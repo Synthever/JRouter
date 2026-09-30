@@ -5,7 +5,7 @@ import AppLogo from "@/shared/components/AppLogo";
 
 export default function HowItWorks() {
   return (
-    <section className="lp-section bg-[var(--bg)]" id="how-it-works">
+    <section className="lp-section bg-transparent" id="how-it-works">
       <div className="lp-wrap">
         <div className="mb-12">
           <div className="lp-eyebrow mb-3">

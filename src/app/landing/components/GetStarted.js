@@ -1,6 +1,5 @@
 "use client";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
-import DarkWaveTerrain from "./DarkWaveTerrain";
 
 export default function GetStarted() {
   const { copied, copy } = useCopyToClipboard();
@@ -10,10 +9,7 @@ export default function GetStarted() {
   };
 
   return (
-    <section className="lp-section relative overflow-hidden bg-[#06070a]/60">
-      {/* 3D Undulating Wireframe Wave Terrain Background (Dark Theme) */}
-      <DarkWaveTerrain />
-
+    <section className="lp-section relative overflow-hidden bg-transparent">
       <div className="lp-wrap relative z-10">
         <div className="flex flex-col lg:flex-row gap-12 items-start">
           {/* Left: Steps */}

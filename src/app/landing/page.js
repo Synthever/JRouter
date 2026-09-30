@@ -2,6 +2,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Navigation from "./components/Navigation";
+import HeroShaderBackground from "./components/HeroShaderBackground";
 import HeroSection from "./components/HeroSection";
 import HowItWorks from "./components/HowItWorks";
 import Features from "./components/Features";
@@ -37,17 +38,20 @@ export default function LandingPage() {
         <Navigation />
         
         <main>
-          {/* Hero Section */}
-          <div className="relative">
+          {/* Persistent full-bleed WebGL shader field active across Hero -> GetStarted -> HowItWorks -> Features */}
+          <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-black">
+            <HeroShaderBackground />
+          </div>
+
+          <div className="relative z-10">
             <HeroSection />
+            <GetStarted />
+            <HowItWorks />
+            <Features />
           </div>
           
-          <GetStarted />
-          <HowItWorks />
-          <Features />
-          
           {/* CTA Section */}
-          <section className="lp-section bg-[var(--surface)] text-center">
+          <section className="relative z-20 lp-section bg-[var(--surface)] text-center">
             <div className="lp-wrap py-8">
               <div className="lp-eyebrow mb-3">
                 <span className="lp-eyebrow__dot"></span>

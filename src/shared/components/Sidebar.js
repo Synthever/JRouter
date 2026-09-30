@@ -118,43 +118,43 @@ export default function Sidebar({ onClose }) {
 
   return (
     <>
-      <aside className="flex w-64 flex-col border-r border-[var(--line)] bg-[var(--surface)] transition-colors duration-150 min-h-full">
+      <aside className="flex w-60 flex-col border-r border-[var(--line)] bg-[var(--surface)] transition-colors duration-150 min-h-full">
         {/* Traffic lights */}
-        <div className="flex items-center gap-2 px-5 pt-4 pb-2">
-          <div className="w-2.5 h-2.5 rounded-full bg-[#FF5F56]/80" />
-          <div className="w-2.5 h-2.5 rounded-full bg-[#FFBD2E]/80" />
-          <div className="w-2.5 h-2.5 rounded-full bg-[#27C93F]/80" />
+        <div className="flex items-center gap-2 px-4 pt-3.5 pb-1.5">
+          <div className="w-2 h-2 rounded-full bg-[#FF5F56]/80" />
+          <div className="w-2 h-2 rounded-full bg-[#FFBD2E]/80" />
+          <div className="w-2 h-2 rounded-full bg-[#27C93F]/80" />
         </div>
 
         {/* Logo */}
-        <div className="px-5 py-3 flex flex-col gap-2 border-b border-[var(--line)]">
-          <Link href="/dashboard" className="flex items-center gap-3">
-            <AppLogo size={32} />
+        <div className="px-4 py-2.5 flex flex-col gap-2 border-b border-[var(--line)]">
+          <Link href="/dashboard" className="flex items-center gap-2.5">
+            <AppLogo size={28} />
             <div className="flex flex-col">
-              <h1 className="text-[14px] font-semibold tracking-tight text-[var(--text)]">
+              <h1 className="text-[13px] font-semibold tracking-tight text-[var(--text)]">
                 {APP_CONFIG.name}
               </h1>
-              <span className="text-[11px] font-mono text-[var(--text-3)]">v{APP_CONFIG.version}</span>
+              <span className="text-[10px] font-mono text-[var(--text-3)]">v{APP_CONFIG.version}</span>
             </div>
           </Link>
           {updateInfo && (
             <div className="flex flex-col gap-1.5 rounded-[var(--r1)] p-1.5 bg-[var(--surface-2)] border border-[var(--line)]">
-              <span className="text-[11px] font-semibold text-[var(--pos)]">
-                ↑ New version available: v{updateInfo.latestVersion}
+              <span className="text-[10px] font-semibold text-[var(--pos)]">
+                ↑ New version: v{updateInfo.latestVersion}
               </span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowUpdateModal(true)}
-                  className="px-2 py-0.5 rounded-[var(--r1)] bg-[var(--pos)] text-black text-[11px] font-semibold transition-colors cursor-pointer"
+                  className="px-2 py-0.5 rounded-[var(--r1)] bg-[var(--pos)] text-black text-[10px] font-semibold transition-colors cursor-pointer"
                 >
-                  Update now
+                  Update
                 </button>
                 <button
                   onClick={() => copy(INSTALL_CMD)}
                   title="Copy install command"
                   className="flex-1 text-left hover:opacity-80 transition-opacity cursor-pointer min-w-0"
                 >
-                  <code className="block text-[10px] text-[var(--text-2)] font-mono truncate">
+                  <code className="block text-[9px] text-[var(--text-2)] font-mono truncate">
                     {copied ? "✓ copied!" : INSTALL_CMD}
                   </code>
                 </button>
@@ -164,14 +164,14 @@ export default function Sidebar({ onClose }) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 px-2.5 py-2.5 space-y-0.5 overflow-y-auto custom-scrollbar">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               onClick={onClose}
               className={cn(
-                "flex items-center gap-2.5 px-3 py-1.5 rounded-[var(--r1)] transition-all group text-[13px] font-medium border",
+                "flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-all group text-[12.5px] font-medium border",
                 isActive(item.href)
                   ? "bg-[var(--surface-2)] text-[var(--text)] border-[var(--accent-line)]"
                   : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
@@ -180,17 +180,17 @@ export default function Sidebar({ onClose }) {
               <Icon
                 name={item.icon}
                 className={cn(
-                  "text-[18px]",
+                  "text-[16px]",
                   isActive(item.href) ? "text-[var(--text)]" : "text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
                 )}
               />
-              <span className="text-[13px] font-medium">{item.label}</span>
+              <span className="text-[12.5px] font-medium">{item.label}</span>
             </Link>
           ))}
 
           {/* System section */}
-          <div className="pt-3 mt-2 space-y-1">
-            <p className="px-3 text-[11px] font-mono font-medium text-[var(--text-3)] uppercase tracking-[0.2em] mb-2">
+          <div className="pt-2.5 mt-2 space-y-0.5">
+            <p className="px-2.5 text-[10px] font-mono font-medium text-[var(--text-3)] uppercase tracking-[0.2em] mb-1.5">
               System
             </p>
 
@@ -198,16 +198,16 @@ export default function Sidebar({ onClose }) {
             <button
               onClick={() => setMediaOpen((v) => !v)}
               className={cn(
-                "w-full flex items-center gap-2.5 px-3 py-1.5 rounded-[var(--r1)] transition-all group text-[13px] font-medium border",
+                "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-all group text-[12.5px] font-medium border",
                 pathname.startsWith("/dashboard/media-providers")
                   ? "bg-[var(--surface-2)] text-[var(--text)] border-[var(--accent-line)]"
                   : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
               )}
             >
-              <Icon name="perm_media" className="text-[18px] text-[var(--text-3)] group-hover:text-[var(--text)]" />
-              <span className="text-[13px] font-medium flex-1 text-left">Media Providers</span>
+              <Icon name="perm_media" className="text-[16px] text-[var(--text-3)] group-hover:text-[var(--text)]" />
+              <span className="text-[12.5px] font-medium flex-1 text-left">Media Providers</span>
               {MEDIA_PROVIDER_KINDS.some((k) => VISIBLE_MEDIA_KINDS.includes(k.id) && k.isNew) && (
-                <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-[var(--r1)] bg-[var(--surface-2)] text-[var(--pos)] border border-[var(--line)]">NEW</span>
+                <span className="text-[9px] font-mono font-semibold px-1 py-0.2 rounded bg-[var(--surface-2)] text-[var(--pos)] border border-[var(--line)]">NEW</span>
               )}
               <Icon
                 name="expand_more"
@@ -216,23 +216,23 @@ export default function Sidebar({ onClose }) {
               />
             </button>
             {mediaOpen && (
-              <div className="pl-3 space-y-0.5">
+              <div className="pl-2 space-y-0.5">
                 {MEDIA_PROVIDER_KINDS.filter((k) => VISIBLE_MEDIA_KINDS.includes(k.id)).map((kind) => (
                   <Link
                     key={kind.id}
                     href={`/dashboard/media-providers/${kind.id}`}
                     onClick={onClose}
                     className={cn(
-                      "flex items-center gap-2.5 px-3 py-1 rounded-[var(--r1)] transition-all group border",
+                      "flex items-center gap-2 px-2.5 py-1 rounded-md transition-all group border",
                       pathname.startsWith(`/dashboard/media-providers/${kind.id}`)
                         ? "bg-[var(--surface-2)] text-[var(--text)] border-[var(--accent-line)]"
                         : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
                     )}
                   >
-                    <Icon name={kind.icon} className="text-[16px] text-[var(--text-3)]" />
-                    <span className="text-[13px]">{kind.label}</span>
+                    <Icon name={kind.icon} className="text-[15px] text-[var(--text-3)]" />
+                    <span className="text-[12px]">{kind.label}</span>
                     {kind.isNew && (
-                      <span className="ml-auto text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-[var(--r1)] bg-[var(--surface-2)] text-[var(--pos)] border border-[var(--line)]">NEW</span>
+                      <span className="ml-auto text-[9px] font-mono font-semibold px-1 py-0.2 rounded bg-[var(--surface-2)] text-[var(--pos)] border border-[var(--line)]">NEW</span>
                     )}
                   </Link>
                 ))}
@@ -241,14 +241,14 @@ export default function Sidebar({ onClose }) {
                   href={COMBINED_WEB_ITEM.href}
                   onClick={onClose}
                   className={cn(
-                    "flex items-center gap-2.5 px-3 py-1 rounded-[var(--r1)] transition-all group border",
+                    "flex items-center gap-2 px-2.5 py-1 rounded-md transition-all group border",
                     pathname.startsWith(COMBINED_WEB_ITEM.href)
                       ? "bg-[var(--surface-2)] text-[var(--text)] border-[var(--accent-line)]"
                       : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
                   )}
                 >
-                  <Icon name={COMBINED_WEB_ITEM.icon} className="text-[16px] text-[var(--text-3)]" />
-                  <span className="text-[13px]">{COMBINED_WEB_ITEM.label}</span>
+                  <Icon name={COMBINED_WEB_ITEM.icon} className="text-[15px] text-[var(--text-3)]" />
+                  <span className="text-[12px]">{COMBINED_WEB_ITEM.label}</span>
                 </Link>
               </div>
             )}
@@ -259,7 +259,7 @@ export default function Sidebar({ onClose }) {
                 href={item.href}
                 onClick={onClose}
                 className={cn(
-                  "flex items-center gap-2.5 px-3 py-1.5 rounded-[var(--r1)] transition-all group border",
+                  "flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-all group border",
                   isActive(item.href)
                     ? "bg-[var(--surface-2)] text-[var(--text)] border-[var(--accent-line)]"
                     : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
@@ -268,11 +268,11 @@ export default function Sidebar({ onClose }) {
                 <Icon
                   name={item.icon}
                   className={cn(
-                    "text-[18px]",
+                    "text-[16px]",
                     isActive(item.href) ? "text-[var(--text)]" : "text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
                   )}
                 />
-                <span className="text-[13px] font-medium">{item.label}</span>
+                <span className="text-[12.5px] font-medium">{item.label}</span>
               </Link>
             ))}
 
@@ -285,7 +285,7 @@ export default function Sidebar({ onClose }) {
                   href={item.href}
                   onClick={onClose}
                   className={cn(
-                    "flex items-center gap-2.5 px-3 py-1.5 rounded-[var(--r1)] transition-all group border",
+                    "flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-all group border",
                     isActive(item.href)
                       ? "bg-[var(--surface-2)] text-[var(--text)] border-[var(--accent-line)]"
                       : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
@@ -294,11 +294,11 @@ export default function Sidebar({ onClose }) {
                   <Icon
                     name={item.icon}
                     className={cn(
-                      "text-[18px]",
+                      "text-[16px]",
                       isActive(item.href) ? "text-[var(--text)]" : "text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
                     )}
                   />
-                  <span className="text-[13px] font-medium">{item.label}</span>
+                  <span className="text-[12.5px] font-medium">{item.label}</span>
                 </Link>
               ) : null;
             })}
@@ -307,16 +307,16 @@ export default function Sidebar({ onClose }) {
             <button
               onClick={() => setShowRemoteModal(true)}
               className={cn(
-                "flex items-center gap-2.5 px-3 py-1.5 rounded-[var(--r1)] transition-all group w-full border border-transparent",
+                "flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-all group w-full border border-transparent",
                 "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
               )}
             >
               <Icon
                 name="computer"
-                className="text-[18px] text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
+                className="text-[16px] text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
               />
-              <span className="text-[13px] font-medium">9Remote</span>
-              <span className="ml-auto text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-[var(--r1)] bg-[var(--surface-2)] text-[var(--pos)] border border-[var(--line)]">
+              <span className="text-[12.5px] font-medium">9Remote</span>
+              <span className="ml-auto text-[9px] font-mono font-semibold px-1 py-0.2 rounded bg-[var(--surface-2)] text-[var(--pos)] border border-[var(--line)]">
                 NEW
               </span>
             </button>
@@ -328,15 +328,15 @@ export default function Sidebar({ onClose }) {
               rel="noreferrer"
               onClick={onClose}
               className={cn(
-                "flex items-center gap-2.5 px-3 py-1.5 rounded-[var(--r1)] transition-all group w-full border border-transparent",
+                "flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-all group w-full border border-transparent",
                 "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
               )}
             >
               <Icon
                 name="translate"
-                className="text-[18px] text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
+                className="text-[16px] text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
               />
-              <span className="text-[13px] font-medium">9English</span>
+              <span className="text-[12.5px] font-medium">9English</span>
             </a>
 
             {/* Settings */}
@@ -344,7 +344,7 @@ export default function Sidebar({ onClose }) {
               href="/dashboard/profile"
               onClick={onClose}
               className={cn(
-                "flex items-center gap-2.5 px-3 py-1.5 rounded-[var(--r1)] transition-all group border",
+                "flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-all group border",
                 isActive("/dashboard/profile")
                   ? "bg-[var(--surface-2)] text-[var(--text)] border-[var(--accent-line)]"
                   : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
@@ -353,11 +353,11 @@ export default function Sidebar({ onClose }) {
               <Icon
                 name="settings"
                 className={cn(
-                  "text-[18px]",
+                  "text-[16px]",
                   isActive("/dashboard/profile") ? "text-[var(--text)]" : "text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
                 )}
               />
-              <span className="text-[13px] font-medium">Settings</span>
+              <span className="text-[12.5px] font-medium">Settings</span>
             </Link>
           </div>
         </nav>

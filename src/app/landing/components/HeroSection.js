@@ -1,16 +1,12 @@
 "use client";
 import Icon from "@/shared/components/Icon";
 import { useRouter } from "next/navigation";
-import HeroShaderBackground from "./HeroShaderBackground";
 
 export default function HeroSection() {
   const router = useRouter();
 
   return (
-    <section className="relative min-h-[92vh] flex flex-col items-center justify-center text-center px-4 sm:px-6 pt-32 pb-20 bg-black text-white w-full overflow-hidden">
-      {/* Signature Shader-lit infrastructure field from hero.md */}
-      <HeroShaderBackground />
-
+    <section className="relative min-h-[92vh] flex flex-col items-center justify-center text-center px-4 sm:px-6 pt-32 pb-20 bg-transparent text-white w-full overflow-hidden">
       {/* Foreground Hero Content */}
       <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center gap-6 sm:gap-8">
         {/* Eyebrow glass badge */}

@@ -46,7 +46,7 @@ const FEATURES = [
 
 export default function Features() {
   return (
-    <section className="lp-section bg-[var(--bg-2)]/40" id="features">
+    <section className="lp-section bg-transparent" id="features">
       <div className="lp-wrap">
         <div className="mb-12">
           <div className="lp-eyebrow mb-3">

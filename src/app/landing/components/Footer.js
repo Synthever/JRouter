@@ -4,7 +4,7 @@ import AppLogo from "@/shared/components/AppLogo";
 
 export default function Footer() {
   return (
-    <footer className="border-t border-[var(--line)] bg-[var(--surface)] pt-12 pb-8 px-6">
+    <footer className="relative z-20 border-t border-[var(--line)] bg-[var(--surface)] pt-12 pb-8 px-6">
       <div className="lp-wrap">
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 mb-12">
           {/* Brand */}
