@@ -9,38 +9,44 @@ export default function GetStarted() {
   };
 
   return (
-    <section className="py-24 px-6 bg-[#120f0d]">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col lg:flex-row gap-16 items-start">
+    <section className="lp-section bg-[var(--bg-2)]/50">
+      <div className="lp-wrap">
+        <div className="flex flex-col lg:flex-row gap-12 items-start">
           {/* Left: Steps */}
           <div className="flex-1">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">Get Started in 30 Seconds</h2>
-            <p className="text-gray-400 text-lg mb-8">
-              Install 9Router, configure your providers via web dashboard, and start routing AI requests.
+            <div className="lp-eyebrow mb-3">
+              <span className="lp-eyebrow__dot"></span>
+              <span>QUICKSTART</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-semibold text-[var(--text)] tracking-tight mb-4">
+              Initialize in 30 Seconds
+            </h2>
+            <p className="text-sm text-[var(--text-2)] mb-8 max-w-lg leading-relaxed">
+              Launch local gateway, configure providers in the developer dashboard, and point any OpenAI-compatible client to port 20128.
             </p>
             
             <div className="flex flex-col gap-6">
               <div className="flex gap-4">
-                <div className="flex-none w-8 h-8 rounded-full bg-[#f97815]/20 text-[#f97815] flex items-center justify-center font-bold">1</div>
+                <div className="flex-none size-7 rounded-[var(--r1)] bg-[var(--surface-2)] border border-[var(--line-2)] text-[var(--text)] flex items-center justify-center font-mono text-xs font-semibold">1</div>
                 <div>
-                  <h4 className="font-bold text-lg">Install 9Router</h4>
-                  <p className="text-sm text-gray-500 mt-1">Run npx command to start the server instantly</p>
+                  <h4 className="font-semibold text-sm text-[var(--text)]">Launch Gateway</h4>
+                  <p className="text-xs text-[var(--text-2)] mt-0.5">Run CLI command to launch local proxy process</p>
                 </div>
               </div>
               
               <div className="flex gap-4">
-                <div className="flex-none w-8 h-8 rounded-full bg-[#f97815]/20 text-[#f97815] flex items-center justify-center font-bold">2</div>
+                <div className="flex-none size-7 rounded-[var(--r1)] bg-[var(--surface-2)] border border-[var(--line-2)] text-[var(--text)] flex items-center justify-center font-mono text-xs font-semibold">2</div>
                 <div>
-                  <h4 className="font-bold text-lg">Open Dashboard</h4>
-                  <p className="text-sm text-gray-500 mt-1">Configure providers and API keys via web interface</p>
+                  <h4 className="font-semibold text-sm text-[var(--text)]">Open Dashboard</h4>
+                  <p className="text-xs text-[var(--text-2)] mt-0.5">Configure API credentials, combos, and proxy pools</p>
                 </div>
               </div>
               
               <div className="flex gap-4">
-                <div className="flex-none w-8 h-8 rounded-full bg-[#f97815]/20 text-[#f97815] flex items-center justify-center font-bold">3</div>
+                <div className="flex-none size-7 rounded-[var(--r1)] bg-[var(--surface-2)] border border-[var(--line-2)] text-[var(--text)] flex items-center justify-center font-mono text-xs font-semibold">3</div>
                 <div>
-                  <h4 className="font-bold text-lg">Route Requests</h4>
-                  <p className="text-sm text-gray-500 mt-1">Point your CLI tools to http://localhost:20128</p>
+                  <h4 className="font-semibold text-sm text-[var(--text)]">Route Traffic</h4>
+                  <p className="text-xs text-[var(--text-2)] mt-0.5">Point Claude Code, Codex, or agents to http://localhost:20128</p>
                 </div>
               </div>
             </div>
@@ -48,43 +54,37 @@ export default function GetStarted() {
 
           {/* Right: Code block */}
           <div className="flex-1 w-full">
-            <div className="rounded-xl overflow-hidden bg-[#1e1e1e] border border-[#3a2f27] shadow-2xl">
+            <div className="rounded-[var(--r3)] overflow-hidden bg-[var(--surface-inset)] border border-[var(--line)] shadow-[var(--shadow-card)]">
               {/* Terminal header */}
-              <div className="flex items-center gap-2 px-4 py-3 bg-[#252526] border-b border-gray-700">
-                <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                <div className="ml-2 text-xs text-gray-500 font-mono">terminal</div>
+              <div className="flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-2)] border-b border-[var(--line)]">
+                <div className="w-2.5 h-2.5 rounded-full bg-[#FF5F56]/80"></div>
+                <div className="w-2.5 h-2.5 rounded-full bg-[#FFBD2E]/80"></div>
+                <div className="w-2.5 h-2.5 rounded-full bg-[#27C93F]/80"></div>
+                <div className="ml-2 text-[11px] text-[var(--text-3)] font-mono">bash — 80x24</div>
               </div>
               
               {/* Terminal content */}
-              <div className="p-6 font-mono text-sm leading-relaxed overflow-x-auto">
+              <div className="p-5 font-mono text-xs leading-relaxed overflow-x-auto text-[var(--text)]">
                 <div 
                   className="flex items-center gap-2 mb-4 group cursor-pointer"
-                  onClick={() => handleCopy("npx 9router")}
+                  onClick={() => handleCopy("npm run start")}
                 >
-                  <span className="text-green-400">$</span>
-                  <span className="text-white">npx 9router</span>
-                  <span className="ml-auto text-gray-500 text-xs opacity-0 group-hover:opacity-100">
+                  <span className="text-[var(--pos)]">$</span>
+                  <span className="text-[var(--text)] font-semibold">npm run start</span>
+                  <span className="ml-auto text-[10px] text-[var(--text-3)] group-hover:text-[var(--text)]">
                     {copied === "landing" ? "✓ Copied" : "Copy"}
                   </span>
                 </div>
                 
-                <div className="text-gray-400 mb-6">
-                  <span className="text-[#f97815]">&gt;</span> Starting 9Router...<br/>
-                  <span className="text-[#f97815]">&gt;</span> Server running on <span className="text-blue-400">http://localhost:20128</span><br/>
-                  <span className="text-[#f97815]">&gt;</span> Dashboard: <span className="text-blue-400">http://localhost:20128/dashboard</span><br/>
-                  <span className="text-green-400">&gt;</span> Ready to route! ✓
+                <div className="text-[var(--text-2)] mb-5 space-y-1">
+                  <div><span className="text-[var(--text-3)]">&gt;</span> Initializing JRouter gateway...</div>
+                  <div><span className="text-[var(--text-3)]">&gt;</span> OpenAI proxy listening on <span className="text-[var(--text)] underline">http://localhost:20128/v1</span></div>
+                  <div><span className="text-[var(--text-3)]">&gt;</span> Dashboard available on <span className="text-[var(--text)] underline">http://localhost:20128/dashboard</span></div>
+                  <div><span className="text-[var(--pos)]">&gt;</span> Ready for incoming connections ✓</div>
                 </div>
                 
-                <div className="text-xs text-gray-500 mb-2 border-t border-gray-700 pt-4">
-                  📝 Configure providers in dashboard or use environment variables
-                </div>
-                
-                <div className="text-gray-400 text-xs">
-                  <span className="text-purple-400">Data Location:</span><br/>
-                  <span className="text-gray-500">  macOS/Linux:</span> ~/.9router/db/data.sqlite<br/>
-                  <span className="text-gray-500">  Windows:</span> %APPDATA%/9router/db/data.sqlite
+                <div className="text-[11px] text-[var(--text-3)] pt-3 border-t border-[var(--line)]">
+                  <div>Local SQLite DB: ~/.9router/db/data.sqlite</div>
                 </div>
               </div>
             </div>

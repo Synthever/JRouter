@@ -369,6 +369,44 @@ input, textarea {
   width: 100%;
 }
 
+/* Landing Page Container */
+.lp-wrap {
+  max-width: 1120px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+  width: 100%;
+}
+
+/* Landing Page Section Framing */
+.lp-section {
+  padding: 64px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  position: relative;
+}
+
+/* Eyebrow Label */
+.lp-eyebrow, .ui-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-2);
+}
+.lp-eyebrow__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background-color: var(--text);
+}
+
 /* 5-column dashboard stats grid */
 .grid-stats {
   display: grid;
