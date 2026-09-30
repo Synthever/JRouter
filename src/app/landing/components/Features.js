@@ -4,109 +4,59 @@ const FEATURES = [
   { 
     icon: "link", 
     title: "Unified Endpoint", 
-    desc: "Access all providers via a single standard API URL.", 
-    colors: {
-      border: "hover:border-blue-500/50",
-      bg: "hover:bg-blue-500/5",
-      iconBg: "bg-blue-500/10",
-      iconText: "text-blue-500",
-      titleHover: "group-hover:text-blue-400"
-    }
+    desc: "Single OpenAI-compatible /v1/chat/completions route for 40+ providers.", 
   },
   { 
-    icon: "bolt", 
-    title: "Easy Setup", 
-    desc: "Get up and running in minutes with npx command.", 
-    colors: {
-      border: "hover:border-orange-500/50",
-      bg: "hover:bg-orange-500/5",
-      iconBg: "bg-orange-500/10",
-      iconText: "text-orange-500",
-      titleHover: "group-hover:text-orange-400"
-    }
-  },
-  { 
-    icon: "shield_with_heart", 
+    icon: "shield", 
     title: "Model Fallback", 
-    desc: "Automatically switch providers on failure or high latency.", 
-    colors: {
-      border: "hover:border-rose-500/50",
-      bg: "hover:bg-rose-500/5",
-      iconBg: "bg-rose-500/10",
-      iconText: "text-rose-500",
-      titleHover: "group-hover:text-rose-400"
-    }
+    desc: "Automatic failover across providers, models, and credentials on rate-limits.", 
+  },
+  { 
+    icon: "savings", 
+    title: "RTK Token Saver", 
+    desc: "In-place tool result compression reducing prompt token overhead up to 60%.", 
   },
   { 
     icon: "monitoring", 
-    title: "Usage Tracking", 
-    desc: "Detailed analytics and cost monitoring across all models.", 
-    colors: {
-      border: "hover:border-purple-500/50",
-      bg: "hover:bg-purple-500/5",
-      iconBg: "bg-purple-500/10",
-      iconText: "text-purple-500",
-      titleHover: "group-hover:text-purple-400"
-    }
+    title: "Usage Analytics", 
+    desc: "Real-time tabular telemetry, latency metrics, and quota tracking.", 
   },
   { 
-    icon: "key", 
-    title: "OAuth & API Keys", 
-    desc: "Securely manage credentials in one vault.", 
-    colors: {
-      border: "hover:border-amber-500/50",
-      bg: "hover:bg-amber-500/5",
-      iconBg: "bg-amber-500/10",
-      iconText: "text-amber-500",
-      titleHover: "group-hover:text-amber-400"
-    }
+    icon: "vpn_key", 
+    title: "Credential Vault", 
+    desc: "AES-encrypted local SQLite storage for OAuth tokens and raw API keys.", 
   },
   { 
-    icon: "cloud_sync", 
-    title: "Cloud Sync", 
-    desc: "Sync your configurations across devices instantly.", 
-    colors: {
-      border: "hover:border-sky-500/50",
-      bg: "hover:bg-sky-500/5",
-      iconBg: "bg-sky-500/10",
-      iconText: "text-sky-500",
-      titleHover: "group-hover:text-sky-400"
-    }
+    icon: "lan", 
+    title: "Proxy Pools", 
+    desc: "Dynamic outbound socks5/http proxy rotation with health ping checks.", 
   },
   { 
     icon: "terminal", 
-    title: "CLI Support", 
-    desc: "Works with Claude Code, Codex, Cline, Cursor, and more.", 
-    colors: {
-      border: "hover:border-emerald-500/50",
-      bg: "hover:bg-emerald-500/5",
-      iconBg: "bg-emerald-500/10",
-      iconText: "text-emerald-500",
-      titleHover: "group-hover:text-emerald-400"
-    }
+    title: "CLI Tool Native", 
+    desc: "First-class compatibility with Claude Code, Codex, Cline, and Roo.", 
   },
   { 
-    icon: "dashboard", 
-    title: "Dashboard", 
-    desc: "Visual dashboard for real-time traffic analysis.", 
-    colors: {
-      border: "hover:border-fuchsia-500/50",
-      bg: "hover:bg-fuchsia-500/5",
-      iconBg: "bg-fuchsia-500/10",
-      iconText: "text-fuchsia-500",
-      titleHover: "group-hover:text-fuchsia-400"
-    }
+    icon: "translate", 
+    title: "Format Translation", 
+    desc: "Direct AST translation between Anthropic, Gemini, Kiro, and OpenAI formats.", 
   },
 ];
 
 export default function Features() {
   return (
-    <section className="py-24 px-6" id="features">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Powerful Features</h2>
-          <p className="text-gray-400 max-w-xl text-lg">
-            Everything you need to manage your AI infrastructure in one place, built for scale.
+    <section className="lp-section bg-[var(--bg-2)]/40" id="features">
+      <div className="lp-wrap">
+        <div className="mb-12">
+          <div className="lp-eyebrow mb-3">
+            <span className="lp-eyebrow__dot"></span>
+            <span>CAPABILITIES</span>
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-semibold text-[var(--text)] tracking-tight mb-3">
+            Core Routing Infrastructure
+          </h2>
+          <p className="text-sm text-[var(--text-2)] max-w-xl leading-relaxed">
+            High-throughput format translation, model fallbacks, and token metrics built on a clean local SQLite substrate.
           </p>
         </div>
         
@@ -114,15 +64,15 @@ export default function Features() {
           {FEATURES.map((feature) => (
             <div 
               key={feature.title}
-              className={`p-6 rounded-xl bg-[#23180f] border border-[#3a2f27] ${feature.colors.border} ${feature.colors.bg} transition-all duration-300 group`}
+              className="p-5 rounded-[var(--r3)] bg-[var(--surface)] border border-[var(--line)] shadow-[var(--shadow-card)] hover:border-[var(--accent-line)] transition-all flex flex-col justify-between"
             >
-              <div className={`w-10 h-10 rounded-lg ${feature.colors.iconBg} flex items-center justify-center mb-4 ${feature.colors.iconText} group-hover:scale-110 transition-transform duration-300`}>
-                <span className="material-symbols-outlined">{feature.icon}</span>
+              <div>
+                <div className="size-9 rounded-[var(--r1)] bg-[var(--surface-2)] border border-[var(--line-2)] flex items-center justify-center text-[var(--text)] mb-3">
+                  <span className="material-symbols-outlined text-[18px]">{feature.icon}</span>
+                </div>
+                <h3 className="text-sm font-semibold text-[var(--text)] mb-1">{feature.title}</h3>
+                <p className="text-xs text-[var(--text-2)] leading-relaxed">{feature.desc}</p>
               </div>
-              <h3 className={`text-lg font-bold mb-2 ${feature.colors.titleHover} transition-colors`}>
-                {feature.title}
-              </h3>
-              <p className="text-sm text-gray-400 leading-relaxed">{feature.desc}</p>
             </div>
           ))}
         </div>

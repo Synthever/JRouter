@@ -20,15 +20,15 @@ export default function Input({
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
       {label && (
-        <label className="text-sm font-medium text-text-main">
+        <label className="text-xs font-mono text-[var(--text-2)] uppercase tracking-wider">
           {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
+          {required && <span className="text-[var(--danger)] ml-1">*</span>}
         </label>
       )}
       <div className="relative">
         {icon && (
-          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-text-muted">
-            <span className="material-symbols-outlined text-[20px]">{icon}</span>
+          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-[var(--text-3)]">
+            <span className="material-symbols-outlined text-[18px]">{icon}</span>
           </div>
         )}
         <input
@@ -38,27 +38,27 @@ export default function Input({
           onChange={onChange}
           disabled={disabled}
           className={cn(
-            "w-full py-2.5 px-3 text-sm text-text-main bg-surface-2 rounded-[10px]",
-            "border border-transparent placeholder-text-muted/70",
-            "focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500/40",
-            "transition-all duration-150 ease-out disabled:opacity-50 disabled:cursor-not-allowed",
+            "w-full py-2 px-3 text-xs sm:text-sm text-[var(--text)] bg-[var(--surface-2)] rounded-[var(--r1)]",
+            "border border-[var(--line-2)] placeholder-[var(--text-3)]",
+            "focus:outline-none focus:border-[var(--accent-line)] focus:ring-1 focus:ring-[var(--accent-line)]",
+            "transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed",
             // iOS zoom fix
             "text-[16px] sm:text-sm",
-            icon && "pl-10",
-            error && "ring-1 ring-red-500 focus:ring-2 focus:ring-red-500/40 border-red-500/40",
+            icon && "pl-9",
+            error && "border-[var(--danger)] focus:border-[var(--danger)] focus:ring-[var(--danger)]/30",
             inputClassName
           )}
           {...props}
         />
       </div>
       {error && (
-        <p className="text-xs text-red-500 flex items-center gap-1">
+        <p className="text-xs text-[var(--danger)] flex items-center gap-1 font-mono">
           <span className="material-symbols-outlined text-[14px]">error</span>
           {error}
         </p>
       )}
       {hint && !error && (
-        <p className="text-xs text-text-muted">{hint}</p>
+        <p className="text-xs text-[var(--text-3)] font-mono">{hint}</p>
       )}
     </div>
   );

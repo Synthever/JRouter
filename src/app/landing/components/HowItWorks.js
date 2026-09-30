@@ -2,59 +2,60 @@
 
 export default function HowItWorks() {
   return (
-    <section className="py-24 border-y border-[#3a2f27] bg-[#23180f]/30" id="how-it-works">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">How 9Router Works</h2>
-          <p className="text-gray-400 max-w-xl text-lg">
-            Data flows seamlessly from your application through our intelligent routing layer to the best provider for the job.
+    <section className="lp-section bg-[var(--bg)]" id="how-it-works">
+      <div className="lp-wrap">
+        <div className="mb-12">
+          <div className="lp-eyebrow mb-3">
+            <span className="lp-eyebrow__dot"></span>
+            <span>SYSTEM ARCHITECTURE</span>
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-semibold text-[var(--text)] tracking-tight mb-3">
+            How JRouter Operates
+          </h2>
+          <p className="text-sm text-[var(--text-2)] max-w-xl leading-relaxed">
+            Transparent proxy translation between standard developer SDKs and heterogeneous upstream APIs with automatic fallback and caching.
           </p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-          {/* Connection line */}
-          <div className="hidden md:block absolute top-12 left-[16%] right-[16%] h-[2px] bg-linear-to-r from-gray-700 via-[#f97815] to-gray-700 -z-10"></div>
-          
-          {/* Step 1: CLI & SDKs */}
-          <div className="flex flex-col gap-6 relative group">
-            <div className="w-24 h-24 rounded-2xl bg-[#181411] border border-[#3a2f27] flex items-center justify-center shadow-xl group-hover:border-gray-500 transition-colors z-10 mx-auto md:mx-0">
-              <span className="material-symbols-outlined text-4xl text-gray-300">terminal</span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
+          {/* Step 1: Client CLI & SDKs */}
+          <div className="p-6 rounded-[var(--r3)] bg-[var(--surface)] border border-[var(--line)] shadow-[var(--shadow-card)] flex flex-col gap-4">
+            <div className="size-11 rounded-[var(--r2)] bg-[var(--surface-2)] border border-[var(--line-2)] flex items-center justify-center text-[var(--text)]">
+              <span className="material-symbols-outlined text-[20px]">terminal</span>
             </div>
             <div>
-              <h3 className="text-xl font-bold mb-2">1. CLI &amp; SDKs</h3>
-              <p className="text-sm text-gray-400">
-                Your requests start from your favorite tools or our unified SDK. Just change the base URL.
+              <div className="text-[11px] font-mono text-[var(--text-3)] mb-1 uppercase tracking-[0.2em]">Step 01</div>
+              <h3 className="text-base font-semibold text-[var(--text)] mb-1">Developer Clients</h3>
+              <p className="text-xs text-[var(--text-2)] leading-relaxed">
+                Requests originate from CLI tools (Claude Code, Codex, Cline) or standard OpenAI SDKs pointing to localhost:20128.
               </p>
             </div>
           </div>
 
-          {/* Step 2: 9Router Hub */}
-          <div className="flex flex-col gap-6 relative group md:items-center md:text-center">
-            <div className="w-24 h-24 rounded-2xl bg-[#181411] border-2 border-[#f97815] flex items-center justify-center shadow-[0_0_30px_rgba(249,120,21,0.2)] z-10 mx-auto">
-              <span className="material-symbols-outlined text-4xl text-[#f97815] animate-pulse">hub</span>
+          {/* Step 2: JRouter Gateway */}
+          <div className="p-6 rounded-[var(--r3)] bg-[var(--surface)] border border-[var(--line)] shadow-[var(--shadow-card)] flex flex-col gap-4">
+            <div className="size-11 rounded-[var(--r2)] bg-[var(--surface-2)] border border-[var(--accent-line)] flex items-center justify-center text-[var(--text)]">
+              <span className="material-symbols-outlined text-[20px]">hub</span>
             </div>
             <div>
-              <h3 className="text-xl font-bold mb-2 text-[#f97815]">2. 9Router Hub</h3>
-              <p className="text-sm text-gray-400">
-                Our engine analyzes the prompt, checks provider health, and routes for lowest latency or cost.
+              <div className="text-[11px] font-mono text-[var(--text-3)] mb-1 uppercase tracking-[0.2em]">Step 02</div>
+              <h3 className="text-base font-semibold text-[var(--text)] mb-1">JRouter Engine</h3>
+              <p className="text-xs text-[var(--text-2)] leading-relaxed">
+                Translates request payload into provider-native format, compresses tool tokens, verifies quotas, and routes across accounts.
               </p>
             </div>
           </div>
 
-          {/* Step 3: AI Providers */}
-          <div className="flex flex-col gap-6 relative group md:items-end md:text-right">
-            <div className="w-24 h-24 rounded-2xl bg-[#181411] border border-[#3a2f27] flex items-center justify-center shadow-xl group-hover:border-gray-500 transition-colors z-10 mx-auto md:mx-0">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="w-6 h-6 rounded bg-white/10"></div>
-                <div className="w-6 h-6 rounded bg-white/10"></div>
-                <div className="w-6 h-6 rounded bg-white/10"></div>
-                <div className="w-6 h-6 rounded bg-white/10"></div>
-              </div>
+          {/* Step 3: Upstream Providers */}
+          <div className="p-6 rounded-[var(--r3)] bg-[var(--surface)] border border-[var(--line)] shadow-[var(--shadow-card)] flex flex-col gap-4">
+            <div className="size-11 rounded-[var(--r2)] bg-[var(--surface-2)] border border-[var(--line-2)] flex items-center justify-center text-[var(--text)]">
+              <span className="material-symbols-outlined text-[20px]">dns</span>
             </div>
             <div>
-              <h3 className="text-xl font-bold mb-2">3. AI Providers</h3>
-              <p className="text-sm text-gray-400">
-                The request is fulfilled by OpenAI, Anthropic, Gemini, or others instantly.
+              <div className="text-[11px] font-mono text-[var(--text-3)] mb-1 uppercase tracking-[0.2em]">Step 03</div>
+              <h3 className="text-base font-semibold text-[var(--text)] mb-1">Upstream Providers</h3>
+              <p className="text-xs text-[var(--text-2)] leading-relaxed">
+                Dispatches upstream to Anthropic, OpenAI, Gemini, or local models, streaming SSE responses back with zero translation latency.
               </p>
             </div>
           </div>
