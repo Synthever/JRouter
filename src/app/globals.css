@@ -370,6 +370,29 @@ html {
   background-color: rgba(255, 255, 255, 0.95);
 }
 
+/* Hide scrollbar utility (used on landing page and custom hidden scroll containers) */
+.no-scrollbar,
+html.no-scrollbar,
+body.no-scrollbar,
+html:has(.landing-page),
+body:has(.landing-page) {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+.no-scrollbar::-webkit-scrollbar,
+html.no-scrollbar::-webkit-scrollbar,
+body.no-scrollbar::-webkit-scrollbar,
+html.no-scrollbar *::-webkit-scrollbar,
+html:has(.landing-page)::-webkit-scrollbar,
+body:has(.landing-page)::-webkit-scrollbar,
+.landing-page::-webkit-scrollbar,
+.landing-page *::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
 /* Reusable elevated card */
 .card-soft {
   background-color: var(--color-surface);

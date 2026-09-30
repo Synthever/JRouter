@@ -1,5 +1,6 @@
 "use client";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
+import DarkWaveTerrain from "./DarkWaveTerrain";
 
 export default function GetStarted() {
   const { copied, copy } = useCopyToClipboard();
@@ -9,8 +10,11 @@ export default function GetStarted() {
   };
 
   return (
-    <section className="lp-section bg-[var(--bg-2)]/50">
-      <div className="lp-wrap">
+    <section className="lp-section relative overflow-hidden bg-[#06070a]/60">
+      {/* 3D Undulating Wireframe Wave Terrain Background (Dark Theme) */}
+      <DarkWaveTerrain />
+
+      <div className="lp-wrap relative z-10">
         <div className="flex flex-col lg:flex-row gap-12 items-start">
           {/* Left: Steps */}
           <div className="flex-1">
@@ -27,7 +31,7 @@ export default function GetStarted() {
             
             <div className="flex flex-col gap-6">
               <div className="flex gap-4">
-                <div className="flex-none size-7 rounded-[var(--r1)] bg-[var(--surface-2)] border border-[var(--line-2)] text-[var(--text)] flex items-center justify-center font-mono text-xs font-semibold">1</div>
+                <div className="flex-none size-7 rounded-[var(--r1)] bg-[var(--surface-2)]/90 backdrop-blur-md border border-[var(--line-2)] text-[var(--text)] flex items-center justify-center font-mono text-xs font-semibold shadow-xs">1</div>
                 <div>
                   <h4 className="font-semibold text-sm text-[var(--text)]">Launch Gateway</h4>
                   <p className="text-xs text-[var(--text-2)] mt-0.5">Run CLI command to launch local proxy process</p>
@@ -35,7 +39,7 @@ export default function GetStarted() {
               </div>
               
               <div className="flex gap-4">
-                <div className="flex-none size-7 rounded-[var(--r1)] bg-[var(--surface-2)] border border-[var(--line-2)] text-[var(--text)] flex items-center justify-center font-mono text-xs font-semibold">2</div>
+                <div className="flex-none size-7 rounded-[var(--r1)] bg-[var(--surface-2)]/90 backdrop-blur-md border border-[var(--line-2)] text-[var(--text)] flex items-center justify-center font-mono text-xs font-semibold shadow-xs">2</div>
                 <div>
                   <h4 className="font-semibold text-sm text-[var(--text)]">Open Dashboard</h4>
                   <p className="text-xs text-[var(--text-2)] mt-0.5">Configure API credentials, combos, and proxy pools</p>
@@ -43,7 +47,7 @@ export default function GetStarted() {
               </div>
               
               <div className="flex gap-4">
-                <div className="flex-none size-7 rounded-[var(--r1)] bg-[var(--surface-2)] border border-[var(--line-2)] text-[var(--text)] flex items-center justify-center font-mono text-xs font-semibold">3</div>
+                <div className="flex-none size-7 rounded-[var(--r1)] bg-[var(--surface-2)]/90 backdrop-blur-md border border-[var(--line-2)] text-[var(--text)] flex items-center justify-center font-mono text-xs font-semibold shadow-xs">3</div>
                 <div>
                   <h4 className="font-semibold text-sm text-[var(--text)]">Route Traffic</h4>
                   <p className="text-xs text-[var(--text-2)] mt-0.5">Point Claude Code, Codex, or agents to http://localhost:20128</p>
@@ -54,9 +58,9 @@ export default function GetStarted() {
 
           {/* Right: Code block */}
           <div className="flex-1 w-full">
-            <div className="rounded-[var(--r3)] overflow-hidden bg-[var(--surface-inset)] border border-[var(--line)] shadow-[var(--shadow-card)]">
+            <div className="rounded-[var(--r3)] overflow-hidden bg-[var(--surface-inset)]/90 backdrop-blur-xl border border-[var(--line-2)] shadow-[var(--shadow-card)]">
               {/* Terminal header */}
-              <div className="flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-2)] border-b border-[var(--line)]">
+              <div className="flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-2)]/90 border-b border-[var(--line)]">
                 <div className="w-2.5 h-2.5 rounded-full bg-[#FF5F56]/80"></div>
                 <div className="w-2.5 h-2.5 rounded-full bg-[#FFBD2E]/80"></div>
                 <div className="w-2.5 h-2.5 rounded-full bg-[#27C93F]/80"></div>

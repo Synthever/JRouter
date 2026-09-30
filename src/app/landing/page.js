@@ -1,4 +1,5 @@
 "use client";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Navigation from "./components/Navigation";
 import HeroSection from "./components/HeroSection";
@@ -9,8 +10,18 @@ import Footer from "./components/Footer";
 
 export default function LandingPage() {
   const router = useRouter();
+
+  useEffect(() => {
+    document.documentElement.classList.add("no-scrollbar");
+    document.body.classList.add("no-scrollbar");
+    return () => {
+      document.documentElement.classList.remove("no-scrollbar");
+      document.body.classList.remove("no-scrollbar");
+    };
+  }, []);
+
   return (
-    <div className="dark relative text-[var(--text)] bg-[var(--bg)] font-sans overflow-x-hidden antialiased min-h-screen">
+    <div className="landing-page dark relative text-[var(--text)] bg-[var(--bg)] font-sans overflow-x-hidden antialiased min-h-screen">
       {/* Hardware Hairline Grid Substrate */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none bg-[var(--bg)]">
         <div 
@@ -71,8 +82,26 @@ export default function LandingPage() {
         <Footer />
       </div>
       
-      {/* Global styles for keyframes */}
+      {/* Global styles for keyframes & landing scrollbar hiding */}
       <style jsx global>{`
+        html,
+        body,
+        html.no-scrollbar,
+        body.no-scrollbar {
+          scrollbar-width: none !important;
+          -ms-overflow-style: none !important;
+        }
+        html::-webkit-scrollbar,
+        body::-webkit-scrollbar,
+        html.no-scrollbar::-webkit-scrollbar,
+        body.no-scrollbar::-webkit-scrollbar,
+        html.no-scrollbar *::-webkit-scrollbar,
+        *::-webkit-scrollbar {
+          display: none !important;
+          width: 0 !important;
+          height: 0 !important;
+          background: transparent !important;
+        }
         @keyframes float {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-6px); }
