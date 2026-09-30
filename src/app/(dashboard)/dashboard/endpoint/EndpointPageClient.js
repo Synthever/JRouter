@@ -79,11 +79,11 @@ export default function APIPageClient({ machineId }) {
   const [visibleKeys, setVisibleKeys] = useState(new Set());
 
   // Client-side local/remote detection (UI hint only, not a security gate)
-  const [isRemoteHost, setIsRemoteHost] = useState(false);
-  useEffect(() => {
-    if (typeof window !== "undefined")
-      setIsRemoteHost(!["localhost", "127.0.0.1", "::1"].includes(window.location.hostname));
-  }, []);
+  const [isRemoteHost] = useState(() => (
+    typeof window !== "undefined"
+      ? !["localhost", "127.0.0.1", "::1"].includes(window.location.hostname)
+      : false
+  ));
 
   const { copied, copy } = useCopyToClipboard();
 
@@ -172,7 +172,7 @@ export default function APIPageClient({ machineId }) {
   }, []);
 
   // Trust user intent (settingsEnabled): UI stays "enabled" while watchdog restarts process
-  const syncTunnelStatus = async () => {
+  async function syncTunnelStatus() {
     try {
       const statusRes = await fetch("/api/tunnel/status", { cache: "no-store" });
       if (!statusRes.ok) return;
@@ -190,9 +190,9 @@ export default function APIPageClient({ machineId }) {
       setTsEnabled(tsEn);
       updateReachable(null, tsClientReachableRef, tsMissRef, setTsReachable, tsEverReachableRef, setTsEverReachable);
     } catch { /* ignore poll errors */ }
-  };
+  }
 
-  const loadSettings = async () => {
+  async function loadSettings() {
     setTunnelChecking(true);
     try {
       const [settingsData, statusRes] = await Promise.all([
@@ -225,7 +225,7 @@ export default function APIPageClient({ machineId }) {
     } finally {
       setTunnelChecking(false);
     }
-  };
+  }
 
   const handleTunnelDashboardAccess = async (value) => {
     try {
@@ -245,7 +245,7 @@ export default function APIPageClient({ machineId }) {
     }
   };
 
-  const fetchData = async () => {
+  async function fetchData() {
     try {
       const fetchKeys = async () => {
         const res = await fetch("/api/keys");
@@ -272,9 +272,9 @@ export default function APIPageClient({ machineId }) {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  // u2500u2500u2500 Cloudflare Tunnel handlers
+  // ─── Cloudflare Tunnel handlers
   // Ping tunnel health until reachable. Race multiple URLs (shortlink + direct) — 1 OK is enough.
   const pingTunnelHealth = async (...urls) => {
     setTunnelLoading(true);
@@ -688,14 +688,11 @@ export default function APIPageClient({ machineId }) {
     });
   };
 
-  const [baseUrl, setBaseUrl] = useState("/v1");
-
-  // Hydration fix: Only access window on client side
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setBaseUrl(`${window.location.origin}/v1`);
-    }
-  }, []);
+  const [baseUrl] = useState(() => (
+    typeof window !== "undefined"
+      ? `${window.location.origin}/v1`
+      : "/v1"
+  ));
 
   if (loading) {
     return (
@@ -998,72 +995,84 @@ export default function APIPageClient({ machineId }) {
             </Button>
           </div>
         ) : (
-          <div className="flex flex-col">
-            {keys.map((key) => (
-              <div
-                key={key.id}
-                className={`group flex items-center justify-between py-3 border-b border-black/[0.03] dark:border-white/[0.03] last:border-b-0 ${key.isActive === false ? "opacity-60" : ""}`}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">{key.name}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <code className="text-xs text-text-muted font-mono">
-                      {visibleKeys.has(key.id) ? key.key : maskKey(key.key)}
-                    </code>
+          <div className="flex flex-col divide-y divide-[var(--line)]">
+            {keys.map((key) => {
+              const isCopied = copied === key.id;
+              return (
+                <div
+                  key={key.id}
+                  className={`group flex items-center justify-between py-3.5 ${key.isActive === false ? "opacity-60" : ""}`}
+                >
+                  <div className="flex-1 min-w-0 pr-4">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <p className="text-sm font-semibold text-[var(--text)] tracking-tight">{key.name}</p>
+                      {key.isActive === false && (
+                        <span className="text-[10px] font-mono font-semibold px-2 py-0.2 rounded-[var(--r-full)] bg-[#261F12] text-[#F2B34B] border border-[#F2B34B]/30">
+                          Paused
+                        </span>
+                      )}
+                    </div>
+                    <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-[var(--r1)] bg-[var(--surface-2)] border border-[var(--line-2)] text-xs font-mono">
+                      <code className="text-[var(--text)] u-tnum select-all">
+                        {visibleKeys.has(key.id) ? key.key : maskKey(key.key)}
+                      </code>
+                      <button
+                        type="button"
+                        onClick={() => toggleKeyVisibility(key.id)}
+                        className="text-[var(--text-3)] hover:text-[var(--text)] transition-colors cursor-pointer"
+                        title={visibleKeys.has(key.id) ? "Hide key" : "Show key"}
+                      >
+                        <span className="material-symbols-outlined text-[15px]">
+                          {visibleKeys.has(key.id) ? "visibility_off" : "visibility"}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => copy(key.key, key.id)}
+                        className="text-[var(--text-3)] hover:text-[var(--text)] transition-colors cursor-pointer"
+                        title={isCopied ? "Copied" : "Copy key"}
+                      >
+                        <span className={`material-symbols-outlined text-[15px] ${isCopied ? "text-[var(--pos)]" : ""}`}>
+                          {isCopied ? "check" : "content_copy"}
+                        </span>
+                      </button>
+                    </div>
+                    <p className="text-[11px] font-mono text-[var(--text-3)] mt-1.5">
+                      Created {new Date(key.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Toggle
+                      size="sm"
+                      checked={key.isActive ?? true}
+                      onChange={(checked) => {
+                        if (key.isActive && !checked) {
+                          setConfirmState({
+                            title: "Pause API Key",
+                            message: `Pause API key "${key.name}"?\n\nThis key will stop working immediately but can be resumed later.`,
+                            onConfirm: async () => {
+                              setConfirmState(null);
+                              handleToggleKey(key.id, checked);
+                            }
+                          });
+                        } else {
+                          handleToggleKey(key.id, checked);
+                        }
+                      }}
+                      title={key.isActive ? "Pause key" : "Resume key"}
+                    />
                     <button
-                      onClick={() => toggleKeyVisibility(key.id)}
-                      className="p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded text-text-muted hover:text-primary transition-all"
-                      title={visibleKeys.has(key.id) ? "Hide key" : "Show key"}
+                      type="button"
+                      onClick={() => handleDeleteKey(key.id)}
+                      className="size-8 rounded-[var(--r1)] hover:bg-[#281515] text-[var(--text-3)] hover:text-[#FF6B6B] transition-colors flex items-center justify-center cursor-pointer"
+                      title="Delete Key"
                     >
-                      <span className="material-symbols-outlined text-[14px]">
-                        {visibleKeys.has(key.id) ? "visibility_off" : "visibility"}
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => copy(key.key, key.id)}
-                      className="p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded text-text-muted hover:text-primary transition-all"
-                    >
-                      <span className="material-symbols-outlined text-[14px]">
-                        {copied === key.id ? "check" : "content_copy"}
-                      </span>
+                      <span className="material-symbols-outlined text-[18px]">delete</span>
                     </button>
                   </div>
-                  <p className="text-xs text-text-muted mt-1">
-                    Created {new Date(key.createdAt).toLocaleDateString()}
-                  </p>
-                  {key.isActive === false && (
-                    <p className="text-xs text-orange-500 mt-1">Paused</p>
-                  )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <Toggle
-                    size="sm"
-                    checked={key.isActive ?? true}
-                    onChange={(checked) => {
-                      if (key.isActive && !checked) {
-                        setConfirmState({
-                          title: "Pause API Key",
-                          message: `Pause API key "${key.name}"?\n\nThis key will stop working immediately but can be resumed later.`,
-                          onConfirm: async () => {
-                            setConfirmState(null);
-                            handleToggleKey(key.id, checked);
-                          }
-                        });
-                      } else {
-                        handleToggleKey(key.id, checked);
-                      }
-                    }}
-                    title={key.isActive ? "Pause key" : "Resume key"}
-                  />
-                  <button
-                    onClick={() => handleDeleteKey(key.id)}
-                    className="p-2 hover:bg-red-500/10 rounded text-red-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">delete</span>
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </Card>
