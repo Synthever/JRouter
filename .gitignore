@@ -51,6 +51,9 @@ source/*
 .cursor/*
 docs/*
 !docs/ARCHITECTURE.md
+!docs/DESIGN.md
+!docs/superpowers/
+!docs/superpowers/**
 test/*
 open-sse/test/*
 RM.vn.md
