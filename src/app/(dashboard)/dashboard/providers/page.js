@@ -752,7 +752,7 @@ function ProviderCard({ providerId, provider, stats, authType, onToggle }) {
 
           {stats.total > 0 && (
             <div
-              className="opacity-0 group-hover:opacity-100 transition-opacity ml-1"
+              className="ml-1 shrink-0 flex items-center"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -871,7 +871,7 @@ function ApiKeyProviderCard({
 
           {stats.total > 0 && (
             <div
-              className="opacity-0 group-hover:opacity-100 transition-opacity ml-1"
+              className="ml-1 shrink-0 flex items-center"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
