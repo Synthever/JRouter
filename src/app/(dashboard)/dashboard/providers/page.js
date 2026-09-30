@@ -694,93 +694,79 @@ function ProviderCard({ providerId, provider, stats, authType, onToggle }) {
   return (
     <Link href={`/dashboard/providers/${providerId}`} className="group block min-w-0">
       <div
-        className={`flex flex-col justify-between h-full p-4 rounded-[var(--r2)] bg-[var(--surface)] border border-[var(--line)] shadow-[var(--shadow-card)] hover:border-[var(--accent-line)] hover:bg-[var(--surface-hover)]/30 transition-all cursor-pointer ${
+        className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-[var(--r1)] bg-[var(--surface)] border border-[var(--line)] shadow-[var(--shadow-card)] hover:border-[var(--accent-line)] hover:bg-[var(--surface-hover)]/30 transition-all cursor-pointer ${
           allDisabled ? "opacity-50" : ""
         }`}
       >
-        {/* Top: Icon Socket + Status LED Chip & Toggle */}
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <div className="size-9 rounded-[var(--r1)] bg-[var(--surface-2)] border border-[var(--line-2)] flex items-center justify-center p-1.5 shrink-0 shadow-xs">
+        {/* Left: Docked Icon + Name + Tag */}
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className="size-7 rounded-[var(--r1)] bg-[var(--surface-2)] border border-[var(--line-2)] flex items-center justify-center p-1 shrink-0">
             <ProviderIcon
               src={`/providers/${provider.id}.png`}
               alt={provider.name}
-              size={24}
-              className="object-contain max-w-[24px] max-h-[24px]"
+              size={18}
+              className="object-contain max-w-[18px] max-h-[18px]"
               fallbackText={
                 provider.textIcon || provider.id.slice(0, 2).toUpperCase()
               }
               fallbackColor={provider.color}
             />
           </div>
-
-          <div className="flex items-center gap-2">
-            {allDisabled ? (
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[var(--r-full)] bg-[var(--surface-2)] border border-[var(--line)] text-[10px] font-mono font-medium text-[var(--text-3)] uppercase">
-                <span className="size-1.5 rounded-full bg-[var(--text-3)]" />
-                Paused
-              </span>
-            ) : isNoAuth ? (
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[var(--r-full)] bg-[#14251D] border border-[#34D39A]/30 text-[10px] font-mono font-medium text-[var(--pos)] uppercase">
-                <span className="size-1.5 rounded-full bg-[var(--pos)] animate-pulse" />
-                Ready
-              </span>
-            ) : connected > 0 ? (
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[var(--r-full)] bg-[#14251D] border border-[#34D39A]/30 text-[10px] font-mono font-medium text-[var(--pos)] uppercase u-tnum">
-                <span className="size-1.5 rounded-full bg-[var(--pos)] shadow-[0_0_6px_rgba(52,211,154,0.6)]" />
-                {connected} Active
-              </span>
-            ) : error > 0 ? (
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[var(--r-full)] bg-[#281515] border border-[#FF6B6B]/30 text-[10px] font-mono font-medium text-[var(--danger)] uppercase">
-                <span className="size-1.5 rounded-full bg-[var(--danger)]" />
-                {errorCode || "Error"}
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[var(--r-full)] bg-[var(--surface-2)] border border-[var(--line)] text-[10px] font-mono font-medium text-[var(--text-3)] uppercase">
-                Standby
-              </span>
-            )}
-
-            {stats.total > 0 && (
-              <div
-                className="opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onToggle(!allDisabled ? false : true);
-                }}
-              >
-                <Toggle
-                  size="sm"
-                  checked={!allDisabled}
-                  onChange={() => {}}
-                  title={allDisabled ? "Enable provider" : "Disable provider"}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Middle: Provider Name & Auth Mode */}
-        <div className="flex flex-col gap-1 mb-3">
-          <h3 className="font-semibold text-sm text-[var(--text)] tracking-tight truncate" title={provider.name}>
-            {provider.name}
-          </h3>
-          <div className="flex items-center gap-1.5 text-[11px] font-mono text-[var(--text-3)]">
-            <span className="uppercase tracking-wider">
+          <div className="min-w-0 flex items-baseline gap-2">
+            <span className="font-semibold text-xs text-[var(--text)] tracking-tight truncate" title={provider.name}>
+              {provider.name}
+            </span>
+            <span className="text-[10px] font-mono text-[var(--text-3)] uppercase hidden xl:inline">
               {Array.isArray(authType) ? authType[0] : authType}
             </span>
-            {errorTime && <span>• {errorTime}</span>}
           </div>
         </div>
 
-        {/* Bottom: Modular Telemetry Tray */}
-        <div className="pt-2.5 mt-auto border-t border-[var(--line)] flex items-center justify-between text-[11px] font-mono text-[var(--text-3)]">
-          <span className="u-tnum">
-            {stats.total > 0 ? `${connected}/${stats.total} accounts` : "0 credentials"}
-          </span>
-          <span className="material-symbols-outlined text-[14px] text-[var(--text-3)] group-hover:text-[var(--text)] group-hover:translate-x-0.5 transition-all">
-            arrow_forward
-          </span>
+        {/* Right: LED Status & Count / Toggle */}
+        <div className="flex shrink-0 items-center gap-2">
+          {allDisabled ? (
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-mono text-[var(--text-3)] uppercase">
+              <span className="size-1.5 rounded-full bg-[var(--text-3)]" />
+              Paused
+            </span>
+          ) : isNoAuth ? (
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-mono text-[var(--pos)] uppercase">
+              <span className="size-1.5 rounded-full bg-[var(--pos)] animate-pulse" />
+              Ready
+            </span>
+          ) : connected > 0 ? (
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-mono text-[var(--pos)] uppercase u-tnum">
+              <span className="size-1.5 rounded-full bg-[var(--pos)] shadow-[0_0_6px_rgba(52,211,154,0.6)]" />
+              {connected}
+            </span>
+          ) : error > 0 ? (
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-mono text-[var(--danger)] uppercase">
+              <span className="size-1.5 rounded-full bg-[var(--danger)]" />
+              {errorCode || "Err"}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-mono text-[var(--text-3)] uppercase">
+              <span className="size-1.5 rounded-full bg-[var(--line-2)]" />
+            </span>
+          )}
+
+          {stats.total > 0 && (
+            <div
+              className="opacity-0 group-hover:opacity-100 transition-opacity ml-1"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggle(!allDisabled ? false : true);
+              }}
+            >
+              <Toggle
+                size="sm"
+                checked={!allDisabled}
+                onChange={() => {}}
+                title={allDisabled ? "Enable provider" : "Disable provider"}
+              />
+            </div>
+          )}
         </div>
       </div>
     </Link>
@@ -832,98 +818,74 @@ function ApiKeyProviderCard({
   return (
     <Link href={`/dashboard/providers/${providerId}`} className="group block min-w-0">
       <div
-        className={`flex flex-col justify-between h-full p-4 rounded-[var(--r2)] bg-[var(--surface)] border border-[var(--line)] shadow-[var(--shadow-card)] hover:border-[var(--accent-line)] hover:bg-[var(--surface-hover)]/30 transition-all cursor-pointer ${
+        className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-[var(--r1)] bg-[var(--surface)] border border-[var(--line)] shadow-[var(--shadow-card)] hover:border-[var(--accent-line)] hover:bg-[var(--surface-hover)]/30 transition-all cursor-pointer ${
           allDisabled ? "opacity-50" : ""
         }`}
       >
-        {/* Top: Icon Socket + Status LED Chip & Toggle */}
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <div className="size-9 rounded-[var(--r1)] bg-[var(--surface-2)] border border-[var(--line-2)] flex items-center justify-center p-1.5 shrink-0 shadow-xs">
+        {/* Left: Docked Icon + Name + Tag */}
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className="size-7 rounded-[var(--r1)] bg-[var(--surface-2)] border border-[var(--line-2)] flex items-center justify-center p-1 shrink-0">
             <ProviderIcon
               src={getIconPath()}
               alt={provider.name}
-              size={24}
-              className="object-contain max-w-[24px] max-h-[24px]"
+              size={18}
+              className="object-contain max-w-[18px] max-h-[18px]"
               fallbackText={
                 provider.textIcon || provider.id.slice(0, 2).toUpperCase()
               }
               fallbackColor={provider.color}
             />
           </div>
-
-          <div className="flex items-center gap-2">
-            {allDisabled ? (
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[var(--r-full)] bg-[var(--surface-2)] border border-[var(--line)] text-[10px] font-mono font-medium text-[var(--text-3)] uppercase">
-                <span className="size-1.5 rounded-full bg-[var(--text-3)]" />
-                Paused
-              </span>
-            ) : connected > 0 ? (
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[var(--r-full)] bg-[#14251D] border border-[#34D39A]/30 text-[10px] font-mono font-medium text-[var(--pos)] uppercase u-tnum">
-                <span className="size-1.5 rounded-full bg-[var(--pos)] shadow-[0_0_6px_rgba(52,211,154,0.6)]" />
-                {connected} Active
-              </span>
-            ) : error > 0 ? (
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[var(--r-full)] bg-[#281515] border border-[#FF6B6B]/30 text-[10px] font-mono font-medium text-[var(--danger)] uppercase">
-                <span className="size-1.5 rounded-full bg-[var(--danger)]" />
-                {errorCode || "Error"}
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[var(--r-full)] bg-[var(--surface-2)] border border-[var(--line)] text-[10px] font-mono font-medium text-[var(--text-3)] uppercase">
-                Standby
-              </span>
-            )}
-
-            {stats.total > 0 && (
-              <div
-                className="opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onToggle(!allDisabled ? false : true);
-                }}
-              >
-                <Toggle
-                  size="sm"
-                  checked={!allDisabled}
-                  onChange={() => {}}
-                  title={allDisabled ? "Enable provider" : "Disable provider"}
-                />
-              </div>
-            )}
+          <div className="min-w-0 flex items-baseline gap-2">
+            <span className="font-semibold text-xs text-[var(--text)] tracking-tight truncate" title={provider.name}>
+              {provider.name}
+            </span>
+            <span className="text-[10px] font-mono text-[var(--text-3)] uppercase hidden xl:inline">
+              {isCompatible ? "OpenAI" : isAnthropicCompatible ? "Anthropic" : "API Key"}
+            </span>
           </div>
         </div>
 
-        {/* Middle: Provider Name & Tech Specs */}
-        <div className="flex flex-col gap-1 mb-3">
-          <h3 className="font-semibold text-sm text-[var(--text)] tracking-tight truncate" title={provider.name}>
-            {provider.name}
-          </h3>
-          <div className="flex items-center gap-1.5 text-[11px] font-mono text-[var(--text-3)]">
-            {isCompatible ? (
-              <span className="px-1.5 py-0.2 rounded-[var(--r1)] bg-[var(--surface-2)] border border-[var(--line)] text-[10px] uppercase">
-                {provider.apiType === "responses" ? "OpenAI Responses" : "OpenAI Chat"}
-              </span>
-            ) : isAnthropicCompatible ? (
-              <span className="px-1.5 py-0.2 rounded-[var(--r1)] bg-[var(--surface-2)] border border-[var(--line)] text-[10px] uppercase">
-                Anthropic Messages
-              </span>
-            ) : (
-              <span className="uppercase tracking-wider">
-                {Array.isArray(authType) ? authType[0] : authType || "API Key"}
-              </span>
-            )}
-            {errorTime && <span>• {errorTime}</span>}
-          </div>
-        </div>
+        {/* Right: LED Status & Count / Toggle */}
+        <div className="flex shrink-0 items-center gap-2">
+          {allDisabled ? (
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-mono text-[var(--text-3)] uppercase">
+              <span className="size-1.5 rounded-full bg-[var(--text-3)]" />
+              Paused
+            </span>
+          ) : connected > 0 ? (
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-mono text-[var(--pos)] uppercase u-tnum">
+              <span className="size-1.5 rounded-full bg-[var(--pos)] shadow-[0_0_6px_rgba(52,211,154,0.6)]" />
+              {connected}
+            </span>
+          ) : error > 0 ? (
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-mono text-[var(--danger)] uppercase">
+              <span className="size-1.5 rounded-full bg-[var(--danger)]" />
+              {errorCode || "Err"}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-mono text-[var(--text-3)] uppercase">
+              <span className="size-1.5 rounded-full bg-[var(--line-2)]" />
+            </span>
+          )}
 
-        {/* Bottom: Modular Telemetry Tray */}
-        <div className="pt-2.5 mt-auto border-t border-[var(--line)] flex items-center justify-between text-[11px] font-mono text-[var(--text-3)]">
-          <span className="u-tnum">
-            {stats.total > 0 ? `${connected}/${stats.total} keys` : "0 keys configured"}
-          </span>
-          <span className="material-symbols-outlined text-[14px] text-[var(--text-3)] group-hover:text-[var(--text)] group-hover:translate-x-0.5 transition-all">
-            arrow_forward
-          </span>
+          {stats.total > 0 && (
+            <div
+              className="opacity-0 group-hover:opacity-100 transition-opacity ml-1"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggle(!allDisabled ? false : true);
+              }}
+            >
+              <Toggle
+                size="sm"
+                checked={!allDisabled}
+                onChange={() => {}}
+                title={allDisabled ? "Enable provider" : "Disable provider"}
+              />
+            </div>
+          )}
         </div>
       </div>
     </Link>
