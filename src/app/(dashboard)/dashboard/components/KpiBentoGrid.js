@@ -76,18 +76,10 @@ export default function KpiBentoGrid({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between py-1">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-            </span>
-            <span className="font-mono text-[11px] font-medium tracking-[0.16em] uppercase text-zinc-400">
-              GATEWAY // TELEMETRY
+            <span className="font-mono text-[15px] font-medium tracking-[0.16em] uppercase text-zinc-400">
+              DASHBOARD
             </span>
           </div>
-          <span className="hidden sm:inline-block text-zinc-700">·</span>
-          <span className="hidden sm:inline-block font-mono text-[11px] text-zinc-500">
-            PORT 20128
-          </span>
         </div>
 
         {/* Period filter + Refresh */}
@@ -173,12 +165,14 @@ export default function KpiBentoGrid({
             </div>
             <div className="mt-1 flex items-center gap-1.5 text-xs font-mono">
               {errorCount === 0 ? (
-                <span className="text-emerald-400/90 font-medium">0 failure signals</span>
+                <>
+                  <span className="text-emerald-400/90 font-medium">0 failure signals</span>
+                  <span className="text-zinc-600">·</span>
+                  <span className="text-emerald-500">200 OK</span>
+                </>
               ) : (
                 <span className="text-amber-400 font-medium">{errorCount} failure signals</span>
               )}
-              <span className="text-zinc-600">·</span>
-              <span className="text-zinc-500">HTTP 200 OK</span>
             </div>
           </div>
         </div>

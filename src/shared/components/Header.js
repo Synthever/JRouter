@@ -172,9 +172,9 @@ const getPageInfo = (pathname) => {
     };
   if (pathname === "/dashboard")
     return {
-      title: "Endpoint",
-      description: "API endpoint configuration",
-      icon: "api",
+      title: "Dashboard",
+      description: "Overview of your AI provider usage and performance",
+      icon: "layout-dashboard",
       breadcrumbs: [],
     };
   return { title: "", description: "", breadcrumbs: [] };
@@ -229,17 +229,20 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
 
   return (
     <header className="shrink-0 flex items-center justify-between gap-3 px-4 lg:px-8 py-3.5 border-b border-[var(--line)] bg-[var(--surface)] z-20">
-      {/* Mobile menu button */}
-      <div className="flex items-center gap-3 lg:hidden shrink-0">
-        {showMenuButton && (
+      {/* Sidebar toggle button (Mobile + Desktop) */}
+      {showMenuButton && (
+        <div className="flex items-center shrink-0 -ml-1">
           <button
+            type="button"
             onClick={onMenuClick}
-            className="text-[var(--text)] hover:text-white transition-colors"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800/60 transition-colors cursor-pointer"
+            title="Toggle sidebar (Ctrl+B)"
+            aria-label="Toggle sidebar"
           >
-            <Icon name="menu" />
+            <Icon name="panel-left" className="text-[18px]" />
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Page title with breadcrumbs */}
       <div className="flex flex-col min-w-0 flex-1">

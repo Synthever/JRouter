@@ -23,13 +23,19 @@ import {
   Languages, Compass, FileUp, BadgeCheck, ShieldCheck, Box,
   Eye, EyeOff, HeartHandshake, AlertTriangle, Wifi, WifiOff,
   Radio, LayoutDashboard, ArrowUpDown, TrendingUp, PieChart,
-  Inbox
+  Inbox, PanelLeftClose, PanelLeftOpen, PanelLeft
 } from "lucide-react";
 import { cn } from "@/shared/utils/cn";
 
 const ICON_MAP = {
   // Navigation & Actions
   "menu": Menu,
+  "panel_left": PanelLeft,
+  "panel-left": PanelLeft,
+  "panel_left_close": PanelLeftClose,
+  "panel-left-close": PanelLeftClose,
+  "panel_left_open": PanelLeftOpen,
+  "panel-left-open": PanelLeftOpen,
   "close": X,
   "check": Check,
   "check_circle": CheckCircle2,
@@ -141,6 +147,10 @@ const ICON_MAP = {
   "playlist_add": ListPlus,
   "layers": Layers,
   "space_dashboard": LayoutDashboard,
+  "layout-dashboard": LayoutDashboard,
+  "layout_dashboard": LayoutDashboard,
+  "layoutdashboard": LayoutDashboard,
+  "dashboard": LayoutDashboard,
   "contrast": Contrast,
   "light": Sun,
   "light_mode": Sun,
@@ -231,7 +241,9 @@ export default function Icon({
   if (!raw || typeof raw !== "string") return null;
 
   const key = raw.trim().toLowerCase();
-  const Component = ICON_MAP[key] || ICON_MAP[raw.trim()] || HelpCircle;
+  const underscoreKey = key.replace(/-/g, "_");
+  const hyphenKey = key.replace(/_/g, "-");
+  const Component = ICON_MAP[key] || ICON_MAP[hyphenKey] || ICON_MAP[underscoreKey] || ICON_MAP[raw.trim()] || HelpCircle;
 
   return (
     <Component

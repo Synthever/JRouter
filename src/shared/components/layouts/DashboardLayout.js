@@ -1,9 +1,10 @@
 "use client";
 import Icon from "@/shared/components/Icon";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { useNotificationStore } from "@/store/notificationStore";
+import { cn } from "@/shared/utils/cn";
 import Sidebar from "../Sidebar";
 import Header from "../Header";
 
@@ -34,9 +35,49 @@ function getToastStyle(type) {
 
 export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
   const pathname = usePathname();
   const notifications = useNotificationStore((state) => state.notifications);
   const removeNotification = useNotificationStore((state) => state.removeNotification);
+
+  // Restore collapsed preference from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("9router_sidebar_collapsed");
+      if (saved === "true") {
+        setDesktopSidebarCollapsed(true);
+      }
+    } catch {}
+  }, []);
+
+  const handleToggleSidebar = useCallback(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setSidebarOpen((v) => !v);
+    } else {
+      setDesktopSidebarCollapsed((prev) => {
+        const next = !prev;
+        try {
+          localStorage.setItem("9router_sidebar_collapsed", String(next));
+        } catch {}
+        return next;
+      });
+    }
+  }, []);
+
+  // Keyboard shortcut Ctrl+B or Cmd+B to toggle sidebar
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
+        // Skip if typing inside inputs or textareas
+        const tag = e.target?.tagName?.toLowerCase();
+        if (tag === "input" || tag === "textarea" || e.target?.isContentEditable) return;
+        e.preventDefault();
+        handleToggleSidebar();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleToggleSidebar]);
 
   // Preload heavy usage charts in background when browser is idle
   useEffect(() => {
@@ -96,8 +137,13 @@ export default function DashboardLayout({ children }) {
       )}
 
       {/* Sidebar - Desktop */}
-      <div className="hidden lg:flex">
-        <Sidebar />
+      <div
+        className={cn(
+          "hidden lg:flex transition-[width,opacity] duration-200 ease-in-out shrink-0 overflow-hidden",
+          desktopSidebarCollapsed ? "w-0 opacity-0 pointer-events-none" : "w-60 opacity-100"
+        )}
+      >
+        <Sidebar onToggleCollapse={handleToggleSidebar} isCollapsed={desktopSidebarCollapsed} />
       </div>
 
       {/* Sidebar - Mobile */}
@@ -111,7 +157,11 @@ export default function DashboardLayout({ children }) {
 
       {/* Main content */}
       <main className="flex flex-col flex-1 h-full min-w-0 relative transition-colors duration-150 isolate bg-bg">
-        <Header key={pathname} onMenuClick={() => setSidebarOpen(true)} />
+        <Header
+          key={pathname}
+          onMenuClick={handleToggleSidebar}
+          isSidebarCollapsed={desktopSidebarCollapsed}
+        />
         <div className={`flex-1 overflow-y-auto custom-scrollbar ${pathname === "/dashboard/basic-chat" ? "" : "p-6 lg:p-8"} ${pathname === "/dashboard/basic-chat" ? "flex flex-col overflow-hidden" : ""}`}>
           <div className={`${pathname === "/dashboard/basic-chat" ? "flex-1 w-full h-full flex flex-col" : "page"}`}>{children}</div>
         </div>

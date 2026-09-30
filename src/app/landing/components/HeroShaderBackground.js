@@ -46,10 +46,10 @@ const ShaderCanvas = dynamic(
                   rotationX={0}
                   rotationY={130}
                   rotationZ={70}
-                  color1="#92dbe0"
-                  color2="#0b7bff"
-                  color3="#3865cf"
-                  reflection={0.4}
+                  color1="#a1a1aa"
+                  color2="#52525b"
+                  color3="#18181b"
+                  reflection={0.35}
                   // View (camera) props
                   cAzimuthAngle={270}
                   cPolarAngle={180}
@@ -57,7 +57,7 @@ const ShaderCanvas = dynamic(
                   cameraZoom={15.1}
                   // Effect props
                   lightType="env"
-                  brightness={0.8}
+                  brightness={0.75}
                   envPreset="city"
                   grain="on"
                   // Tool props
