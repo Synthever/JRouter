@@ -12,7 +12,28 @@
    Brand orange (dark) / soft coral (light), neutral warm bases
    ============================================================ */
 :root {
-  /* Brand scale (light) - centered on #E56A4A */
+  /* JRouter Hardware Design System Tokens (Light Mode) */
+  --bg: #F7F7F8;
+  --bg-2: #EFEFEF;
+  --surface: #FFFFFF;
+  --surface-2: #F0F0F2;
+  --surface-inset: #EAEAEC;
+  --surface-hover: #E4E4E7;
+  --line: rgba(0, 0, 0, 0.08);
+  --line-2: rgba(0, 0, 0, 0.14);
+  --accent-line: rgba(0, 0, 0, 0.22);
+  --text: #0A0A0B;
+  --text-2: #52525B;
+  --text-3: #71717A;
+  --text-muted: #71717A;
+  --text-dim: #A1A1AA;
+  --pos: #15803D;
+  --warn: #B45309;
+  --danger: #DC2626;
+  --promo: #FF3B3B;
+  --promo-accent: #FF8560;
+
+  /* Brand scale (light) */
   --color-brand-50: #fdf1ed;
   --color-brand-100: #fadccf;
   --color-brand-200: #f4b59c;
@@ -28,35 +49,42 @@
   --color-primary: var(--color-brand-500);
   --color-primary-hover: var(--color-brand-600);
 
-  /* Surfaces & backgrounds (light) */
-  --color-bg: #FDFAF6;
-  --color-bg-alt: #F7F3EE;
-  --color-surface: #ffffff;
-  --color-surface-2: #f4f4f5;
-  --color-surface-3: #e7e7e9;
-  --color-sidebar: rgba(244, 241, 236, 0.85);
+  /* Backward-compatible semantic surface mapping */
+  --color-bg: var(--bg);
+  --color-bg-alt: var(--bg-2);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-inset);
+  --color-sidebar: var(--surface);
 
   /* Borders */
-  --color-border: #e5e7eb;
-  --color-border-subtle: #f1f1f3;
+  --color-border: var(--line);
+  --color-border-subtle: var(--line);
 
   /* Text */
-  --color-text: #0a0a0a;
-  --color-text-main: #0a0a0a;
-  --color-text-muted: #6B7280;
-  --color-text-subtle: #9CA3AF;
+  --color-text: var(--text);
+  --color-text-main: var(--text);
+  --color-text-muted: var(--text-2);
+  --color-text-subtle: var(--text-3);
 
   /* Status */
-  --color-danger: #cf222e;
-  --color-success: #10B981;
-  --color-warning: #F59E0B;
+  --color-danger: var(--danger);
+  --color-success: var(--pos);
+  --color-warning: var(--warn);
   --color-info: #3B82F6;
 
   /* Radius */
-  --radius-brand: 10px;
-  --radius-brand-lg: 14px;
+  --r1: 6px;
+  --r2: 10px;
+  --r3: 14px;
+  --r4: 20px;
+  --r-full: 999px;
+  --radius-brand: var(--r2);
+  --radius-brand-lg: var(--r3);
 
   /* Shadows */
+  --shadow-card: inset 0 1px 0 0 rgba(255, 255, 255, 0.8), 0 2px 8px -2px rgba(0, 0, 0, 0.08);
+  --shadow-pop: inset 0 1px 0 0 rgba(255, 255, 255, 0.9), 0 12px 32px -8px rgba(0, 0, 0, 0.12);
   --shadow-soft: 0 1px 2px 0 rgba(0,0,0,0.04);
   --shadow-warm: 0 2px 12px -2px rgba(229, 106, 74, 0.18);
   --shadow-elevated: 0 12px 28px -4px rgba(60, 50, 45, 0.06);
@@ -70,7 +98,28 @@
 }
 
 .dark {
-  /* Brand scale (dark) - centered on #E56A4A, same as light for consistency */
+  /* JRouter Hardware Design System Tokens (Dark Mode) */
+  --bg: #0A0A0B;
+  --bg-2: #0D0D0F;
+  --surface: #131315;
+  --surface-2: #1A1A1D;
+  --surface-inset: #101012;
+  --surface-hover: #232327;
+  --line: rgba(255, 255, 255, 0.065);
+  --line-2: rgba(255, 255, 255, 0.11);
+  --accent-line: rgba(255, 255, 255, 0.18);
+  --text: #EDEDEE;
+  --text-2: #A1A1A6;
+  --text-3: #6B6B70;
+  --text-muted: #A1A1A6;
+  --text-dim: #6B6B70;
+  --pos: #34D39A;
+  --warn: #F2B34B;
+  --danger: #FF6B6B;
+  --promo: #FF3B3B;
+  --promo-accent: #FF8560;
+
+  /* Brand scale (dark) */
   --color-brand-50: #fdf1ed;
   --color-brand-100: #fadccf;
   --color-brand-200: #f4b59c;
@@ -85,27 +134,29 @@
   --color-primary: #E56A4A;
   --color-primary-hover: #cc5236;
 
-  /* Surfaces (dark - Claude-like neutral warm) */
-  --color-bg: #1a1a1a;
-  --color-bg-alt: #1F1F1E;
-  --color-surface: #262626;
-  --color-surface-2: #303030;
-  --color-surface-3: #3a3a3a;
-  --color-sidebar: rgba(30, 30, 30, 0.85);
+  /* Backward-compatible semantic surface mapping (dark) */
+  --color-bg: var(--bg);
+  --color-bg-alt: var(--bg-2);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-inset);
+  --color-sidebar: var(--surface);
 
-  --color-border: #333333;
-  --color-border-subtle: #2a2a2a;
+  --color-border: var(--line);
+  --color-border-subtle: var(--line);
 
-  --color-text: #ededed;
-  --color-text-main: #ededed;
-  --color-text-muted: #9ca3af;
-  --color-text-subtle: #6b7280;
+  --color-text: var(--text);
+  --color-text-main: var(--text);
+  --color-text-muted: var(--text-2);
+  --color-text-subtle: var(--text-3);
 
-  --color-danger: #ef4444;
-  --color-success: #22c55e;
-  --color-warning: #fbbf24;
+  --color-danger: var(--danger);
+  --color-success: var(--pos);
+  --color-warning: var(--warn);
   --color-info: #60a5fa;
 
+  --shadow-card: inset 0 1px 0 0 rgba(255, 255, 255, 0.04), 0 24px 48px -34px rgba(0, 0, 0, 0.85);
+  --shadow-pop: inset 0 1px 0 0 rgba(255, 255, 255, 0.06), 0 30px 60px -30px rgba(0, 0, 0, 0.90);
   --shadow-soft: 0 1px 2px 0 rgba(0,0,0,0.3);
   --shadow-warm: 0 2px 12px -2px rgba(229, 106, 74, 0.25);
   --shadow-elevated: 0 12px 28px -4px rgba(0, 0, 0, 0.45);
@@ -195,8 +246,9 @@ select {
   --shadow-elev: var(--shadow-elev);
   --shadow-focus: var(--shadow-focus);
 
-  /* Font - Inter primary, Apple system fallback */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, sans-serif;
+  /* Font - Geist primary, Apple system fallback */
+  --font-sans: var(--font-geist-sans), "Geist", system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", sans-serif;
+  --font-mono: var(--font-geist-mono), "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 /* Base */
@@ -297,6 +349,95 @@ input, textarea {
   background-color: var(--color-surface);
   box-shadow: var(--shadow-elev);
   border-radius: var(--radius-brand-lg);
+}
+
+/* ============================================================
+   JRouter Hardware Design System Utilities
+   ============================================================ */
+
+/* Utility: Tabular monospace numbers */
+.u-tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Page constraint: 1180px centered */
+.page {
+  max-width: 1180px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+
+/* 5-column dashboard stats grid */
+.grid-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+}
+@media (max-width: 1050px) {
+  .grid-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 720px) {
+  .grid-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 420px) {
+  .grid-stats {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+}
+
+/* Hardware Card style with 1px catchlight */
+.ui-card {
+  background-color: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r3);
+  box-shadow: var(--shadow-card);
+}
+
+/* Hardware Buttons */
+.ui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--r1);
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.ui-btn--primary {
+  background-color: #FFFFFF;
+  color: #0A0A0B;
+  border: 1px solid transparent;
+  padding: 8px 16px;
+}
+.ui-btn--primary:hover {
+  background-color: #EDEDEE;
+}
+.ui-btn--soft {
+  background-color: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--line-2);
+  padding: 7px 14px;
+}
+.ui-btn--soft:hover {
+  background-color: var(--surface-hover);
+  color: #FFFFFF;
+}
+.ui-btn--ghost {
+  background-color: transparent;
+  color: var(--text);
+  border: 1px solid var(--line-2);
+  padding: 7px 14px;
+}
+.ui-btn--ghost:hover {
+  background-color: var(--surface-2);
+  color: var(--text);
 }
 
 /* Hero gradient (compat) */
