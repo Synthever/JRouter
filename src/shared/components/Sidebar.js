@@ -112,36 +112,36 @@ export default function Sidebar({ onClose }) {
 
   return (
     <>
-      <aside className="flex w-72 flex-col border-r border-border-subtle bg-vibrancy backdrop-blur-xl transition-colors duration-300 min-h-full">
+      <aside className="flex w-64 flex-col border-r border-[var(--line)] bg-[var(--surface)] transition-colors duration-150 min-h-full">
         {/* Traffic lights */}
-        <div className="flex items-center gap-2 px-6 pt-5 pb-2">
-          <div className="w-3 h-3 rounded-full bg-[#FF5F56]" />
-          <div className="w-3 h-3 rounded-full bg-[#FFBD2E]" />
-          <div className="w-3 h-3 rounded-full bg-[#27C93F]" />
+        <div className="flex items-center gap-2 px-5 pt-4 pb-2">
+          <div className="w-2.5 h-2.5 rounded-full bg-[#FF5F56]/80" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#FFBD2E]/80" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#27C93F]/80" />
         </div>
 
         {/* Logo */}
-        <div className="px-6 py-4 flex flex-col gap-2">
+        <div className="px-5 py-3 flex flex-col gap-2 border-b border-[var(--line)]">
           <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="flex items-center justify-center size-9 rounded-[10px] bg-gradient-to-br from-brand-500 to-brand-700 shadow-[var(--shadow-warm)]">
-              <span className="material-symbols-outlined text-white text-[20px]">hub</span>
+            <div className="flex items-center justify-center size-8 rounded-[var(--r1)] bg-white text-black shadow-xs">
+              <span className="material-symbols-outlined text-[18px]">hub</span>
             </div>
             <div className="flex flex-col">
-              <h1 className="text-lg font-semibold tracking-tight text-text-main">
+              <h1 className="text-[14px] font-semibold tracking-tight text-[var(--text)]">
                 {APP_CONFIG.name}
               </h1>
-              <span className="text-xs text-text-muted">v{APP_CONFIG.version}</span>
+              <span className="text-[11px] font-mono text-[var(--text-3)]">v{APP_CONFIG.version}</span>
             </div>
           </Link>
           {updateInfo && (
-            <div className="flex flex-col gap-1.5 rounded p-1 -m-1">
-              <span className="text-xs font-semibold text-green-600 dark:text-amber-500">
+            <div className="flex flex-col gap-1.5 rounded-[var(--r1)] p-1.5 bg-[var(--surface-2)] border border-[var(--line)]">
+              <span className="text-[11px] font-semibold text-[var(--pos)]">
                 ↑ New version available: v{updateInfo.latestVersion}
               </span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowUpdateModal(true)}
-                  className="px-2 py-1 rounded bg-green-600 hover:bg-green-700 dark:bg-amber-500 dark:hover:bg-amber-600 text-white text-[11px] font-semibold transition-colors cursor-pointer"
+                  className="px-2 py-0.5 rounded-[var(--r1)] bg-[var(--pos)] text-black text-[11px] font-semibold transition-colors cursor-pointer"
                 >
                   Update now
                 </button>
@@ -150,7 +150,7 @@ export default function Sidebar({ onClose }) {
                   title="Copy install command"
                   className="flex-1 text-left hover:opacity-80 transition-opacity cursor-pointer min-w-0"
                 >
-                  <code className="block text-[10px] text-green-600/80 dark:text-amber-400/70 font-mono truncate">
+                  <code className="block text-[10px] text-[var(--text-2)] font-mono truncate">
                     {copied ? "✓ copied!" : INSTALL_CMD}
                   </code>
                 </button>
@@ -160,23 +160,23 @@ export default function Sidebar({ onClose }) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-2 space-y-0.5 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto custom-scrollbar">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               onClick={onClose}
               className={cn(
-                "flex items-center gap-3 px-3 py-1 rounded-lg transition-all group",
+                "flex items-center gap-2.5 px-3 py-1.5 rounded-[var(--r1)] transition-all group text-[13px] font-medium border",
                 isActive(item.href)
-                  ? "bg-primary/10 text-primary"
-                  : "text-text-muted hover:bg-surface-2 hover:text-text-main"
+                  ? "bg-[var(--surface-2)] text-[var(--text)] border-[var(--accent-line)]"
+                  : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
               )}
             >
               <span
                 className={cn(
                   "material-symbols-outlined text-[18px]",
-                  isActive(item.href) ? "fill-1" : "group-hover:text-primary transition-colors"
+                  isActive(item.href) ? "text-[var(--text)]" : "text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
                 )}
               >
                 {item.icon}
@@ -186,8 +186,8 @@ export default function Sidebar({ onClose }) {
           ))}
 
           {/* System section */}
-          <div className="pt-3 mt-2 space-y-0.5">
-            <p className="px-4 text-xs font-semibold text-text-muted/60 uppercase tracking-wider mb-2">
+          <div className="pt-3 mt-2 space-y-1">
+            <p className="px-3 text-[11px] font-mono font-medium text-[var(--text-3)] uppercase tracking-[0.2em] mb-2">
               System
             </p>
 
@@ -195,39 +195,39 @@ export default function Sidebar({ onClose }) {
             <button
               onClick={() => setMediaOpen((v) => !v)}
               className={cn(
-                "w-full flex items-center gap-3 px-3 py-1 rounded-lg transition-all group",
+                "w-full flex items-center gap-2.5 px-3 py-1.5 rounded-[var(--r1)] transition-all group text-[13px] font-medium border",
                 pathname.startsWith("/dashboard/media-providers")
-                  ? "bg-primary/10 text-primary"
-                  : "text-text-muted hover:bg-surface-2 hover:text-text-main"
+                  ? "bg-[var(--surface-2)] text-[var(--text)] border-[var(--accent-line)]"
+                  : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
               )}
             >
-              <span className="material-symbols-outlined text-[18px]">perm_media</span>
+              <span className="material-symbols-outlined text-[18px] text-[var(--text-3)] group-hover:text-[var(--text)]">perm_media</span>
               <span className="text-[13px] font-medium flex-1 text-left">Media Providers</span>
               {MEDIA_PROVIDER_KINDS.some((k) => VISIBLE_MEDIA_KINDS.includes(k.id) && k.isNew) && (
-                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-[3px] bg-green-500/15 text-green-400">NEW</span>
+                <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-[var(--r1)] bg-[var(--surface-2)] text-[var(--pos)] border border-[var(--line)]">NEW</span>
               )}
-              <span className="material-symbols-outlined text-[14px] transition-transform" style={{ transform: mediaOpen ? "rotate(180deg)" : "rotate(0deg)" }}>
+              <span className="material-symbols-outlined text-[14px] transition-transform text-[var(--text-3)]" style={{ transform: mediaOpen ? "rotate(180deg)" : "rotate(0deg)" }}>
                 expand_more
               </span>
             </button>
             {mediaOpen && (
-              <div className="pl-4">
+              <div className="pl-3 space-y-0.5">
                 {MEDIA_PROVIDER_KINDS.filter((k) => VISIBLE_MEDIA_KINDS.includes(k.id)).map((kind) => (
                   <Link
                     key={kind.id}
                     href={`/dashboard/media-providers/${kind.id}`}
                     onClick={onClose}
                     className={cn(
-                      "flex items-center gap-3 px-4 py-1 rounded-lg transition-all group",
+                      "flex items-center gap-2.5 px-3 py-1 rounded-[var(--r1)] transition-all group border",
                       pathname.startsWith(`/dashboard/media-providers/${kind.id}`)
-                        ? "bg-primary/10 text-primary"
-                        : "text-text-muted hover:bg-surface-2 hover:text-text-main"
+                        ? "bg-[var(--surface-2)] text-[var(--text)] border-[var(--accent-line)]"
+                        : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
                     )}
                   >
-                    <span className="material-symbols-outlined text-[16px]">{kind.icon}</span>
-                    <span className="text-sm">{kind.label}</span>
+                    <span className="material-symbols-outlined text-[16px] text-[var(--text-3)]">{kind.icon}</span>
+                    <span className="text-[13px]">{kind.label}</span>
                     {kind.isNew && (
-                      <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-[3px] bg-green-500/15 text-green-400">NEW</span>
+                      <span className="ml-auto text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-[var(--r1)] bg-[var(--surface-2)] text-[var(--pos)] border border-[var(--line)]">NEW</span>
                     )}
                   </Link>
                 ))}
@@ -236,14 +236,14 @@ export default function Sidebar({ onClose }) {
                   href={COMBINED_WEB_ITEM.href}
                   onClick={onClose}
                   className={cn(
-                    "flex items-center gap-3 px-4 py-1 rounded-lg transition-all group",
+                    "flex items-center gap-2.5 px-3 py-1 rounded-[var(--r1)] transition-all group border",
                     pathname.startsWith(COMBINED_WEB_ITEM.href)
-                      ? "bg-primary/10 text-primary"
-                      : "text-text-muted hover:bg-surface-2 hover:text-text-main"
+                      ? "bg-[var(--surface-2)] text-[var(--text)] border-[var(--accent-line)]"
+                      : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
                   )}
                 >
-                  <span className="material-symbols-outlined text-[16px]">{COMBINED_WEB_ITEM.icon}</span>
-                  <span className="text-sm">{COMBINED_WEB_ITEM.label}</span>
+                  <span className="material-symbols-outlined text-[16px] text-[var(--text-3)]">{COMBINED_WEB_ITEM.icon}</span>
+                  <span className="text-[13px]">{COMBINED_WEB_ITEM.label}</span>
                 </Link>
               </div>
             )}
@@ -254,16 +254,16 @@ export default function Sidebar({ onClose }) {
                 href={item.href}
                 onClick={onClose}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-1 rounded-lg transition-all group",
+                  "flex items-center gap-2.5 px-3 py-1.5 rounded-[var(--r1)] transition-all group border",
                   isActive(item.href)
-                    ? "bg-primary/10 text-primary"
-                    : "text-text-muted hover:bg-surface-2 hover:text-text-main"
+                    ? "bg-[var(--surface-2)] text-[var(--text)] border-[var(--accent-line)]"
+                    : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
                 )}
               >
                 <span
                   className={cn(
                     "material-symbols-outlined text-[18px]",
-                    isActive(item.href) ? "fill-1" : "group-hover:text-primary transition-colors"
+                    isActive(item.href) ? "text-[var(--text)]" : "text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
                   )}
                 >
                   {item.icon}
@@ -281,16 +281,16 @@ export default function Sidebar({ onClose }) {
                   href={item.href}
                   onClick={onClose}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-1 rounded-lg transition-all group",
+                    "flex items-center gap-2.5 px-3 py-1.5 rounded-[var(--r1)] transition-all group border",
                     isActive(item.href)
-                      ? "bg-primary/10 text-primary"
-                      : "text-text-muted hover:bg-surface-2 hover:text-text-main"
+                      ? "bg-[var(--surface-2)] text-[var(--text)] border-[var(--accent-line)]"
+                      : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
                   )}
                 >
                   <span
                     className={cn(
                       "material-symbols-outlined text-[18px]",
-                      isActive(item.href) ? "fill-1" : "group-hover:text-primary transition-colors"
+                      isActive(item.href) ? "text-[var(--text)]" : "text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
                     )}
                   >
                     {item.icon}
@@ -304,15 +304,15 @@ export default function Sidebar({ onClose }) {
             <button
               onClick={() => setShowRemoteModal(true)}
               className={cn(
-                "flex items-center gap-3 px-3 py-1 rounded-lg transition-all group w-full",
-                "text-text-muted hover:bg-surface-2 hover:text-text-main"
+                "flex items-center gap-2.5 px-3 py-1.5 rounded-[var(--r1)] transition-all group w-full border border-transparent",
+                "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
               )}
             >
-              <span className="material-symbols-outlined text-[18px] group-hover:text-primary transition-colors">
+              <span className="material-symbols-outlined text-[18px] text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors">
                 computer
               </span>
               <span className="text-[13px] font-medium">9Remote</span>
-              <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-[3px] bg-green-500/15 text-green-400">
+              <span className="ml-auto text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-[var(--r1)] bg-[var(--surface-2)] text-[var(--pos)] border border-[var(--line)]">
                 NEW
               </span>
             </button>
@@ -324,11 +324,11 @@ export default function Sidebar({ onClose }) {
               rel="noreferrer"
               onClick={onClose}
               className={cn(
-                "flex items-center gap-3 px-3 py-1 rounded-lg transition-all group w-full",
-                "text-text-muted hover:bg-surface-2 hover:text-text-main"
+                "flex items-center gap-2.5 px-3 py-1.5 rounded-[var(--r1)] transition-all group w-full border border-transparent",
+                "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
               )}
             >
-              <span className="material-symbols-outlined text-[18px] group-hover:text-primary transition-colors">
+              <span className="material-symbols-outlined text-[18px] text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors">
                 translate
               </span>
               <span className="text-[13px] font-medium">9English</span>
@@ -339,16 +339,16 @@ export default function Sidebar({ onClose }) {
               href="/dashboard/profile"
               onClick={onClose}
               className={cn(
-                "flex items-center gap-3 px-3 py-1 rounded-lg transition-all group",
+                "flex items-center gap-2.5 px-3 py-1.5 rounded-[var(--r1)] transition-all group border",
                 isActive("/dashboard/profile")
-                  ? "bg-primary/10 text-primary"
-                  : "text-text-muted hover:bg-surface-2 hover:text-text-main"
+                  ? "bg-[var(--surface-2)] text-[var(--text)] border-[var(--accent-line)]"
+                  : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
               )}
             >
               <span
                 className={cn(
                   "material-symbols-outlined text-[18px]",
-                  isActive("/dashboard/profile") ? "fill-1" : "group-hover:text-primary transition-colors"
+                  isActive("/dashboard/profile") ? "text-[var(--text)]" : "text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
                 )}
               >
                 settings
