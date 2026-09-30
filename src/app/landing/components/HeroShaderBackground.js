@@ -1,25 +1,27 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, memo } from "react";
 import dynamic from "next/dynamic";
 
-// ponytail: Dynamic import prevents Next.js SSR WebGL failure. Falls back to dark ambient radial gradient.
+// ponytail: lazyLoad={false} stops WebGL canvas teardown on scroll; preserveDrawingBuffer prevents context discard.
 const ShaderCanvas = dynamic(
   () =>
     import("@shadergradient/react")
       .then((mod) => {
         const { ShaderGradientCanvas, ShaderGradient } = mod;
-        return function ShaderField() {
+        const ShaderField = memo(function ShaderField() {
           return (
             <ShaderGradientCanvas
               style={{
                 position: "absolute",
                 top: 0,
                 left: 0,
-                width: "100vw",
-                height: "120vh",
+                width: "100%",
+                height: "100%",
                 pointerEvents: "none",
               }}
+              lazyLoad={false}
+              preserveDrawingBuffer={true}
               pixelDensity={1}
               pointerEvents="none"
             >
@@ -59,7 +61,8 @@ const ShaderCanvas = dynamic(
               />
             </ShaderGradientCanvas>
           );
-        };
+        });
+        return ShaderField;
       })
       .catch((err) => {
         console.warn("ShaderGradientCanvas load skipped:", err);
@@ -68,7 +71,7 @@ const ShaderCanvas = dynamic(
   { ssr: false }
 );
 
-export default function HeroShaderBackground() {
+export default memo(function HeroShaderBackground() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -77,14 +80,14 @@ export default function HeroShaderBackground() {
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 bg-black">
-      {/* Ambient gradient layer matching color1 #1f469a falling into #000000 */}
+      {/* Permanent high-fidelity blue vortex substrate so background is never empty */}
       <div 
-        className="absolute inset-0 pointer-events-none opacity-70"
+        className="absolute inset-0 pointer-events-none opacity-80"
         style={{
-          background: "radial-gradient(ellipse 80% 60% at 50% 35%, rgba(31, 70, 154, 0.45) 0%, rgba(10, 20, 60, 0.25) 50%, #000000 85%)",
+          background: "radial-gradient(ellipse 75% 65% at 50% 40%, rgba(31, 70, 154, 0.55) 0%, rgba(15, 30, 85, 0.3) 45%, #000000 85%)",
         }}
       />
       {mounted && <ShaderCanvas />}
     </div>
   );
-}
+});

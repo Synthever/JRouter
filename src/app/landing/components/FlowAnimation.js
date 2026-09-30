@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import ProviderIcon from "@/shared/components/ProviderIcon";
+import AppLogo from "@/shared/components/AppLogo";
 
 const CLI_TOOLS = [
   { id: "claude", name: "Claude Code", image: "/providers/claude.png" },
@@ -46,9 +47,7 @@ export default function FlowAnimation() {
     <div className="mt-8 w-full max-w-3xl relative h-[320px] hidden md:flex items-center justify-center">
       {/* JRouter Hub - Center */}
       <div className="relative z-20 w-28 h-28 rounded-full bg-[var(--surface)] border border-[var(--line-2)] shadow-[var(--shadow-card)] flex flex-col items-center justify-center gap-1 group">
-        <span className="material-symbols-outlined text-3xl text-[var(--text)]">
-          hub
-        </span>
+        <AppLogo size={40} />
         <span className="text-[10px] font-mono font-semibold text-[var(--text)] tracking-[0.2em] uppercase">
           JRouter
         </span>

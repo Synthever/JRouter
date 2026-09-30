@@ -25,7 +25,7 @@ export const metadata = {
   title: "9Router - AI Infrastructure Management",
   description: "One endpoint for all your AI providers. Manage keys, monitor usage, and scale effortlessly.",
   icons: {
-    icon: "/favicon.svg",
+    icon: "/brand/jrouter.svg",
   },
 };
 

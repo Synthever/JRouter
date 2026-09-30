@@ -10,7 +10,7 @@ import Footer from "./components/Footer";
 export default function LandingPage() {
   const router = useRouter();
   return (
-    <div className="relative text-[var(--text)] bg-[var(--bg)] font-sans overflow-x-hidden antialiased">
+    <div className="dark relative text-[var(--text)] bg-[var(--bg)] font-sans overflow-x-hidden antialiased min-h-screen">
       {/* Hardware Hairline Grid Substrate */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none bg-[var(--bg)]">
         <div 

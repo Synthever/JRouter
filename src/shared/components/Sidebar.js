@@ -12,6 +12,7 @@ import useSettingsStore from "@/store/settingsStore";
 import Button from "./Button";
 import { ConfirmModal } from "./Modal";
 import NineRemotePromoModal from "./NineRemotePromoModal";
+import AppLogo from "./AppLogo";
 
 // const VISIBLE_MEDIA_KINDS = ["embedding", "image", "imageToText", "tts", "stt", "webSearch", "webFetch", "video", "music"];
 const VISIBLE_MEDIA_KINDS = ["embedding", "image", "video", "tts", "stt", "systemone"];
@@ -123,9 +124,7 @@ export default function Sidebar({ onClose }) {
         {/* Logo */}
         <div className="px-5 py-3 flex flex-col gap-2 border-b border-[var(--line)]">
           <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="flex items-center justify-center size-8 rounded-[var(--r1)] bg-white text-black shadow-xs">
-              <span className="material-symbols-outlined text-[18px]">hub</span>
-            </div>
+            <AppLogo size={32} />
             <div className="flex flex-col">
               <h1 className="text-[14px] font-semibold tracking-tight text-[var(--text)]">
                 {APP_CONFIG.name}

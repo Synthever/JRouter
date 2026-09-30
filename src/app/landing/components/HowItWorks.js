@@ -1,5 +1,7 @@
 "use client";
 
+import AppLogo from "@/shared/components/AppLogo";
+
 export default function HowItWorks() {
   return (
     <section className="lp-section bg-[var(--bg)]" id="how-it-works">
@@ -35,7 +37,7 @@ export default function HowItWorks() {
           {/* Step 2: JRouter Gateway */}
           <div className="p-6 rounded-[var(--r3)] bg-[var(--surface)] border border-[var(--line)] shadow-[var(--shadow-card)] flex flex-col gap-4">
             <div className="size-11 rounded-[var(--r2)] bg-[var(--surface-2)] border border-[var(--accent-line)] flex items-center justify-center text-[var(--text)]">
-              <span className="material-symbols-outlined text-[20px]">hub</span>
+              <AppLogo size={24} />
             </div>
             <div>
               <div className="text-[11px] font-mono text-[var(--text-3)] mb-1 uppercase tracking-[0.2em]">Step 02</div>

@@ -1,5 +1,7 @@
 "use client";
 
+import AppLogo from "@/shared/components/AppLogo";
+
 export default function Footer() {
   return (
     <footer className="border-t border-[var(--line)] bg-[var(--surface)] pt-12 pb-8 px-6">
@@ -8,9 +10,7 @@ export default function Footer() {
           {/* Brand */}
           <div className="col-span-2 lg:col-span-2">
             <div className="flex items-center gap-2.5 mb-4">
-              <div className="size-6 rounded-[var(--r1)] bg-white text-black flex items-center justify-center">
-                <span className="material-symbols-outlined text-[15px]">hub</span>
-              </div>
+              <AppLogo size={28} />
               <h3 className="text-[var(--text)] text-sm font-semibold tracking-tight">JRouter</h3>
             </div>
             <p className="text-[var(--text-3)] text-xs max-w-xs leading-relaxed mb-4">
