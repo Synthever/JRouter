@@ -2,7 +2,6 @@
 import { useRouter } from "next/navigation";
 import Navigation from "./components/Navigation";
 import HeroSection from "./components/HeroSection";
-import FlowAnimation from "./components/FlowAnimation";
 import HowItWorks from "./components/HowItWorks";
 import Features from "./components/Features";
 import GetStarted from "./components/GetStarted";
@@ -27,12 +26,9 @@ export default function LandingPage() {
         <Navigation />
         
         <main>
-          {/* Hero with Flow Animation */}
+          {/* Hero Section */}
           <div className="relative">
             <HeroSection />
-            <div className="flex justify-center pb-16">
-              <FlowAnimation />
-            </div>
           </div>
           
           <GetStarted />
