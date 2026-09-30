@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect } from "react";
 import { Card } from "@/shared/components";
@@ -265,7 +266,7 @@ export function TtsExampleCard({ providerId }) {
                     useTunnel ? "border-primary/40 bg-primary/10 text-primary" : "border-border text-text-muted hover:text-primary"
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[14px]">wifi_tethering</span>
+                  <Icon className="text-[14px]">wifi_tethering</Icon>
                   Tunnel
                 </button>
               )}
@@ -333,7 +334,7 @@ export function TtsExampleCard({ providerId }) {
                   onClick={openModal}
                   className="flex w-full items-center justify-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-border text-text-muted hover:text-primary hover:border-primary/40 transition-colors sm:w-auto sm:shrink-0"
                 >
-                  <span className="material-symbols-outlined text-[14px]">language</span>
+                  <Icon className="text-[14px]">language</Icon>
                   Select language
                 </button>
               </div>
@@ -393,7 +394,7 @@ export function TtsExampleCard({ providerId }) {
                       onClick={() => { setVoiceId(""); setSelectedVoice(""); }}
                       className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-primary transition-colors"
                     >
-                      <span className="material-symbols-outlined text-[14px]">close</span>
+                      <Icon className="text-[14px]">close</Icon>
                     </button>
                   )}
                 </div>
@@ -434,7 +435,7 @@ export function TtsExampleCard({ providerId }) {
                   onClick={() => setInput("")}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-primary transition-colors"
                 >
-                  <span className="material-symbols-outlined text-[14px]">close</span>
+                  <Icon className="text-[14px]">close</Icon>
                 </button>
               )}
             </div>
@@ -457,7 +458,7 @@ export function TtsExampleCard({ providerId }) {
                     onClick={() => setStyle("")}
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-primary transition-colors"
                   >
-                    <span className="material-symbols-outlined text-[14px]">close</span>
+                    <Icon className="text-[14px]">close</Icon>
                   </button>
                 )}
               </div>
@@ -485,7 +486,7 @@ export function TtsExampleCard({ providerId }) {
                   onClick={() => copyCurl(curlSnippet)}
                   className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-primary transition-colors"
                 >
-                  <span className="material-symbols-outlined text-[14px]">{copiedCurl ? "check" : "content_copy"}</span>
+                  <Icon className="text-[14px]">{copiedCurl ? "check" : "content_copy"}</Icon>
                   {copiedCurl ? "Copied" : "Copy"}
                 </button>
                 <button
@@ -493,9 +494,9 @@ export function TtsExampleCard({ providerId }) {
                   disabled={running || !input.trim() || !modelFull}
                   className="flex w-full sm:w-auto items-center justify-center gap-1.5 px-3 py-1 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <span className="material-symbols-outlined text-[14px]" style={running ? { animation: "spin 1s linear infinite" } : undefined}>
+                  <Icon className="text-[14px]" style={running ? { animation: "spin 1s linear infinite" } : undefined}>
                     play_arrow
-                  </span>
+                  </Icon>
                   {running ? "Generating..." : "Run"}
                 </button>
               </div>
@@ -513,7 +514,7 @@ export function TtsExampleCard({ providerId }) {
                   Response {latency && <span className="font-normal normal-case">&#9889; {latency}ms</span>}
                 </span>
                 <a href={audioUrl} download="speech.mp3" className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-primary transition-colors">
-                  <span className="material-symbols-outlined text-[14px]">download</span>
+                  <Icon className="text-[14px]">download</Icon>
                   Download
                 </a>
               </div>
@@ -559,7 +560,7 @@ export function TtsExampleCard({ providerId }) {
             <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0 rounded-t-xl">
               <h3 className="text-sm font-semibold">Select Language</h3>
               <button onClick={() => setModalOpen(false)} className="text-text-muted hover:text-primary transition-colors">
-                <span className="material-symbols-outlined text-[20px]">close</span>
+                <Icon className="text-[20px]">close</Icon>
               </button>
             </div>
 
@@ -593,7 +594,7 @@ export function TtsExampleCard({ providerId }) {
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="text-xs text-text-muted">{c.voices.length} voices</span>
                         {selectedLang === c.code && (
-                          <span className="material-symbols-outlined text-[16px] text-primary">check</span>
+                          <Icon className="text-[16px] text-primary">check</Icon>
                         )}
                       </div>
                     </button>

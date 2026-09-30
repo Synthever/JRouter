@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect, useCallback, useMemo, Fragment } from "react";
 import PropTypes from "prop-types";
@@ -195,9 +196,9 @@ export default function UsageTable({
                 >
                   <td className="px-6 py-3">
                     <div className="flex items-center gap-2">
-                      <span className={`material-symbols-outlined text-[18px] text-text-muted transition-transform ${expanded.has(group.groupKey) ? "rotate-90" : ""}`}>
+                      <Icon className={`text-[18px] text-text-muted transition-transform ${expanded.has(group.groupKey) ? "rotate-90" : ""}`}>
                         chevron_right
-                      </span>
+                      </Icon>
                       <span className={`font-medium transition-colors ${group.summary.pending > 0 ? "text-primary" : ""}`}>
                         {group.groupKey}
                       </span>

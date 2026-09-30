@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useState } from "react";
 import PropTypes from "prop-types";
@@ -110,7 +111,7 @@ export default function GitLabAuthModal({ isOpen, providerInfo, onSuccess, onClo
                 onClick={() => setMode("oauth")}
                 className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border hover:border-primary hover:bg-primary/5 transition-colors text-left"
               >
-                <span className="material-symbols-outlined text-2xl text-primary">lock_open</span>
+                <Icon className="text-2xl text-primary">lock_open</Icon>
                 <div>
                   <p className="text-sm font-medium">OAuth App</p>
                   <p className="text-xs text-text-muted">Use a GitLab OAuth application</p>
@@ -120,7 +121,7 @@ export default function GitLabAuthModal({ isOpen, providerInfo, onSuccess, onClo
                 onClick={() => setMode("pat")}
                 className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border hover:border-primary hover:bg-primary/5 transition-colors text-left"
               >
-                <span className="material-symbols-outlined text-2xl text-primary">key</span>
+                <Icon className="text-2xl text-primary">key</Icon>
                 <div>
                   <p className="text-sm font-medium">Personal Access Token</p>
                   <p className="text-xs text-text-muted">Use a GitLab PAT with api scope</p>

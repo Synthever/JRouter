@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getStatusVariant as getConnectionStatusVariant } from "@/shared/utils/connectionStatus";
@@ -104,13 +105,13 @@ function ConnectionRow({ connection, proxyPools, isOAuth, isFirst, isLast, onMov
       <div className="flex w-full min-w-0 flex-1 items-start gap-3 sm:items-center">
         <div className="flex flex-col">
           <button onClick={onMoveUp} disabled={isFirst} className={`p-0.5 rounded ${isFirst ? "text-text-muted/30 cursor-not-allowed" : "hover:bg-sidebar text-text-muted hover:text-primary"}`}>
-            <span className="material-symbols-outlined text-sm">keyboard_arrow_up</span>
+            <Icon className="text-sm">keyboard_arrow_up</Icon>
           </button>
           <button onClick={onMoveDown} disabled={isLast} className={`p-0.5 rounded ${isLast ? "text-text-muted/30 cursor-not-allowed" : "hover:bg-sidebar text-text-muted hover:text-primary"}`}>
-            <span className="material-symbols-outlined text-sm">keyboard_arrow_down</span>
+            <Icon className="text-sm">keyboard_arrow_down</Icon>
           </button>
         </div>
-        <span className="material-symbols-outlined text-base text-text-muted">{isOAuth ? "lock" : "key"}</span>
+        <Icon className="text-base text-text-muted">{isOAuth ? "lock" : "key"}</Icon>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">{displayName}</p>
           <div className="flex flex-wrap items-center gap-2 mt-1">
@@ -142,7 +143,7 @@ function ConnectionRow({ connection, proxyPools, isOAuth, isFirst, isLast, onMov
                 className={`flex flex-col items-center px-2 py-1 rounded hover:bg-black/5 dark:hover:bg-white/5 transition-colors ${hasAnyProxy ? "text-primary" : "text-text-muted hover:text-primary"}`}
                 disabled={updatingProxy}
               >
-                <span className="material-symbols-outlined text-[18px]">{updatingProxy ? "progress_activity" : "lan"}</span>
+                <Icon className="text-[18px]">{updatingProxy ? "progress_activity" : "lan"}</Icon>
                 <span className="text-[10px] leading-tight">Proxy</span>
               </button>
               {showProxyDropdown && (
@@ -156,11 +157,11 @@ function ConnectionRow({ connection, proxyPools, isOAuth, isFirst, isLast, onMov
             </div>
           )}
           <button onClick={onEdit} className="flex flex-col items-center px-2 py-1 rounded hover:bg-black/5 dark:hover:bg-white/5 text-text-muted hover:text-primary">
-            <span className="material-symbols-outlined text-[18px]">edit</span>
+            <Icon className="text-[18px]">edit</Icon>
             <span className="text-[10px] leading-tight">Edit</span>
           </button>
           <button onClick={onDelete} className="flex flex-col items-center px-2 py-1 rounded hover:bg-red-500/10 text-red-500">
-            <span className="material-symbols-outlined text-[18px]">delete</span>
+            <Icon className="text-[18px]">delete</Icon>
             <span className="text-[10px] leading-tight">Delete</span>
           </button>
         </div>

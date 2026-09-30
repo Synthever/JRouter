@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AppLogo from "@/shared/components/AppLogo";
@@ -46,7 +47,7 @@ export default function Navigation() {
             <a className="hover:text-white transition-colors" href="#how-it-works">How it Works</a>
             <a className="hover:text-white transition-colors" href="https://github.com/Synthever/JRouter#readme" target="_blank" rel="noopener noreferrer">Docs</a>
             <a className="hover:text-white transition-colors flex items-center gap-1" href="https://github.com/Synthever/JRouter" target="_blank" rel="noopener noreferrer">
-              GitHub <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+              GitHub <Icon className="text-[14px]">open_in_new</Icon>
             </a>
           </div>
         </div>
@@ -55,7 +56,7 @@ export default function Navigation() {
         <div className="flex items-center gap-3">
           <button 
             onClick={() => router.push("/dashboard")}
-            className="hidden sm:inline-flex cursor-pointer bg-white/10 hover:bg-white/20 transition px-4 py-1.5 sm:py-2 rounded-md sm:rounded-full text-xs sm:text-sm font-medium border border-white/15 backdrop-blur-md text-white shadow-xs"
+            className="hidden sm:inline-flex cursor-pointer bg-white/10 hover:bg-white/20 transition px-4 py-1.5 sm:py-2 rounded-md sm:rounded-full text-xs sm:text-sm font-medium backdrop-blur-md text-white shadow-xs"
           >
             Dashboard
           </button>
@@ -64,7 +65,7 @@ export default function Navigation() {
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle menu"
           >
-            <span className="material-symbols-outlined text-[20px]">{mobileMenuOpen ? "close" : "menu"}</span>
+            <Icon className="text-[20px]">{mobileMenuOpen ? "close" : "menu"}</Icon>
           </button>
         </div>
       </div>
@@ -77,7 +78,7 @@ export default function Navigation() {
           <a className="text-neutral-300 hover:text-white text-sm font-medium transition-colors" href="https://github.com/Synthever/JRouter#readme" target="_blank" rel="noopener noreferrer">Docs</a>
           <a className="text-neutral-300 hover:text-white text-sm font-medium transition-colors flex items-center justify-between" href="https://github.com/Synthever/JRouter" target="_blank" rel="noopener noreferrer">
             <span>GitHub</span>
-            <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+            <Icon className="text-[14px]">open_in_new</Icon>
           </a>
           <button 
             onClick={() => {

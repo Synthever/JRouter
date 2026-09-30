@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useEffect, useMemo, useState } from "react";
 import { readKeyPresets, upsertKeyPreset, deleteKeyPreset, subscribeKeyPresets } from "./cliEndpointPresets";
@@ -93,7 +94,7 @@ export default function ApiKeySelect({ value, onChange, apiKeys = [], cloudEnabl
         </select>
         {isSaved && (
           <button type="button" onClick={handleDeleteSaved} className="p-1 text-text-muted hover:text-red-500 rounded transition-colors shrink-0" title="Delete saved key">
-            <span className="material-symbols-outlined text-[14px]">delete</span>
+            <Icon className="text-[14px]">delete</Icon>
           </button>
         )}
       </div>

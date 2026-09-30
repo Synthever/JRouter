@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect, useRef } from "react";
 import { Card, Button, Toggle, Input } from "@/shared/components";
@@ -771,7 +772,7 @@ export default function ProfilePage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
             <div className="flex items-center gap-3 sm:gap-4">
               <div className="size-10 sm:size-12 rounded-lg bg-green-500/10 text-green-500 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-xl sm:text-2xl">computer</span>
+                <Icon className="text-xl sm:text-2xl">computer</Icon>
               </div>
               <div>
                 <h2 className="text-lg sm:text-xl font-semibold">Local Mode</h2>
@@ -791,9 +792,9 @@ export default function ProfilePage() {
                       : "text-text-muted hover:text-text-main"
                   )}
                 >
-                  <span className="material-symbols-outlined text-[18px]">
+                  <Icon className="text-[18px]">
                     {option === "light" ? "light_mode" : option === "dark" ? "dark_mode" : "contrast"}
-                  </span>
+                  </Icon>
                   <span className="capitalize text-xs sm:text-sm">{option}</span>
                 </button>
               ))}
@@ -845,7 +846,7 @@ export default function ProfilePage() {
         <Card>
           <div className="flex items-center gap-3 mb-4">
             <div className="size-10 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-[20px]">language</span>
+              <Icon className="text-[20px]">language</Icon>
             </div>
             <h3 className="text-base sm:text-lg font-semibold">Language</h3>
           </div>
@@ -863,7 +864,7 @@ export default function ProfilePage() {
         <Card>
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
-              <span className="material-symbols-outlined text-[20px]">shield</span>
+              <Icon className="text-[20px]">shield</Icon>
             </div>
             <h3 className="text-base sm:text-lg font-semibold">Security</h3>
           </div>
@@ -949,7 +950,7 @@ export default function ProfilePage() {
             className="w-full flex items-center gap-3 text-left"
           >
             <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-500 shrink-0">
-              <span className="material-symbols-outlined text-[20px]">lock_open</span>
+              <Icon className="text-[20px]">lock_open</Icon>
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-base sm:text-lg font-semibold">Single Sign-On (SSO)</h3>
@@ -961,9 +962,9 @@ export default function ProfilePage() {
                     : "Optional SSO via Okta, Entra ID, Keycloak, or OIDC"}
               </p>
             </div>
-            <span className="material-symbols-outlined text-text-muted shrink-0">
+            <Icon className="text-text-muted shrink-0">
               {oidcExpanded ? "expand_less" : "expand_more"}
-            </span>
+            </Icon>
           </button>
           {oidcExpanded && (
             <div className="flex flex-col gap-4 mt-4">
@@ -1062,7 +1063,7 @@ export default function ProfilePage() {
                       className="w-full p-3 flex items-center justify-between gap-2 text-left hover:bg-surface/50 transition-colors"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-primary text-lg">menu_book</span>
+                        <Icon className="text-primary text-lg">menu_book</Icon>
                         <div>
                           <p className="font-semibold text-xs sm:text-sm text-text-main">
                             IdP Setup Guidelines & Provider Configuration Instructions
@@ -1072,12 +1073,10 @@ export default function ProfilePage() {
                           </p>
                         </div>
                       </div>
-                      <span
-                        className="material-symbols-outlined text-text-muted transition-transform text-lg"
-                        style={{ transform: showSamlGuide ? "rotate(180deg)" : "none" }}
-                      >
+                      <Icon className="text-text-muted transition-transform text-lg"
+                        style={{ transform: showSamlGuide ? "rotate(180deg)" : "none" }}>
                         expand_more
-                      </span>
+                      </Icon>
                     </button>
 
                     {showSamlGuide && (
@@ -1296,7 +1295,7 @@ export default function ProfilePage() {
                         download="9router-sp-metadata.xml"
                         className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                       >
-                        <span className="material-symbols-outlined text-[16px]">download</span>
+                        <Icon className="text-[16px]">download</Icon>
                         Download XML
                       </a>
                     </div>
@@ -1439,7 +1438,7 @@ export default function ProfilePage() {
         <Card>
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500 shrink-0">
-              <span className="material-symbols-outlined text-[20px]">route</span>
+              <Icon className="text-[20px]">route</Icon>
             </div>
             <h3 className="text-base sm:text-lg font-semibold">Routing Strategy</h3>
           </div>
@@ -1530,7 +1529,7 @@ export default function ProfilePage() {
         <Card>
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500 shrink-0">
-              <span className="material-symbols-outlined text-[20px]">wifi</span>
+              <Icon className="text-[20px]">wifi</Icon>
             </div>
             <h3 className="text-base sm:text-lg font-semibold">Network</h3>
           </div>
@@ -1602,7 +1601,7 @@ export default function ProfilePage() {
         <Card>
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 rounded-lg bg-orange-500/10 text-orange-500 shrink-0">
-              <span className="material-symbols-outlined text-[20px]">monitoring</span>
+              <Icon className="text-[20px]">monitoring</Icon>
             </div>
             <h3 className="text-base sm:text-lg font-semibold">Observability</h3>
           </div>

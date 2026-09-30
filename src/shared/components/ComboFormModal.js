@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect } from "react";
 import Modal from "./Modal";
@@ -35,15 +36,15 @@ function ModelItem({ index, model, isFirst, isLast, onEdit, onMoveUp, onMoveDown
       <div className="flex shrink-0 items-center gap-0.5">
         <button onClick={onMoveUp} disabled={isFirst}
           className={`p-0.5 rounded ${isFirst ? "text-text-muted/20 cursor-not-allowed" : "text-text-muted hover:text-primary hover:bg-black/5 dark:hover:bg-white/5"}`} title="Move up">
-          <span className="material-symbols-outlined text-[12px]">arrow_upward</span>
+          <Icon className="text-[12px]">arrow_upward</Icon>
         </button>
         <button onClick={onMoveDown} disabled={isLast}
           className={`p-0.5 rounded ${isLast ? "text-text-muted/20 cursor-not-allowed" : "text-text-muted hover:text-primary hover:bg-black/5 dark:hover:bg-white/5"}`} title="Move down">
-          <span className="material-symbols-outlined text-[12px]">arrow_downward</span>
+          <Icon className="text-[12px]">arrow_downward</Icon>
         </button>
       </div>
       <button onClick={onRemove} className="p-0.5 hover:bg-red-500/10 rounded text-text-muted hover:text-red-500 transition-all" title="Remove">
-        <span className="material-symbols-outlined text-[12px]">close</span>
+        <Icon className="text-[12px]">close</Icon>
       </button>
     </div>
   );
@@ -135,7 +136,7 @@ export default function ComboFormModal({ isOpen, combo, onClose, onSave, activeP
             <label className="text-sm font-medium mb-1.5 block">Models</label>
             {models.length === 0 ? (
               <div className="text-center py-4 border border-dashed border-black/10 dark:border-white/10 rounded-lg bg-black/[0.01] dark:bg-white/[0.01]">
-                <span className="material-symbols-outlined text-text-muted text-xl mb-1">layers</span>
+                <Icon className="text-text-muted text-xl mb-1">layers</Icon>
                 <p className="text-xs text-text-muted">No models added yet</p>
               </div>
             ) : (
@@ -152,7 +153,7 @@ export default function ComboFormModal({ isOpen, combo, onClose, onSave, activeP
             )}
             <button onClick={() => setShowModelSelect(true)}
               className="w-full mt-2 py-2 border border-dashed border-black/10 dark:border-white/10 rounded-lg text-xs text-primary font-medium hover:text-primary hover:border-primary/50 transition-colors flex items-center justify-center gap-1">
-              <span className="material-symbols-outlined text-[16px]">add</span>
+              <Icon className="text-[16px]">add</Icon>
               Add Model
             </button>
           </div>

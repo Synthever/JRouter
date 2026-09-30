@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
@@ -113,9 +114,9 @@ export default function KiroSocialOAuthModal({ isOpen, provider, onSuccess, onCl
         {step === "loading" && (
           <div className="text-center py-6">
             <div className="size-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
-              <span className="material-symbols-outlined text-3xl text-primary animate-spin">
+              <Icon className="text-3xl text-primary animate-spin">
                 progress_activity
-              </span>
+              </Icon>
             </div>
             <h3 className="text-lg font-semibold mb-2">Initializing...</h3>
             <p className="text-sm text-text-muted">
@@ -171,7 +172,7 @@ export default function KiroSocialOAuthModal({ isOpen, provider, onSuccess, onCl
         {step === "success" && (
           <div className="text-center py-6">
             <div className="size-16 mx-auto mb-4 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-              <span className="material-symbols-outlined text-3xl text-green-600">check_circle</span>
+              <Icon className="text-3xl text-green-600">check_circle</Icon>
             </div>
             <h3 className="text-lg font-semibold mb-2">Connected Successfully!</h3>
             <p className="text-sm text-text-muted mb-4">
@@ -187,7 +188,7 @@ export default function KiroSocialOAuthModal({ isOpen, provider, onSuccess, onCl
         {step === "error" && (
           <div className="text-center py-6">
             <div className="size-16 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-              <span className="material-symbols-outlined text-3xl text-red-600">error</span>
+              <Icon className="text-3xl text-red-600">error</Icon>
             </div>
             <h3 className="text-lg font-semibold mb-2">Connection Failed</h3>
             <p className="text-sm text-red-600 mb-4">{error}</p>

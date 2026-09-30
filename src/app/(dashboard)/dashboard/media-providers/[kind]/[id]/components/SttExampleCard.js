@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect } from "react";
 import { Card } from "@/shared/components";
@@ -147,7 +148,7 @@ export function SttExampleCard({ providerId }) {
                   useTunnel ? "border-primary/40 bg-primary/10 text-primary" : "border-border text-text-muted hover:text-primary"
                 }`}
               >
-                <span className="material-symbols-outlined text-[14px]">wifi_tethering</span>
+                <Icon className="text-[14px]">wifi_tethering</Icon>
                 Tunnel
               </button>
             )}
@@ -244,7 +245,7 @@ export function SttExampleCard({ providerId }) {
                 onClick={() => copyCurl(curlSnippet)}
                 className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-primary transition-colors"
               >
-                <span className="material-symbols-outlined text-[14px]">{copiedCurl ? "check" : "content_copy"}</span>
+                <Icon className="text-[14px]">{copiedCurl ? "check" : "content_copy"}</Icon>
                 {copiedCurl ? "Copied" : "Copy"}
               </button>
               <button
@@ -252,9 +253,9 @@ export function SttExampleCard({ providerId }) {
                 disabled={running || !audioFile || !modelFull}
                 className="flex w-full sm:w-auto items-center justify-center gap-1.5 px-3 py-1 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span className="material-symbols-outlined text-[14px]" style={running ? { animation: "spin 1s linear infinite" } : undefined}>
+                <Icon className="text-[14px]" style={running ? { animation: "spin 1s linear infinite" } : undefined}>
                   play_arrow
-                </span>
+                </Icon>
                 {running ? "Transcribing..." : "Run"}
               </button>
             </div>
@@ -275,7 +276,7 @@ export function SttExampleCard({ providerId }) {
                 onClick={() => copyRes(resultStr)}
                 className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-primary transition-colors"
               >
-                <span className="material-symbols-outlined text-[14px]">{copiedRes ? "check" : "content_copy"}</span>
+                <Icon className="text-[14px]">{copiedRes ? "check" : "content_copy"}</Icon>
                 {copiedRes ? "Copied" : "Copy"}
               </button>
             )}

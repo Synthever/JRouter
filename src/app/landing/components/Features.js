@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 const FEATURES = [
   { 
@@ -68,7 +69,7 @@ export default function Features() {
             >
               <div>
                 <div className="size-9 rounded-[var(--r1)] bg-[var(--surface-2)] border border-[var(--line-2)] flex items-center justify-center text-[var(--text)] mb-3">
-                  <span className="material-symbols-outlined text-[18px]">{feature.icon}</span>
+                  <Icon className="text-[18px]">{feature.icon}</Icon>
                 </div>
                 <h3 className="text-sm font-semibold text-[var(--text)] mb-1">{feature.title}</h3>
                 <p className="text-xs text-[var(--text-2)] leading-relaxed">{feature.desc}</p>

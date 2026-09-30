@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
@@ -139,13 +140,13 @@ export default function AddCustomModelModal({ isOpen, providerAlias, providerDis
         {/* Test result */}
         {testStatus === "ok" && (
           <div className="flex items-center gap-2 text-sm text-green-600">
-            <span className="material-symbols-outlined text-base">check_circle</span>
+            <Icon className="text-base">check_circle</Icon>
             Model is reachable
           </div>
         )}
         {testStatus === "error" && (
           <div className="flex items-start gap-2 text-sm text-red-500">
-            <span className="material-symbols-outlined text-base shrink-0">cancel</span>
+            <Icon className="text-base shrink-0">cancel</Icon>
             <span>{testError || "Model not reachable"}</span>
           </div>
         )}

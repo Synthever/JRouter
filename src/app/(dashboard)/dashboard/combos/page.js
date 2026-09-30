@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect } from "react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
@@ -414,7 +415,7 @@ export default function CombosPage() {
         <Card>
           <div className="text-center py-12">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4">
-              <span className="material-symbols-outlined text-[32px]">layers</span>
+              <Icon className="text-[32px]">layers</Icon>
             </div>
             <p className="text-text-main font-medium mb-1">No combos yet</p>
             <p className="text-sm text-text-muted mb-4">Create model combos with fallback support</p>
@@ -588,7 +589,7 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
             />
           </label>
           <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-primary text-[18px]">layers</span>
+            <Icon className="text-primary text-[18px]">layers</Icon>
           </div>
           <div className="min-w-0 flex-1">
             <code className="block truncate font-mono text-sm font-medium">{combo.name}</code>
@@ -627,7 +628,7 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
                   className="inline-flex max-w-full items-center gap-1 rounded border border-dashed border-primary/40 px-1.5 py-0.5 font-mono text-[11px] text-primary hover:border-primary hover:bg-primary/5 transition-colors"
                   title="Pick the model that fuses panel answers"
                 >
-                  <span className="material-symbols-outlined text-[13px]">gavel</span>
+                  <Icon className="text-[13px]">gavel</Icon>
                   <span className="truncate">{judge || `Auto — ${combo.models[0] || "first model"}`}</span>
                 </button>
                 {judge && (
@@ -636,7 +637,7 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
                     className="p-0.5 rounded text-text-muted hover:text-red-500 hover:bg-red-500/10 transition-colors"
                     title="Reset judge to Auto"
                   >
-                    <span className="material-symbols-outlined text-[13px]">close</span>
+                    <Icon className="text-[13px]">close</Icon>
                   </button>
                 )}
               </div>
@@ -662,9 +663,9 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
               className="flex flex-col items-center rounded px-2 py-1 text-text-muted transition-colors hover:bg-black/5 hover:text-primary dark:hover:bg-white/5"
               title="Copy combo name"
             >
-              <span className="material-symbols-outlined text-[18px]">
+              <Icon className="text-[18px]">
                 {copied === `combo-${combo.id}` ? "check" : "content_copy"}
-              </span>
+              </Icon>
               <span className="text-[10px] leading-tight">Copy</span>
             </button>
             <button
@@ -672,7 +673,7 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
               className="flex flex-col items-center rounded px-2 py-1 text-text-muted transition-colors hover:bg-black/5 hover:text-primary dark:hover:bg-white/5"
               title="Edit"
             >
-              <span className="material-symbols-outlined text-[18px]">edit</span>
+              <Icon className="text-[18px]">edit</Icon>
               <span className="text-[10px] leading-tight">Edit</span>
             </button>
             <button
@@ -680,7 +681,7 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
               className="flex flex-col items-center rounded px-2 py-1 text-red-500 transition-colors hover:bg-red-500/10"
               title="Delete"
             >
-              <span className="material-symbols-outlined text-[18px]">delete</span>
+              <Icon className="text-[18px]">delete</Icon>
               <span className="text-[10px] leading-tight">Delete</span>
             </button>
           </div>
@@ -772,7 +773,7 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
             aria-label={`Enable ${cap.label} adapter`}
           />
           <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-primary text-[18px]">{cap.icon}</span>
+            <Icon className="text-primary text-[18px]">{cap.icon}</Icon>
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
@@ -852,7 +853,7 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
                         }`}
                         title="Move up"
                       >
-                        <span className="material-symbols-outlined text-[16px] leading-none">arrow_upward</span>
+                        <Icon className="text-[16px] leading-none">arrow_upward</Icon>
                       </button>
                       <button
                         type="button"
@@ -865,7 +866,7 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
                         }`}
                         title="Move down"
                       >
-                        <span className="material-symbols-outlined text-[16px] leading-none">arrow_downward</span>
+                        <Icon className="text-[16px] leading-none">arrow_downward</Icon>
                       </button>
                     </div>
                   </td>
@@ -881,7 +882,7 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
                       }`}
                       title="Remove model"
                     >
-                      <span className="material-symbols-outlined text-[16px] leading-none">close</span>
+                      <Icon className="text-[16px] leading-none">close</Icon>
                     </button>
                   </td>
                 </tr>
@@ -982,7 +983,7 @@ function ModelItem({ id, index, model, isFirst, isLast, onEdit, onMoveUp, onMove
           className={`p-0.5 rounded ${isFirst ? "text-text-muted/20 cursor-not-allowed" : "text-text-muted hover:text-primary hover:bg-black/5 dark:hover:bg-white/5"}`}
           title="Move up"
         >
-          <span className="material-symbols-outlined text-[12px]">arrow_upward</span>
+          <Icon className="text-[12px]">arrow_upward</Icon>
         </button>
         <button
           onClick={onMoveDown}
@@ -990,7 +991,7 @@ function ModelItem({ id, index, model, isFirst, isLast, onEdit, onMoveUp, onMove
           className={`p-0.5 rounded ${isLast ? "text-text-muted/20 cursor-not-allowed" : "text-text-muted hover:text-primary hover:bg-black/5 dark:hover:bg-white/5"}`}
           title="Move down"
         >
-          <span className="material-symbols-outlined text-[12px]">arrow_downward</span>
+          <Icon className="text-[12px]">arrow_downward</Icon>
         </button>
       </div>
 
@@ -1000,7 +1001,7 @@ function ModelItem({ id, index, model, isFirst, isLast, onEdit, onMoveUp, onMove
         className="p-0.5 hover:bg-red-500/10 rounded text-text-muted hover:text-red-500 transition-all"
         title="Remove"
       >
-        <span className="material-symbols-outlined text-[12px]">close</span>
+        <Icon className="text-[12px]">close</Icon>
       </button>
     </div>
   );
@@ -1134,7 +1135,7 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, kindF
 
             {models.length === 0 ? (
               <div className="text-center py-4 border border-dashed border-black/10 dark:border-white/10 rounded-lg bg-black/[0.01] dark:bg-white/[0.01]">
-                <span className="material-symbols-outlined text-text-muted text-xl mb-1">layers</span>
+                <Icon className="text-text-muted text-xl mb-1">layers</Icon>
                 <p className="text-xs text-text-muted">No models added yet</p>
               </div>
             ) : (
@@ -1169,7 +1170,7 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, kindF
               onClick={() => setShowModelSelect(true)}
               className="w-full mt-2 py-2 border border-dashed border-black/10 dark:border-white/10 rounded-lg text-xs text-primary font-medium hover:text-primary hover:border-primary/50 transition-colors flex items-center justify-center gap-1"
             >
-              <span className="material-symbols-outlined text-[16px]">add</span>
+              <Icon className="text-[16px]">add</Icon>
               Add Model
             </button>
           </div>

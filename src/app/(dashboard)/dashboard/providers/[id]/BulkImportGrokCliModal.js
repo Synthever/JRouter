@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useState, useRef } from "react";
 import { Modal, Button } from "@/shared/components";
@@ -227,7 +228,7 @@ export default function BulkImportGrokCliModal({ isOpen, onClose, onSuccess }) {
 
           {isDragging && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-sidebar/90 rounded pointer-events-none backdrop-blur-xs">
-              <span className="material-symbols-outlined text-3xl text-primary mb-1">upload_file</span>
+              <Icon className="text-3xl text-primary mb-1">upload_file</Icon>
               <span className="text-sm font-medium text-primary">
                 {translate("Drop .json files here")}
               </span>
@@ -237,7 +238,7 @@ export default function BulkImportGrokCliModal({ isOpen, onClose, onSuccess }) {
 
         {fileCountInfo && (
           <div className="flex items-center gap-1.5 text-xs text-green-400 font-medium bg-green-500/10 border border-green-500/20 px-2.5 py-1.5 rounded">
-            <span className="material-symbols-outlined text-sm">check_circle</span>
+            <Icon className="text-sm">check_circle</Icon>
             <span>
               {translate("Loaded")} {fileCountInfo.accountsCount} {translate("account(s) from")}{" "}
               {fileCountInfo.filesCount} {translate("file(s)")}

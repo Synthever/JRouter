@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import PropTypes from "prop-types";
@@ -296,9 +297,9 @@ export default function ZedAuthModal({ isOpen, providerInfo, onSuccess, onClose 
       <div className="flex flex-col gap-4">
         {(phase === "booting" || phase === "importing") && (
           <div className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg bg-sidebar/50">
-            <span className="material-symbols-outlined text-base text-primary animate-spin">
+            <Icon className="text-base text-primary animate-spin">
               progress_activity
-            </span>
+            </Icon>
             <span className="text-sm">
               {phase === "importing"
                 ? "Importing session from Zed IDE…"
@@ -311,9 +312,9 @@ export default function ZedAuthModal({ isOpen, providerInfo, onSuccess, onClose 
           <div className="space-y-3">
             <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
               <div className="flex gap-2">
-                <span className="material-symbols-outlined text-green-600 dark:text-green-400">
+                <Icon className="text-green-600 dark:text-green-400">
                   check_circle
-                </span>
+                </Icon>
                 <p className="text-sm text-green-800 dark:text-green-200">
                   Zed IDE session detected (user {ideSession.userId}). Import failed — retry or use browser sign-in below.
                 </p>
@@ -334,9 +335,9 @@ export default function ZedAuthModal({ isOpen, providerInfo, onSuccess, onClose 
         {showBrowserUi && (
           <>
             <div className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg bg-sidebar/50">
-              <span className="material-symbols-outlined text-base text-primary animate-spin">
+              <Icon className="text-base text-primary animate-spin">
                 progress_activity
-              </span>
+              </Icon>
               <span className="text-sm">Waiting for popup authorization…</span>
             </div>
 

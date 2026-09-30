@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useState } from "react";
 import Modal from "./Modal";
@@ -27,9 +28,9 @@ export default function ManualConfigModal({ isOpen, onClose, title = "Manual Con
                 size="sm"
                 onClick={() => copyConfig(config.content, index)}
               >
-                <span className="material-symbols-outlined text-[14px] mr-1">
+                <Icon className="text-[14px] mr-1">
                   {copiedIndex === index ? "check" : "content_copy"}
-                </span>
+                </Icon>
                 {copiedIndex === index ? "Copied!" : "Copy"}
               </Button>
             </div>

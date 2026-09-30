@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/shared/utils/cn";
+import { Loader2 } from "lucide-react";
 
 // Spinner loading
 export function Spinner({ size = "md", className }) {
@@ -12,15 +13,13 @@ export function Spinner({ size = "md", className }) {
   };
 
   return (
-    <span
+    <Loader2
       className={cn(
-        "material-symbols-outlined animate-spin text-brand-500",
+        "animate-spin text-brand-500",
         sizes[size],
         className
       )}
-    >
-      progress_activity
-    </span>
+    />
   );
 }
 

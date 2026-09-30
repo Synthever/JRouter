@@ -13,6 +13,7 @@ import Button from "./Button";
 import { ConfirmModal } from "./Modal";
 import NineRemotePromoModal from "./NineRemotePromoModal";
 import AppLogo from "./AppLogo";
+import Icon from "./Icon";
 
 // const VISIBLE_MEDIA_KINDS = ["embedding", "image", "imageToText", "tts", "stt", "webSearch", "webFetch", "video", "music"];
 const VISIBLE_MEDIA_KINDS = ["embedding", "image", "video", "tts", "stt", "systemone"];
@@ -176,14 +177,13 @@ export default function Sidebar({ onClose }) {
                   : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
               )}
             >
-              <span
+              <Icon
+                name={item.icon}
                 className={cn(
-                  "material-symbols-outlined text-[18px]",
+                  "text-[18px]",
                   isActive(item.href) ? "text-[var(--text)]" : "text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
                 )}
-              >
-                {item.icon}
-              </span>
+              />
               <span className="text-[13px] font-medium">{item.label}</span>
             </Link>
           ))}
@@ -204,14 +204,16 @@ export default function Sidebar({ onClose }) {
                   : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
               )}
             >
-              <span className="material-symbols-outlined text-[18px] text-[var(--text-3)] group-hover:text-[var(--text)]">perm_media</span>
+              <Icon name="perm_media" className="text-[18px] text-[var(--text-3)] group-hover:text-[var(--text)]" />
               <span className="text-[13px] font-medium flex-1 text-left">Media Providers</span>
               {MEDIA_PROVIDER_KINDS.some((k) => VISIBLE_MEDIA_KINDS.includes(k.id) && k.isNew) && (
                 <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-[var(--r1)] bg-[var(--surface-2)] text-[var(--pos)] border border-[var(--line)]">NEW</span>
               )}
-              <span className="material-symbols-outlined text-[14px] transition-transform text-[var(--text-3)]" style={{ transform: mediaOpen ? "rotate(180deg)" : "rotate(0deg)" }}>
-                expand_more
-              </span>
+              <Icon
+                name="expand_more"
+                className="text-[14px] transition-transform text-[var(--text-3)]"
+                style={{ transform: mediaOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+              />
             </button>
             {mediaOpen && (
               <div className="pl-3 space-y-0.5">
@@ -227,7 +229,7 @@ export default function Sidebar({ onClose }) {
                         : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
                     )}
                   >
-                    <span className="material-symbols-outlined text-[16px] text-[var(--text-3)]">{kind.icon}</span>
+                    <Icon name={kind.icon} className="text-[16px] text-[var(--text-3)]" />
                     <span className="text-[13px]">{kind.label}</span>
                     {kind.isNew && (
                       <span className="ml-auto text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-[var(--r1)] bg-[var(--surface-2)] text-[var(--pos)] border border-[var(--line)]">NEW</span>
@@ -245,7 +247,7 @@ export default function Sidebar({ onClose }) {
                       : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
                   )}
                 >
-                  <span className="material-symbols-outlined text-[16px] text-[var(--text-3)]">{COMBINED_WEB_ITEM.icon}</span>
+                  <Icon name={COMBINED_WEB_ITEM.icon} className="text-[16px] text-[var(--text-3)]" />
                   <span className="text-[13px]">{COMBINED_WEB_ITEM.label}</span>
                 </Link>
               </div>
@@ -263,14 +265,13 @@ export default function Sidebar({ onClose }) {
                     : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
                 )}
               >
-                <span
+                <Icon
+                  name={item.icon}
                   className={cn(
-                    "material-symbols-outlined text-[18px]",
+                    "text-[18px]",
                     isActive(item.href) ? "text-[var(--text)]" : "text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
                   )}
-                >
-                  {item.icon}
-                </span>
+                />
                 <span className="text-[13px] font-medium">{item.label}</span>
               </Link>
             ))}
@@ -290,14 +291,13 @@ export default function Sidebar({ onClose }) {
                       : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
                   )}
                 >
-                  <span
+                  <Icon
+                    name={item.icon}
                     className={cn(
-                      "material-symbols-outlined text-[18px]",
+                      "text-[18px]",
                       isActive(item.href) ? "text-[var(--text)]" : "text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
                     )}
-                  >
-                    {item.icon}
-                  </span>
+                  />
                   <span className="text-[13px] font-medium">{item.label}</span>
                 </Link>
               ) : null;
@@ -311,9 +311,10 @@ export default function Sidebar({ onClose }) {
                 "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
               )}
             >
-              <span className="material-symbols-outlined text-[18px] text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors">
-                computer
-              </span>
+              <Icon
+                name="computer"
+                className="text-[18px] text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
+              />
               <span className="text-[13px] font-medium">9Remote</span>
               <span className="ml-auto text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-[var(--r1)] bg-[var(--surface-2)] text-[var(--pos)] border border-[var(--line)]">
                 NEW
@@ -331,9 +332,10 @@ export default function Sidebar({ onClose }) {
                 "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
               )}
             >
-              <span className="material-symbols-outlined text-[18px] text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors">
-                translate
-              </span>
+              <Icon
+                name="translate"
+                className="text-[18px] text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
+              />
               <span className="text-[13px] font-medium">9English</span>
             </a>
 
@@ -348,14 +350,13 @@ export default function Sidebar({ onClose }) {
                   : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
               )}
             >
-              <span
+              <Icon
+                name="settings"
                 className={cn(
-                  "material-symbols-outlined text-[18px]",
+                  "text-[18px]",
                   isActive("/dashboard/profile") ? "text-[var(--text)]" : "text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
                 )}
-              >
-                settings
-              </span>
+              />
               <span className="text-[13px] font-medium">Settings</span>
             </Link>
           </div>
@@ -394,7 +395,7 @@ export default function Sidebar({ onClose }) {
           ) : (
             <div className="text-center p-8">
               <div className="flex items-center justify-center size-16 rounded-full bg-red-500/20 text-red-500 mx-auto mb-4">
-                <span className="material-symbols-outlined text-[32px]">power_off</span>
+                <Icon name="power_off" className="text-[32px]" />
               </div>
               <h2 className="text-xl font-semibold text-white mb-2">Server Disconnected</h2>
               <p className="text-text-muted mb-6">The proxy server has been stopped.</p>
@@ -419,7 +420,7 @@ function ManualUpdatePanel({ latestVersion, installCmd, copied, onCopyAndShutdow
     <div className="w-full max-w-lg rounded-xl bg-neutral-900/95 border border-white/10 p-6 text-white">
       <div className="flex items-center gap-3 mb-4">
         <div className="flex items-center justify-center size-11 rounded-full bg-amber-500/20 text-amber-400">
-          <span className="material-symbols-outlined text-[24px]">content_copy</span>
+          <Icon name="content_copy" className="text-[24px]" />
         </div>
         <div>
           <h2 className="text-lg font-semibold">Update 9Router{latestVersion ? ` to v${latestVersion}` : ""}</h2>

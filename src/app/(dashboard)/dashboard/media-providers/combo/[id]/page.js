@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useParams, notFound, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -245,10 +246,10 @@ export default function ComboDetailPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3 min-w-0">
           <Link href={backHref} className="text-text-muted hover:text-primary">
-            <span className="material-symbols-outlined">arrow_back</span>
+            <Icon>arrow_back</Icon>
           </Link>
           <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-primary">layers</span>
+            <Icon className="text-primary">layers</Icon>
           </div>
           <div className="min-w-0">
             <p className="text-xs text-text-muted">{kindLabel} Combo</p>
@@ -313,13 +314,13 @@ export default function ComboDetailPage() {
                   </div>
                   <div className="flex items-center gap-0.5">
                     <button onClick={() => handleMove(idx, -1)} disabled={idx === 0} className={`p-1 rounded ${idx === 0 ? "text-text-muted/20" : "text-text-muted hover:text-primary hover:bg-black/5"}`} title="Move up">
-                      <span className="material-symbols-outlined text-[16px]">arrow_upward</span>
+                      <Icon className="text-[16px]">arrow_upward</Icon>
                     </button>
                     <button onClick={() => handleMove(idx, 1)} disabled={idx === providers.length - 1} className={`p-1 rounded ${idx === providers.length - 1 ? "text-text-muted/20" : "text-text-muted hover:text-primary hover:bg-black/5"}`} title="Move down">
-                      <span className="material-symbols-outlined text-[16px]">arrow_downward</span>
+                      <Icon className="text-[16px]">arrow_downward</Icon>
                     </button>
                     <button onClick={() => handleRemoveProvider(idx)} className="p-1 rounded text-text-muted hover:text-red-500 hover:bg-red-500/10" title="Remove">
-                      <span className="material-symbols-outlined text-[16px]">close</span>
+                      <Icon className="text-[16px]">close</Icon>
                     </button>
                   </div>
                 </div>
@@ -353,7 +354,7 @@ export default function ComboDetailPage() {
                 <div>
                   <div className="flex items-center justify-end mb-1.5">
                     <a href={testResult.imageUrl} download="image.png" className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-primary transition-colors">
-                      <span className="material-symbols-outlined text-[14px]">download</span>
+                      <Icon className="text-[14px]">download</Icon>
                       Download
                     </a>
                   </div>
@@ -364,7 +365,7 @@ export default function ComboDetailPage() {
                 <div>
                   <div className="flex items-center justify-end mb-1.5">
                     <a href={testResult.audioUrl} download="speech.mp3" className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-primary transition-colors">
-                      <span className="material-symbols-outlined text-[14px]">download</span>
+                      <Icon className="text-[14px]">download</Icon>
                       Download
                     </a>
                   </div>

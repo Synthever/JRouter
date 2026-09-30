@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import AppLogo from "@/shared/components/AppLogo";
 
@@ -23,7 +24,7 @@ export default function HowItWorks() {
           {/* Step 1: Client CLI & SDKs */}
           <div className="p-6 rounded-[var(--r3)] bg-[var(--surface)] border border-[var(--line)] shadow-[var(--shadow-card)] flex flex-col gap-4">
             <div className="size-11 rounded-[var(--r2)] bg-[var(--surface-2)] border border-[var(--line-2)] flex items-center justify-center text-[var(--text)]">
-              <span className="material-symbols-outlined text-[20px]">terminal</span>
+              <Icon className="text-[20px]">terminal</Icon>
             </div>
             <div>
               <div className="text-[11px] font-mono text-[var(--text-3)] mb-1 uppercase tracking-[0.2em]">Step 01</div>
@@ -51,7 +52,7 @@ export default function HowItWorks() {
           {/* Step 3: Upstream Providers */}
           <div className="p-6 rounded-[var(--r3)] bg-[var(--surface)] border border-[var(--line)] shadow-[var(--shadow-card)] flex flex-col gap-4">
             <div className="size-11 rounded-[var(--r2)] bg-[var(--surface-2)] border border-[var(--line-2)] flex items-center justify-center text-[var(--text)]">
-              <span className="material-symbols-outlined text-[20px]">dns</span>
+              <Icon className="text-[20px]">dns</Icon>
             </div>
             <div>
               <div className="text-[11px] font-mono text-[var(--text-3)] mb-1 uppercase tracking-[0.2em]">Step 03</div>

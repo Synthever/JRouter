@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -80,7 +81,7 @@ export default function NewProviderPage() {
           href="/dashboard/providers"
           className="inline-flex items-center gap-1 text-sm text-text-muted hover:text-primary transition-colors mb-4"
         >
-          <span className="material-symbols-outlined text-lg">arrow_back</span>
+          <Icon className="text-lg">arrow_back</Icon>
           Back to Providers
         </Link>
         <h1 className="text-3xl font-semibold tracking-tight">Add New Provider</h1>
@@ -109,12 +110,10 @@ export default function NewProviderPage() {
               <div
                 className="size-10 rounded-lg flex items-center justify-center bg-bg border border-border"
               >
-                <span
-                  className="material-symbols-outlined text-xl"
-                  style={{ color: selectedProvider.color }}
-                >
+                <Icon className="text-xl"
+                  style={{ color: selectedProvider.color }}>
                   {selectedProvider.icon}
-                </span>
+                </Icon>
               </div>
               <div>
                 <p className="font-medium">{selectedProvider.name}</p>
@@ -142,9 +141,9 @@ export default function NewProviderPage() {
                       : "border-border hover:border-primary/50"
                   }`}
                 >
-                  <span className="material-symbols-outlined">
+                  <Icon>
                     {method.value === "api_key" ? "key" : "lock"}
-                  </span>
+                  </Icon>
                   <span className="font-medium">{method.label}</span>
                 </button>
               ))}

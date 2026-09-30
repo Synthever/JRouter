@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import Card from "./Card";
 
@@ -45,7 +46,7 @@ export default function ProviderInfoCard({ config, provider, title = "Provider I
             rel="noopener noreferrer"
             className="text-xs text-primary hover:underline inline-flex items-center gap-1"
           >
-            <span className="material-symbols-outlined text-sm">open_in_new</span>
+            <Icon className="text-sm">open_in_new</Icon>
             Get API Key
           </a>
         )}

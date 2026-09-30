@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect, useCallback } from "react";
 
@@ -79,7 +80,7 @@ export default function RequestLogger() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-[18px] text-[var(--text-3)]">list_alt</span>
+          <Icon className="text-[18px] text-[var(--text-3)]">list_alt</Icon>
           <h2 className="text-base sm:text-lg font-semibold tracking-tight text-[var(--text)]">Request Logs</h2>
         </div>
         <div className="flex items-center gap-3">
@@ -92,7 +93,7 @@ export default function RequestLogger() {
                 viewMode === "table" ? "bg-[var(--surface)] text-[var(--text)] shadow-xs" : "text-[var(--text-3)] hover:text-[var(--text)]"
               }`}
             >
-              <span className="material-symbols-outlined text-[14px]">table_rows</span>
+              <Icon className="text-[14px]">table_rows</Icon>
               <span>Table</span>
             </button>
             <button
@@ -102,7 +103,7 @@ export default function RequestLogger() {
                 viewMode === "cards" ? "bg-[var(--surface)] text-[var(--text)] shadow-xs" : "text-[var(--text-3)] hover:text-[var(--text)]"
               }`}
             >
-              <span className="material-symbols-outlined text-[14px]">grid_view</span>
+              <Icon className="text-[14px]">grid_view</Icon>
               <span>Cards</span>
             </button>
           </div>

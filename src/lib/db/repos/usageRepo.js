@@ -359,10 +359,9 @@ export async function getUsageStats(period = "all") {
   for (const c of allConnections) connectionMap[c.id] = c.name || c.email || c.id;
 
   const providerNodeNameMap = {};
-  let allNodes = [];
   try {
-    allNodes = await getProviderNodes();
-    for (const n of allNodes) if (n.id && n.name) providerNodeNameMap[n.id] = n.name;
+    const nodes = await getProviderNodes();
+    for (const n of nodes) if (n.id && n.name) providerNodeNameMap[n.id] = n.name;
   } catch {}
 
   let allApiKeys = [];
@@ -371,7 +370,7 @@ export async function getUsageStats(period = "all") {
   for (const k of allApiKeys) apiKeyMap[k.key] = { name: k.name, id: k.id, createdAt: k.createdAt };
 
   // recentRequests from live history (last 100 entries enough for 20 deduped)
-  const recentRows = db.all(`SELECT timestamp, provider, model, tokens, status, cost, connectionId FROM usageHistory ORDER BY id DESC LIMIT 100`);
+  const recentRows = db.all(`SELECT timestamp, provider, model, tokens, status FROM usageHistory ORDER BY id DESC LIMIT 100`);
   const seen = new Set();
   const recentRequests = recentRows
     .map((r) => {
@@ -381,8 +380,6 @@ export async function getUsageStats(period = "all") {
         promptTokens: t.prompt_tokens || t.input_tokens || 0,
         completionTokens: t.completion_tokens || t.output_tokens || 0,
         cachedTokens: t.cached_tokens || t.cache_read_input_tokens || 0,
-        cost: r.cost || 0,
-        connectionId: r.connectionId || "",
         status: r.status || "ok",
       };
     })
@@ -668,56 +665,6 @@ export async function getUsageStats(period = "all") {
   }
 
   stats.totalRequests = Object.values(stats.byProvider).reduce((sum, p) => sum + (p.requests || 0), 0);
-
-  // Compute status breakdown (success vs error) for the period
-  let cutoffIso = null;
-  if (period === "today") {
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    cutoffIso = startOfDay.toISOString();
-  } else if (period === "24h") {
-    cutoffIso = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
-  } else if (period === "7d") {
-    cutoffIso = new Date(Date.now() - 7 * 86400 * 1000).toISOString();
-  } else if (period === "30d") {
-    cutoffIso = new Date(Date.now() - 30 * 86400 * 1000).toISOString();
-  } else if (period === "60d") {
-    cutoffIso = new Date(Date.now() - 60 * 86400 * 1000).toISOString();
-  }
-
-  let statusRows = [];
-  try {
-    statusRows = cutoffIso
-      ? db.all(`SELECT status, COUNT(*) as count FROM usageHistory WHERE timestamp >= ? GROUP BY status`, [cutoffIso])
-      : db.all(`SELECT status, COUNT(*) as count FROM usageHistory GROUP BY status`);
-  } catch {}
-
-  let failedRequests = 0;
-  let successfulRequests = 0;
-  for (const row of statusRows) {
-    const s = String(row.status || "").toLowerCase();
-    if (s.includes("error") || s.includes("fail") || s.startsWith("4") || s.startsWith("5")) {
-      failedRequests += (row.count || 0);
-    } else {
-      successfulRequests += (row.count || 0);
-    }
-  }
-
-  const calculatedTotal = successfulRequests + failedRequests;
-  stats.successfulRequests = successfulRequests;
-  stats.failedRequests = failedRequests;
-  stats.successRate = calculatedTotal > 0
-    ? Math.round((successfulRequests / calculatedTotal) * 1000) / 10
-    : 100;
-
-  if (stats.totalRequests === 0 && calculatedTotal > 0) {
-    stats.totalRequests = calculatedTotal;
-  }
-
-  stats.connectionsCount = allConnections.length;
-  stats.activeConnectionsCount = allConnections.filter((c) => c.isActive !== false).length;
-  stats.nodesCount = allNodes.length;
-
   return stats;
 }
 

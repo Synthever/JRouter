@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
@@ -193,7 +194,7 @@ export default function XiaomiMimoAuthModal({ isOpen, onSuccess, onClose }) {
     <div className="bg-card p-3 rounded-lg border border-border flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <span className="material-symbols-outlined text-primary text-base">login</span>
+          <Icon className="text-primary text-base">login</Icon>
           <span className="text-xs sm:text-sm font-semibold">Browser Login</span>
           <span className="text-[11px] text-text-muted">No Desktop required</span>
         </div>
@@ -231,9 +232,9 @@ export default function XiaomiMimoAuthModal({ isOpen, onSuccess, onClose }) {
         {phase === "detecting" && (
           <div className="text-center py-6">
             <div className="size-12 mx-auto mb-3 rounded-full bg-primary/10 flex items-center justify-center">
-              <span className="material-symbols-outlined text-2xl text-primary animate-spin">
+              <Icon className="text-2xl text-primary animate-spin">
                 progress_activity
-              </span>
+              </Icon>
             </div>
             <p className="text-sm text-text-muted">Reading local MiMo Desktop credentials...</p>
           </div>
@@ -243,9 +244,9 @@ export default function XiaomiMimoAuthModal({ isOpen, onSuccess, onClose }) {
         {phase === "importing" && (
           <div className="text-center py-6">
             <div className="size-12 mx-auto mb-3 rounded-full bg-primary/10 flex items-center justify-center">
-              <span className="material-symbols-outlined text-2xl text-primary animate-spin">
+              <Icon className="text-2xl text-primary animate-spin">
                 progress_activity
-              </span>
+              </Icon>
             </div>
             <p className="text-sm font-medium">Connecting...</p>
           </div>
@@ -255,16 +256,16 @@ export default function XiaomiMimoAuthModal({ isOpen, onSuccess, onClose }) {
         {phase === "found" && detectResult && (
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-text-muted px-0.5">
-              <span className="material-symbols-outlined text-primary text-sm">desktop_windows</span>
+              <Icon className="text-primary text-sm">desktop_windows</Icon>
               <span>Desktop Plan · Local credentials</span>
             </div>
 
             {existingConnection ? (
               <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
                 <div className="flex gap-2.5 items-start">
-                  <span className="material-symbols-outlined text-blue-600 dark:text-blue-400 text-lg mt-0.5">
+                  <Icon className="text-blue-600 dark:text-blue-400 text-lg mt-0.5">
                     check_circle
-                  </span>
+                  </Icon>
                   <div className="text-sm text-blue-800 dark:text-blue-200">
                     <p className="font-medium">This account is already connected (no need to import again)</p>
                     <p className="text-xs mt-0.5 opacity-80">
@@ -276,9 +277,9 @@ export default function XiaomiMimoAuthModal({ isOpen, onSuccess, onClose }) {
             ) : (
               <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
                 <div className="flex gap-2.5 items-start">
-                  <span className="material-symbols-outlined text-green-600 dark:text-green-400 text-lg mt-0.5">
+                  <Icon className="text-green-600 dark:text-green-400 text-lg mt-0.5">
                     check_circle
-                  </span>
+                  </Icon>
                   <div className="text-sm text-green-800 dark:text-green-200">
                     <p className="font-medium">Xiaomi MiMo Desktop credentials found!</p>
                     <p className="text-xs mt-0.5 opacity-80">
@@ -322,7 +323,7 @@ export default function XiaomiMimoAuthModal({ isOpen, onSuccess, onClose }) {
           <div className="flex flex-col gap-3">
             <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
               <div className="flex gap-2.5 items-start">
-                <span className="material-symbols-outlined text-amber-600 dark:text-amber-400 text-lg mt-0.5">info</span>
+                <Icon className="text-amber-600 dark:text-amber-400 text-lg mt-0.5">info</Icon>
                 <div className="text-sm text-amber-800 dark:text-amber-200">
                   <p className="font-medium">No local Desktop credentials found</p>
                   <p className="text-xs mt-0.5 opacity-80">
@@ -348,7 +349,7 @@ export default function XiaomiMimoAuthModal({ isOpen, onSuccess, onClose }) {
             <div className="relative w-full max-w-sm bg-surface border border-border-subtle rounded-[14px] shadow-2xl p-5 flex flex-col gap-3.5 animate-in zoom-in-95 duration-150">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary text-lg">public</span>
+                  <Icon className="text-primary text-lg">public</Icon>
                   <h3 className="text-sm font-semibold">Select account cluster</h3>
                 </div>
                 <button
@@ -356,7 +357,7 @@ export default function XiaomiMimoAuthModal({ isOpen, onSuccess, onClose }) {
                   onClick={() => setShowClusterModal(false)}
                   className="text-text-muted hover:text-text-primary p-1 rounded-md transition-colors cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-lg">close</span>
+                  <Icon className="text-lg">close</Icon>
                 </button>
               </div>
 

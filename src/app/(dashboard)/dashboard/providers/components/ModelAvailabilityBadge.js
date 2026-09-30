@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 /**
  * ModelAvailabilityBadge — compact inline status indicator
@@ -101,9 +102,9 @@ export default function ModelAvailabilityBadge() {
             : "bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500/15"
         }`}
       >
-        <span className="material-symbols-outlined text-[14px]">
+        <Icon className="text-[14px]">
           {isHealthy ? "verified" : "warning"}
-        </span>
+        </Icon>
         {isHealthy
           ? "All models operational"
           : `${unavailableCount} model${unavailableCount !== 1 ? "s" : ""} with issues`}
@@ -113,12 +114,10 @@ export default function ModelAvailabilityBadge() {
         <div className="absolute top-full right-0 mt-2 w-80 bg-surface border border-border rounded-xl shadow-2xl z-50 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-bg">
             <div className="flex items-center gap-2">
-              <span
-                className="material-symbols-outlined text-[16px]"
-                style={{ color: isHealthy ? "#22c55e" : "#f59e0b" }}
-              >
+              <Icon className="text-[16px]"
+                style={{ color: isHealthy ? "#22c55e" : "#f59e0b" }}>
                 {isHealthy ? "verified" : "warning"}
-              </span>
+              </Icon>
               <span className="text-sm font-semibold text-text-main">Model Status</span>
             </div>
             <button
@@ -126,7 +125,7 @@ export default function ModelAvailabilityBadge() {
               className="p-1 rounded-lg hover:bg-surface text-text-muted hover:text-text-main transition-colors"
               title="Refresh"
             >
-              <span className="material-symbols-outlined text-[14px]">refresh</span>
+              <Icon className="text-[14px]">refresh</Icon>
             </button>
           </div>
 
@@ -150,12 +149,10 @@ export default function ModelAvailabilityBadge() {
                             className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-surface/30"
                           >
                             <div className="flex items-center gap-1.5 min-w-0">
-                              <span
-                                className="material-symbols-outlined text-[14px] shrink-0"
-                                style={{ color: status.color }}
-                              >
+                              <Icon className="text-[14px] shrink-0"
+                                style={{ color: status.color }}>
                                 {status.icon}
-                              </span>
+                              </Icon>
                               <span className="font-mono text-xs text-text-main truncate">{m.model}</span>
                             </div>
                             {m.status === "cooldown" && (

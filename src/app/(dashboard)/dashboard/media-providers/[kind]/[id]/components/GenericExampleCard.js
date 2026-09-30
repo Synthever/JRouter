@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect } from "react";
 import { Card } from "@/shared/components";
@@ -281,7 +282,7 @@ export function GenericExampleCard({ providerId, kind }) {
                   useTunnel ? "border-primary/40 bg-primary/10 text-primary" : "border-border text-text-muted hover:text-primary"
                 }`}
               >
-                <span className="material-symbols-outlined text-[14px]">wifi_tethering</span>
+                <Icon className="text-[14px]">wifi_tethering</Icon>
                 Tunnel
               </button>
             )}
@@ -332,7 +333,7 @@ export function GenericExampleCard({ providerId, kind }) {
                 onClick={() => setInput("")}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-primary transition-colors"
               >
-                <span className="material-symbols-outlined text-[14px]">close</span>
+                <Icon className="text-[14px]">close</Icon>
               </button>
             )}
           </div>
@@ -354,7 +355,7 @@ export function GenericExampleCard({ providerId, kind }) {
                   onClick={() => setQuestion("")}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-primary transition-colors"
                 >
-                  <span className="material-symbols-outlined text-[14px]">close</span>
+                  <Icon className="text-[14px]">close</Icon>
                 </button>
               )}
             </div>
@@ -378,7 +379,7 @@ export function GenericExampleCard({ providerId, kind }) {
                     onClick={() => setRefImage("")}
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-primary transition-colors"
                   >
-                    <span className="material-symbols-outlined text-[14px]">close</span>
+                    <Icon className="text-[14px]">close</Icon>
                   </button>
                 )}
               </div>
@@ -413,7 +414,7 @@ export function GenericExampleCard({ providerId, kind }) {
                     onClick={() => setMaskImage("")}
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-primary transition-colors"
                   >
-                    <span className="material-symbols-outlined text-[14px]">close</span>
+                    <Icon className="text-[14px]">close</Icon>
                   </button>
                 )}
               </div>
@@ -491,7 +492,7 @@ export function GenericExampleCard({ providerId, kind }) {
                 onClick={() => copyCurl(curlSnippet)}
                 className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-primary transition-colors"
               >
-                <span className="material-symbols-outlined text-[14px]">{copiedCurl ? "check" : "content_copy"}</span>
+                <Icon className="text-[14px]">{copiedCurl ? "check" : "content_copy"}</Icon>
                 {copiedCurl ? "Copied" : "Copy"}
               </button>
             <button
@@ -499,9 +500,9 @@ export function GenericExampleCard({ providerId, kind }) {
               disabled={running || !input.trim() || !modelFull}
               className="flex w-full sm:w-auto items-center justify-center gap-1.5 px-3 py-1 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-                <span className="material-symbols-outlined text-[14px]" style={running ? { animation: "spin 1s linear infinite" } : undefined}>
+                <Icon className="text-[14px]" style={running ? { animation: "spin 1s linear infinite" } : undefined}>
                   play_arrow
-                </span>
+                </Icon>
                 {running ? "Running..." : "Run"}
               </button>
             </div>
@@ -512,9 +513,9 @@ export function GenericExampleCard({ providerId, kind }) {
         {/* Streaming progress */}
         {(running || progress) && useStreaming && (
           <div className="flex flex-col gap-2 px-3 py-2 rounded-lg bg-sidebar border border-border sm:flex-row sm:items-center sm:gap-3">
-            <span className="material-symbols-outlined text-[16px] text-primary" style={running ? { animation: "spin 1s linear infinite" } : undefined}>
+            <Icon className="text-[16px] text-primary" style={running ? { animation: "spin 1s linear infinite" } : undefined}>
               {running ? "progress_activity" : "check_circle"}
-            </span>
+            </Icon>
             <span className="text-xs text-text-muted">
               {progress?.stage || "starting"}
               {!running && progress?.bytesReceived ? ` · ${(progress.bytesReceived / 1024).toFixed(1)} KB` : ""}
@@ -550,7 +551,7 @@ export function GenericExampleCard({ providerId, kind }) {
                 onClick={() => copyRes(resultJson)}
                 className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-primary transition-colors"
               >
-                <span className="material-symbols-outlined text-[14px]">{copiedRes ? "check" : "content_copy"}</span>
+                <Icon className="text-[14px]">{copiedRes ? "check" : "content_copy"}</Icon>
                 {copiedRes ? "Copied" : "Copy"}
               </button>
             )}
@@ -566,7 +567,7 @@ export function GenericExampleCard({ providerId, kind }) {
                   download="image.png"
                   className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-primary transition-colors"
                 >
-                  <span className="material-symbols-outlined text-[14px]">download</span>
+                  <Icon className="text-[14px]">download</Icon>
                   Download
                 </a>
               </div>

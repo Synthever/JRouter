@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect, useCallback } from "react";
 import Card from "@/shared/components/Card";
@@ -62,15 +63,15 @@ function CollapsibleSection({ title, children, defaultOpen = false, icon = null 
         className="w-full flex items-center justify-between p-3 bg-black/[0.02] dark:bg-white/[0.02] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors"
       >
         <div className="flex items-center gap-2">
-          {icon && <span className="material-symbols-outlined text-[18px] text-text-muted">{icon}</span>}
+          {icon && <Icon className="text-[18px] text-text-muted">{icon}</Icon>}
           <span className="font-semibold text-sm text-text-main">{title}</span>
         </div>
-        <span className={cn(
-          "material-symbols-outlined text-[20px] text-text-muted transition-transform duration-200",
+        <Icon className={cn(
+          "text-[20px] text-text-muted transition-transform duration-200",
           isOpen ? "rotate-90" : ""
         )}>
           chevron_right
-        </span>
+        </Icon>
       </button>
       
       {isOpen && (
@@ -268,7 +269,7 @@ export default function RequestDetailsTab() {
                 <tr>
                   <td colSpan="7" className="p-8 text-center text-text-muted">
                     <div className="flex items-center justify-center gap-2">
-                      <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
+                      <Icon className="animate-spin text-[20px]">progress_activity</Icon>
                       Loading...
                     </div>
                   </td>
@@ -416,7 +417,7 @@ export default function RequestDetailsTab() {
             {selectedDetail.pxpipe && (
               <div className="rounded-lg border border-black/5 dark:border-white/5 p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="material-symbols-outlined text-[18px] text-text-muted">image</span>
+                  <Icon className="text-[18px] text-text-muted">image</Icon>
                   <span className="font-semibold text-sm text-text-main">PXPIPE</span>
                   <span className={cn(
                     "text-xs px-2 py-0.5 rounded",
@@ -485,7 +486,7 @@ export default function RequestDetailsTab() {
                 {selectedDetail.response?.thinking && (
                   <div className="mb-4">
                     <h4 className="font-semibold text-text-main mb-2 flex items-center gap-2 text-xs uppercase tracking-wide opacity-70">
-                      <span className="material-symbols-outlined text-[16px]">psychology</span>
+                      <Icon className="text-[16px]">psychology</Icon>
                       Thinking Process
                     </h4>
                     <pre className="max-h-[200px] max-w-full overflow-auto rounded-lg border border-amber-200 bg-amber-50 p-3 font-mono text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100 sm:p-4">

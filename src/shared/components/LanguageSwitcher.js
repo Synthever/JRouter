@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -122,7 +123,7 @@ export default function LanguageSwitcher({ className = "", isOpen: controlledOpe
           title="Language"
           data-i18n-skip="true"
         >
-          <span className="material-symbols-outlined text-[20px]">language</span>
+          <Icon className="text-[20px]">language</Icon>
           <span className="text-sm font-medium">{getLocaleInfo(locale).name}</span>
           <span className="text-lg">{getLocaleInfo(locale).flag}</span>
         </button>
@@ -150,7 +151,7 @@ export default function LanguageSwitcher({ className = "", isOpen: controlledOpe
                 className="p-1.5 rounded-lg text-text-muted hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
                 aria-label="Close"
               >
-                <span className="material-symbols-outlined text-[20px]">close</span>
+                <Icon className="text-[20px]">close</Icon>
               </button>
             </div>
 
@@ -176,7 +177,7 @@ export default function LanguageSwitcher({ className = "", isOpen: controlledOpe
                       {/* Fixed 2-line height so all cards are uniform */}
                       <span className="text-center leading-tight line-clamp-2 h-8 flex items-center">{info.name}</span>
                       {active && (
-                        <span className="material-symbols-outlined text-sm">check</span>
+                        <Icon className="text-sm">check</Icon>
                       )}
                     </button>
                   );

@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useEffect, useMemo, useState } from "react";
 import Modal from "./Modal";
@@ -131,7 +132,7 @@ export default function McpMarketplaceModal({ isOpen, onClose, onAdd, addedNames
 
         {loading && (
           <div className="flex items-center gap-2 text-text-muted text-xs py-4 justify-center">
-            <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
+            <Icon className="animate-spin text-[18px]">progress_activity</Icon>
             <span>Loading registry...</span>
           </div>
         )}
@@ -192,7 +193,7 @@ export default function McpMarketplaceModal({ isOpen, onClose, onAdd, addedNames
                     <div className="px-3 py-2 bg-surface/40 border-t border-border flex flex-col gap-2">
                       {isLoadingTools && (
                         <div className="flex items-center gap-2 text-text-muted text-[10px] py-1">
-                          <span className="material-symbols-outlined animate-spin text-[14px]">progress_activity</span>
+                          <Icon className="animate-spin text-[14px]">progress_activity</Icon>
                           <span>Probing server for tools...</span>
                         </div>
                       )}

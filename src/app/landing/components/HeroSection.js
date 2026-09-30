@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 import { useRouter } from "next/navigation";
 import HeroShaderBackground from "./HeroShaderBackground";
 
@@ -39,7 +40,7 @@ export default function HeroSection() {
             className="cursor-pointer bg-white text-black px-6 py-3 rounded-md font-semibold flex items-center gap-2 hover:bg-neutral-200 transition text-sm sm:text-base shadow-xl"
           >
             <span>Launch Dashboard</span>
-            <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+            <Icon className="text-[18px]">arrow_forward</Icon>
           </button>
           <a
             href="https://github.com/Synthever/JRouter"
@@ -47,7 +48,7 @@ export default function HeroSection() {
             rel="noopener noreferrer"
             className="cursor-pointer bg-white/10 hover:bg-white/20 transition px-6 py-3 rounded-md font-medium text-white border border-white/20 backdrop-blur-md flex items-center gap-2 text-sm sm:text-base"
           >
-            <span className="material-symbols-outlined text-[18px]">code</span>
+            <Icon className="text-[18px]">code</Icon>
             <span>GitHub Repository</span>
           </a>
         </div>

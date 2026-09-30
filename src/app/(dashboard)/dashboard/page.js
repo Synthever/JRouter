@@ -1,7 +1,7 @@
 import { getMachineId } from "@/shared/utils/machine";
-import DashboardOverviewClient from "./DashboardOverviewClient";
+import EndpointPageClient from "./endpoint/EndpointPageClient";
 
 export default async function DashboardPage() {
   const machineId = await getMachineId();
-  return <DashboardOverviewClient machineId={machineId} />;
+  return <EndpointPageClient machineId={machineId} />;
 }

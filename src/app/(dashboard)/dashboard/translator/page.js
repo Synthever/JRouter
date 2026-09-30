@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useState } from "react";
 import { Card, Button } from "@/shared/components";
@@ -221,7 +222,7 @@ export default function TranslatorPage() {
         {meta && (
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <MetaBadge label="src" value={meta.sourceFormat} color="blue" />
-            <span className="material-symbols-outlined text-text-muted text-[14px]">arrow_forward</span>
+            <Icon className="text-text-muted text-[14px]">arrow_forward</Icon>
             <MetaBadge label="dst" value={meta.targetFormat} color="orange" />
             <MetaBadge label="provider" value={meta.provider} color="green" />
             <MetaBadge label="model" value={meta.model} color="purple" />
@@ -240,9 +241,9 @@ export default function TranslatorPage() {
               {/* Step header */}
               <div className="flex items-center justify-between">
                 <button onClick={() => toggle(step.id)} className="flex items-center gap-2 flex-1 text-left group">
-                  <span className="material-symbols-outlined text-[20px] text-text-muted group-hover:text-primary transition-colors">
+                  <Icon className="text-[20px] text-text-muted group-hover:text-primary transition-colors">
                     {isExpanded ? "expand_more" : "chevron_right"}
-                  </span>
+                  </Icon>
                   <span className="text-xs font-mono text-text-muted/60 w-4">{step.id}</span>
                   <h3 className="text-sm font-semibold text-text-main">{step.label}</h3>
                   <span className="text-xs text-text-muted/60 font-mono">{step.file}</span>

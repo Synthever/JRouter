@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import Link from "next/link";
 import { Card } from "@/shared/components";
@@ -34,7 +35,7 @@ export default function MitmLinkCard({ tool }) {
               <p className="text-xs text-text-muted truncate">{tool.description}</p>
             </div>
           </div>
-          <span className="material-symbols-outlined text-text-muted text-[20px]">chevron_right</span>
+          <Icon className="text-text-muted text-[20px]">chevron_right</Icon>
         </div>
       </Card>
     </Link>

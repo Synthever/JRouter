@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/shared/utils/cn";
+import Icon from "@/shared/components/Icon";
 
 export default function Card({
   children,
@@ -37,7 +38,7 @@ export default function Card({
           <div className="flex items-center gap-3">
             {icon && (
               <div className="size-8 rounded-[var(--r1)] bg-[var(--surface-2)] border border-[var(--line-2)] text-[var(--text)] flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-[18px]">{icon}</span>
+                <Icon name={icon} className="text-[18px]" />
               </div>
             )}
             <div>

@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import PropTypes from "prop-types";
 
@@ -55,9 +56,9 @@ export default function OverviewCards({ stats }) {
             <span className="text-[11px] font-mono font-medium tracking-[0.2em] text-[var(--text-3)] truncate">
               {card.label}
             </span>
-            <span className="material-symbols-outlined text-[16px] text-[var(--text-3)] shrink-0">
+            <Icon className="text-[16px] text-[var(--text-3)] shrink-0">
               {card.icon}
-            </span>
+            </Icon>
           </div>
           <div className="flex flex-col gap-1">
             <span

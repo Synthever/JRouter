@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import PropTypes from "prop-types";
 import ProviderIcon from "@/shared/components/ProviderIcon";
+import Icon from "@/shared/components/Icon";
 import HeaderMenu from "@/shared/components/HeaderMenu";
 import HeaderLanguage from "@/shared/components/HeaderLanguage";
 import ThemeToggle from "@/shared/components/ThemeToggle";
@@ -171,9 +172,9 @@ const getPageInfo = (pathname) => {
     };
   if (pathname === "/dashboard")
     return {
-      title: "Dashboard",
-      description: "Real-time routing telemetry, system health, and traffic metrics",
-      icon: "space_dashboard",
+      title: "Endpoint",
+      description: "API endpoint configuration",
+      icon: "api",
       breadcrumbs: [],
     };
   return { title: "", description: "", breadcrumbs: [] };
@@ -235,7 +236,7 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
             onClick={onMenuClick}
             className="text-[var(--text)] hover:text-white transition-colors"
           >
-            <span className="material-symbols-outlined">menu</span>
+            <Icon name="menu" />
           </button>
         )}
       </div>
@@ -250,9 +251,10 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
                 className="flex items-center gap-2"
               >
                 {index > 0 && (
-                  <span className="material-symbols-outlined text-[var(--text-3)] text-base">
-                    chevron_right
-                  </span>
+                  <Icon
+                    name="chevron_right"
+                    className="text-[var(--text-3)] text-base"
+                  />
                 )}
                 {crumb.href ? (
                   <Link
@@ -284,9 +286,10 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
           <div>
             <div className="flex items-center gap-2">
               {icon && (
-                <span className="material-symbols-outlined text-[var(--text-2)] text-xl lg:text-2xl">
-                  {icon}
-                </span>
+                <Icon
+                  name={icon}
+                  className="text-[var(--text-2)] text-xl lg:text-2xl"
+                />
               )}
               <h1 className="text-base lg:text-[24px] font-semibold text-[var(--text)] tracking-[-0.02em] leading-tight truncate">
                 {translate(title)}
@@ -308,7 +311,7 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
             className="hidden sm:flex items-center max-w-[220px] px-2.5 py-1 rounded-[var(--r-full)] border border-[var(--line-2)] bg-[var(--surface-2)] text-xs text-[var(--text-2)] truncate font-mono"
             title={displayName}
           >
-            <span className="material-symbols-outlined text-[14px] mr-1.5 text-[var(--text)]">person</span>
+            <Icon name="person" className="text-[14px] mr-1.5 text-[var(--text)]" />
             <span className="truncate">{displayName}</span>
             <span className="ml-2 shrink-0 rounded-[var(--r-full)] bg-[var(--surface)] border border-[var(--line)] px-1.5 py-0.2 text-[10px] font-mono uppercase text-[var(--text-2)]">
               {loginMethod}
@@ -321,7 +324,7 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
           className="flex items-center gap-1.5 px-3 h-8 rounded-[var(--r1)] border border-[var(--line-2)] bg-[var(--surface-2)] text-[var(--text)] hover:bg-[var(--surface-hover)] transition-colors text-xs font-medium cursor-pointer"
           aria-label="Donate"
         >
-          <span className="material-symbols-outlined text-[16px] text-[var(--promo)]">volunteer_activism</span>
+          <Icon name="volunteer_activism" className="text-[16px] text-[var(--promo)]" />
           <span className="hidden sm:inline">Donate</span>
         </button>
         <ThemeToggle />
@@ -343,9 +346,10 @@ function HeaderSearch() {
 
   return (
     <div className="relative w-[160px] sm:w-[220px]">
-      <span className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-[var(--text-3)] text-[16px] pointer-events-none">
-        search
-      </span>
+      <Icon
+        name="search"
+        className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--text-3)] text-[16px] pointer-events-none"
+      />
       <input
         type="text"
         value={query}
@@ -360,7 +364,7 @@ function HeaderSearch() {
           className="absolute right-1 top-1/2 -translate-y-1/2 text-[var(--text-3)] hover:text-[var(--text)] p-0.5 rounded cursor-pointer"
           aria-label="Clear search"
         >
-          <span className="material-symbols-outlined text-[16px]">close</span>
+          <Icon name="close" className="text-[16px]" />
         </button>
       )}
     </div>

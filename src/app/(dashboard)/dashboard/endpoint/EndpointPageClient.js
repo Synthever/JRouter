@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import PropTypes from "prop-types";
@@ -713,7 +714,7 @@ export default function APIPageClient({ machineId }) {
       {/* Endpoint Card */}
       <Card>
         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <span className="material-symbols-outlined text-primary">api</span>
+          <Icon className="text-primary">api</Icon>
           API Endpoint
         </h2>
 
@@ -739,20 +740,20 @@ export default function APIPageClient({ machineId }) {
                   onClick={() => copy(`${tunnelPublicUrl || tunnelUrl}/v1`, "tunnel_url")}
                   className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded text-text-muted hover:text-primary transition-colors shrink-0"
                 >
-                  <span className="material-symbols-outlined text-[18px]">{copied === "tunnel_url" ? "check" : "content_copy"}</span>
+                  <Icon className="text-[18px]">{copied === "tunnel_url" ? "check" : "content_copy"}</Icon>
                 </button>
                 <button
                   onClick={() => setShowDisableTunnelModal(true)}
                   className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0"
                   title="Disable Tunnel"
                 >
-                  <span className="material-symbols-outlined text-[18px]">power_settings_new</span>
+                  <Icon className="text-[18px]">power_settings_new</Icon>
                 </button>
               </>
             ) : tunnelEnabled && !tunnelLoading && !tunnelReachable ? (
               <>
                 <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded border border-amber-300 dark:border-amber-800 bg-amber-500/5 text-sm text-amber-600 dark:text-amber-400">
-                  <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+                  <Icon className="animate-spin text-sm">progress_activity</Icon>
                   {tunnelEverReachable ? "Tunnel reconnecting..." : "Tunnel checking..."}
                 </div>
                 <button
@@ -760,13 +761,13 @@ export default function APIPageClient({ machineId }) {
                   className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0"
                   title="Disable Tunnel"
                 >
-                  <span className="material-symbols-outlined text-[18px]">power_settings_new</span>
+                  <Icon className="text-[18px]">power_settings_new</Icon>
                 </button>
               </>
             ) : tunnelLoading ? (
               <>
                 <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded border border-border bg-input text-sm text-text-muted">
-                  <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+                  <Icon className="animate-spin text-sm">progress_activity</Icon>
                   {tunnelProgress || "Creating tunnel..."}
                 </div>
                 <button
@@ -774,13 +775,13 @@ export default function APIPageClient({ machineId }) {
                   className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0"
                   title="Stop"
                 >
-                  <span className="material-symbols-outlined text-[18px]">power_settings_new</span>
+                  <Icon className="text-[18px]">power_settings_new</Icon>
                 </button>
               </>
             ) : tunnelStatus?.type === "error" ? (
               <>
                 <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded border border-red-300 dark:border-red-800 bg-red-500/5 text-sm text-red-600 dark:text-red-400">
-                  <span className="material-symbols-outlined text-sm">error</span>
+                  <Icon className="text-sm">error</Icon>
                   {tunnelStatus.message}
                 </div>
                 <Button size="sm" icon="cloud_upload" onClick={() => setShowEnableTunnelModal(true)}>Enable</Button>
@@ -788,7 +789,7 @@ export default function APIPageClient({ machineId }) {
             ) : tunnelChecking ? (
               <>
                 <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded border border-border bg-input text-sm text-text-muted">
-                  <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+                  <Icon className="animate-spin text-sm">progress_activity</Icon>
                   Checking...
                 </div>
                 <button
@@ -796,7 +797,7 @@ export default function APIPageClient({ machineId }) {
                   className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0"
                   title="Stop"
                 >
-                  <span className="material-symbols-outlined text-[18px]">power_settings_new</span>
+                  <Icon className="text-[18px]">power_settings_new</Icon>
                 </button>
               </>
             ) : (
@@ -831,20 +832,20 @@ export default function APIPageClient({ machineId }) {
                   onClick={() => copy(`${tsUrl}/v1`, "ts_url")}
                   className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded text-text-muted hover:text-primary transition-colors shrink-0"
                 >
-                  <span className="material-symbols-outlined text-[18px]">{copied === "ts_url" ? "check" : "content_copy"}</span>
+                  <Icon className="text-[18px]">{copied === "ts_url" ? "check" : "content_copy"}</Icon>
                 </button>
                 <button
                   onClick={() => setShowDisableTsModal(true)}
                   className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0"
                   title="Disable Tailscale"
                 >
-                  <span className="material-symbols-outlined text-[18px]">power_settings_new</span>
+                  <Icon className="text-[18px]">power_settings_new</Icon>
                 </button>
               </>
             ) : tsEnabled && !tsLoading && !tsReachable ? (
               <>
                 <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded border border-amber-300 dark:border-amber-800 bg-amber-500/5 text-sm text-amber-600 dark:text-amber-400">
-                  <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+                  <Icon className="animate-spin text-sm">progress_activity</Icon>
                   {tsEverReachable ? "Tailscale reconnecting..." : "Tailscale checking..."}
                 </div>
                 <button
@@ -852,13 +853,13 @@ export default function APIPageClient({ machineId }) {
                   className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0"
                   title="Disable Tailscale"
                 >
-                  <span className="material-symbols-outlined text-[18px]">power_settings_new</span>
+                  <Icon className="text-[18px]">power_settings_new</Icon>
                 </button>
               </>
             ) : (tsLoading || tsConnecting) ? (
               <>
                 <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded border border-border bg-input text-sm text-text-muted">
-                  <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+                  <Icon className="animate-spin text-sm">progress_activity</Icon>
                   {tsProgress || "Connecting..."}
                 </div>
                 {tsAuthUrl && (
@@ -875,13 +876,13 @@ export default function APIPageClient({ machineId }) {
                   className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0"
                   title="Stop"
                 >
-                  <span className="material-symbols-outlined text-[18px]">power_settings_new</span>
+                  <Icon className="text-[18px]">power_settings_new</Icon>
                 </button>
               </>
             ) : tsStatus?.type === "error" ? (
               <>
                 <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded border border-red-300 dark:border-red-800 bg-red-500/5 text-sm text-red-600 dark:text-red-400">
-                  <span className="material-symbols-outlined text-sm">error</span>
+                  <Icon className="text-sm">error</Icon>
                   {tsStatus.message}
                 </div>
                 <Button size="sm" icon="vpn_lock" onClick={handleOpenTsModal}>Enable</Button>
@@ -959,7 +960,7 @@ export default function APIPageClient({ machineId }) {
       <Card id="require-api-key">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary">vpn_key</span>
+            <Icon className="text-primary">vpn_key</Icon>
             API Keys
           </h2>
           <Button icon="add" onClick={() => setShowAddModal(true)}>
@@ -989,7 +990,7 @@ export default function APIPageClient({ machineId }) {
         {keys.length === 0 ? (
           <div className="text-center py-12">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4">
-              <span className="material-symbols-outlined text-[32px]">vpn_key</span>
+              <Icon className="text-[32px]">vpn_key</Icon>
             </div>
             <p className="text-text-main font-medium mb-1">No API keys yet</p>
             <p className="text-sm text-text-muted mb-4">Create your first API key to get started</p>
@@ -1015,17 +1016,17 @@ export default function APIPageClient({ machineId }) {
                       className="p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded text-text-muted hover:text-primary transition-all"
                       title={visibleKeys.has(key.id) ? "Hide key" : "Show key"}
                     >
-                      <span className="material-symbols-outlined text-[14px]">
+                      <Icon className="text-[14px]">
                         {visibleKeys.has(key.id) ? "visibility_off" : "visibility"}
-                      </span>
+                      </Icon>
                     </button>
                     <button
                       onClick={() => copy(key.key, key.id)}
                       className="p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded text-text-muted hover:text-primary transition-all"
                     >
-                      <span className="material-symbols-outlined text-[14px]">
+                      <Icon className="text-[14px]">
                         {copied === key.id ? "check" : "content_copy"}
-                      </span>
+                      </Icon>
                     </button>
                   </div>
                   <p className="text-xs text-text-muted mt-1">
@@ -1059,7 +1060,7 @@ export default function APIPageClient({ machineId }) {
                     onClick={() => handleDeleteKey(key.id)}
                     className="p-2 hover:bg-red-500/10 rounded text-red-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all"
                   >
-                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                    <Icon className="text-[18px]">delete</Icon>
                   </button>
                 </div>
               </div>
@@ -1146,7 +1147,7 @@ export default function APIPageClient({ machineId }) {
         <div className="flex flex-col gap-4">
           <div className="bg-surface-2 border border-border-subtle rounded-lg p-4">
             <div className="flex items-start gap-3">
-              <span className="material-symbols-outlined text-primary">cloud_upload</span>
+              <Icon className="text-primary">cloud_upload</Icon>
               <div>
                 <p className="text-sm text-text-main font-medium mb-1">
                   Cloudflare Tunnel
@@ -1161,7 +1162,7 @@ export default function APIPageClient({ machineId }) {
           <div className="grid grid-cols-2 gap-3">
             {TUNNEL_BENEFITS.map((benefit) => (
               <div key={benefit.title} className="flex flex-col items-center text-center p-3 rounded-lg bg-sidebar/50">
-                <span className="material-symbols-outlined text-xl text-primary mb-1">{benefit.icon}</span>
+                <Icon className="text-xl text-primary mb-1">{benefit.icon}</Icon>
                 <p className="text-xs font-semibold">{benefit.title}</p>
                 <p className="text-xs text-text-muted">{benefit.desc}</p>
               </div>
@@ -1208,7 +1209,7 @@ export default function APIPageClient({ machineId }) {
           {/* Checking state */}
           {tsInstalled === null && (
             <p className="text-sm text-text-muted flex items-center gap-2">
-              <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+              <Icon className="animate-spin text-sm">progress_activity</Icon>
               Checking...
             </p>
           )}
@@ -1230,7 +1231,7 @@ export default function APIPageClient({ machineId }) {
           {tsInstalling && (
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2 text-sm text-text-muted">
-                <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+                <Icon className="animate-spin text-sm">progress_activity</Icon>
                 Installing Tailscale...
               </div>
               {tsInstallLog.length > 0 && (
@@ -1247,7 +1248,7 @@ export default function APIPageClient({ machineId }) {
           {tsInstalled === true && !tsInstalling && (
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-                <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                <Icon className="text-[16px]">check_circle</Icon>
                 Tailscale installed
               </div>
               <div className="flex gap-2">

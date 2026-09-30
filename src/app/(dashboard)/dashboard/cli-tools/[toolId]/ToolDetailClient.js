@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
@@ -183,7 +184,7 @@ export default function ToolDetailClient({ toolId, machineId }) {
     return (
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-1 sm:px-0">
         <Link href="/dashboard/cli-tools" className="inline-flex items-center gap-1 text-sm text-text-muted hover:text-primary w-fit">
-          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+          <Icon className="text-[18px]">arrow_back</Icon>
           Back to CLI Tools
         </Link>
         <p className="text-sm text-text-muted">Tool not found or disabled.</p>
@@ -194,7 +195,7 @@ export default function ToolDetailClient({ toolId, machineId }) {
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-1 sm:px-0">
       <Link href="/dashboard/cli-tools" className="inline-flex items-center gap-1 text-sm text-text-muted hover:text-primary w-fit">
-        <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+        <Icon className="text-[18px]">arrow_back</Icon>
         Back to CLI Tools
       </Link>
       <div className="flex flex-col gap-1">
