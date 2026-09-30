@@ -3,18 +3,18 @@
 import { cn } from "@/shared/utils/cn";
 
 const variants = {
-  primary: "bg-brand-500 hover:bg-brand-600 text-white shadow-sm disabled:bg-surface-3 disabled:text-text-muted",
-  secondary: "bg-surface-2 hover:bg-surface-3 text-text-main border border-border disabled:opacity-50",
-  outline: "border border-border text-text-main hover:bg-surface-2 hover:border-brand-500/40",
-  ghost: "text-text-muted hover:bg-surface-2 hover:text-text-main",
-  danger: "bg-red-500 hover:bg-red-600 text-white shadow-sm disabled:bg-surface-3 disabled:text-text-muted",
-  success: "bg-green-600 hover:bg-green-700 text-white shadow-sm disabled:bg-surface-3 disabled:text-text-muted",
+  primary: "bg-white hover:bg-[#EDEDEE] text-[#0A0A0B] border border-transparent shadow-xs disabled:opacity-40",
+  secondary: "bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] text-[var(--text)] border border-[var(--line-2)] disabled:opacity-40",
+  outline: "bg-transparent hover:bg-[var(--surface-2)] text-[var(--text)] border border-[var(--line-2)] hover:border-[var(--accent-line)]",
+  ghost: "bg-transparent hover:bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text)] border border-transparent",
+  danger: "bg-[#281515] hover:bg-[#381a1a] text-[#FF6B6B] border border-[#FF6B6B]/30 disabled:opacity-40",
+  success: "bg-[#14251D] hover:bg-[#1b3327] text-[#34D39A] border border-[#34D39A]/30 disabled:opacity-40",
 };
 
 const sizes = {
-  sm: "h-7 px-3 text-xs rounded-[8px]",
-  md: "h-9 px-4 text-sm rounded-[10px]",
-  lg: "h-11 px-6 text-sm rounded-[10px]",
+  sm: "h-7 px-2.5 text-xs rounded-[var(--r1)] font-medium",
+  md: "h-8.5 px-3.5 text-xs sm:text-[13px] rounded-[var(--r1)] font-medium",
+  lg: "h-10 px-5 text-sm rounded-[var(--r1)] font-medium",
 };
 
 export default function Button({
