@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 function getStatusBadge(statusStr = "") {
   const upper = statusStr.toUpperCase();
@@ -34,22 +34,7 @@ export default function RequestLogger() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [viewMode, setViewMode] = useState("table"); // "table" | "cards"
 
-  useEffect(() => {
-    fetchLogs();
-  }, []);
-
-  useEffect(() => {
-    let interval;
-    if (autoRefresh) {
-      interval = setInterval(() => {
-        fetchLogs(false);
-      }, 3000);
-    }
-    return () => clearInterval(interval);
-  }, [autoRefresh]);
-
-  const fetchLogs = async (showLoading = true) => {
-    if (showLoading) setLoading(true);
+  const fetchLogs = useCallback(async () => {
     try {
       const res = await fetch("/api/usage/request-logs");
       if (res.ok) {
@@ -58,10 +43,37 @@ export default function RequestLogger() {
       }
     } catch (error) {
       console.error("Failed to fetch logs:", error);
-    } finally {
-      if (showLoading) setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/usage/request-logs")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (!cancelled) {
+          setLogs(data);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch logs:", err);
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let interval;
+    if (autoRefresh) {
+      interval = setInterval(() => {
+        fetchLogs();
+      }, 3000);
+    }
+    return () => clearInterval(interval);
+  }, [autoRefresh, fetchLogs]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -208,5 +220,4 @@ export default function RequestLogger() {
       </div>
     </div>
   );
-}
 }
