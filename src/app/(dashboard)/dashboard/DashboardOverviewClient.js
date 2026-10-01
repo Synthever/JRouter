@@ -61,7 +61,7 @@ export default function DashboardOverviewClient({ machineId }) {
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full pb-10">
+    <div className="dashboard-overview flex flex-col gap-6 w-full pb-10">
       {/* 1. Top Section: Period Filters + 5 KPI Cards (.grid-stats) */}
       <KpiBentoGrid
         stats={stats}

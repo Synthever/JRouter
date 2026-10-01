@@ -83,7 +83,7 @@ export default function TopModelsCard({ stats }) {
               );
             })
           ) : (
-            <div className="text-center py-8 text-xs font-mono text-[var(--text-3)] border border-dashed border-[var(--line)] rounded-[var(--r2)] bg-[var(--surface-inset)]">
+            <div className="dashboard-card-inset text-center py-8 text-xs font-mono text-[var(--text-3)] border border-dashed border-[var(--line)] rounded-[var(--r2)] bg-[var(--surface-inset)]">
               No model usage records found in this time range.
             </div>
           )}

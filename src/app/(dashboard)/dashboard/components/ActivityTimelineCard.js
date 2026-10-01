@@ -153,7 +153,7 @@ export default function ActivityTimelineCard({ period = "7d" }) {
             Loading timeline telemetry...
           </div>
         ) : !hasData ? (
-          <div className="w-full h-full flex flex-col items-center justify-center border border-dashed border-[var(--line)] rounded-[var(--r2)] bg-[var(--surface-inset)] p-6 text-center">
+          <div className="dashboard-card-inset w-full h-full flex flex-col items-center justify-center border border-dashed border-[var(--line)] rounded-[var(--r2)] bg-[var(--surface-inset)] p-6 text-center">
             <Activity className="size-6 text-[var(--text-3)] mb-2" />
             <p className="text-xs font-mono text-[var(--text-2)]">No activity recorded for this period</p>
             <p className="text-[11px] text-[var(--text-3)] mt-1">

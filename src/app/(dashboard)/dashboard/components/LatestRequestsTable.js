@@ -195,7 +195,7 @@ export default function LatestRequestsTable({ initialRequests = [] }) {
               return (
                 <div
                   key={log.id || `${log.timestamp}-${i}`}
-                  className="p-3.5 rounded-[var(--r2)] bg-[var(--surface-inset)] border border-[var(--line)] flex flex-col justify-between gap-3 font-mono text-xs hover:border-[var(--line-2)] transition-colors"
+                  className="dashboard-card-inset p-3.5 rounded-[var(--r2)] bg-[var(--surface-inset)] border border-[var(--line)] flex flex-col justify-between gap-3 font-mono text-xs hover:border-[var(--line-2)] transition-colors"
                 >
                   <div className="flex items-center justify-between">
                     {renderStatusBadge(log.status)}
@@ -239,7 +239,7 @@ export default function LatestRequestsTable({ initialRequests = [] }) {
               );
             })
           ) : (
-            <div className="col-span-full py-10 text-center text-[var(--text-3)] text-xs font-mono border border-dashed border-[var(--line)] rounded-[var(--r2)] bg-[var(--surface-inset)]">
+            <div className="dashboard-card-inset col-span-full py-10 text-center text-[var(--text-3)] text-xs font-mono border border-dashed border-[var(--line)] rounded-[var(--r2)] bg-[var(--surface-inset)]">
               {filter ? "No requests matching filter" : "No recent requests logged yet."}
             </div>
           )}

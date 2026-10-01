@@ -75,7 +75,7 @@ export default function ProviderDistributionCard({ stats }) {
             providers.slice(0, 5).map((p) => (
               <div
                 key={p.name}
-                className="flex items-center justify-between p-2.5 rounded-[var(--r2)] bg-[var(--surface-inset)] border border-[var(--line)] text-xs font-mono"
+                className="dashboard-card-inset flex items-center justify-between p-2.5 rounded-[var(--r2)] bg-[var(--surface-inset)] border border-[var(--line)] text-xs font-mono"
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <span className={`size-2 rounded-full ${p.color}`} />
@@ -98,7 +98,7 @@ export default function ProviderDistributionCard({ stats }) {
               </div>
             ))
           ) : (
-            <div className="text-center py-8 text-xs font-mono text-[var(--text-3)] border border-dashed border-[var(--line)] rounded-[var(--r2)] bg-[var(--surface-inset)]">
+            <div className="dashboard-card-inset text-center py-8 text-xs font-mono text-[var(--text-3)] border border-dashed border-[var(--line)] rounded-[var(--r2)] bg-[var(--surface-inset)]">
               No provider traffic logged for this period.
             </div>
           )}
