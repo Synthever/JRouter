@@ -51,7 +51,7 @@ export default function LandingPage() {
           </div>
           
           {/* CTA Section */}
-          <section className="relative z-20 lp-section bg-[var(--surface)] text-center">
+          <section className="relative z-20 lp-section bg-[var(--surface)] text-center border-t border-[var(--line)]">
             <div className="lp-wrap py-8">
               <div className="lp-eyebrow mb-3">
                 <span className="lp-eyebrow__dot"></span>

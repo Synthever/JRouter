@@ -46,7 +46,7 @@ const FEATURES = [
 
 export default function Features() {
   return (
-    <section className="lp-section bg-transparent" id="features">
+    <section className="lp-section bg-transparent border-none" id="features">
       <div className="lp-wrap">
         <div className="mb-12">
           <div className="lp-eyebrow mb-3">
