@@ -206,9 +206,6 @@ export default function Sidebar({ onClose, onToggleCollapse }) {
             >
               <Icon name="perm_media" className="text-[16px] text-[var(--text-3)] group-hover:text-[var(--text)]" />
               <span className="text-[12.5px] font-medium flex-1 text-left">Media Providers</span>
-              {MEDIA_PROVIDER_KINDS.some((k) => VISIBLE_MEDIA_KINDS.includes(k.id) && k.isNew) && (
-                <span className="text-[9px] font-mono font-semibold px-1 py-0.2 rounded bg-[var(--surface-2)] text-[var(--pos)] border border-[var(--line)]">NEW</span>
-              )}
               <Icon
                 name="expand_more"
                 className="text-[14px] transition-transform text-[var(--text-3)]"
@@ -231,9 +228,6 @@ export default function Sidebar({ onClose, onToggleCollapse }) {
                   >
                     <Icon name={kind.icon} className="text-[15px] text-[var(--text-3)]" />
                     <span className="text-[12px]">{kind.label}</span>
-                    {kind.isNew && (
-                      <span className="ml-auto text-[9px] font-mono font-semibold px-1 py-0.2 rounded bg-[var(--surface-2)] text-[var(--pos)] border border-[var(--line)]">NEW</span>
-                    )}
                   </Link>
                 ))}
                 <Link
@@ -316,8 +310,8 @@ export default function Sidebar({ onClose, onToggleCollapse }) {
                 className="text-[16px] text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
               />
               <span className="text-[12.5px] font-medium">9Remote</span>
-              <span className="ml-auto text-[9px] font-mono font-semibold px-1 py-0.2 rounded bg-[var(--surface-2)] text-[var(--pos)] border border-[var(--line)]">
-                NEW
+              <span className="ml-auto text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-400 border border-orange-500/20">
+                HOT
               </span>
             </button>
 
