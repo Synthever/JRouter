@@ -40,7 +40,12 @@ const nextConfig = {
     // Tree-shake heavy barrel imports to cut compile + bundle size
     optimizePackageImports: ["@xyflow/react", "@dnd-kit/core", "@dnd-kit/sortable", "lucide-react", "marked"],
   },
+  transpilePackages: ["@shadergradient/react"],
   webpack: (config, { isServer }) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "@shadergradient/react$": join(projectRoot, "node_modules/@shadergradient/react/dist/index.mjs"),
+    };
     // Ignore fs/path modules in browser bundle
     if (!isServer) {
       config.resolve.fallback = {
