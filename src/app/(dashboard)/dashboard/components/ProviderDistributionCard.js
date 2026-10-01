@@ -6,13 +6,13 @@ import { Server, ArrowRight } from "lucide-react";
 import { fmtTokens, fmtCost } from "./KpiBentoGrid";
 
 const PROVIDER_COLORS = [
-  "bg-zinc-200",
+  "bg-[var(--text)]",
+  "bg-[var(--text-2)]",
+  "bg-[var(--text-3)]",
+  "bg-[var(--pos)]",
+  "bg-[var(--warn)]",
+  "bg-[var(--promo-accent)]",
   "bg-zinc-400",
-  "bg-zinc-600",
-  "bg-emerald-400",
-  "bg-sky-400",
-  "bg-amber-400",
-  "bg-indigo-400",
 ];
 
 export default function ProviderDistributionCard({ stats }) {
@@ -39,16 +39,16 @@ export default function ProviderDistributionCard({ stats }) {
   }, [stats]);
 
   return (
-    <div className="rounded-xl border border-zinc-800/80 bg-[#0E0F12] p-5 flex flex-col justify-between shadow-xs">
+    <div className="ui-card p-5 flex flex-col justify-between">
       <div>
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <span className="font-mono text-[10px] font-medium tracking-[0.16em] uppercase text-zinc-400">
+            <span className="ui-eyebrow text-[10px] text-[var(--text-2)]">
               PROVIDER DISTRIBUTION
             </span>
           </div>
-          <span className="font-mono text-[11px] text-zinc-400">
+          <span className="font-mono text-[11px] text-[var(--text-3)] u-tnum">
             {providers.length} upstream sources
           </span>
         </div>
@@ -56,7 +56,7 @@ export default function ProviderDistributionCard({ stats }) {
         {/* Proportional Segment Bar */}
         {providers.length > 0 && (
           <div className="mb-4">
-            <div className="h-2 w-full bg-zinc-800/80 rounded-full overflow-hidden flex gap-0.5">
+            <div className="h-2 w-full bg-[var(--surface-inset)] border border-[var(--line)] rounded-full overflow-hidden flex gap-0.5">
               {providers.map((p) => (
                 <div
                   key={p.name}
@@ -75,30 +75,30 @@ export default function ProviderDistributionCard({ stats }) {
             providers.slice(0, 5).map((p) => (
               <div
                 key={p.name}
-                className="flex items-center justify-between p-2 rounded-lg bg-[#0A0B0D] border border-zinc-800/60 text-xs font-mono"
+                className="flex items-center justify-between p-2.5 rounded-[var(--r2)] bg-[var(--surface-inset)] border border-[var(--line)] text-xs font-mono"
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <span className={`size-2 rounded-full ${p.color}`} />
-                  <span className="text-zinc-200 font-medium capitalize truncate max-w-[140px] sm:max-w-[180px]">
+                  <span className="text-[var(--text)] font-medium capitalize truncate max-w-[140px] sm:max-w-[200px]">
                     {p.name}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-4 text-right shrink-0">
-                  <span className="text-zinc-400 text-[11px]">
+                  <span className="text-[var(--text-3)] text-[11px] u-tnum">
                     {fmtTokens(p.tokens)}
                   </span>
-                  <span className="text-zinc-400 text-[11px]">
+                  <span className="text-[var(--text-3)] text-[11px] u-tnum">
                     {fmtCost(p.cost)}
                   </span>
-                  <span className="text-white font-semibold tabular-nums w-12">
+                  <span className="text-[var(--text)] font-semibold u-tnum w-12">
                     {p.share}%
                   </span>
                 </div>
               </div>
             ))
           ) : (
-            <div className="text-center py-8 text-xs font-mono text-zinc-400 border border-dashed border-zinc-800/60 rounded-md">
+            <div className="text-center py-8 text-xs font-mono text-[var(--text-3)] border border-dashed border-[var(--line)] rounded-[var(--r2)] bg-[var(--surface-inset)]">
               No provider traffic logged for this period.
             </div>
           )}
@@ -106,10 +106,10 @@ export default function ProviderDistributionCard({ stats }) {
       </div>
 
       {/* Footer Navigation */}
-      <div className="pt-3 mt-4 border-t border-zinc-800/80 flex items-center justify-between text-xs font-mono">
+      <div className="pt-3 mt-4 border-t border-[var(--line)] flex items-center justify-between text-xs font-mono">
         <Link
           href="/dashboard/providers"
-          className="text-zinc-400 hover:text-white flex items-center gap-1 transition-colors"
+          className="text-[var(--text-2)] hover:text-[var(--text)] flex items-center gap-1 transition-colors"
         >
           <span>Manage Upstreams</span>
           <ArrowRight className="size-3" />

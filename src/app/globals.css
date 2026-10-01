@@ -487,6 +487,80 @@ body:has(.landing-page)::-webkit-scrollbar,
   box-shadow: var(--shadow-card);
 }
 
+/* Analytics 2-column split: Chart 1.6fr, Model Breakdown 1fr */
+.overview-analytics {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+@media (max-width: 860px) {
+  .overview-analytics {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Stat card */
+.stat-card {
+  background-color: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r3);
+  box-shadow: var(--shadow-card);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Card Title Typography */
+.ui-card__title {
+  font-family: var(--font-sans);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  color: var(--text);
+}
+
+/* Status Badges */
+.badge-success {
+  background-color: #14251D;
+  color: var(--pos);
+  border: 1px solid rgba(52, 211, 154, 0.25);
+  border-radius: var(--r-full);
+  padding: 2px 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.badge-warning {
+  background-color: #261F12;
+  color: var(--warn);
+  border: 1px solid rgba(242, 179, 75, 0.25);
+  border-radius: var(--r-full);
+  padding: 2px 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.badge-danger {
+  background-color: #281515;
+  color: var(--danger);
+  border: 1px solid rgba(255, 107, 107, 0.25);
+  border-radius: var(--r-full);
+  padding: 2px 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 /* Hardware Buttons */
 .ui-btn {
   display: inline-flex;

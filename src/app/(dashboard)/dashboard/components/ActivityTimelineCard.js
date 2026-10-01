@@ -24,12 +24,12 @@ function CustomTooltip({ active, payload, label, mode }) {
   if (!active || !payload || !payload.length) return null;
   const val = payload[0].value;
   return (
-    <div className="rounded-lg border border-zinc-800 bg-[#0C0D10]/95 backdrop-blur-md px-3 py-2 shadow-xl text-xs font-mono">
-      <div className="text-zinc-500 mb-1 text-[11px]">{label}</div>
+    <div className="rounded-[var(--r2)] border border-[var(--line-2)] bg-[var(--surface-2)]/95 backdrop-blur-md px-3 py-2 shadow-[var(--shadow-pop)] text-xs font-mono">
+      <div className="text-[var(--text-3)] mb-1 text-[11px]">{label}</div>
       <div className="flex items-center gap-2">
-        <span className="size-2 rounded-full bg-white" />
-        <span className="text-zinc-400 capitalize">{mode}:</span>
-        <span className="text-white font-semibold">
+        <span className="size-2 rounded-full bg-[var(--text)]" />
+        <span className="text-[var(--text-2)] capitalize">{mode}:</span>
+        <span className="text-[var(--text)] font-semibold u-tnum">
           {mode === "cost" ? fmtCost(val) : mode === "tokens" ? fmtTokens(val) : Number(val).toLocaleString()}
         </span>
       </div>
@@ -86,35 +86,35 @@ export default function ActivityTimelineCard({ period = "7d" }) {
   };
 
   return (
-    <div className="rounded-xl border border-zinc-800/80 bg-[#0E0F12] p-5 flex flex-col justify-between shadow-xs">
+    <div className="ui-card p-5 flex flex-col justify-between">
       {/* Card Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="font-mono text-[10px] font-medium tracking-[0.16em] uppercase text-zinc-400">
+            <span className="ui-eyebrow text-[10px] text-[var(--text-2)]">
               ACTIVITY TIMELINE
             </span>
-            <span className="text-zinc-700">·</span>
-            <span className="text-xs text-zinc-400">Throughput over time</span>
+            <span className="text-[var(--text-3)]">·</span>
+            <span className="text-xs text-[var(--text-3)]">Throughput over time</span>
           </div>
-          <div className="mt-1 flex items-center gap-4 text-xs font-mono">
-            <span className="text-zinc-400">
+          <div className="mt-1 flex items-center gap-4 text-xs font-mono text-[var(--text-2)]">
+            <span>
               Total:{" "}
-              <strong className="text-white font-semibold">
+              <strong className="text-[var(--text)] font-semibold u-tnum">
                 {viewMode === "cost" ? fmtCost(total) : viewMode === "tokens" ? fmtTokens(total) : total.toLocaleString()}
               </strong>
             </span>
-            <span className="text-zinc-600">·</span>
-            <span className="text-zinc-400">
+            <span className="text-[var(--text-3)]">·</span>
+            <span>
               Peak:{" "}
-              <strong className="text-zinc-200">
+              <strong className="text-[var(--text)] font-semibold u-tnum">
                 {viewMode === "cost" ? fmtCost(peak) : viewMode === "tokens" ? fmtTokens(peak) : Math.round(peak).toLocaleString()}
               </strong>
             </span>
-            <span className="text-zinc-600">·</span>
-            <span className="text-zinc-400">
+            <span className="text-[var(--text-3)]">·</span>
+            <span>
               Avg:{" "}
-              <strong className="text-zinc-300">
+              <strong className="text-[var(--text)] font-semibold u-tnum">
                 {viewMode === "cost" ? fmtCost(avg) : viewMode === "tokens" ? fmtTokens(avg) : Math.round(avg).toLocaleString()}
               </strong>
             </span>
@@ -122,7 +122,7 @@ export default function ActivityTimelineCard({ period = "7d" }) {
         </div>
 
         {/* View Mode Toggle */}
-        <div className="inline-flex items-center bg-[#101114] border border-zinc-800/80 rounded-lg p-0.5 self-start sm:self-auto shadow-xs">
+        <div className="inline-flex items-center bg-[var(--surface-2)] border border-[var(--line-2)] rounded-[var(--r1)] p-0.5 self-start sm:self-auto">
           {VIEW_MODES.map((m) => {
             const active = viewMode === m.value;
             const IconComp = m.icon;
@@ -132,10 +132,10 @@ export default function ActivityTimelineCard({ period = "7d" }) {
                 type="button"
                 onClick={() => setViewMode(m.value)}
                 className={cn(
-                  "flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono rounded-[6px] transition-all cursor-pointer",
+                  "flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono rounded-[4px] transition-all cursor-pointer",
                   active
-                    ? "bg-zinc-800 text-white font-medium border border-zinc-700/60 shadow-xs"
-                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40"
+                    ? "bg-[var(--surface)] text-[var(--text)] font-medium border border-[var(--line-2)] shadow-[var(--shadow-card)]"
+                    : "text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]"
                 )}
               >
                 <IconComp className="size-3" />
@@ -149,15 +149,15 @@ export default function ActivityTimelineCard({ period = "7d" }) {
       {/* Chart Canvas */}
       <div className="w-full h-[220px] sm:h-[240px]">
         {!mounted || loading ? (
-          <div className="w-full h-full flex items-center justify-center text-xs font-mono text-zinc-500 animate-pulse">
+          <div className="w-full h-full flex items-center justify-center text-xs font-mono text-[var(--text-3)] animate-pulse">
             Loading timeline telemetry...
           </div>
         ) : !hasData ? (
-          <div className="w-full h-full flex flex-col items-center justify-center border border-dashed border-zinc-800/80 rounded-lg bg-[#0A0B0D] p-6 text-center">
-            <Activity className="size-6 text-zinc-600 mb-2" />
-            <p className="text-xs font-mono text-zinc-400">No activity recorded for this period</p>
-            <p className="text-[11px] text-zinc-600 mt-1">
-              Send requests to <code className="text-zinc-400 bg-zinc-900 px-1 py-0.5 rounded">/v1/chat/completions</code> to see real-time volume.
+          <div className="w-full h-full flex flex-col items-center justify-center border border-dashed border-[var(--line)] rounded-[var(--r2)] bg-[var(--surface-inset)] p-6 text-center">
+            <Activity className="size-6 text-[var(--text-3)] mb-2" />
+            <p className="text-xs font-mono text-[var(--text-2)]">No activity recorded for this period</p>
+            <p className="text-[11px] text-[var(--text-3)] mt-1">
+              Send requests to <code className="text-[var(--text-2)] bg-[var(--surface-2)] px-1 py-0.5 rounded-[var(--r1)] border border-[var(--line)]">/v1/chat/completions</code> to see real-time volume.
             </p>
           </div>
         ) : (
@@ -169,19 +169,19 @@ export default function ActivityTimelineCard({ period = "7d" }) {
                   <stop offset="95%" stopColor="#FFFFFF" stopOpacity={0.00} />
                 </linearGradient>
               </defs>
-              <CartesianGrid stroke="#27272A" strokeDasharray="3 3" vertical={false} opacity={0.35} />
+              <CartesianGrid stroke="rgba(255, 255, 255, 0.065)" strokeDasharray="3 3" vertical={false} />
               <XAxis
                 dataKey="label"
-                stroke="#52525B"
-                fontSize={10}
-                fontFamily="var(--font-geist-mono)"
+                stroke="#6B6B70"
+                fontSize={11}
+                fontFamily="var(--font-mono)"
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
-                stroke="#52525B"
-                fontSize={10}
-                fontFamily="var(--font-geist-mono)"
+                stroke="#6B6B70"
+                fontSize={11}
+                fontFamily="var(--font-mono)"
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={formatYAxis}
@@ -190,8 +190,8 @@ export default function ActivityTimelineCard({ period = "7d" }) {
               <Area
                 type="monotone"
                 dataKey={viewMode}
-                stroke="#E4E4E7"
-                strokeWidth={1.75}
+                stroke="#EDEDEE"
+                strokeWidth={1.5}
                 fillOpacity={1}
                 fill="url(#areaGradient)"
               />

@@ -61,8 +61,8 @@ export default function DashboardOverviewClient({ machineId }) {
   };
 
   return (
-    <div className="flex flex-col gap-5 max-w-[1380px] mx-auto pb-10">
-      {/* 1. Top Section: Period Filters + 5 KPI Cards */}
+    <div className="flex flex-col gap-6 w-full pb-10">
+      {/* 1. Top Section: Period Filters + 5 KPI Cards (.grid-stats) */}
       <KpiBentoGrid
         stats={stats}
         connectionsCount={providers.length}
@@ -73,20 +73,16 @@ export default function DashboardOverviewClient({ machineId }) {
         onRefresh={fetchStats}
       />
 
-      {/* 2. Activity Timeline Card */}
-      <ActivityTimelineCard period={period} />
-
-      {/* 3. Lower Bento Grid: Top Models (6 cols) + Provider Distribution (6 cols) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
-        <div className="lg:col-span-6 flex flex-col">
-          <TopModelsCard stats={stats} />
-        </div>
-        <div className="lg:col-span-6 flex flex-col">
-          <ProviderDistributionCard stats={stats} />
-        </div>
+      {/* 2. Analytics Split: Activity Timeline (1.6fr) + Model Breakdown (1fr) */}
+      <div className="overview-analytics">
+        <ActivityTimelineCard period={period} />
+        <TopModelsCard stats={stats} />
       </div>
 
-      {/* 4. Full-Width Bottom Section: Latest Requests Table */}
+      {/* 3. Upstream Provider Distribution */}
+      <ProviderDistributionCard stats={stats} />
+
+      {/* 4. Full-Width Bottom Section: Interactive Activity Logs (.logs-table) */}
       <LatestRequestsTable initialRequests={stats?.recentRequests || []} />
     </div>
   );
