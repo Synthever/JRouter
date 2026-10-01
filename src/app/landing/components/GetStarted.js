@@ -1,32 +1,85 @@
 "use client";
+import { useState, useEffect, useRef } from "react";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 
 export default function GetStarted() {
   const { copied, copy } = useCopyToClipboard();
+  const [isVisible, setIsVisible] = useState(false);
+  const sectionRef = useRef(null);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -40px 0px" }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const handleCopy = (text) => {
     copy(text, "landing");
   };
 
   return (
-    <section className="lp-section relative overflow-hidden bg-transparent border-none">
+    <section ref={sectionRef} className="lp-section relative overflow-hidden bg-transparent border-none">
       <div className="lp-wrap relative z-10">
         <div className="flex flex-col lg:flex-row gap-12 items-start">
           {/* Left: Steps */}
           <div className="flex-1">
-            <div className="lp-eyebrow mb-3">
+            <div
+              className="lp-eyebrow mb-3"
+              style={{
+                transform: isVisible ? "translateY(0)" : "translateY(16px)",
+                opacity: isVisible ? 1 : 0,
+                transition: "transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.05s, opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.05s",
+                willChange: "transform, opacity",
+              }}
+            >
               <span className="lp-eyebrow__dot"></span>
               <span>QUICKSTART</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-semibold text-[var(--text)] tracking-tight mb-4">
+            <h2
+              className="text-2xl sm:text-3xl font-semibold text-[var(--text)] tracking-tight mb-4"
+              style={{
+                transform: isVisible ? "translateY(0)" : "translateY(24px)",
+                opacity: isVisible ? 1 : 0,
+                transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s, opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s",
+                willChange: "transform, opacity",
+              }}
+            >
               Initialize in 30 Seconds
             </h2>
-            <p className="text-sm text-[var(--text-2)] mb-8 max-w-lg leading-relaxed">
+            <p
+              className="text-sm text-[var(--text-2)] mb-8 max-w-lg leading-relaxed"
+              style={{
+                transform: isVisible ? "translateY(0)" : "translateY(24px)",
+                opacity: isVisible ? 1 : 0,
+                transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.25s, opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.25s",
+                willChange: "transform, opacity",
+              }}
+            >
               Launch local gateway, configure providers in the developer dashboard, and point any OpenAI-compatible client to port 20128.
             </p>
             
             <div className="flex flex-col gap-6">
-              <div className="flex gap-4">
+              <div
+                className="flex gap-4"
+                style={{
+                  transform: isVisible ? "translateX(0)" : "translateX(-32px)",
+                  opacity: isVisible ? 1 : 0,
+                  transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.35s, opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.35s",
+                  willChange: "transform, opacity",
+                }}
+              >
                 <div className="flex-none size-7 rounded-lg bg-black/40 backdrop-blur-xl border-0 text-[var(--text)] flex items-center justify-center font-mono text-xs font-semibold shadow-md shadow-black/50">1</div>
                 <div>
                   <h4 className="font-semibold text-sm text-[var(--text)]">Launch Gateway</h4>
@@ -34,7 +87,15 @@ export default function GetStarted() {
                 </div>
               </div>
               
-              <div className="flex gap-4">
+              <div
+                className="flex gap-4"
+                style={{
+                  transform: isVisible ? "translateX(0)" : "translateX(-32px)",
+                  opacity: isVisible ? 1 : 0,
+                  transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.45s, opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.45s",
+                  willChange: "transform, opacity",
+                }}
+              >
                 <div className="flex-none size-7 rounded-lg bg-black/40 backdrop-blur-xl border-0 text-[var(--text)] flex items-center justify-center font-mono text-xs font-semibold shadow-md shadow-black/50">2</div>
                 <div>
                   <h4 className="font-semibold text-sm text-[var(--text)]">Open Dashboard</h4>
@@ -42,7 +103,15 @@ export default function GetStarted() {
                 </div>
               </div>
               
-              <div className="flex gap-4">
+              <div
+                className="flex gap-4"
+                style={{
+                  transform: isVisible ? "translateX(0)" : "translateX(-32px)",
+                  opacity: isVisible ? 1 : 0,
+                  transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.55s, opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.55s",
+                  willChange: "transform, opacity",
+                }}
+              >
                 <div className="flex-none size-7 rounded-lg bg-black/40 backdrop-blur-xl border-0 text-[var(--text)] flex items-center justify-center font-mono text-xs font-semibold shadow-md shadow-black/50">3</div>
                 <div>
                   <h4 className="font-semibold text-sm text-[var(--text)]">Route Traffic</h4>
@@ -53,7 +122,15 @@ export default function GetStarted() {
           </div>
 
           {/* Right: Code block */}
-          <div className="flex-1 w-full">
+          <div
+            className="flex-1 w-full"
+            style={{
+              transform: isVisible ? "translateX(0) scale(1)" : "translateX(40px) scale(0.97)",
+              opacity: isVisible ? 1 : 0,
+              transition: "transform 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.25s, opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.25s",
+              willChange: "transform, opacity",
+            }}
+          >
             <div className="rounded-[var(--r3)] overflow-hidden bg-[var(--surface-inset)]/90 backdrop-blur-xl border border-[var(--line-2)] shadow-[var(--shadow-card)]">
               {/* Terminal header */}
               <div className="flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-2)]/90 border-b border-[var(--line)]">

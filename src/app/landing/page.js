@@ -1,5 +1,5 @@
 "use client";
-import { useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Navigation from "./components/Navigation";
 import HeroShaderBackground from "./components/HeroShaderBackground";
@@ -20,6 +20,8 @@ if (typeof window !== "undefined") {
 
 export default function LandingPage() {
   const router = useRouter();
+  const ctaRef = useRef(null);
+  const [ctaVisible, setCtaVisible] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.add("no-scrollbar");
@@ -28,6 +30,24 @@ export default function LandingPage() {
       document.documentElement.classList.remove("no-scrollbar");
       document.body.classList.remove("no-scrollbar");
     };
+  }, []);
+
+  useEffect(() => {
+    const el = ctaRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setCtaVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.15, rootMargin: "0px 0px -40px 0px" }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
   return (
@@ -59,22 +79,52 @@ export default function LandingPage() {
             <Features />
             
             {/* CTA Section */}
-            <section className="lp-section bg-transparent text-center border-none">
+            <section ref={ctaRef} className="lp-section bg-transparent text-center border-none">
               <div className="lp-wrap py-8">
-                <div className="lp-eyebrow mb-3">
+                <div
+                  className="lp-eyebrow mb-3"
+                  style={{
+                    transform: ctaVisible ? "translateY(0)" : "translateY(16px)",
+                    opacity: ctaVisible ? 1 : 0,
+                    transition: "transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.05s, opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.05s",
+                    willChange: "transform, opacity",
+                  }}
+                >
                   <span className="lp-eyebrow__dot"></span>
                   <span>OPEN SOURCE GATEWAY</span>
                 </div>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-[var(--text)] mb-3">
+                <h2
+                  className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-[var(--text)] mb-3"
+                  style={{
+                    transform: ctaVisible ? "translateY(0)" : "translateY(24px)",
+                    opacity: ctaVisible ? 1 : 0,
+                    transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s, opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s",
+                    willChange: "transform, opacity",
+                  }}
+                >
                   Streamline Your AI Stack
                 </h2>
-                <p className="text-sm text-[var(--text-2)] mb-8 max-w-lg mx-auto leading-relaxed">
+                <p
+                  className="text-sm text-[var(--text-2)] mb-8 max-w-lg mx-auto leading-relaxed"
+                  style={{
+                    transform: ctaVisible ? "translateY(0)" : "translateY(24px)",
+                    opacity: ctaVisible ? 1 : 0,
+                    transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.25s, opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.25s",
+                    willChange: "transform, opacity",
+                  }}
+                >
                   Connect your IDE, CLI tools, and background agents to a unified proxy layer. Local execution, zero subscription markups.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                   <button 
                     onClick={() => router.push("/dashboard")}
                     className="ui-btn ui-btn--primary px-6 py-2.5 text-xs sm:text-sm font-semibold cursor-pointer w-full sm:w-auto"
+                    style={{
+                      transform: ctaVisible ? "translateX(0)" : "translateX(-24px)",
+                      opacity: ctaVisible ? 1 : 0,
+                      transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.35s, opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.35s",
+                      willChange: "transform, opacity",
+                    }}
                   >
                     Launch Dashboard
                   </button>
@@ -83,6 +133,12 @@ export default function LandingPage() {
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="ui-btn ui-btn--soft px-6 py-2.5 text-xs sm:text-sm font-medium w-full sm:w-auto"
+                    style={{
+                      transform: ctaVisible ? "translateX(0)" : "translateX(24px)",
+                      opacity: ctaVisible ? 1 : 0,
+                      transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.35s, opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.35s",
+                      willChange: "transform, opacity",
+                    }}
                   >
                     Documentation
                   </a>

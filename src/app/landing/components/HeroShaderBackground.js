@@ -35,7 +35,7 @@ const ShaderCanvas = dynamic(
                   pointerEvents: "none",
                 }}
                 lazyLoad={false}
-                pixelDensity={1}
+                pixelDensity={typeof window !== "undefined" ? Math.min(window.devicePixelRatio || 1, 2) : 1}
                 pointerEvents="none"
               >
                 <ShaderGradient
