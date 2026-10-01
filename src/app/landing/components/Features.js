@@ -65,11 +65,11 @@ export default function Features() {
           {FEATURES.map((feature) => (
             <div 
               key={feature.title}
-              className="p-5 rounded-[var(--r3)] bg-[var(--surface)] border border-[var(--line)] shadow-[var(--shadow-card)] hover:border-[var(--accent-line)] transition-all flex flex-col justify-between"
+              className="p-5 rounded-[var(--r3)] bg-black/30 backdrop-blur-xl border-0 shadow-2xl shadow-black/80 hover:bg-black/40 transition-all flex flex-col justify-between"
             >
               <div>
-                <div className="size-9 rounded-[var(--r1)] bg-[var(--surface-2)] border border-[var(--line-2)] flex items-center justify-center text-[var(--text)] mb-3">
-                  <Icon className="text-[18px]">{feature.icon}</Icon>
+                <div className="text-[var(--text)] flex items-center mb-3">
+                  <Icon className="text-[20px]">{feature.icon}</Icon>
                 </div>
                 <h3 className="text-sm font-semibold text-[var(--text)] mb-1">{feature.title}</h3>
                 <p className="text-xs text-[var(--text-2)] leading-relaxed">{feature.desc}</p>

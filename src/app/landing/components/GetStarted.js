@@ -54,9 +54,9 @@ export default function GetStarted() {
 
           {/* Right: Code block */}
           <div className="flex-1 w-full">
-            <div className="rounded-[var(--r3)] overflow-hidden bg-[var(--surface-inset)]/90 backdrop-blur-xl border-0 shadow-[var(--shadow-card)]">
+            <div className="rounded-[var(--r3)] overflow-hidden bg-[var(--surface-inset)]/90 backdrop-blur-xl border border-[var(--line-2)] shadow-[var(--shadow-card)]">
               {/* Terminal header */}
-              <div className="flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-2)]/90">
+              <div className="flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-2)]/90 border-b border-[var(--line)]">
                 <div className="w-2.5 h-2.5 rounded-full bg-[#FF5F56]/80"></div>
                 <div className="w-2.5 h-2.5 rounded-full bg-[#FFBD2E]/80"></div>
                 <div className="w-2.5 h-2.5 rounded-full bg-[#27C93F]/80"></div>
@@ -83,7 +83,7 @@ export default function GetStarted() {
                   <div><span className="text-[var(--pos)]">&gt;</span> Ready for incoming connections ✓</div>
                 </div>
                 
-                <div className="text-[11px] text-[var(--text-3)] pt-3">
+                <div className="text-[11px] text-[var(--text-3)] pt-3 border-t border-[var(--line)]">
                   <div>Local SQLite DB: ~/.9router/db/data.sqlite</div>
                 </div>
               </div>

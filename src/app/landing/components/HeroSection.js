@@ -11,11 +11,8 @@ export default function HeroSection() {
       <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center gap-6 sm:gap-8">
         {/* Eyebrow glass badge */}
         <div className="border border-white/15 flex items-center gap-2.5 rounded-full py-1 px-3.5 bg-white/5 backdrop-blur-md shadow-lg shadow-black/40">
-          <span className="py-0.5 px-2 rounded-full bg-white/10 text-white text-[10px] font-semibold tracking-wide uppercase">
-            Gateway
-          </span>
           <span className="text-xs sm:text-sm text-neutral-300 font-mono tracking-wider">
-            ENTERPRISE AI PROXY INFRASTRUCTURE
+            GATEWAY ENTERPRISE AI PROXY INFRASTRUCTURE
           </span>
         </div>
 

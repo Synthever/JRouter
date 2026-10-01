@@ -22,9 +22,9 @@ export default function HowItWorks() {
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
           {/* Step 1: Client CLI & SDKs */}
-          <div className="p-6 rounded-[var(--r3)] bg-[var(--surface)] border border-[var(--line)] shadow-[var(--shadow-card)] flex flex-col gap-4">
-            <div className="size-11 rounded-[var(--r2)] bg-[var(--surface-2)] border border-[var(--line-2)] flex items-center justify-center text-[var(--text)]">
-              <Icon className="text-[20px]">terminal</Icon>
+          <div className="p-6 rounded-[var(--r3)] bg-black/30 backdrop-blur-xl border-0 shadow-2xl shadow-black/80 flex flex-col gap-4">
+            <div className="text-[var(--text)] flex items-center">
+              <Icon className="text-[24px]">terminal</Icon>
             </div>
             <div>
               <div className="text-[11px] font-mono text-[var(--text-3)] mb-1 uppercase tracking-[0.2em]">Step 01</div>
@@ -36,8 +36,8 @@ export default function HowItWorks() {
           </div>
 
           {/* Step 2: JRouter Gateway */}
-          <div className="p-6 rounded-[var(--r3)] bg-[var(--surface)] border border-[var(--line)] shadow-[var(--shadow-card)] flex flex-col gap-4">
-            <div className="size-11 rounded-[var(--r2)] bg-[var(--surface-2)] border border-[var(--accent-line)] flex items-center justify-center text-[var(--text)]">
+          <div className="p-6 rounded-[var(--r3)] bg-black/30 backdrop-blur-xl border-0 shadow-2xl shadow-black/80 flex flex-col gap-4">
+            <div className="text-[var(--text)] flex items-center">
               <AppLogo size={24} />
             </div>
             <div>
@@ -50,9 +50,9 @@ export default function HowItWorks() {
           </div>
 
           {/* Step 3: Upstream Providers */}
-          <div className="p-6 rounded-[var(--r3)] bg-[var(--surface)] border border-[var(--line)] shadow-[var(--shadow-card)] flex flex-col gap-4">
-            <div className="size-11 rounded-[var(--r2)] bg-[var(--surface-2)] border border-[var(--line-2)] flex items-center justify-center text-[var(--text)]">
-              <Icon className="text-[20px]">dns</Icon>
+          <div className="p-6 rounded-[var(--r3)] bg-black/30 backdrop-blur-xl border-0 shadow-2xl shadow-black/80 flex flex-col gap-4">
+            <div className="text-[var(--text)] flex items-center">
+              <Icon className="text-[24px]">dns</Icon>
             </div>
             <div>
               <div className="text-[11px] font-mono text-[var(--text-3)] mb-1 uppercase tracking-[0.2em]">Step 03</div>

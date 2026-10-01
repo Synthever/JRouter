@@ -48,39 +48,39 @@ export default function LandingPage() {
             <GetStarted />
             <HowItWorks />
             <Features />
+            
+            {/* CTA Section */}
+            <section className="lp-section bg-transparent text-center border-none">
+              <div className="lp-wrap py-8">
+                <div className="lp-eyebrow mb-3">
+                  <span className="lp-eyebrow__dot"></span>
+                  <span>OPEN SOURCE GATEWAY</span>
+                </div>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-[var(--text)] mb-3">
+                  Streamline Your AI Stack
+                </h2>
+                <p className="text-sm text-[var(--text-2)] mb-8 max-w-lg mx-auto leading-relaxed">
+                  Connect your IDE, CLI tools, and background agents to a unified proxy layer. Local execution, zero subscription markups.
+                </p>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <button 
+                    onClick={() => router.push("/dashboard")}
+                    className="ui-btn ui-btn--primary px-6 py-2.5 text-xs sm:text-sm font-semibold cursor-pointer w-full sm:w-auto"
+                  >
+                    Launch Dashboard
+                  </button>
+                  <a 
+                    href="https://github.com/Synthever/JRouter#readme" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="ui-btn ui-btn--soft px-6 py-2.5 text-xs sm:text-sm font-medium w-full sm:w-auto"
+                  >
+                    Documentation
+                  </a>
+                </div>
+              </div>
+            </section>
           </div>
-          
-          {/* CTA Section */}
-          <section className="relative z-20 lp-section bg-[var(--surface)] text-center border-t border-[var(--line)]">
-            <div className="lp-wrap py-8">
-              <div className="lp-eyebrow mb-3">
-                <span className="lp-eyebrow__dot"></span>
-                <span>OPEN SOURCE GATEWAY</span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-[var(--text)] mb-3">
-                Streamline Your AI Stack
-              </h2>
-              <p className="text-sm text-[var(--text-2)] mb-8 max-w-lg mx-auto leading-relaxed">
-                Connect your IDE, CLI tools, and background agents to a unified proxy layer. Local execution, zero subscription markups.
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                <button 
-                  onClick={() => router.push("/dashboard")}
-                  className="ui-btn ui-btn--primary px-6 py-2.5 text-xs sm:text-sm font-semibold cursor-pointer w-full sm:w-auto"
-                >
-                  Launch Dashboard
-                </button>
-                <a 
-                  href="https://github.com/Synthever/JRouter#readme" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="ui-btn ui-btn--soft px-6 py-2.5 text-xs sm:text-sm font-medium w-full sm:w-auto"
-                >
-                  Documentation
-                </a>
-              </div>
-            </div>
-          </section>
         </main>
         
         <Footer />
