@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 const HERO_PHRASES = [
-  "Unified AI Infrastructure for Developer Workflows",
+  "Unified AI Infra for Developer Workflows",
   "One Universal Gateway for 40+ AI Providers",
   "Resilient Model Routing with Zero Markups",
 ];
