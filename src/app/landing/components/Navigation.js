@@ -8,6 +8,7 @@ import AppLogo from "@/shared/components/AppLogo";
 export default function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [hasEntered, setHasEntered] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -19,8 +20,22 @@ export default function Navigation() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setHasEntered(true);
+    }, 60);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <nav className="fixed top-0 inset-x-0 z-50 flex justify-center pointer-events-none transition-all duration-300 ease-out px-4 sm:px-6">
+    <nav
+      className="fixed top-0 inset-x-0 z-50 flex justify-center pointer-events-none px-4 sm:px-6"
+      style={{
+        transform: hasEntered ? "translateY(0)" : "translateY(calc(-100% - 24px))",
+        opacity: hasEntered ? 1 : 0,
+        transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
+      }}
+    >
       <div
         className={`pointer-events-auto transition-all duration-300 ease-out flex items-center justify-between w-full ${
           isScrolled

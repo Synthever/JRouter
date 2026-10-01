@@ -1,24 +1,92 @@
 "use client";
 import Icon from "@/shared/components/Icon";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+
+const HERO_PHRASES = [
+  "Unified AI Infrastructure for Developer Workflows",
+  "One Universal Gateway for 40+ AI Providers",
+  "Resilient Model Routing with Zero Markups",
+];
 
 export default function HeroSection() {
   const router = useRouter();
+  const [hasEntered, setHasEntered] = useState(false);
+  const [phraseIndex, setPhraseIndex] = useState(0);
+  const [currentText, setCurrentText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setHasEntered(true);
+    }, 180);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Typewriter effect: types from beginning, pauses, deletes, and switches between 3 phrases
+  useEffect(() => {
+    const fullText = HERO_PHRASES[phraseIndex];
+    let timer;
+
+    if (!isDeleting && currentText === fullText) {
+      // Pause at full text to allow reading
+      timer = setTimeout(() => {
+        setIsDeleting(true);
+      }, 2000);
+    } else if (isDeleting && currentText === "") {
+      // Pause on empty before starting the next phrase
+      timer = setTimeout(() => {
+        setIsDeleting(false);
+        setPhraseIndex((prev) => (prev + 1) % HERO_PHRASES.length);
+      }, 280);
+    } else if (isDeleting) {
+      // Fast snappy backspacing
+      timer = setTimeout(() => {
+        setCurrentText((prev) => prev.slice(0, -1));
+      }, 18);
+    } else {
+      // Natural typewriter rhythm with quick start
+      const isFirstChar = currentText === "" && phraseIndex === 0;
+      timer = setTimeout(() => {
+        setCurrentText(fullText.slice(0, currentText.length + 1));
+      }, isFirstChar ? 100 : 42);
+    }
+
+    return () => clearTimeout(timer);
+  }, [currentText, isDeleting, phraseIndex]);
 
   return (
     <section className="relative min-h-[92vh] flex flex-col items-center justify-center text-center px-4 sm:px-6 pt-32 pb-20 bg-transparent text-white w-full overflow-hidden">
       {/* Foreground Hero Content */}
       <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center gap-6 sm:gap-8">
         {/* Eyebrow glass badge */}
-        <div className="border border-white/15 flex items-center gap-2.5 rounded-full py-1 px-3.5 bg-white/5 backdrop-blur-md shadow-lg shadow-black/40">
+        <div
+          className="border border-white/15 flex items-center gap-2.5 rounded-full py-1 px-3.5 bg-white/5 backdrop-blur-md shadow-lg shadow-black/40 hover:bg-white/10 hover:border-white/25"
+          style={{
+            transform: hasEntered ? "scale(1) translateY(0)" : "scale(0.8) translateY(14px)",
+            opacity: hasEntered ? 1 : 0,
+            transition:
+              "transform 0.65s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s, border-color 0.2s",
+            willChange: "transform, opacity",
+          }}
+        >
           <span className="text-xs sm:text-sm text-neutral-300 font-mono tracking-wider">
             GATEWAY ENTERPRISE AI PROXY INFRASTRUCTURE
           </span>
         </div>
 
-        {/* Main heading */}
-        <h1 className="text-4xl sm:text-6xl md:text-7xl font-semibold tracking-tight leading-[1.12] text-white">
-          Unified AI Infrastructure for Developer Workflows
+        {/* Main heading with Typewriter animation */}
+        <h1
+          className="text-4xl sm:text-6xl md:text-7xl font-semibold tracking-tight leading-[1.12] text-white min-h-[5.5rem] sm:min-h-[8.5rem] md:min-h-[10.5rem]"
+          aria-label={HERO_PHRASES[phraseIndex]}
+        >
+          <span aria-hidden="true">
+            {currentText}
+            <span
+              className="inline-block w-[3px] sm:w-[4px] md:w-[5px] h-[0.82em] bg-white ml-1.5 align-middle rounded-full animate-pulse"
+            />
+          </span>
+          <span className="sr-only">{HERO_PHRASES[phraseIndex]}</span>
         </h1>
 
         {/* Description */}

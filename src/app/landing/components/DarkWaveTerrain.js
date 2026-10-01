@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, memo } from "react";
+import { useEffect, useRef, useSyncExternalStore, memo } from "react";
 import * as THREE from "three";
+
+const emptySubscribe = () => () => {};
 
 /**
  * DarkWaveTerrain
@@ -18,7 +20,7 @@ function TerrainCanvas() {
 
     let animationFrameId = null;
     let isVisible = true;
-    const clock = new THREE.Clock();
+    const timer = THREE.Timer ? new THREE.Timer() : new THREE.Clock();
 
     // Scene & Dimensions
     const scene = new THREE.Scene();
@@ -246,12 +248,15 @@ function TerrainCanvas() {
     intersectionObserver.observe(container);
 
     // Animation Loop
-    const animate = () => {
+    const animate = (timestamp) => {
       animationFrameId = requestAnimationFrame(animate);
 
       if (!isVisible) return;
 
-      const elapsedTime = clock.getElapsedTime();
+      if (timer.update) {
+        timer.update(timestamp);
+      }
+      const elapsedTime = timer.getElapsed ? timer.getElapsed() : timer.getElapsedTime();
 
       // Smooth mouse interpolation
       curMouseX += (targetMouseX - curMouseX) * 0.04;
@@ -276,6 +281,7 @@ function TerrainCanvas() {
     // Cleanup
     return () => {
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      if (timer?.dispose) timer.dispose();
       window.removeEventListener("mousemove", handleMouseMove);
       resizeObserver.disconnect();
       intersectionObserver.disconnect();
@@ -295,11 +301,7 @@ function TerrainCanvas() {
 }
 
 export default memo(function DarkWaveTerrain() {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 bg-[#060813]">

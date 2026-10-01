@@ -9,6 +9,15 @@ import Features from "./components/Features";
 import GetStarted from "./components/GetStarted";
 import Footer from "./components/Footer";
 
+// Filter out deprecated THREE.Clock warning emitted by 3rd-party dependencies
+if (typeof window !== "undefined") {
+  const origWarn = console.warn;
+  console.warn = (...args) => {
+    if (typeof args[0] === "string" && args[0].includes("THREE.Clock")) return;
+    origWarn.apply(console, args);
+  };
+}
+
 export default function LandingPage() {
   const router = useRouter();
 

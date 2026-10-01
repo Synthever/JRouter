@@ -3,6 +3,15 @@
 import React, { useState, useEffect, memo, Suspense } from "react";
 import dynamic from "next/dynamic";
 
+// Filter out deprecated THREE.Clock warning emitted by 3rd-party @shadergradient/react
+if (typeof window !== "undefined") {
+  const origWarn = console.warn;
+  console.warn = (...args) => {
+    if (typeof args[0] === "string" && args[0].includes("THREE.Clock")) return;
+    origWarn.apply(console, args);
+  };
+}
+
 /**
  * Digital Success - Cool volumetric shadow gradient from hero.md
  * Exact uniforms from packages/blocks/src/hero-section/hero-digital-success.tsx
@@ -55,10 +64,9 @@ const ShaderCanvas = dynamic(
                   cPolarAngle={180}
                   cDistance={0.5}
                   cameraZoom={15.1}
-                  // Effect props
-                  lightType="env"
-                  brightness={0.75}
-                  envPreset="city"
+                  // Effect props - "3d" uses local lights without blocking on external .hdr downloads
+                  lightType="3d"
+                  brightness={0.85}
                   grain="on"
                   // Tool props
                   toggleAxis={false}
@@ -81,15 +89,30 @@ const ShaderCanvas = dynamic(
 );
 
 export default memo(function HeroShaderBackground() {
-  const [mounted, setMounted] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    const timer = setTimeout(() => setReady(true), 50);
+    return () => clearTimeout(timer);
   }, []);
 
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 bg-black">
-      {mounted && <ShaderCanvas />}
+    <div
+      className="absolute inset-0 overflow-hidden pointer-events-none z-0"
+      style={{
+        background:
+          "radial-gradient(ellipse 90% 70% at 50% 30%, #27272a 0%, #18181b 45%, #09090b 80%, #000000 100%)",
+      }}
+    >
+      <div
+        className="w-full h-full"
+        style={{
+          opacity: ready ? 1 : 0,
+          transition: "opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
+        }}
+      >
+        <ShaderCanvas />
+      </div>
     </div>
   );
 });
