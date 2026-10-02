@@ -8,7 +8,6 @@ import ProviderIcon from "@/shared/components/ProviderIcon";
 import Icon from "@/shared/components/Icon";
 import HeaderMenu from "@/shared/components/HeaderMenu";
 import HeaderLanguage from "@/shared/components/HeaderLanguage";
-import ThemeToggle from "@/shared/components/ThemeToggle";
 import { useHeaderSearchStore } from "@/store/headerSearchStore";
 import { OAUTH_PROVIDERS, APIKEY_PROVIDERS } from "@/shared/constants/config";
 import { MEDIA_PROVIDER_KINDS, AI_PROVIDERS } from "@/shared/constants/providers";
@@ -294,7 +293,6 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
           </div>
         )}
         <HeaderSearch />
-        <ThemeToggle className="dashboard-header__action" />
         <HeaderLanguage />
         <HeaderMenu onLogout={handleLogout} />
       </div>

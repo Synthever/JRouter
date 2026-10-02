@@ -52,6 +52,7 @@ source/*
 docs/*
 !docs/ARCHITECTURE.md
 !docs/DESIGN.md
+!docs/FRONTEND.md
 !docs/superpowers/
 !docs/superpowers/**
 test/*

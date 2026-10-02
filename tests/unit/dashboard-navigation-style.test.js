@@ -17,25 +17,31 @@ describe("dashboard navigation styling contract", () => {
     expect(header).not.toContain("hover:text-white");
   });
 
-  it("uses the same header control for theme, language and menu", () => {
-    expect(read("src/shared/components/Header.js")).toContain('<ThemeToggle className="dashboard-header__action"');
+  it("keeps language and menu controls without a standalone theme button", () => {
+    const header = read("src/shared/components/Header.js");
+    expect(header).not.toContain("ThemeToggle");
+    expect(header).toContain("<HeaderLanguage />");
+    expect(header).toContain("<HeaderMenu onLogout={handleLogout} />");
+    expect(read("src/shared/components/HeaderMenu.js")).toContain('label="Theme"');
     for (const name of ["HeaderLanguage", "HeaderMenu"]) {
       expect(read(`src/shared/components/${name}.js`)).toContain('className="dashboard-header__action"');
     }
   });
 
-  it("matches the dark navbar surface to the overview cards", () => {
+  it("keeps the dark navbar transparent without a shadow or bottom border", () => {
     const css = read("src/app/globals.css");
     const header = css.match(/\.dark \.dashboard-header\s*\{([^}]+)\}/)?.[1] || "";
     const overlay = css.match(/\.dark \.dashboard-header::before\s*\{([^}]+)\}/)?.[1] || "";
     const card = css.match(/\.dark \.dashboard-overview :is\(\.stat-card, \.ui-card\)\s*\{([^}]+)\}/)?.[1] || "";
+    const base = css.match(/\n\.dashboard-header\s*\{([^}]+)\}/)?.[1] || "";
 
-    for (const declaration of ["background-color: rgba(0, 0, 0, 0.3);", "background-image: none;"]) {
-      expect(card).toContain(declaration);
+    for (const declaration of ["background-color: transparent;", "background-image: none;"]) {
       expect(header).toContain(declaration);
       expect(overlay).toContain(declaration);
     }
-    expect(header).toContain("box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);");
+    expect(card).toContain("background-color: rgba(0, 0, 0, 0.3);");
+    expect(base).toContain("border-bottom: 0;");
+    expect(header).toContain("box-shadow: none;");
     expect(overlay).toContain("backdrop-filter: blur(24px);");
     expect(css).toMatch(/@supports[^\{]+\{\s*\.dashboard-header,\s*\.dark \.dashboard-header\s*\{\s*background: transparent;/);
   });

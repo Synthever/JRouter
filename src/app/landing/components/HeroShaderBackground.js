@@ -12,11 +12,6 @@ if (typeof window !== "undefined") {
   };
 }
 
-/**
- * Digital Success - Cool volumetric shadow gradient from hero.md
- * Exact uniforms from packages/blocks/src/hero-section/hero-digital-success.tsx
- * Three-color blue palette (#92dbe0, #0b7bff, #3865cf), cameraZoom 15.1, cDistance 0.5.
- */
 const ShaderCanvas = dynamic(
   () =>
     import("@shadergradient/react")
@@ -105,8 +100,10 @@ export default memo(function HeroShaderBackground() {
       }}
     >
       <div
-        className="w-full h-full"
+        className="landing-shader-field w-full h-full"
         style={{
+          // The library's grain pass splits RGB channels even with a neutral palette.
+          filter: "grayscale(1)",
           opacity: ready ? 1 : 0,
           transition: "opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
         }}

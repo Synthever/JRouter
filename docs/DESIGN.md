@@ -423,4 +423,4 @@ Gunakan `AppLogo` dan asset bersama; periksa kontras logo pada light mode. Nama 
 
 ### Dokumentasi pendamping
 
-`DESIGN.md` cukup sebagai acuan visual awal. **Opsional:** `docs/FRONTEND.md` untuk cara menyusun route/layout, lokasi komponen, penggunaan theme, dan prosedur verifikasi. Simpan nilai visual hanya di sini dan referensikan dari dokumen teknis agar tidak ada dua sumber token. Dokumentasi brand terpisah, token export, atau component playground baru diperlukan ketika ada kebutuhan konkret; semuanya di luar perubahan ini.
+`DESIGN.md` menjadi acuan visual. [FRONTEND.md](FRONTEND.md) adalah pendamping teknis untuk cara menyusun route/layout, lokasi komponen, penggunaan theme, dan prosedur verifikasi. Simpan nilai visual hanya di sini dan referensikan dari dokumen teknis agar tidak ada dua sumber token. Dokumentasi brand terpisah, token export, atau component playground baru diperlukan ketika ada kebutuhan konkret; semuanya di luar perubahan ini.
