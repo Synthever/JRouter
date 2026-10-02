@@ -24,6 +24,7 @@
   --text-muted: #71717A;
   --text-dim: #A1A1AA;
   --pos: #15803D;
+  --pos-bg: color-mix(in srgb, var(--pos) 6%, var(--surface));
   --warn: #B45309;
   --danger: #DC2626;
   --promo: #FF3B3B;
@@ -110,6 +111,7 @@
   --text-muted: #A1A1A6;
   --text-dim: #6B6B70;
   --pos: #34D39A;
+  --pos-bg: #14251D;
   --warn: #F2B34B;
   --danger: #FF6B6B;
   --promo: #FF3B3B;
@@ -1016,9 +1018,9 @@ body:has(.landing-page)::-webkit-scrollbar,
 
 /* Status Badges */
 .badge-success {
-  background-color: #14251D;
+  background-color: var(--pos-bg);
   color: var(--pos);
-  border: 1px solid rgba(52, 211, 154, 0.25);
+  border: 1px solid color-mix(in srgb, var(--pos) 25%, transparent);
   border-radius: var(--r-full);
   padding: 2px 8px;
   font-family: var(--font-mono);

@@ -29,6 +29,11 @@ export function getConnectionLabel(connection) {
     || null;
 }
 
+export function maskQuotaEmail(label) {
+  if (typeof label !== "string") return label;
+  return label.replace(/^([^@\s])[^@\s]*@([^@\s]+)$/, "$1***@$2");
+}
+
 export function getConnectionQuotaRemaining(connection, quotaData) {
   const quota = quotaData[connection.id]?.quotas?.[0];
   if (!quota) return Number.POSITIVE_INFINITY;

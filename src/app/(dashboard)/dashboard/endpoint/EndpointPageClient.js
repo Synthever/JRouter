@@ -19,6 +19,7 @@ import EndpointRow from "./components/EndpointRow";
 import StatusAlert from "./components/StatusAlert";
 import Tooltip from "./components/Tooltip";
 import SecurityWarning from "./components/SecurityWarning";
+import styles from "./endpoint.module.css";
 export default function APIPageClient({ machineId }) {
   const [keys, setKeys] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -700,7 +701,7 @@ export default function APIPageClient({ machineId }) {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-8">
+      <div className={styles.page}>
         <CardSkeleton />
         <CardSkeleton />
       </div>
@@ -710,16 +711,18 @@ export default function APIPageClient({ machineId }) {
   const currentEndpoint = baseUrl;
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className={styles.page}>
       {/* Endpoint Card */}
-      <Card>
-        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Icon className="text-primary">api</Icon>
-          API Endpoint
-        </h2>
+      <Card className={styles.panel}>
+        <div className={styles.header}>
+          <h2 className={styles.heading}>
+            <Icon>api</Icon>
+            API Endpoint
+          </h2>
+        </div>
 
         {/* Endpoint rows */}
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-4 sm:gap-3">
           {/* Local */}
           <EndpointRow
             label="Local"
@@ -729,22 +732,23 @@ export default function APIPageClient({ machineId }) {
             onCopy={copy}
           />
           {/* Cloudflare Tunnel */}
-          <div className="flex items-center gap-2">
-            <span className={`text-xs font-mono px-1.5 py-0.5 rounded shrink-0 min-w-[88px] text-center ${
-              tunnelEnabled ? "bg-primary/10 text-primary" : "bg-surface-2 text-text-muted"
+          <div className={styles.row}>
+            <span className={`${styles.label} ${
+              tunnelEnabled ? styles.enabled : ""
             }`}>Tunnel</span>
             {tunnelEnabled && !tunnelLoading && tunnelReachable ? (
               <>
-                <Input value={`${tunnelPublicUrl || tunnelUrl}/v1`} readOnly className="flex-1 font-mono text-sm" />
+                <Input value={`${tunnelPublicUrl || tunnelUrl}/v1`} readOnly className={styles.field} inputClassName="font-mono" aria-label="Tunnel endpoint" />
                 <button
                   onClick={() => copy(`${tunnelPublicUrl || tunnelUrl}/v1`, "tunnel_url")}
-                  className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded text-text-muted hover:text-primary transition-colors shrink-0"
+                  className={styles.iconButton}
+                  aria-label="Copy tunnel endpoint"
                 >
                   <Icon className="text-[18px]">{copied === "tunnel_url" ? "check" : "content_copy"}</Icon>
                 </button>
                 <button
                   onClick={() => setShowDisableTunnelModal(true)}
-                  className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0"
+                  className={`${styles.iconButton} ${styles.dangerButton}`}
                   title="Disable Tunnel"
                 >
                   <Icon className="text-[18px]">power_settings_new</Icon>
@@ -752,13 +756,13 @@ export default function APIPageClient({ machineId }) {
               </>
             ) : tunnelEnabled && !tunnelLoading && !tunnelReachable ? (
               <>
-                <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded border border-amber-300 dark:border-amber-800 bg-amber-500/5 text-sm text-amber-600 dark:text-amber-400">
+                <div className={`${styles.status} ${styles.warning}`}>
                   <Icon className="animate-spin text-sm">progress_activity</Icon>
                   {tunnelEverReachable ? "Tunnel reconnecting..." : "Tunnel checking..."}
                 </div>
                 <button
                   onClick={() => setShowDisableTunnelModal(true)}
-                  className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0"
+                  className={`${styles.iconButton} ${styles.dangerButton}`}
                   title="Disable Tunnel"
                 >
                   <Icon className="text-[18px]">power_settings_new</Icon>
@@ -766,13 +770,13 @@ export default function APIPageClient({ machineId }) {
               </>
             ) : tunnelLoading ? (
               <>
-                <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded border border-border bg-input text-sm text-text-muted">
+                <div className={styles.status}>
                   <Icon className="animate-spin text-sm">progress_activity</Icon>
                   {tunnelProgress || "Creating tunnel..."}
                 </div>
                 <button
                   onClick={() => { setTunnelLoading(false); setTunnelProgress(""); }}
-                  className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0"
+                  className={`${styles.iconButton} ${styles.dangerButton}`}
                   title="Stop"
                 >
                   <Icon className="text-[18px]">power_settings_new</Icon>
@@ -780,21 +784,21 @@ export default function APIPageClient({ machineId }) {
               </>
             ) : tunnelStatus?.type === "error" ? (
               <>
-                <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded border border-red-300 dark:border-red-800 bg-red-500/5 text-sm text-red-600 dark:text-red-400">
+                <div className={`${styles.status} ${styles.error}`}>
                   <Icon className="text-sm">error</Icon>
                   {tunnelStatus.message}
                 </div>
-                <Button size="sm" icon="cloud_upload" onClick={() => setShowEnableTunnelModal(true)}>Enable</Button>
+                <Button className={styles.primary} size="sm" icon="cloud_upload" onClick={() => setShowEnableTunnelModal(true)}>Enable</Button>
               </>
             ) : tunnelChecking ? (
               <>
-                <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded border border-border bg-input text-sm text-text-muted">
+                <div className={styles.status}>
                   <Icon className="animate-spin text-sm">progress_activity</Icon>
                   Checking...
                 </div>
                 <button
                   onClick={() => setTunnelChecking(false)}
-                  className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0"
+                  className={`${styles.iconButton} ${styles.dangerButton}`}
                   title="Stop"
                 >
                   <Icon className="text-[18px]">power_settings_new</Icon>
@@ -802,6 +806,7 @@ export default function APIPageClient({ machineId }) {
               </>
             ) : (
               <Button
+                className={styles.primary}
                 size="sm"
                 icon="cloud_upload"
                 onClick={() => {
@@ -821,22 +826,23 @@ export default function APIPageClient({ machineId }) {
             )}
           </div>
           {/* Tailscale */}
-          <div className="flex items-center gap-2">
-            <span className={`text-xs font-mono px-1.5 py-0.5 rounded shrink-0 min-w-[88px] text-center ${
-              tsEnabled ? "bg-primary/10 text-primary" : "bg-surface-2 text-text-muted"
+          <div className={styles.row}>
+            <span className={`${styles.label} ${
+              tsEnabled ? styles.enabled : ""
             }`}>Tailscale</span>
             {tsEnabled && !tsLoading && tsReachable ? (
               <>
-                <Input value={`${tsUrl}/v1`} readOnly className="flex-1 font-mono text-sm" />
+                <Input value={`${tsUrl}/v1`} readOnly className={styles.field} inputClassName="font-mono" aria-label="Tailscale endpoint" />
                 <button
                   onClick={() => copy(`${tsUrl}/v1`, "ts_url")}
-                  className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded text-text-muted hover:text-primary transition-colors shrink-0"
+                  className={styles.iconButton}
+                  aria-label="Copy Tailscale endpoint"
                 >
                   <Icon className="text-[18px]">{copied === "ts_url" ? "check" : "content_copy"}</Icon>
                 </button>
                 <button
                   onClick={() => setShowDisableTsModal(true)}
-                  className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0"
+                  className={`${styles.iconButton} ${styles.dangerButton}`}
                   title="Disable Tailscale"
                 >
                   <Icon className="text-[18px]">power_settings_new</Icon>
@@ -844,13 +850,13 @@ export default function APIPageClient({ machineId }) {
               </>
             ) : tsEnabled && !tsLoading && !tsReachable ? (
               <>
-                <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded border border-amber-300 dark:border-amber-800 bg-amber-500/5 text-sm text-amber-600 dark:text-amber-400">
+                <div className={`${styles.status} ${styles.warning}`}>
                   <Icon className="animate-spin text-sm">progress_activity</Icon>
                   {tsEverReachable ? "Tailscale reconnecting..." : "Tailscale checking..."}
                 </div>
                 <button
                   onClick={() => setShowDisableTsModal(true)}
-                  className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0"
+                  className={`${styles.iconButton} ${styles.dangerButton}`}
                   title="Disable Tailscale"
                 >
                   <Icon className="text-[18px]">power_settings_new</Icon>
@@ -858,12 +864,13 @@ export default function APIPageClient({ machineId }) {
               </>
             ) : (tsLoading || tsConnecting) ? (
               <>
-                <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded border border-border bg-input text-sm text-text-muted">
+                <div className={styles.status}>
                   <Icon className="animate-spin text-sm">progress_activity</Icon>
                   {tsProgress || "Connecting..."}
                 </div>
                 {tsAuthUrl && (
                   <Button
+                    className={styles.primary}
                     size="sm"
                     icon="open_in_new"
                     onClick={() => window.open(tsAuthUrl, "tailscale_auth", "width=600,height=700,noopener,noreferrer")}
@@ -873,7 +880,7 @@ export default function APIPageClient({ machineId }) {
                 )}
                 <button
                   onClick={() => { setTsLoading(false); setTsConnecting(false); setTsProgress(""); clearUserAuth(); }}
-                  className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0"
+                  className={`${styles.iconButton} ${styles.dangerButton}`}
                   title="Stop"
                 >
                   <Icon className="text-[18px]">power_settings_new</Icon>
@@ -881,11 +888,11 @@ export default function APIPageClient({ machineId }) {
               </>
             ) : tsStatus?.type === "error" ? (
               <>
-                <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded border border-red-300 dark:border-red-800 bg-red-500/5 text-sm text-red-600 dark:text-red-400">
+                <div className={`${styles.status} ${styles.error}`}>
                   <Icon className="text-sm">error</Icon>
                   {tsStatus.message}
                 </div>
-                <Button size="sm" icon="vpn_lock" onClick={handleOpenTsModal}>Enable</Button>
+                <Button className={styles.primary} size="sm" icon="vpn_lock" onClick={handleOpenTsModal}>Enable</Button>
               </>
             ) : (
               <Button
@@ -898,7 +905,7 @@ export default function APIPageClient({ machineId }) {
                   }
                   handleOpenTsModal();
                 }}
-                className="bg-linear-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white!"
+                className={styles.primary}
               >
                 Enable
               </Button>
@@ -943,12 +950,12 @@ export default function APIPageClient({ machineId }) {
 
         {/* Tunnel dashboard access option */}
         {(tunnelEnabled || tsEnabled) && (
-          <div className="mt-4 pt-4 border-t border-border flex items-center gap-3">
+          <div className="mt-5 pt-5 border-t border-border-subtle flex items-center gap-3">
             <Toggle
               checked={tunnelDashboardAccess}
               onChange={() => handleTunnelDashboardAccess(!tunnelDashboardAccess)}
             />
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 min-w-0">
               <p className="font-medium text-sm">Allow dashboard access via tunnel</p>
               <Tooltip text="When enabled, the dashboard can be accessed through your tunnel or Tailscale URL (login still required). When disabled, dashboard access via tunnel/Tailscale is completely blocked." />
             </div>
@@ -957,20 +964,20 @@ export default function APIPageClient({ machineId }) {
       </Card>
 
       {/* API Keys */}
-      <Card id="require-api-key">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <Icon className="text-primary">vpn_key</Icon>
+      <Card className={styles.panel} id="require-api-key">
+        <div className={styles.header}>
+          <h2 className={styles.heading}>
+            <Icon>vpn_key</Icon>
             API Keys
           </h2>
-          <Button icon="add" onClick={() => setShowAddModal(true)}>
+          <Button className={styles.primary} icon="add" onClick={() => setShowAddModal(true)}>
             Create Key
           </Button>
         </div>
 
-        <div className="flex items-center justify-between pb-4 mb-4 border-b border-border">
+        <div className={styles.settingsRow}>
           <div>
-            <p className="font-medium">Require API key</p>
+            <p className="text-sm font-medium">Require API key</p>
             <p className="text-sm text-text-muted">
               Requests without a valid key will be rejected
             </p>
@@ -989,12 +996,12 @@ export default function APIPageClient({ machineId }) {
 
         {keys.length === 0 ? (
           <div className="text-center py-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4">
+            <div className="inline-flex items-center justify-center text-text-muted mb-4">
               <Icon className="text-[32px]">vpn_key</Icon>
             </div>
             <p className="text-text-main font-medium mb-1">No API keys yet</p>
             <p className="text-sm text-text-muted mb-4">Create your first API key to get started</p>
-            <Button icon="add" onClick={() => setShowAddModal(true)}>
+            <Button className={styles.primary} icon="add" onClick={() => setShowAddModal(true)}>
               Create Key
             </Button>
           </div>
@@ -1003,17 +1010,17 @@ export default function APIPageClient({ machineId }) {
             {keys.map((key) => (
               <div
                 key={key.id}
-                className={`group flex items-center justify-between py-3 border-b border-black/[0.03] dark:border-white/[0.03] last:border-b-0 ${key.isActive === false ? "opacity-60" : ""}`}
+                className={styles.keyRow}
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">{key.name}</p>
+                  <p className="text-sm font-medium break-words">{key.name}</p>
                   <div className="flex items-center gap-2 mt-1">
-                    <code className="text-xs text-text-muted font-mono">
+                    <code className={`${styles.keyValue} text-xs text-text-muted font-mono`} data-i18n-skip>
                       {visibleKeys.has(key.id) ? key.key : maskKey(key.key)}
                     </code>
                     <button
                       onClick={() => toggleKeyVisibility(key.id)}
-                      className="p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded text-text-muted hover:text-primary transition-all"
+                      className={styles.iconButton}
                       title={visibleKeys.has(key.id) ? "Hide key" : "Show key"}
                     >
                       <Icon className="text-[14px]">
@@ -1022,7 +1029,8 @@ export default function APIPageClient({ machineId }) {
                     </button>
                     <button
                       onClick={() => copy(key.key, key.id)}
-                      className="p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded text-text-muted hover:text-primary transition-all"
+                      className={styles.iconButton}
+                      aria-label="Copy API key"
                     >
                       <Icon className="text-[14px]">
                         {copied === key.id ? "check" : "content_copy"}
@@ -1033,10 +1041,10 @@ export default function APIPageClient({ machineId }) {
                     Created {new Date(key.createdAt).toLocaleDateString()}
                   </p>
                   {key.isActive === false && (
-                    <p className="text-xs text-orange-500 mt-1">Paused</p>
+                    <p className="text-xs text-[var(--warn)] mt-1">Paused</p>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   <Toggle
                     size="sm"
                     checked={key.isActive ?? true}
@@ -1058,7 +1066,8 @@ export default function APIPageClient({ machineId }) {
                   />
                   <button
                     onClick={() => handleDeleteKey(key.id)}
-                    className="p-2 hover:bg-red-500/10 rounded text-red-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all"
+                    className={`${styles.iconButton} ${styles.dangerButton}`}
+                    aria-label="Delete API key"
                   >
                     <Icon className="text-[18px]">delete</Icon>
                   </button>
@@ -1081,12 +1090,13 @@ export default function APIPageClient({ machineId }) {
         <div className="flex flex-col gap-4">
           <Input
             label="Key Name"
+            aria-label="Key Name"
             value={newKeyName}
             onChange={(e) => setNewKeyName(e.target.value)}
             placeholder="Production Key"
           />
           <div className="flex gap-2">
-            <Button onClick={handleCreateKey} fullWidth disabled={!newKeyName.trim()}>
+            <Button className={styles.primary} onClick={handleCreateKey} fullWidth disabled={!newKeyName.trim()}>
               Create
             </Button>
             <Button
@@ -1110,11 +1120,11 @@ export default function APIPageClient({ machineId }) {
         onClose={() => setCreatedKey(null)}
       >
         <div className="flex flex-col gap-4">
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-            <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-2 font-medium">
+          <div className={`${styles.warning} rounded-[var(--r2)] p-4`}>
+            <p className="text-sm mb-2 font-medium">
               Save this key now!
             </p>
-            <p className="text-sm text-yellow-700 dark:text-yellow-300">
+            <p className="text-sm">
               This is the only time you will see this key. Store it securely.
             </p>
           </div>
@@ -1122,7 +1132,9 @@ export default function APIPageClient({ machineId }) {
             <Input
               value={createdKey || ""}
               readOnly
-              className="flex-1 font-mono text-sm"
+              className={styles.field}
+              inputClassName="font-mono"
+              aria-label="Created API key"
             />
             <Button
               variant="secondary"
@@ -1132,7 +1144,7 @@ export default function APIPageClient({ machineId }) {
               {copied === "created_key" ? "Copied!" : "Copy"}
             </Button>
           </div>
-          <Button onClick={() => setCreatedKey(null)} fullWidth>
+          <Button className={styles.primary} onClick={() => setCreatedKey(null)} fullWidth>
             Done
           </Button>
         </div>
@@ -1147,7 +1159,7 @@ export default function APIPageClient({ machineId }) {
         <div className="flex flex-col gap-4">
           <div className="bg-surface-2 border border-border-subtle rounded-lg p-4">
             <div className="flex items-start gap-3">
-              <Icon className="text-primary">cloud_upload</Icon>
+              <Icon className="text-text-muted shrink-0">cloud_upload</Icon>
               <div>
                 <p className="text-sm text-text-main font-medium mb-1">
                   Cloudflare Tunnel
@@ -1161,8 +1173,8 @@ export default function APIPageClient({ machineId }) {
 
           <div className="grid grid-cols-2 gap-3">
             {TUNNEL_BENEFITS.map((benefit) => (
-              <div key={benefit.title} className="flex flex-col items-center text-center p-3 rounded-lg bg-sidebar/50">
-                <Icon className="text-xl text-primary mb-1">{benefit.icon}</Icon>
+              <div key={benefit.title} className="flex flex-col items-center text-center p-3 rounded-[var(--r2)] bg-surface-2">
+                <Icon className="text-xl text-text-muted mb-1">{benefit.icon}</Icon>
                 <p className="text-xs font-semibold">{benefit.title}</p>
                 <p className="text-xs text-text-muted">{benefit.desc}</p>
               </div>
@@ -1174,7 +1186,7 @@ export default function APIPageClient({ machineId }) {
           </p>
 
           <div className="flex gap-2">
-            <Button onClick={handleEnableTunnel} fullWidth>
+            <Button className={styles.primary} onClick={handleEnableTunnel} fullWidth>
               Start Tunnel
             </Button>
             <Button onClick={() => setShowEnableTunnelModal(false)} variant="ghost" fullWidth>Cancel</Button>
@@ -1191,7 +1203,7 @@ export default function APIPageClient({ machineId }) {
         <div className="flex flex-col gap-4">
           <p className="text-sm text-text-muted">The Cloudflare tunnel will be disconnected. Remote access via tunnel URL will stop working.</p>
           <div className="flex gap-2">
-            <Button onClick={handleDisableTunnel} fullWidth disabled={tunnelLoading} variant="danger">
+            <Button className={styles.dangerButton} onClick={handleDisableTunnel} fullWidth disabled={tunnelLoading} variant="danger">
               {tunnelLoading ? "Disabling..." : "Disable"}
             </Button>
             <Button onClick={() => setShowDisableTunnelModal(false)} variant="ghost" fullWidth disabled={tunnelLoading}>Cancel</Button>
@@ -1219,7 +1231,7 @@ export default function APIPageClient({ machineId }) {
             <div className="flex flex-col gap-3">
               <p className="text-sm text-text-muted">Tailscale is not installed. Install it to enable Funnel.</p>
               <div className="flex gap-2">
-                <Button onClick={handleInstallTailscale} fullWidth>
+                <Button className={styles.primary} onClick={handleInstallTailscale} fullWidth>
                   Install Tailscale
                 </Button>
                 <Button onClick={() => setShowTsModal(false)} variant="ghost" fullWidth>Cancel</Button>
@@ -1235,7 +1247,7 @@ export default function APIPageClient({ machineId }) {
                 Installing Tailscale...
               </div>
               {tsInstallLog.length > 0 && (
-                <div ref={tsLogRef} className="bg-black/5 dark:bg-white/5 rounded p-2 max-h-40 overflow-y-auto font-mono text-xs text-text-muted">
+                <div ref={tsLogRef} className="bg-surface-inset rounded-[var(--r1)] p-3 max-h-40 overflow-y-auto font-mono text-xs text-text-muted" data-i18n-skip>
                   {tsInstallLog.map((line, i) => (
                     <div key={i}>{line}</div>
                   ))}
@@ -1247,12 +1259,13 @@ export default function APIPageClient({ machineId }) {
           {/* Installed: show Connect button */}
           {tsInstalled === true && !tsInstalling && (
             <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+              <div className="flex items-center gap-2 text-sm text-[var(--pos)]">
                 <Icon className="text-[16px]">check_circle</Icon>
                 Tailscale installed
               </div>
               <div className="flex gap-2">
                 <Button
+                  className={styles.primary}
                   onClick={() => handleConnectTailscale()}
                   fullWidth
                 >
@@ -1276,7 +1289,7 @@ export default function APIPageClient({ machineId }) {
         <div className="flex flex-col gap-4">
           <p className="text-sm text-text-muted">Tailscale Funnel will be stopped. Remote access via Tailscale URL will stop working.</p>
           <div className="flex gap-2">
-            <Button onClick={handleDisableTailscale} fullWidth disabled={tsLoading} variant="danger">
+            <Button className={styles.dangerButton} onClick={handleDisableTailscale} fullWidth disabled={tsLoading} variant="danger">
               {tsLoading ? "Disabling..." : "Disable"}
             </Button>
             <Button onClick={() => setShowDisableTsModal(false)} variant="ghost" fullWidth disabled={tsLoading}>Cancel</Button>

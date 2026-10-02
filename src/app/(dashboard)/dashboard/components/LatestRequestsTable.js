@@ -12,6 +12,7 @@ import {
   LayoutGrid,
 } from "lucide-react";
 import { cn } from "@/shared/utils/cn";
+import { AnimatedBackground } from "@/components/core/animated-background";
 import { fmtTokens } from "./KpiBentoGrid";
 
 function timeAgo(timestamp) {
@@ -113,34 +114,32 @@ export default function LatestRequestsTable({ initialRequests = [] }) {
         {/* Filter Input + Controls */}
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap sm:flex-nowrap">
           {/* Dual Layout Toggle */}
-          <div className="inline-flex items-center bg-[var(--surface-2)] border border-[var(--line-2)] rounded-[var(--r1)] p-0.5">
+          <AnimatedBackground
+            value={layout}
+            onValueChange={setLayout}
+            aria-label="Request logs layout"
+            containerClassName="dashboard-segmented-control"
+            className="dashboard-segment-highlight"
+          >
             <button
+              data-id="table"
               type="button"
-              onClick={() => setLayout("table")}
-              className={cn(
-                "p-1.5 rounded-[4px] transition-all cursor-pointer",
-                layout === "table"
-                  ? "bg-[var(--surface)] text-[var(--text)] border border-[var(--line-2)] shadow-[var(--shadow-card)]"
-                  : "text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]"
-              )}
+              aria-label="Table view"
+              className="dashboard-segment"
               title="Table View (Desktop analysis)"
             >
               <Table className="size-3.5" />
             </button>
             <button
+              data-id="cards"
               type="button"
-              onClick={() => setLayout("cards")}
-              className={cn(
-                "p-1.5 rounded-[4px] transition-all cursor-pointer",
-                layout === "cards"
-                  ? "bg-[var(--surface)] text-[var(--text)] border border-[var(--line-2)] shadow-[var(--shadow-card)]"
-                  : "text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]"
-              )}
+              aria-label="Cards view"
+              className="dashboard-segment"
               title="Cards View (Touch-friendly)"
             >
               <LayoutGrid className="size-3.5" />
             </button>
-          </div>
+          </AnimatedBackground>
 
           <div className="relative">
             <Search className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
@@ -157,10 +156,10 @@ export default function LatestRequestsTable({ initialRequests = [] }) {
             type="button"
             onClick={() => setAutoRefresh(!autoRefresh)}
             className={cn(
-              "px-2.5 h-8 rounded-[var(--r1)] border text-xs font-mono flex items-center gap-1.5 transition-colors cursor-pointer",
+              "px-2.5 h-8 rounded-[var(--r1)] text-xs font-mono flex items-center gap-1.5 transition-colors cursor-pointer",
               autoRefresh
-                ? "bg-[var(--surface-2)] border-[var(--line-2)] text-[var(--pos)]"
-                : "bg-[var(--surface-2)] border-[var(--line-2)] text-[var(--text-2)] hover:text-[var(--text)]"
+                ? "text-[var(--pos)]"
+                : "text-[var(--text-2)] hover:text-[var(--text)]"
             )}
             title={autoRefresh ? "Live polling active (6s)" : "Polling paused"}
           >
@@ -174,10 +173,12 @@ export default function LatestRequestsTable({ initialRequests = [] }) {
               setLoading(true);
               fetchLogs().finally(() => setLoading(false));
             }}
-            className="size-8 rounded-[var(--r1)] border border-[var(--line-2)] bg-[var(--surface-2)] flex items-center justify-center text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
+            aria-label="Refresh logs"
+            aria-busy={loading}
+            className="dashboard-refresh"
             title="Refresh logs"
           >
-            <RefreshCw className={cn("size-3.5", loading && "animate-spin text-[var(--text)]")} />
+            <RefreshCw className={cn("size-3.5", loading && "animate-spin motion-reduce:animate-none text-[var(--text)]")} />
           </button>
         </div>
       </div>

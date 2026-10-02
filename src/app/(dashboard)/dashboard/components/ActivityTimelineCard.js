@@ -166,21 +166,21 @@ export default function ActivityTimelineCard({ period = "7d" }) {
             <AreaChart data={data} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#FFFFFF" stopOpacity={0.14} />
-                  <stop offset="95%" stopColor="#FFFFFF" stopOpacity={0.00} />
+                  <stop offset="5%" stopColor="var(--text)" stopOpacity={0.14} />
+                  <stop offset="95%" stopColor="var(--text)" stopOpacity={0.00} />
                 </linearGradient>
               </defs>
-              <CartesianGrid stroke="rgba(255, 255, 255, 0.065)" strokeDasharray="3 3" vertical={false} />
+              <CartesianGrid stroke="var(--line)" strokeDasharray="3 3" vertical={false} />
               <XAxis
                 dataKey="label"
-                stroke="#6B6B70"
+                stroke="var(--text-2)"
                 fontSize={11}
                 fontFamily="var(--font-mono)"
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
-                stroke="#6B6B70"
+                stroke="var(--text-2)"
                 fontSize={11}
                 fontFamily="var(--font-mono)"
                 tickLine={false}
@@ -191,8 +191,8 @@ export default function ActivityTimelineCard({ period = "7d" }) {
               <Area
                 type="monotone"
                 dataKey={viewMode}
-                stroke="#EDEDEE"
-                strokeWidth={1.5}
+                stroke="var(--text)"
+                strokeWidth={2}
                 fillOpacity={1}
                 fill="url(#areaGradient)"
               />

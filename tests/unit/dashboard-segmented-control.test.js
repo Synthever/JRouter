@@ -64,6 +64,18 @@ describe("dashboard animated segmented controls", () => {
     expect(kpi).toContain("disabled={fetching}");
   });
 
+  it("uses the same borderless controls for request logs and telemetry", () => {
+    const logs = read("src/app/(dashboard)/dashboard/components/LatestRequestsTable.js");
+    expect(logs).toContain("value={layout}");
+    expect(logs).toContain("onValueChange={setLayout}");
+    expect(logs).toContain('containerClassName="dashboard-segmented-control"');
+    expect(logs).toContain('className="dashboard-segment-highlight"');
+    expect(logs).toContain('data-id="table"');
+    expect(logs).toContain('data-id="cards"');
+    expect(logs).toContain('aria-label="Refresh logs"');
+    expect(logs).toContain('className="dashboard-refresh"');
+  });
+
   it("uses theme tokens, reduced motion and visible keyboard focus", () => {
     const css = read("src/app/globals.css");
     const source = read("src/components/core/animated-background.js");

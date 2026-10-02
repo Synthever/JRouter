@@ -14,6 +14,7 @@ import {
   getHiddenQuotaRows,
   getQuotaVisibilityKey,
   getConnectionLabel,
+  maskQuotaEmail,
   getConnectionQuotaRemaining,
   sortVisibleConnections,
   buildLoadingState,
@@ -1143,12 +1144,12 @@ export default function ProviderLimits() {
                       </h3>
                       {getConnectionLabel(conn) ? (
                         <p className="text-xs text-text-muted truncate">
-                          {getConnectionLabel(conn)}
+                          {maskQuotaEmail(getConnectionLabel(conn))}
                         </p>
                       ) : null}
                       {getConnectionSecondaryLabel(conn) ? (
                         <p className="text-[11px] text-text-muted/80 truncate">
-                          {getConnectionSecondaryLabel(conn)}
+                          {maskQuotaEmail(getConnectionSecondaryLabel(conn))}
                         </p>
                       ) : null}
                       {conn.provider === "kiro" && (
@@ -1512,8 +1513,8 @@ export default function ProviderLimits() {
         }}
         title={resetConfirmState?.connection?.provider === "claude" ? "Reset Claude limits?" : "Reset Codex limit?"}
         message={resetConfirmState?.connection?.provider === "claude"
-          ? `Refills your ${formatClaudeResetClears(quotaData[resetConfirmState.connection.id]?.raw?.resetCredits?.clears)} now for ${getConnectionLabel(resetConfirmState.connection) || "this account"} · your weekly reset day stays ${formatCreditDate(quotaData[resetConfirmState.connection.id]?.raw?.resetCredits?.weeklyResetsAt)}. This cannot be undone. Resets left: ${resetConfirmState.resetCreditCount ?? 0}.`
-          : `Use 1 Codex reset credit for ${getConnectionLabel(resetConfirmState?.connection || {}) || "this account"}. This cannot be undone. Remaining credits: ${resetConfirmState?.resetCreditCount ?? 0}.`}
+          ? `Refills your ${formatClaudeResetClears(quotaData[resetConfirmState.connection.id]?.raw?.resetCredits?.clears)} now for ${maskQuotaEmail(getConnectionLabel(resetConfirmState.connection)) || "this account"} · your weekly reset day stays ${formatCreditDate(quotaData[resetConfirmState.connection.id]?.raw?.resetCredits?.weeklyResetsAt)}. This cannot be undone. Resets left: ${resetConfirmState.resetCreditCount ?? 0}.`
+          : `Use 1 Codex reset credit for ${maskQuotaEmail(getConnectionLabel(resetConfirmState?.connection || {})) || "this account"}. This cannot be undone. Remaining credits: ${resetConfirmState?.resetCreditCount ?? 0}.`}
         confirmText="Reset limit"
         cancelText="Cancel"
         variant="danger"
@@ -1529,7 +1530,7 @@ export default function ProviderLimits() {
                   {resetCreditsState.data?.kind === "claude" ? "Claude Code Limit Resets" : "Codex Reset Credit Expiry"}
                 </h3>
                 <p className="mt-0.5 truncate text-xs text-text-muted">
-                  {getConnectionLabel(resetCreditsState.connection) || (resetCreditsState.data?.kind === "claude" ? "Claude account" : "Codex account")}
+                  {maskQuotaEmail(getConnectionLabel(resetCreditsState.connection)) || (resetCreditsState.data?.kind === "claude" ? "Claude account" : "Codex account")}
                 </p>
               </div>
               <button
