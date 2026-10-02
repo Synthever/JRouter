@@ -1,0 +1,337 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+  padding-bottom: 40px;
+  color: var(--text);
+}
+
+.toolbar,
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.description {
+  color: var(--text-2);
+  font-size: 14px;
+  line-height: 1.625;
+  max-width: 65ch;
+}
+
+.filter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.select {
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r1);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.panel {
+  min-width: 0;
+  padding: 20px;
+  border: 0;
+  border-radius: var(--r3);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .panel {
+    background-color: transparent;
+    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent 60%);
+    box-shadow: none;
+    -webkit-backdrop-filter: blur(18px) saturate(130%);
+    backdrop-filter: blur(18px) saturate(130%);
+  }
+
+  :global(.dark) .panel {
+    background-color: rgba(0, 0, 0, 0.3);
+    background-image: none;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px);
+  }
+}
+
+.header {
+  margin-bottom: 20px;
+}
+
+.heading {
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  line-height: 1.5;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r1);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: none;
+  cursor: pointer;
+  transition: background-color 150ms, color 150ms;
+}
+
+.action:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.primary {
+  background: var(--text);
+  color: var(--bg);
+  border-color: transparent;
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--text-2);
+  color: var(--bg);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+
+.providerCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 84px;
+  height: 100%;
+  padding: 12px;
+  border: 0;
+  border-radius: var(--r2);
+  background: transparent;
+  box-shadow: none;
+  transition: background-color 150ms;
+}
+
+.providerCard:hover,
+.providerCard:focus-within {
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+}
+
+.providerLink {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  flex: 1;
+  gap: 12px;
+  min-width: 0;
+  border-radius: var(--r1);
+}
+
+.providerIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r2);
+  background: var(--surface-2);
+}
+
+.providerName {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-top: 4px;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.badge {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.success {
+  color: var(--pos);
+}
+
+.error {
+  color: var(--danger);
+}
+
+.badge > span:first-child {
+  background: currentColor;
+}
+
+.protocol {
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 18px;
+  padding: 2px;
+  border-radius: var(--r-full);
+  background: var(--surface-hover);
+  cursor: pointer;
+}
+
+.page [role="switch"][aria-checked="true"] {
+  background: var(--text);
+}
+
+.switch > span {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--r-full);
+  background: var(--text-2);
+  transition: transform 150ms;
+}
+
+.switch[aria-checked="true"] > span {
+  background: var(--bg);
+  transform: translateX(14px);
+}
+
+.page :is(button, a, select):focus-visible {
+  outline: 2px solid var(--text-2);
+  outline-offset: 3px;
+}
+
+.empty {
+  padding: 24px 16px;
+  border: 1px dashed var(--line-2);
+  border-radius: var(--r2);
+  color: var(--text-2);
+  font-size: 14px;
+  line-height: 1.625;
+  text-align: center;
+}
+
+.emptyTitle {
+  margin-bottom: 4px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.showMore {
+  width: 100%;
+  margin-top: 16px;
+  background: transparent;
+}
+
+@media (max-width: 639px) {
+  .panel {
+    padding: 16px;
+  }
+
+  .filter,
+  .actions {
+    width: 100%;
+  }
+
+  .select,
+  .actions > button {
+    flex: 1;
+    min-height: 44px;
+  }
+
+  .action,
+  .page button:not([role="switch"]) {
+    min-height: 44px;
+  }
+
+  .switch::before {
+    position: absolute;
+    width: 44px;
+    height: 44px;
+    left: -6px;
+    content: "";
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .panel,
+  :global(.dark) .panel {
+    background: var(--surface);
+    box-shadow: var(--shadow-card);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page *,
+  .page *::before {
+    animation: none;
+    transition: none;
+  }
+
+  .page button:active {
+    transform: none;
+  }
+}

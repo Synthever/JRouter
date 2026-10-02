@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { Badge, Button, Input, Modal, Select } from "@/shared/components";
+import styles from "../providers.module.css";
 
 const VARIANT_CONFIG = {
   openai: {
@@ -183,7 +184,7 @@ function AddCompatibleModal({ variant, isOpen, onClose, onCreated }) {
             onClick={handleValidate}
             disabled={!checkKey || validating || !formData.baseUrl.trim()}
             variant="secondary"
-            className="w-full sm:w-auto"
+            className={`${styles.action} w-full sm:w-auto`}
           >
             {validating ? "Checking..." : "Check"}
           </Button>
@@ -193,6 +194,7 @@ function AddCompatibleModal({ variant, isOpen, onClose, onCreated }) {
           <Button
             onClick={handleSubmit}
             fullWidth
+            className={`${styles.action} ${styles.primary}`}
             disabled={
               !formData.name.trim() ||
               !formData.prefix.trim() ||
