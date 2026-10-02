@@ -516,7 +516,6 @@ body:has(.landing-page)::-webkit-scrollbar,
 }
 
 .dark .dashboard-overview {
-  --glass-highlight: rgba(255, 255, 255, 0.04);
   --text-3: color-mix(in srgb, var(--text-2) 85%, var(--surface));
 }
 
@@ -525,6 +524,12 @@ body:has(.landing-page)::-webkit-scrollbar,
   background-image: linear-gradient(135deg, var(--glass-highlight), transparent 60%);
   border: 0;
   box-shadow: none;
+}
+
+.dark .dashboard-overview :is(.stat-card, .ui-card) {
+  background-color: rgba(0, 0, 0, 0.3);
+  background-image: none;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
 }
 
 .dashboard-overview .dashboard-card-inset {
@@ -538,10 +543,16 @@ body:has(.landing-page)::-webkit-scrollbar,
     -webkit-backdrop-filter: blur(18px) saturate(130%);
     backdrop-filter: blur(18px) saturate(130%);
   }
+
+  .dark .dashboard-overview :is(.stat-card, .ui-card) {
+    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px);
+  }
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  .dashboard-overview :is(.stat-card, .ui-card) {
+  .dashboard-overview :is(.stat-card, .ui-card),
+  .dark .dashboard-overview :is(.stat-card, .ui-card) {
     background-color: var(--surface);
     background-image: none;
     -webkit-backdrop-filter: none;
@@ -572,6 +583,12 @@ body:has(.landing-page)::-webkit-scrollbar,
   box-shadow: inset 0 1px 0 var(--line);
 }
 
+.dark .dashboard-header {
+  background-color: rgba(0, 0, 0, 0.3);
+  background-image: none;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+}
+
 .dashboard-header__navigation {
   padding-right: 16px;
   border-right: 1px solid var(--line-2);
@@ -598,12 +615,12 @@ body:has(.landing-page)::-webkit-scrollbar,
   width: 36px;
   height: 36px;
   padding: 0;
-  border: 1px solid var(--line-2);
+  border: 0;
   border-radius: var(--r1);
-  background: color-mix(in srgb, var(--surface-2) 65%, transparent);
+  background: transparent;
   color: var(--text-2);
   cursor: pointer;
-  transition: background-color 150ms, border-color 150ms, color 150ms;
+  transition: color 150ms;
 }
 
 .dashboard-header .dashboard-header__action svg {
@@ -612,13 +629,12 @@ body:has(.landing-page)::-webkit-scrollbar,
 
 .dashboard-header .dashboard-header__action:hover,
 .dashboard-header .dashboard-header__action[aria-expanded="true"] {
-  background: var(--surface-hover);
-  border-color: var(--accent-line);
+  background: transparent;
   color: var(--text);
 }
 
 .dashboard-header .dashboard-header__action:active {
-  background: var(--surface-inset);
+  color: var(--text);
 }
 
 .dashboard-header__locale {
@@ -664,6 +680,12 @@ body:has(.landing-page)::-webkit-scrollbar,
 .dashboard-sidebar {
   border-right: 1px solid var(--line-2);
   box-shadow: inset -1px 0 0 var(--line);
+}
+
+.dark .dashboard-sidebar {
+  background-color: rgba(0, 0, 0, 0.3);
+  background-image: none;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
 }
 
 .dashboard-sidebar__brand {
@@ -769,9 +791,10 @@ body:has(.landing-page)::-webkit-scrollbar,
   outline-offset: 3px;
 }
 
-/* The fixed chrome borrows the overview catchlight without blurring nested controls. */
+/* Blur the surface, not the containing block of fixed confirmation overlays. */
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .dashboard-header {
+  .dashboard-header,
+  .dark .dashboard-header {
     background: transparent;
   }
 
@@ -785,6 +808,18 @@ body:has(.landing-page)::-webkit-scrollbar,
     background-image: linear-gradient(135deg, var(--nav-highlight), transparent 65%);
     -webkit-backdrop-filter: blur(18px);
     backdrop-filter: blur(18px);
+  }
+
+  .dark .dashboard-header::before {
+    background-color: rgba(0, 0, 0, 0.3);
+    background-image: none;
+    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px);
+  }
+
+  .dark .dashboard-sidebar {
+    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px);
   }
 }
 
@@ -861,7 +896,10 @@ body:has(.landing-page)::-webkit-scrollbar,
 @media (prefers-reduced-transparency: reduce) {
   .dashboard-header,
   .dashboard-header::before,
-  .dashboard-sidebar {
+  .dark .dashboard-header,
+  .dark .dashboard-header::before,
+  .dashboard-sidebar,
+  .dark .dashboard-sidebar {
     background-color: var(--surface);
     background-image: none;
     -webkit-backdrop-filter: none;

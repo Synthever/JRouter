@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 
 const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
 
-describe("dashboard transparent glass surfaces", () => {
-  it("removes opaque tint, borders and shadows from overview cards", () => {
+describe("dashboard glass surfaces", () => {
+  it("keeps light overview cards transparent and borderless", () => {
     const css = read("src/app/globals.css");
     const rules = [...css.matchAll(/\.dashboard-overview :is\(\.stat-card, \.ui-card\)\s*\{([^}]+)\}/g)];
     const base = rules[0]?.[1] || "";
@@ -15,6 +15,27 @@ describe("dashboard transparent glass surfaces", () => {
     expect(css.includes("var(--surface) 58%, transparent")).toBe(false);
     expect(rules.some(([, declarations]) => declarations.includes("backdrop-filter: blur(18px)"))).toBe(true);
     expect(css.includes("prefers-reduced-transparency: reduce")).toBe(true);
+  });
+
+  it("matches landing card backgrounds, shadows and blur in dark mode", () => {
+    const css = read("src/app/globals.css");
+    const rules = [...css.matchAll(/\.dark \.dashboard-overview :is\(\.stat-card, \.ui-card\)\s*\{([^}]+)\}/g)];
+    const dark = rules[0]?.[1] || "";
+
+    expect(dark).toContain("background-color: rgba(0, 0, 0, 0.3);");
+    expect(dark).toContain("background-image: none;");
+    expect(dark).toContain("box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);");
+    expect(rules.some(([, declarations]) => declarations.includes("backdrop-filter: blur(24px);"))).toBe(true);
+    expect(read("src/app/landing/components/HowItWorks.js")).toContain("bg-black/30 backdrop-blur-xl border-0 shadow-2xl shadow-black/80");
+  });
+
+  it("retains opaque, blur-free cards when reduced transparency is requested", () => {
+    const css = read("src/app/globals.css");
+    const fallback = css.match(/@media \(prefers-reduced-transparency: reduce\)\s*\{([\s\S]*?)\n\}/)?.[1] || "";
+
+    expect(fallback).toContain(".dark .dashboard-overview :is(.stat-card, .ui-card)");
+    expect(fallback).toContain("background-color: var(--surface);");
+    expect(fallback).toContain("backdrop-filter: none;");
   });
 
   it("keeps inset surfaces transparent without another frame", () => {

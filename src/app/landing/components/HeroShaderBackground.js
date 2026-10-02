@@ -55,9 +55,9 @@ const ShaderCanvas = dynamic(
                   rotationX={0}
                   rotationY={130}
                   rotationZ={70}
-                  color1="#000000"
-                  color2="#2c2c2c"
-                  color3="#4e4e4e"
+                  color1="#949494"
+                  color2="#595959"
+                  color3="#343434"
                   reflection={0.35}
                   // View (camera) props
                   cAzimuthAngle={270}
@@ -67,7 +67,7 @@ const ShaderCanvas = dynamic(
                   // Effect props - "3d" uses local lights without blocking on external .hdr downloads
                   lightType="3d"
                   brightness={0.85}
-                  grain="off"
+                  grain="on"
                   // Tool props
                   toggleAxis={false}
                   zoomOut={false}

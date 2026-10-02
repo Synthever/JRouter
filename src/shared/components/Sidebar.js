@@ -160,7 +160,7 @@ export default function Sidebar({ onClose, onToggleCollapse }) {
         </div>
 
         {/* Navigation */}
-        <nav aria-label="Main navigation" className="dashboard-sidebar__nav flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+        <nav aria-label="Main navigation" className="dashboard-sidebar__nav flex-1 min-h-0 overflow-y-auto no-scrollbar">
           {navItems.map((item) => (
             <Link
               key={item.href}

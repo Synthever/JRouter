@@ -24,6 +24,63 @@ describe("dashboard navigation styling contract", () => {
     }
   });
 
+  it("matches the dark navbar surface to the overview cards", () => {
+    const css = read("src/app/globals.css");
+    const header = css.match(/\.dark \.dashboard-header\s*\{([^}]+)\}/)?.[1] || "";
+    const overlay = css.match(/\.dark \.dashboard-header::before\s*\{([^}]+)\}/)?.[1] || "";
+    const card = css.match(/\.dark \.dashboard-overview :is\(\.stat-card, \.ui-card\)\s*\{([^}]+)\}/)?.[1] || "";
+
+    for (const declaration of ["background-color: rgba(0, 0, 0, 0.3);", "background-image: none;"]) {
+      expect(card).toContain(declaration);
+      expect(header).toContain(declaration);
+      expect(overlay).toContain(declaration);
+    }
+    expect(header).toContain("box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);");
+    expect(overlay).toContain("backdrop-filter: blur(24px);");
+    expect(css).toMatch(/@supports[^\{]+\{\s*\.dashboard-header,\s*\.dark \.dashboard-header\s*\{\s*background: transparent;/);
+  });
+
+  it("keeps navbar icon controls unframed in normal and interactive states", () => {
+    const css = read("src/app/globals.css");
+    const action = css.match(/\.dashboard-header \.dashboard-header__action\s*\{([^}]+)\}/)?.[1] || "";
+    const hover = css.match(/\.dashboard-header \.dashboard-header__action\[aria-expanded="true"\]\s*\{([^}]+)\}/)?.[1] || "";
+    const active = css.match(/\.dashboard-header \.dashboard-header__action:active\s*\{([^}]+)\}/)?.[1] || "";
+
+    expect(action).toContain("border: 0;");
+    expect(action).toContain("background: transparent;");
+    expect(hover).toContain("background: transparent;");
+    expect(hover).not.toContain("border-color:");
+    expect(active).not.toContain("background:");
+    expect(active).toContain("color: var(--text);");
+    expect(css).toMatch(/\.dashboard-header \.dashboard-header__action:focus-visible,[\s\S]*?outline: 2px solid var\(--text-2\)/);
+  });
+
+  it("matches the dark sidebar surface to the cards and keeps an opaque fallback", () => {
+    const css = read("src/app/globals.css");
+    const rules = [...css.matchAll(/\.dark \.dashboard-sidebar\s*\{([^}]+)\}/g)];
+    const sidebar = rules[0]?.[1] || "";
+
+    expect(sidebar).toContain("background-color: rgba(0, 0, 0, 0.3);");
+    expect(sidebar).toContain("background-image: none;");
+    expect(sidebar).toContain("box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);");
+    expect(rules.some(([, declarations]) => declarations.includes("backdrop-filter: blur(24px);"))).toBe(true);
+
+    const fallback = [...css.matchAll(/@media \(prefers-reduced-transparency: reduce\)\s*\{([\s\S]*?)\n\}/g)]
+      .find(([, body]) => body.includes(".dashboard-sidebar"))?.[1] || "";
+    expect(fallback).toContain(".dark .dashboard-sidebar");
+    expect(fallback).toContain("background-color: var(--surface);");
+    expect(fallback).toContain("backdrop-filter: none;");
+  });
+
+  it("hides only the sidebar scrollbar while preserving navigation scrolling", () => {
+    const sidebar = read("src/shared/components/Sidebar.js");
+    const css = read("src/app/globals.css");
+
+    expect(sidebar).toContain('className="dashboard-sidebar__nav flex-1 min-h-0 overflow-y-auto no-scrollbar"');
+    expect(css).toMatch(/\.no-scrollbar,[\s\S]*?scrollbar-width: none !important;/);
+    expect(css).toMatch(/\.no-scrollbar::-webkit-scrollbar,[\s\S]*?display: none !important;/);
+  });
+
   it("exposes the selected navigation route and accordion state", () => {
     const sidebar = read("src/shared/components/Sidebar.js");
     expect(sidebar).toContain('aria-label="Main navigation"');
@@ -38,6 +95,7 @@ describe("dashboard navigation styling contract", () => {
     const css = read("src/app/globals.css");
     expect(css).toMatch(/@media \(max-width: 1023px\)[\s\S]*?\.dashboard-sidebar__item[\s\S]*?min-height: 44px/);
     expect(css).toMatch(/@media \(prefers-reduced-transparency: reduce\)[\s\S]*?\.dashboard-header/);
+    expect(css).toMatch(/@media \(prefers-reduced-transparency: reduce\)[\s\S]*?\.dark \.dashboard-header::before,[\s\S]*?background-color: var\(--surface\)/);
     expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.dashboard-sidebar__item/);
   });
 
