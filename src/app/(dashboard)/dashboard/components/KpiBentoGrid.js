@@ -14,6 +14,7 @@ import {
   ArrowDownLeft
 } from "lucide-react";
 import { cn } from "@/shared/utils/cn";
+import { AnimatedBackground } from "@/components/core/animated-background";
 
 export function fmtTokens(n) {
   if (!n || n <= 0) return "0";
@@ -83,38 +84,36 @@ export default function KpiBentoGrid({
 
         {/* Period filter + Refresh */}
         <div className="flex items-center gap-2 self-start sm:self-auto">
-          <div className="inline-flex items-center bg-[var(--surface-2)] border border-[var(--line-2)] rounded-[var(--r1)] p-0.5">
-            {PERIOD_OPTIONS.map((p) => {
-              const active = period === p.value;
-              return (
-                <button
-                  key={p.value}
-                  type="button"
-                  onClick={() => onPeriodChange?.(p.value)}
-                  className={cn(
-                    "px-2.5 py-1 text-xs font-mono rounded-[4px] transition-all cursor-pointer",
-                    active
-                      ? "bg-[var(--surface)] text-[var(--text)] font-medium border border-[var(--line-2)] shadow-[var(--shadow-card)]"
-                      : "text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]"
-                  )}
-                >
-                  {p.label}
-                </button>
-              );
-            })}
-          </div>
+          <AnimatedBackground
+            value={period}
+            onValueChange={onPeriodChange}
+            aria-label="Telemetry period"
+            containerClassName="dashboard-segmented-control"
+            className="dashboard-segment-highlight"
+          >
+            {PERIOD_OPTIONS.map((p) => (
+              <button
+                key={p.value}
+                data-id={p.value}
+                type="button"
+                aria-label={`${p.label} telemetry`}
+                className="dashboard-segment"
+              >
+                {p.label}
+              </button>
+            ))}
+          </AnimatedBackground>
 
           <button
             type="button"
             onClick={onRefresh}
             disabled={fetching}
+            aria-label="Refresh telemetry"
+            aria-busy={fetching}
             title="Refresh telemetry"
-            className={cn(
-              "h-8 px-2.5 rounded-[var(--r1)] border border-[var(--line-2)] bg-[var(--surface-2)] flex items-center justify-center text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer disabled:opacity-50",
-              fetching && "pointer-events-none"
-            )}
+            className="dashboard-refresh"
           >
-            <RefreshCw className={cn("size-3.5", fetching && "animate-spin text-[var(--text)]")} />
+            <RefreshCw className={cn("size-3.5", fetching && "animate-spin motion-reduce:animate-none text-[var(--text)]")} />
           </button>
         </div>
       </div>

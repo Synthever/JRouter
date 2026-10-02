@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Activity, Zap, DollarSign, Layers } from "lucide-react";
-import { cn } from "@/shared/utils/cn";
+import { AnimatedBackground } from "@/components/core/animated-background";
 import { fmtTokens, fmtCost } from "./KpiBentoGrid";
 
 const VIEW_MODES = [
@@ -122,28 +122,29 @@ export default function ActivityTimelineCard({ period = "7d" }) {
         </div>
 
         {/* View Mode Toggle */}
-        <div className="inline-flex items-center bg-[var(--surface-2)] border border-[var(--line-2)] rounded-[var(--r1)] p-0.5 self-start sm:self-auto">
+        <AnimatedBackground
+          value={viewMode}
+          onValueChange={setViewMode}
+          aria-label="Activity metric"
+          containerClassName="dashboard-segmented-control self-start sm:self-auto"
+          className="dashboard-segment-highlight"
+        >
           {VIEW_MODES.map((m) => {
-            const active = viewMode === m.value;
             const IconComp = m.icon;
             return (
               <button
                 key={m.value}
+                data-id={m.value}
                 type="button"
-                onClick={() => setViewMode(m.value)}
-                className={cn(
-                  "flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono rounded-[4px] transition-all cursor-pointer",
-                  active
-                    ? "bg-[var(--surface)] text-[var(--text)] font-medium border border-[var(--line-2)] shadow-[var(--shadow-card)]"
-                    : "text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]"
-                )}
+                aria-label={`${m.label} view`}
+                className="dashboard-segment"
               >
                 <IconComp className="size-3" />
                 {m.label}
               </button>
             );
           })}
-        </div>
+        </AnimatedBackground>
       </div>
 
       {/* Chart Canvas */}
