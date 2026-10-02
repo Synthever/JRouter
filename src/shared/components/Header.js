@@ -207,14 +207,14 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
   };
 
   return (
-    <header className="shrink-0 flex items-center justify-between gap-3 px-4 lg:px-8 py-3.5 border-b border-[var(--line)] bg-[var(--surface)] z-20">
+    <header className="dashboard-header shrink-0 flex items-center z-20">
       {/* Sidebar toggle button (Mobile + Desktop) */}
       {showMenuButton && (
-        <div className="flex items-center shrink-0 -ml-1">
+        <div className="dashboard-header__navigation flex items-center shrink-0">
           <button
             type="button"
             onClick={onMenuClick}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800/60 transition-colors cursor-pointer"
+            className="dashboard-header__action"
             title="Toggle sidebar (Ctrl+B)"
             aria-label="Toggle sidebar"
           >
@@ -224,13 +224,13 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
       )}
 
       {/* Page title with breadcrumbs */}
-      <div className="flex flex-col min-w-0 flex-1">
+      <div className="dashboard-header__title flex flex-col min-w-0 flex-1">
         {breadcrumbs.length > 0 ? (
-          <div className="flex items-center gap-2">
+          <div className="dashboard-header__breadcrumbs flex items-center gap-2 min-w-0">
             {breadcrumbs.map((crumb, index) => (
               <div
                 key={`${crumb.label}-${crumb.href || "current"}`}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 min-w-0"
               >
                 {index > 0 && (
                   <Icon
@@ -241,12 +241,12 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
                 {crumb.href ? (
                   <Link
                     href={crumb.href}
-                    className="text-[13px] text-[var(--text-2)] hover:text-[var(--text)] transition-colors"
+                    className="dashboard-header__crumb text-[13px] text-[var(--text-2)] hover:text-[var(--text)] transition-colors truncate"
                   >
                     {crumb.label}
                   </Link>
                 ) : (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
                     {crumb.image && (
                       <ProviderIcon
                         src={crumb.image}
@@ -256,7 +256,7 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
                         fallbackText={crumb.label.slice(0, 2).toUpperCase()}
                       />
                     )}
-                    <h1 className="text-base lg:text-[24px] font-semibold text-[var(--text)] tracking-[-0.02em] leading-tight truncate">
+                    <h1 className="dashboard-header__heading font-semibold text-[var(--text)] tracking-[-0.02em] leading-tight truncate">
                       {translate(crumb.label)}
                     </h1>
                   </div>
@@ -265,14 +265,14 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
             ))}
           </div>
         ) : title ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
             {icon && (
               <Icon
                 name={icon}
-                className="text-[var(--text-2)] text-xl lg:text-2xl"
+                className="dashboard-header__page-icon"
               />
             )}
-            <h1 className="text-base lg:text-[24px] font-semibold text-[var(--text)] tracking-[-0.02em] leading-tight truncate">
+            <h1 className="dashboard-header__heading font-semibold text-[var(--text)] tracking-[-0.02em] leading-tight truncate">
               {translate(title)}
             </h1>
           </div>
@@ -280,7 +280,7 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
       </div>
 
       {/* Right actions */}
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="dashboard-header__actions flex items-center shrink-0">
         {displayName && (loginMethod === "OIDC" || loginMethod === "SAML") && (
           <div
             className="hidden sm:flex items-center max-w-[220px] px-2.5 py-1 rounded-[var(--r-full)] border border-[var(--line-2)] bg-[var(--surface-2)] text-xs text-[var(--text-2)] truncate font-mono"
@@ -294,7 +294,7 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
           </div>
         )}
         <HeaderSearch />
-        <ThemeToggle />
+        <ThemeToggle className="dashboard-header__action" />
         <HeaderLanguage />
         <HeaderMenu onLogout={handleLogout} />
       </div>
@@ -311,7 +311,7 @@ function HeaderSearch() {
   if (!visible) return null;
 
   return (
-    <div className="relative w-[160px] sm:w-[220px]">
+    <div className="dashboard-header__search relative w-[160px] sm:w-[220px]">
       <Icon
         name="search"
         className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--text-3)] text-[16px] pointer-events-none"
@@ -321,7 +321,8 @@ function HeaderSearch() {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder={placeholder}
-        className="w-full h-8 pl-7 pr-7 rounded-[var(--r1)] border border-[var(--line-2)] bg-[var(--surface-2)] text-xs text-[var(--text)] placeholder-[var(--text-3)] focus:outline-none focus:border-[var(--accent-line)] transition-colors"
+        aria-label={placeholder}
+        className="w-full h-9 pl-7 pr-7 rounded-[var(--r1)] border border-[var(--line-2)] bg-[var(--surface-inset)] text-xs text-[var(--text)] placeholder-[var(--text-2)] focus:outline-none focus:border-[var(--accent-line)] transition-colors"
       />
       {query && (
         <button

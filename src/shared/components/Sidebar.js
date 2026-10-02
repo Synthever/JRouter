@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 import PropTypes from "prop-types";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -43,8 +43,11 @@ const systemItems = [
   { href: "/dashboard/skills", label: "Skills", icon: "extension" },
 ];
 
+const navItemClass = (active) => cn("dashboard-sidebar__item group", active && "is-active");
+
 export default function Sidebar({ onClose, onToggleCollapse }) {
   const pathname = usePathname();
+  const mediaPanelId = useId();
   const [mediaOpen, setMediaOpen] = useState(false);
   const [showRemoteModal, setShowRemoteModal] = useState(false);
   const [isDisconnected, setIsDisconnected] = useState(false);
@@ -118,23 +121,16 @@ export default function Sidebar({ onClose, onToggleCollapse }) {
 
   return (
     <>
-      <aside className="flex w-60 flex-col border-r border-[var(--line)] bg-[var(--surface)] transition-colors duration-150 min-h-full">
-        {/* Traffic lights */}
-        <div className="flex items-center gap-2 px-4 pt-3.5 pb-1.5">
-          <div className="w-2 h-2 rounded-full bg-[#FF5F56]/80" />
-          <div className="w-2 h-2 rounded-full bg-[#FFBD2E]/80" />
-          <div className="w-2 h-2 rounded-full bg-[#27C93F]/80" />
-        </div>
-
+      <aside className="dashboard-sidebar flex w-60 flex-col h-full min-h-0">
         {/* Logo */}
-        <div className="px-4 py-2.5 flex flex-col gap-2 border-b border-[var(--line)]">
-          <Link href="/dashboard" className="flex items-center gap-2.5">
-            <AppLogo size={28} />
-            <div className="flex flex-col">
-              <h1 className="text-[13px] font-semibold tracking-tight text-[var(--text)]">
+        <div className="dashboard-sidebar__brand shrink-0">
+          <Link href="/dashboard" onClick={onClose} className="dashboard-sidebar__brand-link">
+            <AppLogo size={32} className="shrink-0" />
+            <div className="flex flex-col min-w-0 gap-0.5">
+              <span className="text-[13px] font-semibold tracking-tight text-[var(--text)] truncate">
                 {APP_CONFIG.name}
-              </h1>
-              <span className="text-[10px] font-mono text-[var(--text-3)]">v{APP_CONFIG.version}</span>
+              </span>
+              <span className="text-[10px] font-mono text-[var(--text-2)] u-tnum">v{APP_CONFIG.version}</span>
             </div>
           </Link>
           {updateInfo && (
@@ -164,18 +160,14 @@ export default function Sidebar({ onClose, onToggleCollapse }) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-2.5 py-2.5 space-y-0.5 overflow-y-auto custom-scrollbar">
+        <nav aria-label="Main navigation" className="dashboard-sidebar__nav flex-1 min-h-0 overflow-y-auto custom-scrollbar">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               onClick={onClose}
-              className={cn(
-                "flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-all group text-[12.5px] font-medium border",
-                isActive(item.href)
-                  ? "bg-[var(--surface-2)] text-[var(--text)] border-[var(--accent-line)]"
-                  : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
-              )}
+              aria-current={isActive(item.href) ? "page" : undefined}
+              className={navItemClass(isActive(item.href))}
             >
               <Icon
                 name={item.icon}
@@ -189,20 +181,18 @@ export default function Sidebar({ onClose, onToggleCollapse }) {
           ))}
 
           {/* System section */}
-          <div className="pt-2.5 mt-2 space-y-0.5">
-            <p className="px-2.5 text-[10px] font-mono font-medium text-[var(--text-3)] uppercase tracking-[0.2em] mb-1.5">
+          <div className="dashboard-sidebar__section">
+            <p className="dashboard-sidebar__section-title">
               System
             </p>
 
             {/* Media Providers accordion */}
             <button
+              type="button"
               onClick={() => setMediaOpen((v) => !v)}
-              className={cn(
-                "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-all group text-[12.5px] font-medium border",
-                pathname.startsWith("/dashboard/media-providers")
-                  ? "bg-[var(--surface-2)] text-[var(--text)] border-[var(--accent-line)]"
-                  : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
-              )}
+              aria-expanded={mediaOpen}
+              aria-controls={mediaPanelId}
+              className={navItemClass(pathname.startsWith("/dashboard/media-providers"))}
             >
               <Icon name="perm_media" className="text-[16px] text-[var(--text-3)] group-hover:text-[var(--text)]" />
               <span className="text-[12.5px] font-medium flex-1 text-left">Media Providers</span>
@@ -213,18 +203,14 @@ export default function Sidebar({ onClose, onToggleCollapse }) {
               />
             </button>
             {mediaOpen && (
-              <div className="pl-2 space-y-0.5">
+              <div id={mediaPanelId} className="dashboard-sidebar__subnav">
                 {MEDIA_PROVIDER_KINDS.filter((k) => VISIBLE_MEDIA_KINDS.includes(k.id)).map((kind) => (
                   <Link
                     key={kind.id}
                     href={`/dashboard/media-providers/${kind.id}`}
                     onClick={onClose}
-                    className={cn(
-                      "flex items-center gap-2 px-2.5 py-1 rounded-md transition-all group border",
-                      pathname.startsWith(`/dashboard/media-providers/${kind.id}`)
-                        ? "bg-[var(--surface-2)] text-[var(--text)] border-[var(--accent-line)]"
-                        : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
-                    )}
+                    aria-current={pathname.startsWith(`/dashboard/media-providers/${kind.id}`) ? "page" : undefined}
+                    className={navItemClass(pathname.startsWith(`/dashboard/media-providers/${kind.id}`))}
                   >
                     <Icon name={kind.icon} className="text-[15px] text-[var(--text-3)]" />
                     <span className="text-[12px]">{kind.label}</span>
@@ -234,12 +220,8 @@ export default function Sidebar({ onClose, onToggleCollapse }) {
                   key={COMBINED_WEB_ITEM.id}
                   href={COMBINED_WEB_ITEM.href}
                   onClick={onClose}
-                  className={cn(
-                    "flex items-center gap-2 px-2.5 py-1 rounded-md transition-all group border",
-                    pathname.startsWith(COMBINED_WEB_ITEM.href)
-                      ? "bg-[var(--surface-2)] text-[var(--text)] border-[var(--accent-line)]"
-                      : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
-                  )}
+                  aria-current={pathname.startsWith(COMBINED_WEB_ITEM.href) ? "page" : undefined}
+                  className={navItemClass(pathname.startsWith(COMBINED_WEB_ITEM.href))}
                 >
                   <Icon name={COMBINED_WEB_ITEM.icon} className="text-[15px] text-[var(--text-3)]" />
                   <span className="text-[12px]">{COMBINED_WEB_ITEM.label}</span>
@@ -252,12 +234,8 @@ export default function Sidebar({ onClose, onToggleCollapse }) {
                 key={item.href}
                 href={item.href}
                 onClick={onClose}
-                className={cn(
-                  "flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-all group border",
-                  isActive(item.href)
-                    ? "bg-[var(--surface-2)] text-[var(--text)] border-[var(--accent-line)]"
-                    : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
-                )}
+                aria-current={isActive(item.href) ? "page" : undefined}
+                className={navItemClass(isActive(item.href))}
               >
                 <Icon
                   name={item.icon}
@@ -278,12 +256,8 @@ export default function Sidebar({ onClose, onToggleCollapse }) {
                   key={item.href}
                   href={item.href}
                   onClick={onClose}
-                  className={cn(
-                    "flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-all group border",
-                    isActive(item.href)
-                      ? "bg-[var(--surface-2)] text-[var(--text)] border-[var(--accent-line)]"
-                      : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
-                  )}
+                  aria-current={isActive(item.href) ? "page" : undefined}
+                  className={navItemClass(isActive(item.href))}
                 >
                   <Icon
                     name={item.icon}
@@ -299,18 +273,16 @@ export default function Sidebar({ onClose, onToggleCollapse }) {
 
             {/* Remote */}
             <button
+              type="button"
               onClick={() => setShowRemoteModal(true)}
-              className={cn(
-                "flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-all group w-full border border-transparent",
-                "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
-              )}
+              className={navItemClass(false)}
             >
               <Icon
                 name="computer"
                 className="text-[16px] text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
               />
               <span className="text-[12.5px] font-medium">9Remote</span>
-              <span className="ml-auto text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-400 border border-orange-500/20">
+              <span className="dashboard-sidebar__badge ml-auto">
                 HOT
               </span>
             </button>
@@ -321,10 +293,7 @@ export default function Sidebar({ onClose, onToggleCollapse }) {
               target="_blank"
               rel="noreferrer"
               onClick={onClose}
-              className={cn(
-                "flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-all group w-full border border-transparent",
-                "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
-              )}
+              className={navItemClass(false)}
             >
               <Icon
                 name="translate"
@@ -337,12 +306,8 @@ export default function Sidebar({ onClose, onToggleCollapse }) {
             <Link
               href="/dashboard/profile"
               onClick={onClose}
-              className={cn(
-                "flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-all group border",
-                isActive("/dashboard/profile")
-                  ? "bg-[var(--surface-2)] text-[var(--text)] border-[var(--accent-line)]"
-                  : "text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] border-transparent"
-              )}
+              aria-current={isActive("/dashboard/profile") ? "page" : undefined}
+              className={navItemClass(isActive("/dashboard/profile"))}
             >
               <Icon
                 name="settings"

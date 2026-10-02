@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { LOCALE_COOKIE, normalizeLocale } from "@/i18n/config";
-import { LOCALE_FLAGS } from "@/shared/constants/locales";
+import { onLocaleChange } from "@/i18n/runtime";
 import LanguageSwitcher from "./LanguageSwitcher";
 
 function getLocaleFromCookie() {
@@ -16,30 +16,39 @@ function getLocaleFromCookie() {
 
 export default function HeaderLanguage() {
   const [open, setOpen] = useState(false);
-  const [locale, setLocale] = useState("en");
+  const triggerRef = useRef(null);
+  const locale = useSyncExternalStore(onLocaleChange, getLocaleFromCookie, () => "en");
 
   useEffect(() => {
-    setLocale(getLocaleFromCookie());
+    if (!open) return;
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
   }, [open]);
 
   return (
     <>
       <button
+        type="button"
+        ref={triggerRef}
         onClick={() => setOpen(true)}
-        className="flex items-center justify-center p-2 rounded-lg text-text-muted hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5 transition-all"
+        className="dashboard-header__action"
         title="Language"
+        aria-label={`Language (${locale})`}
         data-i18n-skip="true"
       >
-        <span className="text-lg leading-none">{LOCALE_FLAGS[locale] || "🌐"}</span>
+        <span className="dashboard-header__locale">{locale.split("-")[0].toUpperCase()}</span>
       </button>
 
       <LanguageSwitcher
         hideTrigger
         isOpen={open}
-        onClose={(next) => {
-          setOpen(false);
-          setLocale(next);
-        }}
+        onClose={() => setOpen(false)}
       />
     </>
   );

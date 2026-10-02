@@ -10,16 +10,13 @@ import Icon from "./Icon";
 function MenuItem({ icon, label, onClick, trailing, danger }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={`flex items-center gap-3 w-full px-4 py-2.5 text-sm transition-colors ${
-        danger
-          ? "text-red-500 hover:bg-red-500/10"
-          : "text-text-main hover:bg-black/5 dark:hover:bg-white/5"
-      }`}
+      className={`dashboard-header__menu-item ${danger ? "is-danger" : ""}`}
     >
       <Icon
         name={icon}
-        className={`text-[20px] ${danger ? "" : "text-text-muted"}`}
+        className="text-[16px]"
       />
       <span className="flex-1 text-left">{label}</span>
       {trailing && <span className="text-base">{trailing}</span>}
@@ -66,21 +63,37 @@ export default function HeaderMenu({ onLogout }) {
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen && !changelogOpen) return;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+        setChangelogOpen(false);
+        menuRef.current?.querySelector("button")?.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, changelogOpen]);
+
   const close = () => setIsOpen(false);
 
   return (
     <>
-      <div className="relative" ref={menuRef}>
+      <div className="dashboard-header__menu relative" ref={menuRef}>
         <button
+          type="button"
           onClick={() => setIsOpen((v) => !v)}
-          className="flex items-center justify-center p-2 rounded-lg text-text-muted hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5 transition-all"
+          className="dashboard-header__action"
           title="Menu"
+          aria-label="Menu"
+          aria-expanded={isOpen}
         >
           <Icon name="grid_view" />
         </button>
 
         {isOpen && (
-          <div className="absolute right-0 top-full mt-2 w-60 bg-surface border border-black/10 dark:border-white/10 rounded-xl shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 overflow-hidden py-1">
+          <div className="dashboard-header__dropdown absolute right-0 top-full mt-2 w-60 z-50 overflow-hidden p-1">
             <MenuItem
               icon="history"
               label="Change Log"

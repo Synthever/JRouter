@@ -127,9 +127,7 @@ export default function KpiBentoGrid({
             <span className="ui-eyebrow text-[10px] text-[var(--text-2)]">
               TOTAL REQUESTS
             </span>
-            <div className="p-1 rounded-[var(--r1)] bg-[var(--surface-2)] border border-[var(--line-2)] text-[var(--text-2)]">
-              <Layers className="size-3.5" />
-            </div>
+            <Layers className="size-4 shrink-0 text-[var(--text-2)]" />
           </div>
           <div>
             <div className="font-mono text-2xl font-semibold text-[var(--text)] tracking-tight u-tnum">
@@ -154,9 +152,7 @@ export default function KpiBentoGrid({
             <span className="ui-eyebrow text-[10px] text-[var(--text-2)]">
               SUCCESS RATE
             </span>
-            <div className="p-1 rounded-[var(--r1)] bg-[var(--surface-2)] border border-[var(--line-2)] text-[var(--pos)]">
-              <CheckCircle2 className="size-3.5" />
-            </div>
+            <CheckCircle2 className="size-4 shrink-0 text-[var(--pos)]" />
           </div>
           <div>
             <div className="font-mono text-2xl font-semibold text-[var(--text)] tracking-tight u-tnum flex items-baseline gap-1">
@@ -182,9 +178,7 @@ export default function KpiBentoGrid({
             <span className="ui-eyebrow text-[10px] text-[var(--text-2)]">
               TOTAL TOKENS
             </span>
-            <div className="p-1 rounded-[var(--r1)] bg-[var(--surface-2)] border border-[var(--line-2)] text-[var(--text-2)]">
-              <Cpu className="size-3.5" />
-            </div>
+            <Cpu className="size-4 shrink-0 text-[var(--text-2)]" />
           </div>
           <div>
             <div className="font-mono text-2xl font-semibold text-[var(--text)] tracking-tight u-tnum">
@@ -214,9 +208,7 @@ export default function KpiBentoGrid({
             <span className="ui-eyebrow text-[10px] text-[var(--text-2)]">
               ESTIMATED COST
             </span>
-            <div className="p-1 rounded-[var(--r1)] bg-[var(--surface-2)] border border-[var(--line-2)] text-[var(--text-2)]">
-              <DollarSign className="size-3.5" />
-            </div>
+            <DollarSign className="size-4 shrink-0 text-[var(--text-2)]" />
           </div>
           <div>
             <div className="font-mono text-2xl font-semibold text-[var(--text)] tracking-tight u-tnum">
@@ -234,9 +226,7 @@ export default function KpiBentoGrid({
             <span className="ui-eyebrow text-[10px] text-[var(--text-2)]">
               CONNECTIONS & NODES
             </span>
-            <div className="p-1 rounded-[var(--r1)] bg-[var(--surface-2)] border border-[var(--line-2)] text-[var(--text-2)]">
-              <Server className="size-3.5" />
-            </div>
+            <Server className="size-4 shrink-0 text-[var(--text-2)]" />
           </div>
           <div>
             <div className="font-mono text-2xl font-semibold text-[var(--text)] tracking-tight u-tnum">
