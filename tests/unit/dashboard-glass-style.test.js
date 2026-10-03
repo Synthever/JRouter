@@ -17,12 +17,13 @@ describe("dashboard glass surfaces", () => {
     expect(css.includes("prefers-reduced-transparency: reduce")).toBe(true);
   });
 
-  it("matches landing card backgrounds, shadows and blur in dark mode", () => {
+  it("uses the solid surface background while retaining dark card shadows and blur", () => {
     const css = read("src/app/globals.css");
     const rules = [...css.matchAll(/\.dark \.dashboard-overview :is\(\.stat-card, \.ui-card\)\s*\{([^}]+)\}/g)];
     const dark = rules[0]?.[1] || "";
 
-    expect(dark).toContain("background-color: rgba(0, 0, 0, 0.3);");
+    expect(css).toMatch(/\.dark\s*\{[^}]*--surface: #131315;/);
+    expect(dark).toContain("background-color: var(--surface);");
     expect(dark).toContain("background-image: none;");
     expect(dark).toContain("box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);");
     expect(rules.some(([, declarations]) => declarations.includes("backdrop-filter: blur(24px);"))).toBe(true);

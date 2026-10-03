@@ -13,7 +13,7 @@ describe("combos dashboard theme", () => {
     const css = read(`${combosPath}/combos.module.css`);
     expect(css).not.toContain("backdrop-filter:");
     expect(css).toMatch(/\.panel\s*\{[^}]*background: var\(--surface\);/);
-    expect(css).toMatch(/\.comboCard\s*\{[^}]*background: transparent;/);
+    expect(css).toMatch(/\.comboCard\s*\{[^}]*background: #0A0A0B;/i);
     expect(source).toContain("<ModelSelectModal");
   });
 

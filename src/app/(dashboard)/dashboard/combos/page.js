@@ -366,9 +366,8 @@ export default function CombosPage() {
     <div className={styles.page}>
       <header className={styles.intro}>
         <div className="min-w-0">
-          <h1 className={styles.title}>Model combos with fallback</h1>
           <p className={styles.description}>
-            Group models under one name, then pick a strategy per combo:
+            Group models under one name, then pick a strategy per combo
           </p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-stretch">
@@ -425,7 +424,7 @@ export default function CombosPage() {
                   if (el) el.indeterminate = someSelected && !allSelected;
                 }}
                 onChange={toggleSelectAll}
-                className="h-4 w-4 rounded border-[var(--line-2)] focus:ring-2 focus:ring-[var(--text-2)]"
+                className="h-4 w-4 rounded border border-white bg-transparent focus:ring-2 focus:ring-[var(--text-2)]"
               />
               <span>
                 {someSelected
@@ -581,11 +580,11 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
               checked={selected}
               onChange={onToggleSelect}
               onClick={(e) => e.stopPropagation()}
-              className="h-4 w-4 rounded border-[var(--line-2)]"
+              className="h-4 w-4 rounded border border-white bg-transparent"
               aria-label={`Select ${combo.name}`}
             />
           </label>
-          <Icon className="shrink-0 text-text text-[18px]">layers</Icon>
+          <Icon className="text-text text-[18px]">layers</Icon>
           <div className="min-w-0 flex-1">
             <code className={styles.comboName} title={combo.name}>{combo.name}</code>
             <div className={styles.modelList}>

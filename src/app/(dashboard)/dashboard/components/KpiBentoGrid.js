@@ -77,7 +77,6 @@ export default function KpiBentoGrid({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between py-1">
         <div className="flex items-center gap-2">
           <div className="ui-eyebrow">
-            <span className="lp-eyebrow__dot" />
             <span>Dashboard Telemetry</span>
           </div>
         </div>

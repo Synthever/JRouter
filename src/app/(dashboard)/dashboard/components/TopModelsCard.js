@@ -57,7 +57,7 @@ export default function TopModelsCard({ stats }) {
                       <span className="text-[var(--text)] font-medium truncate max-w-[160px] sm:max-w-[220px]" title={m.name}>
                         {m.name}
                       </span>
-                      <span className="px-1.5 py-0.5 rounded-[var(--r1)] bg-[var(--surface-2)] border border-[var(--line-2)] text-[10px] text-[var(--text-3)] font-mono">
+                      <span className="px-1.5 py-0.5 rounded-[var(--r1)] bg-transparent border border-white text-[10px] text-white font-mono">
                         {m.provider}
                       </span>
                     </div>

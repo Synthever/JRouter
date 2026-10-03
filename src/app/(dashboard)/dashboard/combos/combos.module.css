@@ -15,15 +15,6 @@
   gap: 20px;
 }
 
-.title {
-  margin-bottom: 6px;
-  color: var(--text);
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 1.35;
-  letter-spacing: -0.02em;
-}
-
 .description {
   max-width: 65ch;
   color: var(--text-2);
@@ -139,17 +130,17 @@
   padding: 12px;
   border: 0;
   border-radius: var(--r2);
-  background: transparent;
+  background: #0A0A0B;
   box-shadow: none;
   transition: background-color 150ms;
 }
 
 .comboCard:hover {
-  background: color-mix(in srgb, var(--text) 4%, transparent);
+  background: color-mix(in srgb, var(--text) 4%, #0A0A0B);
 }
 
 .selected {
-  background: color-mix(in srgb, var(--text) 6%, transparent);
+  background: color-mix(in srgb, var(--text) 6%, #0A0A0B);
   outline: 1px solid var(--accent-line);
 }
 
@@ -381,7 +372,38 @@
 }
 
 .page input[type="checkbox"] {
-  accent-color: var(--text);
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background-color: transparent;
+  border: 1px solid #ffffff;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-grid;
+  place-content: center;
+  margin: 0;
+  vertical-align: middle;
+  flex-shrink: 0;
+  transition: background-color 150ms, border-color 150ms;
+}
+
+.page input[type="checkbox"]:checked {
+  background-color: #ffffff;
+  border-color: #ffffff;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 16 16' fill='%23000000' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3E%3C/svg%3E");
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.page input[type="checkbox"]:indeterminate {
+  background-color: #ffffff;
+  border-color: #ffffff;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 8h8' stroke='%23000000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .page [role="switch"] {

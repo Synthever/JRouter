@@ -27,7 +27,7 @@ describe("endpoint dashboard theme", () => {
     const css = read(`${endpointPath}/endpoint.module.css`);
     expect(css).toContain("backdrop-filter: blur(18px) saturate(130%);");
     expect(css).toContain("backdrop-filter: blur(24px);");
-    expect(css).toContain("background-color: rgba(0, 0, 0, 0.3);");
+    expect(css).toContain("background-color: #131315;");
     expect(css).toMatch(/prefers-reduced-transparency: reduce[\s\S]*background: var\(--surface\);/);
   });
 

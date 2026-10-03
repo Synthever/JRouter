@@ -39,7 +39,7 @@ describe("dashboard navigation styling contract", () => {
       expect(header).toContain(declaration);
       expect(overlay).toContain(declaration);
     }
-    expect(card).toContain("background-color: rgba(0, 0, 0, 0.3);");
+    expect(card).toContain("background-color: var(--surface);");
     expect(base).toContain("border-bottom: 0;");
     expect(header).toContain("box-shadow: none;");
     expect(overlay).toContain("backdrop-filter: blur(24px);");

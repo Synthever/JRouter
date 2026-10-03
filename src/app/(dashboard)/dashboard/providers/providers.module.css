@@ -61,7 +61,7 @@
   }
 
   :global(.dark) .panel {
-    background-color: rgba(0, 0, 0, 0.3);
+    background-color: #131315;
     background-image: none;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
     -webkit-backdrop-filter: blur(24px);
@@ -147,14 +147,14 @@
   padding: 12px;
   border: 0;
   border-radius: var(--r2);
-  background: transparent;
+  background: #0A0A0B;
   box-shadow: none;
   transition: background-color 150ms;
 }
 
 .providerCard:hover,
 .providerCard:focus-within {
-  background: color-mix(in srgb, var(--text) 4%, transparent);
+  background: color-mix(in srgb, var(--text) 4%, #0A0A0B);
 }
 
 .providerLink {

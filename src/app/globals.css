@@ -525,7 +525,7 @@ body:has(.landing-page)::-webkit-scrollbar,
 }
 
 .dark .dashboard-overview :is(.stat-card, .ui-card) {
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: var(--surface);
   background-image: none;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
 }
