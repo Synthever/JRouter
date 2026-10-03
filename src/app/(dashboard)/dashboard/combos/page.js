@@ -10,6 +10,7 @@ import { Card, Button, Modal, Input, CardSkeleton, ModelSelectModal, ConfirmModa
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import { useModelCaps } from "@/shared/hooks/useModelCaps";
 import { aggregateComboCapabilities } from "open-sse/providers/capabilities.js";
+import styles from "./combos.module.css";
 
 // Validate combo name: only a-z, A-Z, 0-9, -, _
 const VALID_NAME_REGEX = /^[a-zA-Z0-9_.\-]+$/;
@@ -354,7 +355,7 @@ export default function CombosPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-6">
+      <div className={styles.page} aria-busy="true" aria-label="Loading combos">
         <CardSkeleton />
         <CardSkeleton />
       </div>
@@ -362,25 +363,16 @@ export default function CombosPage() {
   }
 
   return (
-    <div className="flex min-w-0 flex-col gap-6 px-1 sm:px-0">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className={styles.page}>
+      <header className={styles.intro}>
         <div className="min-w-0">
-          <p className="text-sm text-text-muted mt-1">
+          <h1 className={styles.title}>Model combos with fallback</h1>
+          <p className={styles.description}>
             Group models under one name, then pick a strategy per combo:
-          </p>
-          <ul className="text-sm text-text-muted mt-2 flex flex-col gap-1">
-            <li><span className="font-medium text-text-main">Fallback</span> — tries models in order (next on failure)</li>
-            <li><span className="font-medium text-text-main">Round Robin</span> — rotates models across requests to spread load</li>
-            <li><span className="font-medium text-text-main">Fusion</span> — queries all models in parallel, then a judge synthesizes one answer. Best quality, but costs the most: every request bills all panel models + the judge (N+1 calls)</li>
-          </ul>
-          <p className="hidden text-xs text-text-muted mt-3 max-w-2xl">
-            <span className="font-medium text-text-main">Cursor / Claude Default</span> create combos named exactly like those clients&apos; model IDs (e.g. <code className="font-mono">composer-2.5</code>, <code className="font-mono">opus</code>), seeded with the matching <code className="font-mono">cu/…</code> or <code className="font-mono">cc/…</code> route so traffic can hit 9router without the prefix.
-            {" "}Note: Cursor IDE itself often blocks built-in Composer / Grok from Override OpenAI Base URL (&quot;model does not support custom API&quot;); add them via Cursor&apos;s <span className="font-medium text-text-main">Add Custom Model</span> using the combo name, or pick a model Cursor allows through the custom endpoint.
           </p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-stretch">
-          <Button icon="add" onClick={() => setShowCreateModal(true)} className="w-full sm:w-auto whitespace-nowrap">
+          <Button icon="add" onClick={() => setShowCreateModal(true)} className={`${styles.primary} w-full whitespace-nowrap sm:w-auto`}>
             Create Combo
           </Button>
           <div className="hidden">
@@ -408,27 +400,24 @@ export default function CombosPage() {
             </Button>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Combos List */}
-      {combos.length === 0 ? (
-        <Card>
-          <div className="text-center py-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4">
-              <Icon className="text-[32px]">layers</Icon>
-            </div>
-            <p className="text-text-main font-medium mb-1">No combos yet</p>
-            <p className="text-sm text-text-muted mb-4">Create model combos with fallback support</p>
-            <Button icon="add" onClick={() => setShowCreateModal(true)} className="w-full sm:w-auto">
-              Create Combo
-            </Button>
+      <section className={styles.panel} aria-labelledby="combo-list-heading">
+        <div className={styles.sectionHeader}>
+          <div>
+            <h2 id="combo-list-heading" className={styles.sectionTitle}>Combos</h2>
           </div>
-        </Card>
-      ) : (
-        <div className="flex flex-col gap-3">
+        </div>
+        {combos.length === 0 ? (
+          <div className={styles.empty}>
+            <p className={styles.emptyTitle}>No combos yet</p>
+            <p>No combos yet.</p>
+          </div>
+        ) : (
+        <div className={styles.comboList}>
           {/* Selection toolbar */}
-          <div className="flex min-w-0 flex-col gap-2 rounded-lg border border-black/5 bg-black/[0.015] px-3 py-2 dark:border-white/5 dark:bg-white/[0.02] sm:flex-row sm:items-center sm:justify-between">
-            <label className="flex cursor-pointer items-center gap-2 text-xs text-text-muted hover:text-primary select-none">
+          <div className={styles.selectionToolbar}>
+            <label className={styles.selectionLabel}>
               <input
                 type="checkbox"
                 checked={allSelected}
@@ -436,7 +425,7 @@ export default function CombosPage() {
                   if (el) el.indeterminate = someSelected && !allSelected;
                 }}
                 onChange={toggleSelectAll}
-                className="h-3.5 w-3.5 rounded border-gray-300 text-primary focus:ring-primary"
+                className="h-4 w-4 rounded border-[var(--line-2)] focus:ring-2 focus:ring-[var(--text-2)]"
               />
               <span>
                 {someSelected
@@ -445,10 +434,10 @@ export default function CombosPage() {
               </span>
             </label>
 
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <div className={styles.bulkActions}>
               {someSelected && (
                 <>
-                  <div className="w-full min-w-[160px] sm:w-[200px]">
+                  <div className={styles.strategySelect}>
                     <Select
                       options={STRATEGY_OPTIONS}
                       value=""
@@ -463,12 +452,12 @@ export default function CombosPage() {
                   </div>
                   <Button
                     size="sm"
-                    variant="danger"
+                    variant="secondary"
                     icon="delete"
                     disabled={bulkBusy}
                     loading={bulkBusy}
                     onClick={handleBulkDelete}
-                    className="whitespace-nowrap"
+                    className={`${styles.deleteButton} whitespace-nowrap`}
                   >
                     Delete ({selectedIds.length})
                   </Button>
@@ -485,7 +474,7 @@ export default function CombosPage() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-3">
+          <div className="flex min-w-0 flex-col gap-2">
             {(() => {
               const comboByName = Object.fromEntries(combos.map((c) => [c.name, c.models]));
               return combos.map((combo) => (
@@ -508,15 +497,23 @@ export default function CombosPage() {
             })()}
           </div>
         </div>
-      )}
+        )}
+      </section>
 
-      {/* Capacity Adapter */}
-      <CapacityAdapterSection
-        capacityAdapter={capacityAdapter}
-        onChange={handleSetCapacityAdapter}
-        activeProviders={activeProviders}
-        getCaps={getCaps}
-      />
+      <section className={styles.panel} aria-labelledby="capacity-adapter-heading">
+        <div className={styles.sectionHeader}>
+          <div>
+            <h2 id="capacity-adapter-heading" className={styles.sectionTitle}>Vision Adapter</h2>
+            <p className={styles.sectionDescription}>Your model can&apos;t read image/audio? Auto-switches to a model in the pool below.</p>
+          </div>
+        </div>
+        <CapacityAdapterSection
+          capacityAdapter={capacityAdapter}
+          onChange={handleSetCapacityAdapter}
+          activeProviders={activeProviders}
+          getCaps={getCaps}
+        />
+      </section>
 
       {/* Create Modal - Use key to force remount and reset state */}
       {showCreateModal && (
@@ -575,7 +572,7 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
   const comboCaps = aggregateComboCapabilities(combo.models, comboByName, getCaps);
 
   return (
-    <Card padding="sm" className={`group ${selected ? "ring-1 ring-primary/40 bg-primary/[0.03]" : ""}`}>
+    <Card padding="none" className={`${styles.comboCard} ${selected ? styles.selected : ""}`}>
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
           <label className="flex shrink-0 items-center pt-1 sm:pt-0 cursor-pointer" title="Select combo">
@@ -584,21 +581,19 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
               checked={selected}
               onChange={onToggleSelect}
               onClick={(e) => e.stopPropagation()}
-              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              className="h-4 w-4 rounded border-[var(--line-2)]"
               aria-label={`Select ${combo.name}`}
             />
           </label>
-          <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-            <Icon className="text-primary text-[18px]">layers</Icon>
-          </div>
+          <Icon className="shrink-0 text-text text-[18px]">layers</Icon>
           <div className="min-w-0 flex-1">
-            <code className="block truncate font-mono text-sm font-medium">{combo.name}</code>
-            <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1">
+            <code className={styles.comboName} title={combo.name}>{combo.name}</code>
+            <div className={styles.modelList}>
               {combo.models.length === 0 ? (
                 <span className="text-xs text-text-muted italic">No models</span>
               ) : (
                 combo.models.slice(0, 3).map((model, index) => (
-                  <code key={index} className="inline-flex items-center gap-1 rounded bg-black/5 px-1.5 py-0.5 font-mono text-xs text-text-muted dark:bg-white/5">
+                  <code key={index} className={styles.modelChip} title={model}>
                     <span>{model}</span>
                     <CapacityBadges caps={
                       comboByName[model]
@@ -609,11 +604,11 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
                 ))
               )}
               {combo.models.length > 3 && (
-                <span className="text-[10px] text-text-muted">+{combo.models.length - 3} more</span>
+                <span className="text-[11px] text-text-muted">+{combo.models.length - 3} more</span>
               )}
             </div>
             {comboCaps && (
-              <div className="mt-1 flex items-center gap-2 text-[10px] text-text-muted">
+              <div className={styles.metadata}>
                 <span>ctx {fmtK(comboCaps.contextWindow)}</span>
                 <span className="opacity-40">·</span>
                 <span>max {fmtK(comboCaps.maxOutput)}</span>
@@ -621,21 +616,24 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
             )}
             {/* Fusion: judge picker (Auto = first model) */}
             {isFusion && (
-              <div className="mt-2 flex min-w-0 flex-wrap items-center gap-1.5">
-                <span className="text-[11px] font-medium text-text-muted">Judge</span>
+              <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
+                <span className="text-xs font-medium text-text-muted">Judge</span>
                 <button
+                  type="button"
                   onClick={() => setShowJudgeSelect(true)}
-                  className="inline-flex max-w-full items-center gap-1 rounded border border-dashed border-primary/40 px-1.5 py-0.5 font-mono text-[11px] text-primary hover:border-primary hover:bg-primary/5 transition-colors"
+                  className={styles.judgeButton}
                   title="Pick the model that fuses panel answers"
                 >
-                  <Icon className="text-[13px]">gavel</Icon>
-                  <span className="truncate">{judge || `Auto — ${combo.models[0] || "first model"}`}</span>
+                  <Icon className="shrink-0 text-[14px]">gavel</Icon>
+                  <span>{judge || `Auto - ${combo.models[0] || "first model"}`}</span>
                 </button>
                 {judge && (
                   <button
+                    type="button"
                     onClick={() => onSetStrategy({ judgeModel: "" })}
-                    className="p-0.5 rounded text-text-muted hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                    className={`${styles.resetJudge} rounded p-1 text-text-muted hover:bg-surface-2 transition-colors`}
                     title="Reset judge to Auto"
+                    aria-label="Reset judge to automatic"
                   >
                     <Icon className="text-[13px]">close</Icon>
                   </button>
@@ -648,7 +646,7 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
         {/* Actions */}
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3 sm:shrink-0">
           {/* Strategy selector — always visible */}
-          <div className="w-full sm:w-[200px]">
+          <div className={styles.strategySelect}>
             <Select
               options={STRATEGY_OPTIONS}
               value={current}
@@ -657,11 +655,13 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-1 sm:flex">
+          <div className={styles.comboActions}>
             <button
+              type="button"
               onClick={(e) => { e.stopPropagation(); onCopy(combo.name, `combo-${combo.id}`); }}
-              className="flex flex-col items-center rounded px-2 py-1 text-text-muted transition-colors hover:bg-black/5 hover:text-primary dark:hover:bg-white/5"
+              className={styles.iconAction}
               title="Copy combo name"
+              aria-label={`Copy ${combo.name}`}
             >
               <Icon className="text-[18px]">
                 {copied === `combo-${combo.id}` ? "check" : "content_copy"}
@@ -669,17 +669,21 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
               <span className="text-[10px] leading-tight">Copy</span>
             </button>
             <button
+              type="button"
               onClick={onEdit}
-              className="flex flex-col items-center rounded px-2 py-1 text-text-muted transition-colors hover:bg-black/5 hover:text-primary dark:hover:bg-white/5"
+              className={styles.iconAction}
               title="Edit"
+              aria-label={`Edit ${combo.name}`}
             >
               <Icon className="text-[18px]">edit</Icon>
               <span className="text-[10px] leading-tight">Edit</span>
             </button>
             <button
+              type="button"
               onClick={onDelete}
-              className="flex flex-col items-center rounded px-2 py-1 text-red-500 transition-colors hover:bg-red-500/10"
+              className={`${styles.iconAction} ${styles.dangerAction}`}
               title="Delete"
+              aria-label={`Delete ${combo.name}`}
             >
               <Icon className="text-[18px]">delete</Icon>
               <span className="text-[10px] leading-tight">Delete</span>
@@ -706,27 +710,17 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
 
 function CapacityAdapterSection({ capacityAdapter, onChange, activeProviders, getCaps }) {
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <p className="text-sm font-medium">Vision Adapter</p>
-          <p className="text-xs text-text-muted mt-0.5">
-            Your model can&apos;t read image/audio? Auto-switches to a model in the pool below.
-          </p>
-        </div>
-      </div>
-      <div className="flex flex-col gap-4">
-        {CAPACITY_ADAPTER_CAPS.map((cap) => (
-          <CapacityAdapterCap
-            key={cap.key}
-            cap={cap}
-            entry={capacityAdapter[cap.key] || EMPTY_CAP_ENTRY}
-            onChange={(entry) => onChange({ ...capacityAdapter, [cap.key]: entry })}
-            activeProviders={activeProviders}
-            getCaps={getCaps}
-          />
-        ))}
-      </div>
+    <div className="flex flex-col gap-2">
+      {CAPACITY_ADAPTER_CAPS.map((cap) => (
+        <CapacityAdapterCap
+          key={cap.key}
+          cap={cap}
+          entry={capacityAdapter[cap.key] || EMPTY_CAP_ENTRY}
+          onChange={(entry) => onChange({ ...capacityAdapter, [cap.key]: entry })}
+          activeProviders={activeProviders}
+          getCaps={getCaps}
+        />
+      ))}
     </div>
   );
 }
@@ -763,22 +757,22 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
   };
 
   return (
-    <Card padding="sm" className={`group ${!enabled ? "opacity-50" : ""}`}>
+    <Card padding="none" className={`${styles.adapterCard} ${!enabled ? "opacity-60" : ""}`}>
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Master toggle + icon + label */}
         <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:items-center">
-          <Toggle
-            checked={enabled}
-            onChange={(v) => patch({ enabled: v })}
-            aria-label={`Enable ${cap.label} adapter`}
-          />
-          <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-            <Icon className="text-primary text-[18px]">{cap.icon}</Icon>
-          </div>
+          <label className="shrink-0 cursor-pointer">
+            <Toggle
+              checked={enabled}
+              onChange={(v) => patch({ enabled: v })}
+            />
+            <span className="sr-only">Enable {cap.label} adapter</span>
+          </label>
+          <Icon className="shrink-0 text-text text-[18px]">{cap.icon}</Icon>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <code className="font-mono text-sm font-medium">{cap.label}</code>
-              <span className="text-[10px] text-text-muted">— {cap.desc}</span>
+              <span className="text-xs text-text-muted">{cap.desc}</span>
             </div>
           </div>
         </div>
@@ -792,7 +786,7 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
               disabled={!enabled}
               aria-label={`Round-robin ${cap.label} adapter`}
             />
-            <span>Round</span>
+            <span>Round<span className="sr-only">-robin {cap.label} adapter</span></span>
           </label>
           <Button
             icon="add"
@@ -813,23 +807,23 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
           No models in pool (will fallback to {DEFAULT_FALLBACK_MODEL})
         </div>
       ) : (
-        <div className="mt-3 overflow-hidden rounded-lg border border-border/50">
-          <table className="w-full text-left text-xs">
+        <div className={styles.tableWrap}>
+          <table className={`${styles.table} min-w-[520px]`}>
             <thead>
-              <tr className="border-b border-border/40 bg-black/[0.02] text-text-muted dark:bg-white/[0.02]">
-                <th className="w-12 px-3 py-1.5 font-medium text-center">#</th>
-                <th className="px-3 py-1.5 font-medium">Model</th>
-                <th className="w-24 px-3 py-1.5 font-medium text-center">Order</th>
-                <th className="w-12 px-3 py-1.5 font-medium text-right"></th>
+              <tr>
+                <th className="w-12 text-center">#</th>
+                <th>Model</th>
+                <th className="w-24 text-center">Order</th>
+                <th className="w-12 text-right"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/30 font-mono">
+            <tbody>
               {models.map((model, index) => (
-                <tr key={`${model}-${index}`} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors">
-                  <td className="px-3 py-2 text-center text-text-muted text-[11px] font-sans">
+                <tr key={`${model}-${index}`}>
+                  <td className="text-center text-text-muted text-[11px] font-sans">
                     #{index + 1}
                   </td>
-                  <td className="px-3 py-2 text-text-main">
+                  <td className="text-text-main">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="truncate">{model}</span>
                       <CapacityBadges caps={getCaps?.(model)} />
@@ -846,12 +840,13 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
                         type="button"
                         onClick={() => handleMove(index, -1)}
                         disabled={!enabled || index === 0}
-                        className={`p-1 rounded transition-colors ${
+                        className={`min-h-11 min-w-11 rounded transition-colors ${
                           !enabled || index === 0
-                            ? "text-text-muted/20 cursor-not-allowed"
-                            : "text-text-muted hover:text-primary hover:bg-black/5 dark:hover:bg-white/5"
+                            ? "text-text-muted/30 cursor-not-allowed"
+                            : "text-text-muted hover:text-text hover:bg-surface-hover"
                         }`}
                         title="Move up"
+                        aria-label={`Move ${model} up`}
                       >
                         <Icon className="text-[16px] leading-none">arrow_upward</Icon>
                       </button>
@@ -859,12 +854,13 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
                         type="button"
                         onClick={() => handleMove(index, 1)}
                         disabled={!enabled || index === models.length - 1}
-                        className={`p-1 rounded transition-colors ${
+                        className={`min-h-11 min-w-11 rounded transition-colors ${
                           !enabled || index === models.length - 1
-                            ? "text-text-muted/20 cursor-not-allowed"
-                            : "text-text-muted hover:text-primary hover:bg-black/5 dark:hover:bg-white/5"
+                            ? "text-text-muted/30 cursor-not-allowed"
+                            : "text-text-muted hover:text-text hover:bg-surface-hover"
                         }`}
                         title="Move down"
+                        aria-label={`Move ${model} down`}
                       >
                         <Icon className="text-[16px] leading-none">arrow_downward</Icon>
                       </button>
@@ -875,12 +871,13 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
                       type="button"
                       onClick={() => handleRemove(index)}
                       disabled={!enabled}
-                      className={`p-1 rounded transition-colors ${
+                      className={`min-h-11 min-w-11 rounded transition-colors ${
                         !enabled
-                          ? "text-text-muted/20 cursor-not-allowed"
-                          : "text-text-muted hover:text-red-500 hover:bg-red-500/10"
+                          ? "text-text-muted/30 cursor-not-allowed"
+                            : "text-text-muted hover:text-red-600 hover:bg-red-500/10"
                       }`}
                       title="Remove model"
+                      aria-label={`Remove ${model}`}
                     >
                       <Icon className="text-[16px] leading-none">close</Icon>
                     </button>
@@ -935,15 +932,16 @@ function ModelItem({ id, index, model, isFirst, isLast, onEdit, onMoveUp, onMove
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex min-w-0 items-center gap-1.5 rounded-md px-2 py-1 bg-black/[0.02] hover:bg-black/[0.04] dark:bg-white/[0.02] dark:hover:bg-white/[0.04] transition-colors ${isDragging ? "shadow-md ring-1 ring-primary/30" : ""}`}
+      className={`${styles.modelItem} ${isDragging ? "ring-1 ring-[var(--accent-line)]" : ""}`}
     >
       {/* Drag handle */}
       <button
         {...attributes}
         {...listeners}
         type="button"
-        className="cursor-grab touch-none p-0.5 rounded text-text-muted hover:text-primary active:cursor-grabbing shrink-0"
+        className="min-h-9 min-w-9 cursor-grab touch-none rounded p-1 text-text-muted hover:text-text active:cursor-grabbing shrink-0"
         title="Drag to reorder"
+        aria-label={`Reorder ${model}`}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
           <circle cx="9" cy="4" r="2"/><circle cx="15" cy="4" r="2"/>
@@ -963,13 +961,22 @@ function ModelItem({ id, index, model, isFirst, isLast, onEdit, onMoveUp, onMove
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commit}
           onKeyDown={handleKeyDown}
-          className="min-w-0 flex-1 rounded border border-primary/40 bg-white px-1.5 py-0.5 font-mono text-xs text-text-main outline-none dark:bg-black/20"
+          className={styles.modelEditor}
         />
       ) : (
         <div
-          className="min-w-0 flex-1 cursor-text truncate rounded px-1.5 py-0.5 font-mono text-xs text-text-main hover:bg-black/5 dark:hover:bg-white/5"
+          className={styles.inlineModel}
           onClick={() => setEditing(true)}
           title="Click to edit"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              setEditing(true);
+            }
+          }}
+          aria-label={`Edit model ${model}`}
         >
           {model}
         </div>
@@ -980,16 +987,18 @@ function ModelItem({ id, index, model, isFirst, isLast, onEdit, onMoveUp, onMove
         <button
           onClick={onMoveUp}
           disabled={isFirst}
-          className={`p-0.5 rounded ${isFirst ? "text-text-muted/20 cursor-not-allowed" : "text-text-muted hover:text-primary hover:bg-black/5 dark:hover:bg-white/5"}`}
+          className={`min-h-9 min-w-9 rounded ${isFirst ? "text-text-muted/30 cursor-not-allowed" : "text-text-muted hover:text-text hover:bg-surface-hover"}`}
           title="Move up"
+          aria-label={`Move ${model} up`}
         >
           <Icon className="text-[12px]">arrow_upward</Icon>
         </button>
         <button
           onClick={onMoveDown}
           disabled={isLast}
-          className={`p-0.5 rounded ${isLast ? "text-text-muted/20 cursor-not-allowed" : "text-text-muted hover:text-primary hover:bg-black/5 dark:hover:bg-white/5"}`}
+          className={`min-h-9 min-w-9 rounded ${isLast ? "text-text-muted/30 cursor-not-allowed" : "text-text-muted hover:text-text hover:bg-surface-hover"}`}
           title="Move down"
+          aria-label={`Move ${model} down`}
         >
           <Icon className="text-[12px]">arrow_downward</Icon>
         </button>
@@ -998,8 +1007,9 @@ function ModelItem({ id, index, model, isFirst, isLast, onEdit, onMoveUp, onMove
       {/* Remove */}
       <button
         onClick={onRemove}
-        className="p-0.5 hover:bg-red-500/10 rounded text-text-muted hover:text-red-500 transition-all"
+        className="min-h-9 min-w-9 rounded text-text-muted hover:bg-red-500/10 hover:text-red-600 transition-colors"
         title="Remove"
+        aria-label={`Remove ${model}`}
       >
         <Icon className="text-[12px]">close</Icon>
       </button>
@@ -1134,9 +1144,9 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, kindF
             <label className="text-sm font-medium mb-1.5 block">Models</label>
 
             {models.length === 0 ? (
-              <div className="text-center py-4 border border-dashed border-black/10 dark:border-white/10 rounded-lg bg-black/[0.01] dark:bg-white/[0.01]">
-                <Icon className="text-text-muted text-xl mb-1">layers</Icon>
-                <p className="text-xs text-text-muted">No models added yet</p>
+              <div className={styles.modalEmpty}>
+                <p className="font-medium text-text-main">No models added yet</p>
+                <p className="mt-1">Choose one or more models to include in this combo.</p>
               </div>
             ) : (
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis, restrictToParentElement]}>
@@ -1167,8 +1177,9 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, kindF
 
             {/* Add Model button */}
             <button
+              type="button"
               onClick={() => setShowModelSelect(true)}
-              className="w-full mt-2 py-2 border border-dashed border-black/10 dark:border-white/10 rounded-lg text-xs text-primary font-medium hover:text-primary hover:border-primary/50 transition-colors flex items-center justify-center gap-1"
+              className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--r1)] border border-[var(--line-2)] bg-surface-2 text-sm font-medium text-text-main transition-colors hover:bg-surface-hover"
             >
               <Icon className="text-[16px]">add</Icon>
               Add Model
@@ -1184,6 +1195,7 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, kindF
               onClick={handleSave}
               fullWidth
               size="sm"
+              className={styles.primary}
               disabled={!name.trim() || !!nameError || saving}
             >
               {saving ? "Saving..." : isEdit ? "Save" : "Create"}
