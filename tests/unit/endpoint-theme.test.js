@@ -44,11 +44,50 @@ describe("endpoint dashboard theme", () => {
     const row = read(`${endpointPath}/components/EndpointRow.js`);
     expect(row).toContain('aria-label={`${label} endpoint`}');
     expect(row).toContain('aria-label={`Copy ${label} endpoint`}');
-    expect(row).toContain("inputClassName=\"font-mono\"");
+    expect(row).toContain("<output");
+    expect(row).toContain("styles.endpointValue");
+    const cssValue = read(`${endpointPath}/endpoint.module.css`);
+    expect(cssValue).toMatch(/\.endpointValue\s*\{[^}]*overflow-wrap: anywhere;/);
+    expect(cssValue).toMatch(/\.endpointValue\s*\{[^}]*white-space: pre-wrap;/);
     const css = read(`${endpointPath}/endpoint.module.css`);
     expect(css).toMatch(/\.field\s*\{[^}]*min-width: 0;/);
     expect(css).toMatch(/\.keyValue\s*\{[^}]*overflow-wrap: anywhere;/);
     expect(css).toMatch(/@media \(max-width: 639px\)[\s\S]*min-height: 44px;/);
+  });
+
+  it("uses theme tokens for endpoint fields instead of white-on-white overrides", () => {
+    const css = read(`${endpointPath}/endpoint.module.css`);
+    const field = css.match(/\.endpointValue\s*\{([^}]*)\}/)?.[1];
+    expect(field).toContain("color: var(--text);");
+    expect(field).toContain("border: 1px solid var(--line-2);");
+    expect(field).toContain("background: var(--surface-2);");
+    expect(css).toMatch(/\.endpointValue:focus\s*\{[^}]*border-color: var\(--text-2\);/);
+  });
+
+  it("gives key credentials a full-width mobile row below name and state controls", () => {
+    const source = read(`${endpointPath}/EndpointPageClient.js`);
+    expect(source).toContain("className={styles.keyDetails}");
+    expect(source).toContain("className={styles.keyCredential}");
+    expect(source).toContain("className={styles.keyActions}");
+    const css = read(`${endpointPath}/endpoint.module.css`);
+    const mobile = css.slice(css.indexOf("@media (max-width: 639px)"));
+    expect(mobile).toMatch(/\.keyRow\s*\{[^}]*display: grid;[^}]*grid-template-columns: minmax\(0, 1fr\) auto;/);
+    expect(mobile).toMatch(/\.keyDetails\s*\{[^}]*display: contents;/);
+    expect(mobile).toMatch(/\.keyCredential\s*\{[^}]*grid-column: 1 \/ -1;/);
+    expect(mobile).toMatch(/\.keyActions\s*\{[^}]*grid-column: 2;[^}]*grid-row: 1;/);
+  });
+
+  it("keeps masked keys compact without changing revealed or copied credentials", () => {
+    const source = read(`${endpointPath}/EndpointPageClient.js`);
+    const maskSource = source.match(/const maskKey = \(fullKey\) => \{([\s\S]*?)\n  \};/)?.[1];
+    expect(maskSource).toBeDefined();
+    const maskKey = new Function("fullKey", maskSource);
+    const key = "sk-" + "a".repeat(64) + "b95e";
+    expect(maskKey(key)).toBe(key.slice(0, 6) + "•".repeat(6) + "b95e");
+    expect(maskKey("short")).toBe("short");
+    expect(maskKey(null)).toBe("");
+    expect(source).toContain("visibleKeys.has(key.id) ? key.key : maskKey(key.key)");
+    expect(source).toContain("copy(key.key, key.id)");
   });
 
   it("keeps the API key delete button transparent, including on hover", () => {

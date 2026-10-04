@@ -1,7 +1,6 @@
 "use client";
 import Icon from "@/shared/components/Icon";
 
-import { Input } from "@/shared/components";
 import styles from "../endpoint.module.css";
 
 /** Reusable endpoint row component */
@@ -11,7 +10,15 @@ export default function EndpointRow({ label, url, copyId, copied, onCopy, badge,
       <span className={`${styles.label} ${
           (badge === "CF" || badge === "TS") ? styles.enabled : ""
         }`}>{label}</span>
-      <Input value={url} readOnly className={styles.field} inputClassName="font-mono" aria-label={`${label} endpoint`} />
+      <div className={styles.field}>
+        <output
+          className={`${styles.endpointValue} font-mono`}
+          aria-label={`${label} endpoint`}
+          tabIndex={0}
+        >
+          {url}
+        </output>
+      </div>
       <button
         onClick={() => onCopy(url, copyId)}
         className={styles.iconButton}

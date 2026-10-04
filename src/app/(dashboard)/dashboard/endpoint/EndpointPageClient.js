@@ -678,7 +678,7 @@ export default function APIPageClient({ machineId }) {
 
   const maskKey = (fullKey) => {
     if (!fullKey || fullKey.length <= 10) return fullKey || "";
-    return fullKey.slice(0, 6) + "•".repeat(fullKey.length - 10) + fullKey.slice(-4);
+    return fullKey.slice(0, 6) + "•".repeat(6) + fullKey.slice(-4);
   };
 
   const toggleKeyVisibility = (keyId) => {
@@ -1012,9 +1012,9 @@ export default function APIPageClient({ machineId }) {
                 key={key.id}
                 className={styles.keyRow}
               >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium break-words">{key.name}</p>
-                  <div className="flex items-center gap-2 mt-1">
+                <div className={styles.keyDetails}>
+                  <p className={`${styles.keyName} text-sm font-medium`}>{key.name}</p>
+                  <div className={styles.keyCredential}>
                     <code className={`${styles.keyValue} text-xs text-text-muted font-mono`} data-i18n-skip>
                       {visibleKeys.has(key.id) ? key.key : maskKey(key.key)}
                     </code>
@@ -1037,14 +1037,14 @@ export default function APIPageClient({ machineId }) {
                       </Icon>
                     </button>
                   </div>
-                  <p className="text-xs text-text-muted mt-1">
+                  <p className={`${styles.keyMeta} text-xs text-text-muted mt-1`}>
                     Created {new Date(key.createdAt).toLocaleDateString()}
                   </p>
                   {key.isActive === false && (
-                    <p className="text-xs text-[var(--warn)] mt-1">Paused</p>
+                    <p className={`${styles.keyPaused} text-xs text-[var(--warn)] mt-1`}>Paused</p>
                   )}
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className={styles.keyActions}>
                   <Toggle
                     size="sm"
                     checked={key.isActive ?? true}
