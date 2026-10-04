@@ -309,7 +309,7 @@ function HeaderSearch() {
   if (!visible) return null;
 
   return (
-    <div className="dashboard-header__search relative w-[160px] sm:w-[220px]">
+    <div className="dashboard-header__search relative">
       <Icon
         name="search"
         className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--text-3)] text-[16px] pointer-events-none"

@@ -17,6 +17,18 @@ describe("dashboard navigation styling contract", () => {
     expect(header).not.toContain("hover:text-white");
   });
 
+  it("bounds header search width without stretching across the mobile action row", () => {
+    const header = read("src/shared/components/Header.js");
+    const css = read("src/app/globals.css");
+    expect(header).toContain('className="dashboard-header__search relative"');
+    const search = [...css.matchAll(/\n\s*\.dashboard-header__search\s*\{([^}]+)\}/g)];
+    expect(search[0]?.[1]).toContain("width: 180px;");
+    expect(search[0]?.[1]).toContain("flex: 0 1 180px;");
+    expect(search[0]?.[1]).toContain("min-width: 0;");
+    expect(search[1]?.[1]).toContain("flex: 0 1 160px;");
+    expect(search[1]?.[1]).toContain("width: 160px;");
+  });
+
   it("keeps language and menu controls without a standalone theme button", () => {
     const header = read("src/shared/components/Header.js");
     expect(header).not.toContain("ThemeToggle");

@@ -138,6 +138,7 @@
 }
 
 .providerCard {
+  --provider-card-bg: var(--surface);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -147,14 +148,18 @@
   padding: 12px;
   border: 0;
   border-radius: var(--r2);
-  background: #0A0A0B;
+  background: var(--provider-card-bg);
   box-shadow: none;
   transition: background-color 150ms;
 }
 
+:global(.dark) .providerCard {
+  --provider-card-bg: var(--bg);
+}
+
 .providerCard:hover,
 .providerCard:focus-within {
-  background: color-mix(in srgb, var(--text) 4%, #0A0A0B);
+  background: color-mix(in srgb, var(--text) 4%, var(--provider-card-bg));
 }
 
 .providerLink {

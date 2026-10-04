@@ -697,6 +697,12 @@ body:has(.landing-page)::-webkit-scrollbar,
   gap: 6px;
 }
 
+.dashboard-header__search {
+  flex: 0 1 180px;
+  width: 180px;
+  min-width: 0;
+}
+
 .dashboard-header .dashboard-header__action {
   display: inline-flex;
   align-items: center;
@@ -943,7 +949,8 @@ body:has(.landing-page)::-webkit-scrollbar,
   }
 
   .dashboard-header__search {
-    flex: 1;
+    flex: 0 1 160px;
+    width: 160px;
     min-width: 0;
   }
 

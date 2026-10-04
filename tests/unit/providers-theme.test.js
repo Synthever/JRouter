@@ -13,7 +13,9 @@ describe("providers dashboard theme", () => {
     expect(css).toContain("backdrop-filter: blur(18px) saturate(130%);");
     expect(css).toContain("backdrop-filter: blur(24px);");
     expect(css).toContain("background-color: #131315;");
-    expect(css).toMatch(/\.providerCard\s*\{[^}]*background: #0A0A0B;/i);
+    expect(css).toMatch(/\.providerCard\s*\{[^}]*--provider-card-bg: var\(--surface\);[^}]*background: var\(--provider-card-bg\);/);
+    expect(css).toMatch(/:global\(\.dark\) \.providerCard\s*\{[^}]*--provider-card-bg: var\(--bg\);/);
+    expect(css).toMatch(/\.providerCard:focus-within\s*\{[^}]*background: color-mix\(in srgb, var\(--text\) 4%, var\(--provider-card-bg\)\);/);
     expect(css).toMatch(/prefers-reduced-transparency: reduce[\s\S]*background: var\(--surface\);/);
   });
 
