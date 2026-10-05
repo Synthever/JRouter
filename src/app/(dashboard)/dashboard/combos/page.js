@@ -6,7 +6,9 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
-import { Card, Button, Modal, Input, CardSkeleton, ModelSelectModal, ConfirmModal, CapacityBadges, Select, Toggle } from "@/shared/components";
+import { Card, Button, Modal, Input, Skeleton, ModelSelectModal, ConfirmModal, CapacityBadges, Select, Toggle } from "@/shared/components";
+import StatusBadge from "@/shared/components/StatusBadge";
+import controls from "@/shared/components/DashboardControls.module.css";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import { useModelCaps } from "@/shared/hooks/useModelCaps";
 import { aggregateComboCapabilities } from "open-sse/providers/capabilities.js";
@@ -355,15 +357,19 @@ export default function CombosPage() {
 
   if (loading) {
     return (
-      <div className={styles.page} aria-busy="true" aria-label="Loading combos">
-        <CardSkeleton />
-        <CardSkeleton />
+      <div className={`dashboard-surface ${styles.page}`} aria-busy="true" aria-label="Loading combos">
+        {[0, 1].map((section) => (
+          <Card key={section} className={`ui-card ${styles.panel}`}>
+            <Skeleton className="mb-4 h-4 w-40" />
+            <Skeleton className="h-20 w-full" />
+          </Card>
+        ))}
       </div>
     );
   }
 
   return (
-    <div className={styles.page}>
+    <div className={`dashboard-surface ${styles.page}`}>
       <header className={styles.intro}>
         <div className="min-w-0">
           <p className={styles.description}>
@@ -371,7 +377,7 @@ export default function CombosPage() {
           </p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-stretch">
-          <Button icon="add" onClick={() => setShowCreateModal(true)} className={`${styles.primary} w-full whitespace-nowrap sm:w-auto`}>
+          <Button variant="contrast" icon="add" onClick={() => setShowCreateModal(true)} className="w-full whitespace-nowrap sm:w-auto">
             Create Combo
           </Button>
           <div className="hidden">
@@ -401,16 +407,19 @@ export default function CombosPage() {
         </div>
       </header>
 
-      <section className={styles.panel} aria-labelledby="combo-list-heading">
+      <section className={`ui-card ${styles.panel}`} aria-labelledby="combo-list-heading">
         <div className={styles.sectionHeader}>
           <div>
-            <h2 id="combo-list-heading" className={styles.sectionTitle}>Combos</h2>
+            <h2 id="combo-list-heading" className="ui-eyebrow flex items-center gap-2">
+              <Icon className="text-[16px]">layers</Icon> Combos
+            </h2>
           </div>
         </div>
         {combos.length === 0 ? (
           <div className={styles.empty}>
             <p className={styles.emptyTitle}>No combos yet</p>
-            <p>No combos yet.</p>
+            <p>Create a combo to route requests through your selected models.</p>
+            <Button variant="contrast" icon="add" onClick={() => setShowCreateModal(true)} className="mt-4">Create Combo</Button>
           </div>
         ) : (
         <div className={styles.comboList}>
@@ -424,7 +433,7 @@ export default function CombosPage() {
                   if (el) el.indeterminate = someSelected && !allSelected;
                 }}
                 onChange={toggleSelectAll}
-                className="h-4 w-4 rounded border border-white bg-transparent focus:ring-2 focus:ring-[var(--text-2)]"
+                aria-label="Select all combos"
               />
               <span>
                 {someSelected
@@ -441,6 +450,7 @@ export default function CombosPage() {
                       options={STRATEGY_OPTIONS}
                       value=""
                       placeholder="Set strategy…"
+                      aria-label="Set strategy for selected combos"
                       disabled={bulkBusy}
                       onChange={(e) => {
                         const v = e.target.value;
@@ -451,7 +461,7 @@ export default function CombosPage() {
                   </div>
                   <Button
                     size="sm"
-                    variant="secondary"
+                    variant="danger"
                     icon="delete"
                     disabled={bulkBusy}
                     loading={bulkBusy}
@@ -473,11 +483,11 @@ export default function CombosPage() {
             </div>
           </div>
 
-          <div className="flex min-w-0 flex-col gap-2">
+          <ul className={styles.rows}>
             {(() => {
               const comboByName = Object.fromEntries(combos.map((c) => [c.name, c.models]));
               return combos.map((combo) => (
-                <ComboCard
+                <ComboRow
                   key={combo.id}
                   combo={combo}
                   getCaps={getCaps}
@@ -494,15 +504,17 @@ export default function CombosPage() {
                 />
               ));
             })()}
-          </div>
+          </ul>
         </div>
         )}
       </section>
 
-      <section className={styles.panel} aria-labelledby="capacity-adapter-heading">
+      <section className={`ui-card ${styles.panel}`} aria-labelledby="capacity-adapter-heading">
         <div className={styles.sectionHeader}>
           <div>
-            <h2 id="capacity-adapter-heading" className={styles.sectionTitle}>Vision Adapter</h2>
+            <h2 id="capacity-adapter-heading" className="ui-eyebrow flex items-center gap-2">
+              <Icon className="text-[16px]">visibility</Icon> Vision Adapter
+            </h2>
             <p className={styles.sectionDescription}>Your model can&apos;t read image/audio? Auto-switches to a model in the pool below.</p>
           </div>
         </div>
@@ -538,6 +550,7 @@ export default function CombosPage() {
 
       {/* Confirm (delete / generate presets) */}
       <ConfirmModal
+        className={styles.dialog}
         isOpen={!!confirmState}
         onClose={() => !confirmState?.loading && setConfirmState(null)}
         onConfirm={confirmState?.onConfirm}
@@ -560,7 +573,7 @@ const fmtK = (n) => {
   return `${Math.round(n / 1000)}k`;
 };
 
-function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], copied, onCopy, onEdit, onDelete, strategy = {}, onSetStrategy, selected = false, onToggleSelect }) {
+function ComboRow({ combo, getCaps, comboByName = {}, activeProviders = [], copied, onCopy, onEdit, onDelete, strategy = {}, onSetStrategy, selected = false, onToggleSelect }) {
   const [showJudgeSelect, setShowJudgeSelect] = useState(false);
   const current = strategy.fallbackStrategy || "fallback";
   const judge = strategy.judgeModel || "";
@@ -571,34 +584,37 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
   const comboCaps = aggregateComboCapabilities(combo.models, comboByName, getCaps);
 
   return (
-    <Card padding="none" className={`${styles.comboCard} ${selected ? styles.selected : ""}`}>
-      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
+    <li className={`${styles.comboRow} ${selected ? styles.selected : ""}`}>
+      <div className={styles.rowContent}>
+        <div className={styles.identity}>
           <label className="flex shrink-0 items-center pt-1 sm:pt-0 cursor-pointer" title="Select combo">
             <input
               type="checkbox"
               checked={selected}
               onChange={onToggleSelect}
               onClick={(e) => e.stopPropagation()}
-              className="h-4 w-4 rounded border border-white bg-transparent"
               aria-label={`Select ${combo.name}`}
             />
           </label>
-          <Icon className="text-text text-[18px]">layers</Icon>
+          <Icon className="shrink-0 text-text-muted text-[16px]">layers</Icon>
           <div className="min-w-0 flex-1">
-            <code className={styles.comboName} title={combo.name}>{combo.name}</code>
-            <div className={styles.modelList}>
+            <div className={styles.nameLine}>
+              <code className={styles.comboName} title={combo.name}>{combo.name}</code>
+              <StatusBadge dot={false}>{combo.models.length} {combo.models.length === 1 ? "model" : "models"}</StatusBadge>
+            </div>
+            <div className={styles.modelList} aria-label="Model routing order">
               {combo.models.length === 0 ? (
                 <span className="text-xs text-text-muted italic">No models</span>
               ) : (
                 combo.models.slice(0, 3).map((model, index) => (
                   <code key={index} className={styles.modelChip} title={model}>
+                    {index > 0 && <span className={styles.chainSeparator} aria-hidden="true">{isFusion ? "+" : "→"}</span>}
                     <span>{model}</span>
                     <CapacityBadges caps={
                       comboByName[model]
                         ? aggregateComboCapabilities(comboByName[model], comboByName, getCaps)
                         : getCaps?.(model)
-                    } />
+                    } colorOverride="text-text-muted" size={14} />
                   </code>
                 ))
               )}
@@ -643,12 +659,13 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
         </div>
 
         {/* Actions */}
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3 sm:shrink-0">
+        <div className={styles.rowControls}>
           {/* Strategy selector — always visible */}
           <div className={styles.strategySelect}>
             <Select
               options={STRATEGY_OPTIONS}
               value={current}
+              aria-label={`Routing strategy for ${combo.name}`}
               onChange={(e) => onSetStrategy({ fallbackStrategy: e.target.value })}
               selectClassName="py-1.5 text-xs"
             />
@@ -662,10 +679,9 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
               title="Copy combo name"
               aria-label={`Copy ${combo.name}`}
             >
-              <Icon className="text-[18px]">
+              <Icon className={`text-[16px] ${copied === `combo-${combo.id}` ? styles.success : ""}`}>
                 {copied === `combo-${combo.id}` ? "check" : "content_copy"}
               </Icon>
-              <span className="text-[10px] leading-tight">Copy</span>
             </button>
             <button
               type="button"
@@ -674,8 +690,7 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
               title="Edit"
               aria-label={`Edit ${combo.name}`}
             >
-              <Icon className="text-[18px]">edit</Icon>
-              <span className="text-[10px] leading-tight">Edit</span>
+              <Icon className="text-[16px]">edit</Icon>
             </button>
             <button
               type="button"
@@ -684,8 +699,7 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
               title="Delete"
               aria-label={`Delete ${combo.name}`}
             >
-              <Icon className="text-[18px]">delete</Icon>
-              <span className="text-[10px] leading-tight">Delete</span>
+              <Icon className="text-[16px]">delete</Icon>
             </button>
           </div>
         </div>
@@ -694,6 +708,8 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
       {/* Judge model picker (single-select; combo members make natural judges too) */}
       {showJudgeSelect && (
         <ModelSelectModal
+          className={controls.modelPicker}
+          portal
           isOpen={showJudgeSelect}
           onClose={() => setShowJudgeSelect(false)}
           onSelect={(m) => { onSetStrategy({ judgeModel: m?.value || "" }); setShowJudgeSelect(false); }}
@@ -703,13 +719,13 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
           closeOnSelect={true}
         />
       )}
-    </Card>
+    </li>
   );
 }
 
 function CapacityAdapterSection({ capacityAdapter, onChange, activeProviders, getCaps }) {
   return (
-    <div className="flex flex-col gap-2">
+    <div className={styles.rows}>
       {CAPACITY_ADAPTER_CAPS.map((cap) => (
         <CapacityAdapterCap
           key={cap.key}
@@ -756,40 +772,36 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
   };
 
   return (
-    <Card padding="none" className={`${styles.adapterCard} ${!enabled ? "opacity-60" : ""}`}>
-      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className={styles.adapterRow}>
+      <div className={styles.adapterHeader}>
         {/* Master toggle + icon + label */}
-        <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:items-center">
-          <label className="shrink-0 cursor-pointer">
-            <Toggle
-              checked={enabled}
-              onChange={(v) => patch({ enabled: v })}
-            />
-            <span className="sr-only">Enable {cap.label} adapter</span>
-          </label>
-          <Icon className="shrink-0 text-text text-[18px]">{cap.icon}</Icon>
+        <div className={styles.identity}>
+          <Icon className="shrink-0 text-text-muted text-[16px]">{cap.icon}</Icon>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <code className="font-mono text-sm font-medium">{cap.label}</code>
-              <span className="text-xs text-text-muted">{cap.desc}</span>
+            <div className={styles.nameLine}>
+              <h3 className={styles.adapterName}>{cap.label}</h3>
+              <StatusBadge variant={enabled ? "success" : "default"}>{enabled ? "Active" : "Disabled"}</StatusBadge>
             </div>
+            <p className={styles.metadata}>{cap.desc}</p>
           </div>
         </div>
 
         {/* Actions: Round-robin toggle + Add Model */}
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3 sm:shrink-0">
+        <div className={styles.adapterActions}>
+          <Toggle size="sm" checked={enabled} onChange={(v) => patch({ enabled: v })} aria-label={`${enabled ? "Disable" : "Enable"} ${cap.label} adapter`} />
           <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer select-none">
             <Toggle
+              size="sm"
               checked={roundRobin}
               onChange={(v) => patch({ roundRobin: v })}
               disabled={!enabled}
               aria-label={`Round-robin ${cap.label} adapter`}
             />
-            <span>Round<span className="sr-only">-robin {cap.label} adapter</span></span>
+            <span>Round-robin</span>
           </label>
           <Button
             icon="add"
-            variant="ghost"
+            variant="secondary"
             size="sm"
             onClick={() => setShowModelSelect(true)}
             disabled={!enabled}
@@ -807,13 +819,13 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
         </div>
       ) : (
         <div className={styles.tableWrap}>
-          <table className={`${styles.table} min-w-[520px]`}>
+          <table className={styles.table} aria-label={`${cap.label} model pool`}>
             <thead>
               <tr>
-                <th className="w-12 text-center">#</th>
-                <th>Model</th>
-                <th className="w-24 text-center">Order</th>
-                <th className="w-12 text-right"><span className="sr-only">Actions</span></th>
+                <th scope="col" className="w-8 text-center">#</th>
+                <th scope="col">Model</th>
+                <th scope="col" className="w-24 text-center">Order</th>
+                <th scope="col" className="w-9 text-right"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody>
@@ -823,13 +835,11 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
                     #{index + 1}
                   </td>
                   <td className="text-text-main">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="truncate">{model}</span>
-                      <CapacityBadges caps={getCaps?.(model)} />
+                    <div className={styles.poolModel}>
+                      <span className={styles.modelValue} title={model}>{model}</span>
+                      <CapacityBadges caps={getCaps?.(model)} colorOverride="text-text-muted" size={14} />
                       {model === DEFAULT_FALLBACK_MODEL && (
-                        <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 font-sans text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
-                          free default
-                        </span>
+                        <StatusBadge dot={false}>Free default</StatusBadge>
                       )}
                     </div>
                   </td>
@@ -839,11 +849,7 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
                         type="button"
                         onClick={() => handleMove(index, -1)}
                         disabled={!enabled || index === 0}
-                        className={`min-h-11 min-w-11 rounded transition-colors ${
-                          !enabled || index === 0
-                            ? "text-text-muted/30 cursor-not-allowed"
-                            : "text-text-muted hover:text-text hover:bg-surface-hover"
-                        }`}
+                        className={styles.iconAction}
                         title="Move up"
                         aria-label={`Move ${model} up`}
                       >
@@ -853,11 +859,7 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
                         type="button"
                         onClick={() => handleMove(index, 1)}
                         disabled={!enabled || index === models.length - 1}
-                        className={`min-h-11 min-w-11 rounded transition-colors ${
-                          !enabled || index === models.length - 1
-                            ? "text-text-muted/30 cursor-not-allowed"
-                            : "text-text-muted hover:text-text hover:bg-surface-hover"
-                        }`}
+                        className={styles.iconAction}
                         title="Move down"
                         aria-label={`Move ${model} down`}
                       >
@@ -870,11 +872,7 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
                       type="button"
                       onClick={() => handleRemove(index)}
                       disabled={!enabled}
-                      className={`min-h-11 min-w-11 rounded transition-colors ${
-                        !enabled
-                          ? "text-text-muted/30 cursor-not-allowed"
-                            : "text-text-muted hover:text-red-600 hover:bg-red-500/10"
-                      }`}
+                      className={`${styles.iconAction} ${styles.dangerAction}`}
                       title="Remove model"
                       aria-label={`Remove ${model}`}
                     >
@@ -890,6 +888,8 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
 
       {showModelSelect && (
         <ModelSelectModal
+          className={controls.modelPicker}
+          portal
           isOpen={showModelSelect}
           onClose={() => setShowModelSelect(false)}
           onSelect={handleAdd}
@@ -901,7 +901,7 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
           closeOnSelect={false}
         />
       )}
-    </Card>
+    </div>
   );
 }
 
@@ -938,7 +938,7 @@ function ModelItem({ id, index, model, isFirst, isLast, onEdit, onMoveUp, onMove
         {...attributes}
         {...listeners}
         type="button"
-        className="min-h-9 min-w-9 cursor-grab touch-none rounded p-1 text-text-muted hover:text-text active:cursor-grabbing shrink-0"
+        className={`${styles.iconAction} ${styles.dragHandle}`}
         title="Drag to reorder"
         aria-label={`Reorder ${model}`}
       >
@@ -961,6 +961,7 @@ function ModelItem({ id, index, model, isFirst, isLast, onEdit, onMoveUp, onMove
           onBlur={commit}
           onKeyDown={handleKeyDown}
           className={styles.modelEditor}
+          aria-label={`Model ${index + 1}`}
         />
       ) : (
         <div
@@ -982,35 +983,35 @@ function ModelItem({ id, index, model, isFirst, isLast, onEdit, onMoveUp, onMove
       )}
 
       {/* Priority arrows */}
-      <div className="flex shrink-0 items-center gap-0.5">
+      <div className={styles.priorityActions}>
         <button
           onClick={onMoveUp}
           disabled={isFirst}
-          className={`min-h-9 min-w-9 rounded ${isFirst ? "text-text-muted/30 cursor-not-allowed" : "text-text-muted hover:text-text hover:bg-surface-hover"}`}
+          className={styles.iconAction}
           title="Move up"
           aria-label={`Move ${model} up`}
         >
-          <Icon className="text-[12px]">arrow_upward</Icon>
+          <Icon className="text-[16px]">arrow_upward</Icon>
         </button>
         <button
           onClick={onMoveDown}
           disabled={isLast}
-          className={`min-h-9 min-w-9 rounded ${isLast ? "text-text-muted/30 cursor-not-allowed" : "text-text-muted hover:text-text hover:bg-surface-hover"}`}
+          className={styles.iconAction}
           title="Move down"
           aria-label={`Move ${model} down`}
         >
-          <Icon className="text-[12px]">arrow_downward</Icon>
+          <Icon className="text-[16px]">arrow_downward</Icon>
         </button>
       </div>
 
       {/* Remove */}
       <button
         onClick={onRemove}
-        className="min-h-9 min-w-9 rounded text-text-muted hover:bg-red-500/10 hover:text-red-600 transition-colors"
+        className={`${styles.iconAction} ${styles.dangerAction}`}
         title="Remove"
         aria-label={`Remove ${model}`}
       >
-        <Icon className="text-[12px]">close</Icon>
+        <Icon className="text-[16px]">close</Icon>
       </button>
     </div>
   );
@@ -1119,6 +1120,7 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, kindF
   return (
     <>
       <Modal
+        className={styles.dialog}
         isOpen={isOpen}
         onClose={onClose}
         title={isEdit ? "Edit Combo" : "Create Combo"}
@@ -1140,7 +1142,7 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, kindF
 
           {/* Models */}
           <div>
-            <label className="text-sm font-medium mb-1.5 block">Models</label>
+            <p className={styles.fieldLabel}>Models</p>
 
             {models.length === 0 ? (
               <div className={styles.modalEmpty}>
@@ -1175,14 +1177,15 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, kindF
             )}
 
             {/* Add Model button */}
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              icon="add"
+              fullWidth
               onClick={() => setShowModelSelect(true)}
-              className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--r1)] border border-[var(--line-2)] bg-surface-2 text-sm font-medium text-text-main transition-colors hover:bg-surface-hover"
+              className="mt-2"
             >
-              <Icon className="text-[16px]">add</Icon>
               Add Model
-            </button>
+            </Button>
           </div>
 
           {/* Actions */}
@@ -1194,7 +1197,7 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, kindF
               onClick={handleSave}
               fullWidth
               size="sm"
-              className={styles.primary}
+              variant="contrast"
               disabled={!name.trim() || !!nameError || saving}
             >
               {saving ? "Saving..." : isEdit ? "Save" : "Create"}
@@ -1206,6 +1209,8 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, kindF
       {/* Model Select Modal */}
       {showModelSelect && (
         <ModelSelectModal
+          className={controls.modelPicker}
+          portal
           isOpen={showModelSelect}
           onClose={() => setShowModelSelect(false)}
           onSelect={handleAddModel}

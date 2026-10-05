@@ -1,0 +1,153 @@
+.dialog,
+.formScope [role="dialog"] {
+  --text-3: var(--text-2);
+  border-radius: var(--r3);
+  overflow-wrap: anywhere;
+}
+
+.dialog > div:first-child > div,
+.formScope [role="dialog"] > div:first-child > div {
+  min-width: 0;
+}
+
+.dialog :is(input, select, textarea),
+.formScope [role="dialog"] :is(input, select, textarea) {
+  min-width: 0;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r1);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.dialog select,
+.formScope [role="dialog"] select {
+  padding-right: 36px;
+}
+
+.dialog label,
+.formScope [role="dialog"] label {
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.dialog :is(input, select, textarea):focus,
+.formScope [role="dialog"] :is(input, select, textarea):focus {
+  border-color: var(--text-2);
+  outline: 2px solid var(--text-2);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+.dialog input::placeholder,
+.formScope [role="dialog"] input::placeholder {
+  color: var(--text-2);
+}
+
+.dialog :is(button, a):focus-visible {
+  outline: 2px solid var(--text-2);
+  outline-offset: 3px;
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r1);
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: color 150ms, background-color 150ms;
+}
+
+.iconButton:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.iconButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.modelPicker {
+  composes: dialog;
+}
+
+.modelPicker [data-model-notice] {
+  background: var(--surface-2);
+  border-color: var(--line);
+  color: var(--text-2);
+}
+
+.modelPicker [data-model-notice] svg,
+.modelPicker [data-model-group] :is(svg, span) {
+  color: var(--text-2);
+}
+
+.modelPicker [data-model-option] {
+  min-height: 28px;
+  max-width: 100%;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r1);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.modelPicker [data-model-option]:hover {
+  background: var(--surface-hover);
+  border-color: var(--text-2);
+}
+
+.modelPicker [data-model-option][aria-pressed="true"] {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg);
+}
+
+.modelPicker [data-model-option] > span {
+  flex-wrap: wrap;
+}
+
+.modelPicker input[type="text"] {
+  padding-left: 32px;
+}
+
+@media (max-width: 639px) {
+  .dialog :is(input, select, textarea),
+  .formScope [role="dialog"] :is(input, select, textarea) {
+    font-size: 16px;
+  }
+
+  .dialog button[data-variant],
+  .modelPicker [data-model-option] {
+    min-height: 44px;
+  }
+
+  .iconButton {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog *,
+  .iconButton {
+    transition: none;
+  }
+}

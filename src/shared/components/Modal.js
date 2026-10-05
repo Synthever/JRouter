@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/shared/utils/cn";
 import Button from "./Button";
 import Tooltip from "./Tooltip";
@@ -128,8 +129,9 @@ export function ConfirmModal({
   variant = "danger",
   loading = false,
   className,
+  portal = false,
 }) {
-  return (
+  const dialog = (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
@@ -150,4 +152,5 @@ export function ConfirmModal({
       <p className="text-text-muted">{message}</p>
     </Modal>
   );
+  return portal && typeof document !== "undefined" ? createPortal(dialog, document.body) : dialog;
 }

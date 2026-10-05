@@ -4,7 +4,7 @@ import Icon from "@/shared/components/Icon";
 import { useState, useEffect, useRef } from "react";
 import { getStatusVariant as getConnectionStatusVariant } from "@/shared/utils/connectionStatus";
 import PropTypes from "prop-types";
-import { Badge, Toggle, Tooltip } from "@/shared/components";
+import { Toggle, Tooltip } from "@/shared/components";
 import CooldownTimer from "./CooldownTimer";
 import StatusBadge from "@/shared/components/StatusBadge";
 import styles from "../providers.module.css";
@@ -147,7 +147,7 @@ export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst
             aria-label={`Move ${displayName} up`}
             onClick={onMoveUp}
             disabled={isFirst}
-            className={`p-0.5 rounded ${isFirst ? "text-text-muted/30 cursor-not-allowed" : "hover:bg-sidebar text-text-muted hover:text-primary"}`}
+            className={`p-0.5 rounded ${isFirst ? "text-text-muted/30 cursor-not-allowed" : "hover:bg-surface-2 text-text-muted hover:text-text-main"}`}
           >
             <Icon className="text-sm">keyboard_arrow_up</Icon>
           </button>
@@ -155,7 +155,7 @@ export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst
             aria-label={`Move ${displayName} down`}
             onClick={onMoveDown}
             disabled={isLast}
-            className={`p-0.5 rounded ${isLast ? "text-text-muted/30 cursor-not-allowed" : "hover:bg-sidebar text-text-muted hover:text-primary"}`}
+            className={`p-0.5 rounded ${isLast ? "text-text-muted/30 cursor-not-allowed" : "hover:bg-surface-2 text-text-muted hover:text-text-main"}`}
           >
             <Icon className="text-sm">keyboard_arrow_down</Icon>
           </button>
@@ -172,17 +172,17 @@ export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst
             <StatusBadge variant={getStatusVariant()} className={getStatusVariant() === "error" ? styles.errorBadge : undefined}>
               {connection.isActive === false ? "disabled" : (effectiveStatus || "Unknown")}
             </StatusBadge>
-            <Badge variant="default" size="sm">
+            <StatusBadge dot={false}>
               {authLabel}
-            </Badge>
+            </StatusBadge>
             {hasAnyProxy && (
-              <Badge variant={proxyBadgeVariant} size="sm">
+              <StatusBadge variant={proxyBadgeVariant} dot={false}>
                 Proxy
-              </Badge>
+              </StatusBadge>
             )}
             {isCooldown && connection.isActive !== false && <CooldownTimer until={modelLockUntil} />}
             {connection.lastError && connection.isActive !== false && (
-              <span className="max-w-full truncate text-xs text-red-500 sm:max-w-[300px]" title={connection.lastError}>
+              <span className={`max-w-full truncate text-xs sm:max-w-[300px] ${styles.error}`} title={connection.lastError}>
                 {connection.lastError}
               </span>
             )}
@@ -191,9 +191,9 @@ export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst
               <span className="text-xs text-text-muted">Auto: {connection.globalPriority}</span>
             )}
             {getOneByOneLabel() && (
-              <Badge variant={getOneByOneVariant()} size="sm">
+              <StatusBadge variant={getOneByOneVariant() === "primary" ? "default" : getOneByOneVariant()} dot={false}>
                 {getOneByOneLabel()}
-              </Badge>
+              </StatusBadge>
             )}
           </div>
           {hasAnyProxy && (
@@ -222,7 +222,7 @@ export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst
             <div className="relative" ref={proxyDropdownRef}>
               <button
                 onClick={() => setShowProxyDropdown((v) => !v)}
-                className={`flex w-full flex-col items-center rounded px-2 py-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5 ${hasAnyProxy ? "text-primary" : "text-text-muted hover:text-primary"}`}
+                className={`flex w-full flex-col items-center rounded px-2 py-1 transition-colors hover:bg-surface-2 ${hasAnyProxy ? "text-text-main" : "text-text-muted hover:text-text-main"}`}
                 disabled={updatingProxy}
               >
                 <Icon className="text-[18px]">
@@ -255,7 +255,7 @@ export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst
             <Tooltip text={autoPingTooltip}>
               <button
                 onClick={() => autoPing.onToggle(!autoPing.on)}
-                className={`flex w-full flex-col items-center rounded px-2 py-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5 ${autoPing.on ? "text-primary" : "text-text-muted hover:text-primary"}`}
+                className={`flex w-full flex-col items-center rounded px-2 py-1 transition-colors hover:bg-surface-2 ${autoPing.on ? "text-text-main" : "text-text-muted hover:text-text-main"}`}
               >
                 <Icon className="text-[18px]">bolt</Icon>
                 <span className="text-[10px] leading-tight">Auto-ping</span>

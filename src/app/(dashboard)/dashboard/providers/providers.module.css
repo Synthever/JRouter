@@ -1,4 +1,5 @@
 .page {
+  composes: formScope from "../../../../shared/components/DashboardControls.module.css";
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -66,6 +67,9 @@
 }
 
 .list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  column-gap: 16px;
   min-width: 0;
   margin: 0;
   padding: 0;
@@ -74,16 +78,24 @@
 
 .providerRow,
 .modelRow {
-  display: flex;
-  align-items: center;
-  gap: 12px;
   min-width: 0;
-  padding: 12px 0;
   border-bottom: 1px solid var(--line);
   transition: background-color 150ms;
 }
 
-.providerRow:last-child,
+.providerRow {
+  display: grid;
+  align-content: start;
+  padding: 14px 8px;
+}
+
+.modelRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+}
+
 .modelRow:last-child {
   border-bottom: 0;
 }
@@ -96,9 +108,11 @@
 }
 
 .providerLink {
-  display: flex;
+  display: grid;
+  grid-area: 1 / 1;
+  grid-template-columns: 36px minmax(0, 1fr);
+  grid-template-rows: max-content auto;
   align-items: center;
-  flex: 1;
   gap: 12px;
   min-width: 0;
   border-radius: var(--r1);
@@ -151,43 +165,32 @@
 
 .status {
   display: flex;
+  grid-column: 1 / -1;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 6px;
-  max-width: 40%;
+  min-width: 0;
+  min-height: 34px;
+  padding-right: 84px;
   color: var(--text-2);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
 
 .status > span {
-  white-space: nowrap;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .rowActions {
-  flex-shrink: 0;
+  grid-area: 1 / 1;
+  align-self: end;
+  justify-self: end;
 }
 
 .iconButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 36px;
-  height: 34px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--r1);
-  background: transparent;
-  color: var(--text-2);
-  cursor: pointer;
-  transition: color 150ms, background-color 150ms;
-}
-
-.iconButton:hover {
-  background: var(--surface-2);
-  color: var(--text);
+  composes: iconButton from "../../../../shared/components/DashboardControls.module.css";
 }
 
 .page [role="switch"] {
@@ -265,50 +268,8 @@
   border-bottom: 0;
 }
 
-.dialog,
-.page [role="dialog"] {
-  --text-3: var(--text-2);
-  border-radius: var(--r3);
-}
-
-.dialog :is(input, select, textarea),
-.page [role="dialog"] :is(input, select, textarea) {
-  min-width: 0;
-  min-height: 36px;
-  padding: 8px 12px;
-  border: 1px solid var(--line-2);
-  border-radius: var(--r1);
-  background: var(--surface-2);
-  color: var(--text);
-  font-size: 13px;
-}
-
-.dialog select,
-.page [role="dialog"] select {
-  padding-right: 36px;
-}
-
-.dialog label,
-.page [role="dialog"] label {
-  color: var(--text-2);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.dialog :is(input, select, textarea):focus,
-.page [role="dialog"] :is(input, select, textarea):focus {
-  border-color: var(--text-2);
-  outline: 2px solid var(--text-2);
-  outline-offset: 2px;
-  box-shadow: none;
-}
-
-.dialog input::placeholder,
-.page [role="dialog"] input::placeholder {
-  color: var(--text-2);
+.dialog {
+  composes: dialog from "../../../../shared/components/DashboardControls.module.css";
 }
 
 .fieldGroup {
@@ -370,26 +331,17 @@
   background: var(--text-2);
 }
 
-@media (max-width: 767px) {
-  .providerLink {
-    display: grid;
-    grid-template-columns: 36px minmax(0, 1fr);
-    gap: 6px 12px;
-  }
-
-  .providerIcon {
-    grid-row: span 2;
-    align-self: start;
-  }
-
-  .status {
-    grid-column: 2;
-    justify-content: flex-start;
-    max-width: none;
+@media (max-width: 1279px) {
+  .list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 639px) {
+  .list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .filter,
   .actions {
     width: 100%;
@@ -410,32 +362,9 @@
     font-size: 16px;
   }
 
-  .providerRow {
-    position: relative;
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .providerLink {
-    width: 100%;
-  }
-
-  .identity {
-    padding-right: 48px;
-  }
-
   .status {
     min-height: 44px;
-    padding-right: 44px;
-  }
-
-  .rowActions {
-    position: absolute;
-    right: 0;
-    top: 12px;
-    flex-direction: column-reverse;
-    gap: 16px;
+    padding-right: 92px;
   }
 
   .iconButton {
@@ -462,10 +391,6 @@
     min-height: 44px;
   }
 
-  .dialog :is(input, select, textarea),
-  .page [role="dialog"] :is(input, select, textarea) {
-    font-size: 16px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

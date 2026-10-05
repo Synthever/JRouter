@@ -5,14 +5,17 @@ const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "
 const providersPath = "src/app/(dashboard)/dashboard/providers";
 
 describe("providers dashboard theme", () => {
-  it("shares Dashboard section surfaces and uses separated rows", () => {
+  it("shares Dashboard section surfaces and uses a responsive provider grid", () => {
     const source = read(`${providersPath}/page.js`);
     expect(source).toContain("dashboard-surface ${styles.page}");
     expect(source.match(/<section className={`ui-card \$\{styles.panel\}`}/g)).toHaveLength(4);
     const css = read(`${providersPath}/providers.module.css`);
     expect(css).not.toContain("backdrop-filter");
     expect(css).not.toContain("providerCard");
-    expect(css).toMatch(/\.providerRow\s*\{[^}]*border-bottom: 1px solid var\(--line\);/);
+    expect(css).toMatch(/\.providerRow,\s*\.modelRow\s*\{[^}]*border-bottom: 1px solid var\(--line\);/);
+    expect(css).toMatch(/\.list\s*\{[^}]*grid-template-columns: repeat\(4, minmax\(0, 1fr\)\);/);
+    expect(css).toMatch(/@media \(max-width: 1279px\)\s*\{\s*\.list\s*\{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/);
+    expect(css).toMatch(/@media \(max-width: 639px\)\s*\{\s*\.list\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\);/);
     const shared = read("src/app/globals.css");
     expect(shared).toContain(".dashboard-surface .ui-card");
     expect(shared).toContain("prefers-reduced-transparency: reduce");

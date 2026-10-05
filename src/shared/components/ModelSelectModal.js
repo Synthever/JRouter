@@ -84,6 +84,8 @@ export default function ModelSelectModal({
   capFilter = null,
   addedModelValues = [],
   closeOnSelect = true,
+  className = "p-4!",
+  portal = false,
 }) {
   // Filter activeProviders by serviceKinds when kindFilter set (e.g. "webSearch", "webFetch")
   const filteredActiveProviders = useMemo(() => {
@@ -497,11 +499,12 @@ export default function ModelSelectModal({
       }}
       title={title}
       size="md"
-      className="p-4!"
+      className={className}
+      portal={portal}
       footer={null}
     >
       {/* Info bar */}
-      <div className="flex items-center gap-2 mb-3 px-2.5 py-2 bg-primary/8 border border-primary/20 rounded-lg text-xs text-text-muted">
+      <div data-model-notice className="flex items-center gap-2 mb-3 px-2.5 py-2 bg-primary/8 border border-primary/20 rounded-lg text-xs text-text-muted">
         <Icon className="text-primary shrink-0" style={{ fontSize: "14px" }}>info</Icon>
         <span>Click to add, click again to remove. Changes are saved automatically.</span>
       </div>
@@ -515,6 +518,7 @@ export default function ModelSelectModal({
           <input
             type="text"
             placeholder="Search..."
+            aria-label="Search models"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-8 pr-3 py-1.5 bg-surface border border-border rounded text-xs focus:outline-none focus:ring-1 focus:ring-primary/50"
@@ -527,7 +531,7 @@ export default function ModelSelectModal({
         {/* Combos section - always first */}
         {filteredCombos.length > 0 && (
           <div>
-            <div className="flex items-center gap-1.5 mb-1.5 sticky top-0 bg-surface py-0.5">
+            <div data-model-group className="flex items-center gap-1.5 mb-1.5 sticky top-0 bg-surface py-0.5">
               <Icon className="text-primary text-[14px]">layers</Icon>
               <span className="text-xs font-medium text-primary">Combos</span>
               <span className="text-[10px] text-text-muted">({filteredCombos.length})</span>
@@ -538,6 +542,8 @@ export default function ModelSelectModal({
                 return (
                   <button
                     key={combo.id}
+                    data-model-option
+                    aria-pressed={isSelected || addedModelValues.includes(combo.name)}
                     onClick={() => handleSelect({ id: combo.name, name: combo.name, value: combo.name })}
                     className={`
                       px-2 py-1 rounded-xl text-xs font-medium transition-all border hover:cursor-pointer flex items-center gap-1
@@ -564,7 +570,7 @@ export default function ModelSelectModal({
         {Object.entries(filteredGroups).map(([providerId, group]) => (
           <div key={providerId}>
             {/* Provider header */}
-            <div className="flex items-center gap-1.5 mb-1.5 sticky top-0 bg-surface py-0.5">
+            <div data-model-group className="flex items-center gap-1.5 mb-1.5 sticky top-0 bg-surface py-0.5">
               <ProviderIcon
                 src={`/providers/${providerId}.png`}
                 alt={group.name}
@@ -587,6 +593,8 @@ export default function ModelSelectModal({
                 return (
                   <button
                     key={model.value}
+                    data-model-option
+                    aria-pressed={isSelected || addedModelValues.includes(model.value)}
                     onClick={() => handleSelect(model)}
                     title={isPlaceholder ? "Select to pre-fill, then edit model ID in the input" : undefined}
                     className={`
@@ -659,4 +667,6 @@ ModelSelectModal.propTypes = {
   kindFilter: PropTypes.string,
   addedModelValues: PropTypes.arrayOf(PropTypes.string),
   closeOnSelect: PropTypes.bool,
+  className: PropTypes.string,
+  portal: PropTypes.bool,
 };
