@@ -33,6 +33,20 @@ function getToastStyle(type) {
   };
 }
 
+// Pages rendered on the dotted dashboard grid background.
+const GRID_BACKGROUND_PAGES = [
+  "/dashboard",
+  "/dashboard/endpoint",
+  "/dashboard/providers",
+  "/dashboard/combos",
+  "/dashboard/playground",
+  "/dashboard/usage",
+  "/dashboard/quota",
+  "/dashboard/token-saver",
+  "/dashboard/cli-tools",
+  "/dashboard/skills",
+];
+
 export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
@@ -96,6 +110,10 @@ export default function DashboardLayout({ children }) {
       return () => clearTimeout(timer);
     }
   }, []);
+
+  // Chat-style pages own their full-height layout, scroll container and padding.
+  const isFullHeightPage = pathname === "/dashboard/basic-chat" || pathname === "/dashboard/playground";
+  const hasGridBackground = GRID_BACKGROUND_PAGES.includes(pathname) || pathname.startsWith("/dashboard/cli-tools/");
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-bg">
@@ -162,8 +180,8 @@ export default function DashboardLayout({ children }) {
           onMenuClick={handleToggleSidebar}
           isSidebarCollapsed={desktopSidebarCollapsed}
         />
-        <div className={`flex-1 overflow-y-auto custom-scrollbar ${pathname === "/dashboard" || pathname === "/dashboard/endpoint" || pathname === "/dashboard/providers" || pathname === "/dashboard/combos" || pathname === "/dashboard/usage" || pathname === "/dashboard/quota" || pathname === "/dashboard/token-saver" || pathname === "/dashboard/cli-tools" || pathname.startsWith("/dashboard/cli-tools/") || pathname === "/dashboard/skills" ? "dashboard-grid-bg" : ""} ${pathname === "/dashboard/basic-chat" ? "" : "p-6 lg:p-8"} ${pathname === "/dashboard/basic-chat" ? "flex flex-col overflow-hidden" : ""}`}>
-          <div className={`${pathname === "/dashboard/basic-chat" ? "flex-1 w-full h-full flex flex-col" : "page"}`}>{children}</div>
+        <div className={`flex-1 overflow-y-auto custom-scrollbar ${hasGridBackground ? "dashboard-grid-bg" : ""} ${isFullHeightPage ? "flex flex-col overflow-hidden" : "p-6 lg:p-8"}`}>
+          <div className={isFullHeightPage ? "flex-1 w-full h-full flex flex-col" : "page"}>{children}</div>
         </div>
       </main>
     </div>

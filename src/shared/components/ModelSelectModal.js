@@ -86,6 +86,7 @@ export default function ModelSelectModal({
   closeOnSelect = true,
   className = "p-4!",
   portal = false,
+  notice = "Click to add, click again to remove. Changes are saved automatically.",
 }) {
   // Filter activeProviders by serviceKinds when kindFilter set (e.g. "webSearch", "webFetch")
   const filteredActiveProviders = useMemo(() => {
@@ -474,14 +475,19 @@ export default function ModelSelectModal({
     return filtered;
   }, [groupedModels, searchQuery, addedModelValues]);
 
-  const handleSelect = (model) => {
+  // Selection carries the owning provider so callers that need to show the choice
+  // outside the modal (e.g. a model picker trigger) do not have to re-derive it.
+  const handleSelect = (model, group) => {
     const value = model?.value || model?.name || model;
     const isAdded = addedModelValues.includes(value);
+    const selection = group
+      ? { ...model, providerId: group.providerId, providerName: group.name, providerColor: group.color, isCombo: group.isCombo === true }
+      : { ...model };
 
     if (isAdded && onDeselect) {
-      onDeselect(model);
+      onDeselect(selection);
     } else {
-      onSelect(model);
+      onSelect(selection);
     }
 
     if (closeOnSelect) {
@@ -504,10 +510,12 @@ export default function ModelSelectModal({
       footer={null}
     >
       {/* Info bar */}
-      <div data-model-notice className="flex items-center gap-2 mb-3 px-2.5 py-2 bg-primary/8 border border-primary/20 rounded-lg text-xs text-text-muted">
-        <Icon className="text-primary shrink-0" style={{ fontSize: "14px" }}>info</Icon>
-        <span>Click to add, click again to remove. Changes are saved automatically.</span>
-      </div>
+      {notice ? (
+        <div data-model-notice className="flex items-center gap-2 mb-3 px-2.5 py-2 bg-primary/8 border border-primary/20 rounded-lg text-xs text-text-muted">
+          <Icon className="text-primary shrink-0" style={{ fontSize: "14px" }}>info</Icon>
+          <span>{notice}</span>
+        </div>
+      ) : null}
 
       {/* Search - compact */}
       <div className="mb-3">
@@ -544,7 +552,7 @@ export default function ModelSelectModal({
                     key={combo.id}
                     data-model-option
                     aria-pressed={isSelected || addedModelValues.includes(combo.name)}
-                    onClick={() => handleSelect({ id: combo.name, name: combo.name, value: combo.name })}
+                    onClick={() => handleSelect({ id: combo.name, name: combo.name, value: combo.name }, { providerId: "combo", name: "Combos", isCombo: true })}
                     className={`
                       px-2 py-1 rounded-xl text-xs font-medium transition-all border hover:cursor-pointer flex items-center gap-1
                       ${isSelected
@@ -595,7 +603,7 @@ export default function ModelSelectModal({
                     key={model.value}
                     data-model-option
                     aria-pressed={isSelected || addedModelValues.includes(model.value)}
-                    onClick={() => handleSelect(model)}
+                    onClick={() => handleSelect(model, { providerId, name: group.name, color: group.color })}
                     title={isPlaceholder ? "Select to pre-fill, then edit model ID in the input" : undefined}
                     className={`
                       px-2 py-1 rounded-xl text-xs font-medium transition-all border hover:cursor-pointer
@@ -669,4 +677,5 @@ ModelSelectModal.propTypes = {
   closeOnSelect: PropTypes.bool,
   className: PropTypes.string,
   portal: PropTypes.bool,
+  notice: PropTypes.string,
 };
