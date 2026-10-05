@@ -205,6 +205,8 @@ export default function ProviderLimits() {
   const [quotaVisibility, setQuotaVisibility] = useState({});
   const [expiringFirst, setExpiringFirst] = useState(false);
   const [providerMenuOpen, setProviderMenuOpen] = useState(false);
+  const [defaultDetailsExpanded, setDefaultDetailsExpanded] = useState(true);
+  const [accountDetailsExpanded, setAccountDetailsExpanded] = useState({});
   const [bulkToggling, setBulkToggling] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(CONNECTIONS_PAGE_SIZE);
@@ -225,6 +227,18 @@ export default function ProviderLimits() {
   const intervalRef = useRef(null);
   const countdownRef = useRef(null);
   const tickCountRef = useRef(0);
+
+  const handleSetAllDetailsExpanded = (expanded) => {
+    setDefaultDetailsExpanded(expanded);
+    setAccountDetailsExpanded({});
+  };
+
+  const handleToggleAccountDetails = (connectionId) => {
+    setAccountDetailsExpanded((current) => ({
+      ...current,
+      [connectionId]: !(current[connectionId] ?? defaultDetailsExpanded),
+    }));
+  };
 
   const fetchConnections = useCallback(
     async (targetPage = page) => {
@@ -1048,6 +1062,27 @@ export default function ProviderLimits() {
             <span className="hidden sm:inline">Turn on Available</span>
           </button>
 
+          <button
+            type="button"
+            onClick={() => handleSetAllDetailsExpanded(true)}
+            disabled={connectionsLoading || sortedConnections.length === 0}
+            className={styles.control}
+            aria-controls="quota-account-list"
+          >
+            <Icon className="text-[14px]">expand_more</Icon>
+            <span>Extend all</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSetAllDetailsExpanded(false)}
+            disabled={connectionsLoading || sortedConnections.length === 0}
+            className={styles.control}
+            aria-controls="quota-account-list"
+          >
+            <Icon className="text-[14px]">expand_less</Icon>
+            <span>Shorten all</span>
+          </button>
+
           {/* Auto-refresh toggle */}
           <button
             onClick={() => setAutoRefresh((prev) => !prev)}
@@ -1106,7 +1141,7 @@ export default function ProviderLimits() {
             <p>{emptyState.description}</p>
           </div>
         )}
-        <div className={styles.accountGrid}>
+        <div id="quota-account-list" className={styles.accountGrid}>
         {connectionsLoading && [0, 1, 2].map((row) => <Skeleton key={row} className="h-40 w-full" />)}
         {sortedConnections.map((conn) => {
           const quota = quotaData[conn.id];
@@ -1128,6 +1163,8 @@ export default function ProviderLimits() {
           const rawQuotas = quota?.quotas || [];
           const visibleQuotas = filterQuotasByVisibility(conn.provider, rawQuotas, quotaVisibility);
           const hiddenQuotaRows = getHiddenQuotaRows(conn.provider, rawQuotas, quotaVisibility);
+          const detailsExpanded = accountDetailsExpanded[conn.id] ?? defaultDetailsExpanded;
+          const detailsId = `quota-details-${conn.id}`;
 
           return (
             <article
@@ -1320,11 +1357,22 @@ export default function ProviderLimits() {
                         }
                       />
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleAccountDetails(conn.id)}
+                      className={styles.iconButton}
+                      aria-expanded={detailsExpanded}
+                      aria-controls={detailsId}
+                      aria-label={`${detailsExpanded ? "Shorten" : "Extend"} quota details for ${maskQuotaEmail(getConnectionLabel(conn)) || providerLabel(conn.provider)}`}
+                      title={detailsExpanded ? "Shorten quota details" : "Extend quota details"}
+                    >
+                      <Icon className="text-[18px]">{detailsExpanded ? "expand_less" : "expand_more"}</Icon>
+                    </button>
                   </div>
                 </div>
               </div>
 
-              <div>
+              <div id={detailsId} className={styles.accountDetails} hidden={!detailsExpanded}>
                 {isLoading ? (
                   <div aria-label="Loading account quota" aria-busy="true"><Skeleton className="h-12 w-full" /></div>
                 ) : error ? (
