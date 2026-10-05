@@ -1,0 +1,89 @@
+.chart {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  height: 220px;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.chart :global(.recharts-cartesian-axis-tick text) {
+  fill: var(--text-2);
+}
+
+.chart :global(.recharts-layer),
+.chart :global(.recharts-surface) {
+  outline: none;
+}
+
+.chart :global(.recharts-surface:focus-visible) {
+  outline: 2px solid var(--text-2);
+  outline-offset: 2px;
+  border-radius: var(--r1);
+}
+
+.tooltip {
+  display: grid;
+  gap: 6px;
+  min-width: 128px;
+  max-width: min(320px, 80vw);
+  padding: 8px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r2);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  box-shadow: var(--shadow-pop);
+}
+
+.tooltipLabel {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tooltipContent {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tooltipName {
+  color: var(--text-2);
+}
+
+.tooltipValue {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.indicator {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--indicator-color);
+}
+
+.indicator[data-indicator="line"] {
+  width: 4px;
+  align-self: stretch;
+  height: auto;
+}
+
+.indicator[data-indicator="dashed"] {
+  width: 0;
+  align-self: stretch;
+  height: auto;
+  border: 1.5px dashed var(--indicator-color);
+  background: transparent;
+}

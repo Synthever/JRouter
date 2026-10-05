@@ -1,0 +1,392 @@
+.page {
+  composes: page from "../usage/usage.module.css";
+  composes: formScope from "../../../../shared/components/DashboardControls.module.css";
+}
+
+.header {
+  composes: header from "../usage/usage.module.css";
+}
+
+.description {
+  composes: description from "../usage/usage.module.css";
+}
+
+.section {
+  composes: section from "../usage/usage.module.css";
+}
+
+.sectionHeader {
+  composes: sectionHeader from "../usage/usage.module.css";
+}
+
+.sectionDescription {
+  composes: sectionDescription from "../usage/usage.module.css";
+}
+
+.dialog {
+  composes: dialog from "../../../../shared/components/DashboardControls.module.css";
+}
+
+.inset {
+  composes: inset from "../usage/usage.module.css";
+}
+
+.fieldLabel {
+  composes: fieldLabel from "../usage/usage.module.css";
+}
+
+/* Header status summary: how many strategies are currently applied. */
+.summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* One strategy row inside the Optimization section. */
+.strategy {
+  min-width: 0;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.strategy:first-child {
+  padding-top: 0;
+}
+
+.strategy:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.strategyHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.identity {
+  display: flex;
+  align-items: flex-start;
+  flex: 1 1 260px;
+  gap: 10px;
+  min-width: 0;
+}
+
+.identity > svg {
+  margin-top: 3px;
+}
+
+.titleLine {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.title {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.docLink {
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+
+.docLink:hover {
+  color: var(--text);
+}
+
+.metadata {
+  margin-top: 4px;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  gap: 12px;
+  min-width: 0;
+}
+
+.levels {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.levelHint {
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/* Headroom compression extras: inset panel under its strategy row. */
+.extras {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+  background: var(--surface-inset);
+}
+
+.extrasHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.extrasMeta {
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.chips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  max-width: 100%;
+  padding: 4px 8px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r1);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: border-color 150ms, background-color 150ms;
+}
+
+.chip:hover {
+  border-color: var(--text-2);
+}
+
+.chip[data-selected="true"] {
+  border-color: var(--text);
+}
+
+.chip[data-installed="true"] {
+  cursor: default;
+}
+
+.chip input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--text);
+  cursor: pointer;
+}
+
+.chipNote {
+  color: var(--text-3);
+}
+
+.uninstall {
+  margin-left: 2px;
+  border: 0;
+  background: none;
+  color: var(--danger);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.uninstall:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.extrasHelp {
+  margin-top: 8px;
+  color: var(--text-3);
+  font-size: 11px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.extrasHelp code,
+.installCommand code,
+.hintCode {
+  padding: 1px 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--r1);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-family: var(--font-mono);
+}
+
+.installLog {
+  max-height: 140px;
+  margin-top: 8px;
+  padding: 8px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r1);
+  background: var(--surface);
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.notice {
+  margin-top: 8px;
+  color: var(--warn);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.progressNote {
+  margin-top: 8px;
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.installCommand {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r1);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.linkButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 34px;
+  padding: 8px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r1);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+  text-align: center;
+}
+
+.linkButton:hover {
+  background: var(--surface-hover);
+}
+
+.page [role="switch"] {
+  background: var(--surface-hover);
+}
+
+.page [role="switch"][aria-checked="true"] {
+  background: var(--text);
+}
+
+.page [role="switch"] > span {
+  background: var(--text-2);
+}
+
+.page [role="switch"][aria-checked="true"] > span {
+  background: var(--bg);
+}
+
+.page :is(button, a, input, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--text-2);
+  outline-offset: 3px;
+}
+
+@media (max-width: 639px) {
+  .identity {
+    flex: 1 1 100%;
+  }
+
+  .actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .levels {
+    align-items: flex-start;
+    flex: 1 1 100%;
+  }
+
+  .levelHint {
+    text-align: left;
+  }
+
+  .docLink {
+    font-size: 12px;
+  }
+
+  .page button:not([role="switch"]) {
+    min-height: 44px;
+  }
+
+  .page [role="switch"]::before {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+    content: "";
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page *,
+  .page *::before {
+    transition: none;
+    animation: none;
+  }
+}

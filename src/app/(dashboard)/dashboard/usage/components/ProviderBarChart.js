@@ -8,16 +8,14 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
 } from "recharts";
 import { SegmentedControl } from "@/shared/components";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/shared/components/ui/chart";
 import styles from "../usage.module.css";
 import {
   axisProps,
   gridProps,
-  ChartTooltip,
-  CHART_BAR_FILL,
+  getBarColor,
   formatTokenCount,
   formatCount,
 } from "./chartTheme";
@@ -39,11 +37,13 @@ export default function ProviderBarChart({ byProvider }) {
         requests: data.requests || 0,
       }))
       .filter((d) => d[viewMode] > 0)
-      .sort((a, b) => b[viewMode] - a[viewMode]);
+        .sort((a, b) => b[viewMode] - a[viewMode])
+        .map((row, index) => ({ ...row, fill: getBarColor(index) }));
   }, [byProvider, viewMode]);
 
   const fmt = viewMode === "tokens" ? formatTokenCount : formatCount;
   const label = viewMode === "tokens" ? "Tokens" : "Requests";
+      const chartConfig = { [viewMode]: { label, color: "var(--text)" } };
 
   return (
     <section className={`ui-card ${styles.section}`} aria-labelledby="usage-provider-heading">
@@ -61,25 +61,23 @@ export default function ProviderBarChart({ byProvider }) {
       {!chartData.length ? (
         <div className={styles.inset} style={{ height: 180 }}>No provider usage yet</div>
       ) : (
-        <div className={styles.chartArea} style={{ height: 180 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
-              <CartesianGrid {...gridProps} vertical={false} />
-              <XAxis
-                dataKey="name"
-                {...axisProps}
-                interval={0}
-                tickFormatter={(v) => (v.length > 10 ? v.slice(0, 10) + "…" : v)}
-              />
-              <YAxis {...axisProps} tickFormatter={fmt} width={56} />
-              <Tooltip
-                content={<ChartTooltip format={fmt} name={label} />}
-                cursor={{ fill: "color-mix(in srgb, var(--text) 4%, transparent)" }}
-              />
-              <Bar dataKey={viewMode} fill={CHART_BAR_FILL} radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        <ChartContainer config={chartConfig} className={styles.chartArea} style={{ height: 180 }}>
+          <BarChart accessibilityLayer data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
+            <CartesianGrid {...gridProps} vertical={false} />
+            <XAxis
+              dataKey="name"
+              {...axisProps}
+              interval={0}
+              tickFormatter={(v) => (v.length > 10 ? v.slice(0, 10) + "…" : v)}
+            />
+            <YAxis {...axisProps} tickFormatter={fmt} width={56} />
+            <ChartTooltip
+              content={<ChartTooltipContent />}
+              cursor={{ fill: "color-mix(in srgb, var(--text) 4%, transparent)" }}
+            />
+            <Bar dataKey={viewMode} fill={`var(--color-${viewMode})`} maxBarSize={56} radius={[4, 4, 0, 0]} isAnimationActive={false} />
+          </BarChart>
+        </ChartContainer>
       )}
     </section>
   );

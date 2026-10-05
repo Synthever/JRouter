@@ -40,6 +40,7 @@ export default function SegmentedControl({
             key={option.value}
             type="button"
             aria-pressed={active}
+            title={option.title}
             onClick={() => onChange(option.value)}
             className={cn(
               "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-[var(--r1)]",

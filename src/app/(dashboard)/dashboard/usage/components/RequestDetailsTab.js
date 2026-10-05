@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect, useCallback } from "react";
@@ -189,7 +189,7 @@ export default function RequestDetailsTab() {
       <section className={`ui-card ${styles.section}`} aria-labelledby="usage-filters-heading">
         <div className={styles.sectionHeader}>
           <h2 id="usage-filters-heading" className="ui-eyebrow flex items-center gap-2">
-            <Icon className="text-[16px]">filter_list</Icon> Filters
+            <Icon className="text-[16px]">search</Icon> Filters
           </h2>
           <Button
             variant="ghost"
@@ -245,7 +245,7 @@ export default function RequestDetailsTab() {
         <div className={styles.sectionHeader}>
           <div className="min-w-0">
             <h2 id="usage-history-heading" className="ui-eyebrow flex items-center gap-2">
-              <Icon className="text-[16px]">receipt_long</Icon> Request History
+              <Icon className="text-[16px]">history</Icon> Request History
             </h2>
             <p className={styles.sectionDescription}>
               {pagination.totalItems
@@ -273,7 +273,7 @@ export default function RequestDetailsTab() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="9" className={styles.empty}>Loading request details…</td>
+                  <td colSpan="9" className={styles.empty}>Loading request detailsâ€¦</td>
                 </tr>
               ) : details.length === 0 ? (
                 <tr>
@@ -293,10 +293,10 @@ export default function RequestDetailsTab() {
                     </td>
                     <td className={styles.num}>{getInputTokens(detail.tokens).toLocaleString()}</td>
                     <td className={`${styles.num} ${styles.muted}`}>
-                      {getCachedTokens(detail.tokens) > 0 ? getCachedTokens(detail.tokens).toLocaleString() : "—"}
+                      {getCachedTokens(detail.tokens) > 0 ? getCachedTokens(detail.tokens).toLocaleString() : "â€”"}
                     </td>
                     <td className={`${styles.num} ${styles.muted}`}>
-                      {getCacheCreationTokens(detail.tokens) > 0 ? getCacheCreationTokens(detail.tokens).toLocaleString() : "—"}
+                      {getCacheCreationTokens(detail.tokens) > 0 ? getCacheCreationTokens(detail.tokens).toLocaleString() : "â€”"}
                     </td>
                     <td className={styles.num}>
                       {detail.tokens?.completion_tokens?.toLocaleString() || 0}
@@ -371,7 +371,7 @@ export default function RequestDetailsTab() {
               <div>
                 <dt>Latency</dt>
                 <dd className="font-mono">
-                  TTFT {selectedDetail.latency?.ttft || 0}ms · Total {selectedDetail.latency?.total || 0}ms
+                  TTFT {selectedDetail.latency?.ttft || 0}ms Â· Total {selectedDetail.latency?.total || 0}ms
                 </dd>
               </div>
               <div>
@@ -436,7 +436,7 @@ export default function RequestDetailsTab() {
                 ) : (
                   <p className={styles.description}>
                     Reason: <span className="font-mono">{selectedDetail.pxpipe.reason}</span>
-                    {selectedDetail.pxpipe.detail ? ` — ${selectedDetail.pxpipe.detail}` : ""}
+                    {selectedDetail.pxpipe.detail ? ` â€” ${selectedDetail.pxpipe.detail}` : ""}
                   </p>
                 )}
               </div>

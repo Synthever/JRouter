@@ -1,0 +1,438 @@
+.page {
+  composes: page from "../usage/usage.module.css";
+  composes: formScope from "../../../../shared/components/DashboardControls.module.css";
+}
+
+.section {
+  composes: section from "../usage/usage.module.css";
+}
+
+.header {
+  composes: header from "../usage/usage.module.css";
+}
+
+.description {
+  composes: description from "../usage/usage.module.css";
+}
+
+.sectionHeader {
+  composes: sectionHeader from "../usage/usage.module.css";
+}
+
+.controls,
+.accountActions,
+.identity,
+.pagination,
+.quotaSummary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.controls,
+.accountActions,
+.pagination {
+  flex-wrap: wrap;
+}
+
+.control {
+  composes: filterSelect from "../usage/usage.module.css";
+}
+
+.page .control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: auto;
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.page .control:hover:not(:disabled),
+.page .control[aria-pressed="true"] {
+  background: var(--surface-hover);
+}
+
+.page .control:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.iconButton {
+  composes: iconButton from "../../../../shared/components/DashboardControls.module.css";
+}
+
+.page .danger,
+.iconButton.danger:hover:not(:disabled) {
+  color: var(--danger);
+}
+
+.active {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.providerMenu {
+  position: absolute;
+  left: 0;
+  z-index: 40;
+  width: min(280px, calc(100vw - 48px));
+  margin-top: 8px;
+  padding: 6px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r2);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 6px 8px;
+  border-radius: var(--r1);
+  color: var(--text-2);
+  font-size: 12px;
+  text-align: left;
+}
+
+.menuItem:hover,
+.menuItem[aria-current="true"] {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.separator {
+  height: 1px;
+  margin: 6px 0;
+  background: var(--line);
+}
+
+.accountGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+  min-width: 0;
+}
+
+.account {
+  container-type: inline-size;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+}
+
+@media (min-width: 1024px) {
+  .accountGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.accountHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.identity {
+  flex: 1 1 220px;
+}
+
+.providerName {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.metadata {
+  margin-top: 4px;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.accountActions {
+  flex-shrink: 0;
+  max-width: 100%;
+  justify-content: flex-end;
+}
+
+.sourceMessage,
+.empty {
+  padding: 24px 0;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.empty {
+  text-align: center;
+}
+
+.emptyTitle {
+  margin-bottom: 4px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.notice {
+  padding: 8px 12px;
+  border-radius: var(--r1);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.quotaList {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quotaRow {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(0, 2fr) minmax(100px, 1fr) 36px;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.quotaRow:last-child {
+  border-bottom: 0;
+}
+
+.quotaRow:hover {
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+}
+
+.quotaName {
+  min-width: 0;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.quotaSummary {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.track {
+  height: 4px;
+  margin-top: 6px;
+  overflow: hidden;
+  border-radius: var(--r-full);
+  background: var(--surface-hover);
+}
+
+.fill {
+  height: 100%;
+  background: currentColor;
+}
+
+.healthy {
+  color: var(--pos);
+}
+
+.moderate {
+  color: var(--warn);
+}
+
+.low {
+  color: var(--danger);
+}
+
+.page :global(.badge-warning) {
+  background: color-mix(in srgb, var(--warn) 6%, var(--surface));
+}
+
+.page :global(.badge-danger) {
+  background: color-mix(in srgb, var(--danger) 3%, var(--surface));
+}
+
+.reset {
+  min-width: 0;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.reset > span {
+  display: block;
+}
+
+.pagination {
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--text-2);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.hiddenRows {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--text-2);
+  font-size: 11px;
+}
+
+.hiddenRows button {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.dialog {
+  composes: dialog from "../../../../shared/components/DashboardControls.module.css";
+}
+
+.dialog :global(.badge-warning) {
+  background: color-mix(in srgb, var(--warn) 6%, var(--surface));
+}
+
+.dialog button[data-variant="danger"] {
+  background: color-mix(in srgb, var(--danger) 3%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 25%, transparent);
+  color: var(--danger);
+}
+
+.creditTable {
+  composes: table from "../usage/usage.module.css";
+}
+
+.page [role="switch"] {
+  background: var(--surface-hover);
+}
+
+.page [role="switch"][aria-checked="true"] {
+  background: var(--text);
+}
+
+.page [role="switch"] > span {
+  background: var(--text-2);
+}
+
+.page [role="switch"][aria-checked="true"] > span {
+  background: var(--bg);
+}
+
+.page :is(button, input, select):focus-visible {
+  outline: 2px solid var(--text-2);
+  outline-offset: 3px;
+}
+
+@container (max-width: 560px) {
+  .quotaRow {
+    grid-template-columns: minmax(0, 1fr) 36px;
+    gap: 6px 8px;
+  }
+
+  .quotaName,
+  .quotaRow > div {
+    grid-column: 1;
+  }
+
+  .quotaRow > button {
+    grid-column: 2;
+    grid-row: 1 / 4;
+    align-self: start;
+  }
+}
+
+@media (max-width: 639px) {
+  .controls {
+    width: 100%;
+  }
+
+  .page .control,
+  .menuItem,
+  .hiddenRows button,
+  .page button[data-variant] {
+    min-height: 44px;
+  }
+
+  .page .control {
+    font-size: 16px;
+  }
+
+  .controls button {
+    font-size: 12px;
+  }
+
+  .accountActions {
+    width: 100%;
+  }
+
+  .accountActions [data-tooltip] {
+    display: none;
+  }
+
+  .quotaRow {
+    grid-template-columns: minmax(0, 1fr) 44px;
+    gap: 6px 8px;
+    padding: 12px 0;
+  }
+
+  .quotaName,
+  .quotaRow > div {
+    grid-column: 1;
+  }
+
+  .quotaRow > button {
+    grid-column: 2;
+    grid-row: 1 / 4;
+    align-self: start;
+  }
+
+  .page [role="switch"]::before {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+    content: "";
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page *,
+  .page *::before {
+    transition: none;
+    animation: none;
+  }
+}

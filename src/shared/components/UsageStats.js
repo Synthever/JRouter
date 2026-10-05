@@ -45,19 +45,23 @@ function TimeAgo({ timestamp }) {
 
 function RecentRequests({ requests = [] }) {
   return (
-    <section className={`ui-card ${styles.section}`} aria-labelledby="usage-recent-heading">
+    <section className={`ui-card ${styles.section} ${styles.recentRequests}`} aria-labelledby="usage-recent-heading">
       <div className={styles.sectionHeader}>
         <h2 id="usage-recent-heading" className="ui-eyebrow">Recent Requests</h2>
       </div>
 
       {!requests.length ? (
-        <div className={styles.inset} style={{ height: 240 }}>No requests yet</div>
+        <div className={`${styles.inset} flex-1`}>No requests yet</div>
       ) : (
-        <div className={`${styles.tableWrap} max-h-[380px] overflow-y-auto`}>
-          <table className={styles.table}>
+        <div
+          className={`${styles.tableWrap} ${styles.recentRequestsScroll} no-scrollbar`}
+          role="region"
+          aria-label="Recent requests list"
+          tabIndex={0}
+        >
+          <table className={`${styles.table} ${styles.recentRequestsTable}`}>
             <thead>
               <tr>
-                <th scope="col"><span className="sr-only">Status</span></th>
                 <th scope="col">Model</th>
                 <th scope="col" className={styles.num}>In / Out</th>
                 <th scope="col" className={styles.num}>When</th>
@@ -68,13 +72,13 @@ function RecentRequests({ requests = [] }) {
                 const ok = !r.status || r.status === "ok" || r.status === "success";
                 return (
                   <tr key={i}>
-                    <td>
-                      <StatusBadge variant={ok ? "success" : "error"} className="!px-0">
-                        <span className="sr-only">{ok ? "Success" : "Error"}</span>
-                      </StatusBadge>
-                    </td>
                     <td className="font-mono" title={r.model}>
-                      <span className="block max-w-[104px] truncate sm:max-w-[160px]">{r.model}</span>
+                      <div className={styles.recentRequestModel}>
+                        <StatusBadge variant={ok ? "success" : "error"} className="!px-0 shrink-0">
+                          <span className="sr-only">{ok ? "Success" : "Error"}</span>
+                        </StatusBadge>
+                        <span>{r.model}</span>
+                      </div>
                     </td>
                     <td className={styles.num}>
                       <span className={styles.muted}>{fmt(r.promptTokens)}↑</span>{" "}

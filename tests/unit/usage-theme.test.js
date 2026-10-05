@@ -34,20 +34,29 @@ describe("usage dashboard theme", () => {
     expect(css).not.toMatch(/\.section\s*\{[^}]*background:/);
   });
 
-  it("charts reuse the Dashboard chart tokens instead of a local palette", () => {
+  it("charts use shadcn containers and a theme-derived neutral palette", () => {
     const theme = read(`${usagePath}/components/chartTheme.js`);
     expect(theme).toContain('export const CHART_GRID_STROKE = "var(--line)"');
     expect(theme).toContain('export const CHART_AXIS_STROKE = "var(--text-2)"');
-    expect(theme).toContain('export const CHART_BAR_FILL = "var(--text-2)"');
+    expect(theme).toContain("CHART_BAR_COLORS");
+    expect(theme).toContain("color-mix(in srgb, var(--text)");
     for (const file of ["UsageChart.js", "ProviderBarChart.js", "TopModelsChart.js"]) {
       const source = read(`${usagePath}/components/${file}`);
       expect(source).toContain("chartTheme");
+      expect(source).toContain("<ChartContainer");
+      expect(source).toContain("<ChartTooltipContent");
+      expect(source).not.toContain("ResponsiveContainer");
       // No hardcoded hex colours anywhere in the chart components.
       expect(source).not.toMatch(/#[0-9a-fA-F]{3,6}\b/);
     }
+    for (const file of ["ProviderBarChart.js", "TopModelsChart.js"]) {
+      const source = read(`${usagePath}/components/${file}`);
+      expect(source).toContain("maxBarSize=");
+      expect(source).toContain("getBarColor");
+    }
     const area = read(`${usagePath}/components/UsageChart.js`);
-    expect(area).toContain('stroke="var(--text)"');
-    expect(area).toContain('stopColor="var(--text)"');
+    expect(area).toContain('stroke="var(--color-volume)"');
+    expect(area).toContain('stopColor="var(--color-volume)"');
     const dashboard = read("src/app/(dashboard)/dashboard/components/ActivityTimelineCard.js");
     expect(dashboard).toContain('stroke="var(--text)"');
   });
@@ -68,6 +77,22 @@ describe("usage dashboard theme", () => {
     // Numbers use the shared tabular cell class, not ad-hoc utilities.
     expect(table).toContain("styles.num");
     expect(table).not.toContain("px-6 py-3");
+  });
+
+  it("keeps Recent Requests vertically scrollable without a narrow horizontal scroller", () => {
+    const stats = read("src/shared/components/UsageStats.js");
+    const recent = stats.slice(stats.indexOf("function RecentRequests("), stats.indexOf("function sortData("));
+    expect(recent).not.toContain("max-h-[380px]");
+    expect(recent).not.toContain("truncate");
+    expect(recent).toContain("no-scrollbar");
+    expect(recent).toContain("tabIndex={0}");
+    const css = read(`${usagePath}/usage.module.css`);
+    expect(css).toMatch(/\.recentRequestsScroll\s*\{[^}]*flex: 1;[^}]*min-height: 0;[^}]*overflow-x: hidden;[^}]*overflow-y: auto;/);
+    expect(css).toMatch(/\.recentRequestsTable\s*\{[^}]*table-layout: fixed;/);
+    expect(css).toContain("overflow-wrap: anywhere;");
+    expect(css).toMatch(/\.gridSplit > \*\s*\{[^}]*grid-column: 1 \/ -1;/);
+    expect(css).toMatch(/@container[^}]*\.gridSplit > \*\s*\{[^}]*grid-column: auto;/);
+    expect(css).toMatch(/@container[\s\S]*\.recentRequests\s*\{[^}]*height: 0;[^}]*min-height: 100%;/);
   });
 
   it("keeps the usage route on the shared grid background", () => {

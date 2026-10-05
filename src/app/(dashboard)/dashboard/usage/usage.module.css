@@ -95,6 +95,17 @@
   min-width: 0;
 }
 
+.gridSplit {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 16px;
+  container-type: inline-size;
+}
+
+.gridSplit > * {
+  grid-column: 1 / -1;
+}
+
 .metric {
   display: flex;
   flex-direction: column;
@@ -132,6 +143,58 @@
 .tableWrap {
   min-width: 0;
   overflow-x: auto;
+}
+
+.recentRequests {
+  display: flex;
+  flex-direction: column;
+  height: 480px;
+  min-height: 0;
+}
+
+.recentRequests > .sectionHeader {
+  flex-shrink: 0;
+}
+
+.recentRequestsScroll {
+  flex: 1;
+  height: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.recentRequestsTable {
+  table-layout: fixed;
+}
+
+.recentRequestsTable th,
+.recentRequestsTable td {
+  padding: 8px 6px;
+}
+
+.recentRequestsTable th:nth-child(2) {
+  width: 34%;
+}
+
+.recentRequestsTable th:nth-child(3) {
+  width: 64px;
+}
+
+.recentRequestsTable td:nth-child(2) span {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.recentRequestModel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recentRequestModel > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .table {
@@ -378,12 +441,15 @@
   }
 }
 
-@media (min-width: 1024px) {
-  .gridSplit {
-    display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
-    gap: 16px;
-    align-items: stretch;
+@container (min-width: 1080px) {
+  .gridSplit > * {
+    grid-column: auto;
+  }
+
+  .recentRequests {
+    /* Let Live Routing size the grid row, then fill it without expanding for the table. */
+    height: 0;
+    min-height: 100%;
   }
 }
 
