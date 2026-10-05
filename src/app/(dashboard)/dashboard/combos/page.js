@@ -422,7 +422,7 @@ export default function CombosPage() {
             <Button variant="contrast" icon="add" onClick={() => setShowCreateModal(true)} className="mt-4">Create Combo</Button>
           </div>
         ) : (
-        <div className={styles.comboList}>
+        <div>
           {/* Selection toolbar */}
           <div className={styles.selectionToolbar}>
             <label className={styles.selectionLabel}>

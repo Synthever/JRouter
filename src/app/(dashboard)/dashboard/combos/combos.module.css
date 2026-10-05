@@ -2,186 +2,201 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
+  width: 100%;
   min-width: 0;
   padding-bottom: 40px;
   color: var(--text);
 }
 
-.intro {
+.intro,
+.sectionHeader,
+.adapterHeader {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: 12px;
 }
 
-.description {
-  max-width: 65ch;
+.description,
+.sectionDescription {
   color: var(--text-2);
-  font-size: 14px;
-  line-height: 1.625;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .panel {
   min-width: 0;
   padding: 20px;
-  border: 1px solid var(--line);
-  border-radius: var(--r3);
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
 }
 
 .sectionHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px 20px;
   margin-bottom: 16px;
 }
 
 .sectionDescription {
-  max-width: 65ch;
-  color: var(--text-2);
-  font-size: 13px;
-  line-height: 1.6;
+  margin-top: 8px;
 }
 
-.sectionTitle {
-  color: var(--text);
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1.4;
-  letter-spacing: -0.01em;
-}
-
-.primary {
-  background: var(--text);
-  color: var(--bg);
-  border-color: transparent;
-  box-shadow: none;
-}
-
-.primary:hover:not(:disabled) {
-  background: var(--text-2);
-  color: var(--bg);
-}
-
-.deleteButton {
-  border-color: color-mix(in srgb, var(--danger) 35%, transparent);
-  background: color-mix(in srgb, var(--danger) 5%, var(--surface));
-  color: var(--danger);
-}
-
-.deleteButton:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
-  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
-  color: var(--danger);
-}
-
-.page :is(button, a, input, select):focus-visible {
-  outline: 2px solid var(--text-2);
-  outline-offset: 3px;
-}
-
-.comboList {
-  display: flex;
+.rows {
   min-width: 0;
-  flex-direction: column;
-  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .selectionToolbar {
   display: flex;
-  min-width: 0;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
-  padding: 12px;
-  border-radius: var(--r2);
-  background: var(--surface-2);
+  min-width: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
 }
 
 .selectionLabel {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 34px;
   color: var(--text-2);
   font-size: 12px;
   cursor: pointer;
-  user-select: none;
 }
 
-.bulkActions {
+.bulkActions,
+.rowControls,
+.comboActions,
+.adapterActions,
+.priorityActions {
   display: flex;
-  min-width: 0;
   align-items: center;
-  flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
+}
+
+.bulkActions,
+.adapterActions {
+  flex-wrap: wrap;
 }
 
 .strategySelect {
   width: 200px;
+  max-width: 100%;
 }
 
-.comboCard {
+.strategySelect select {
+  min-height: 34px;
+  padding: 6px 36px 6px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r1);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.comboRow,
+.adapterRow {
   min-width: 0;
-  padding: 12px;
-  border: 0;
-  border-radius: var(--r2);
-  background: #0A0A0B;
-  box-shadow: none;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.comboRow:last-child,
+.adapterRow:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.comboRow {
   transition: background-color 150ms;
 }
 
-.comboCard:hover {
-  background: color-mix(in srgb, var(--text) 4%, #0A0A0B);
+.comboRow:hover,
+.comboRow:focus-within {
+  background: color-mix(in srgb, var(--text) 3%, transparent);
 }
 
-.selected {
-  background: color-mix(in srgb, var(--text) 6%, #0A0A0B);
-  outline: 1px solid var(--accent-line);
+.comboRow.selected {
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+.rowContent {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 16px;
+}
+
+.identity {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.identity > svg {
+  margin-top: 3px;
+}
+
+.nameLine {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.comboName,
+.adapterName {
+  min-width: 0;
+  max-width: 100%;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
 }
 
 .comboName {
-  display: block;
-  max-width: 100%;
   overflow: hidden;
-  color: var(--text);
   font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .modelList {
   display: flex;
-  min-width: 0;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
-  margin-top: 6px;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  margin-top: 8px;
 }
 
 .modelChip {
   display: inline-flex;
-  max-width: 100%;
   align-items: center;
-  gap: 4px;
-  padding: 2px 6px;
-  border-radius: var(--r1);
-  background: var(--surface-2);
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
   color: var(--text-2);
   font-family: var(--font-mono);
   font-size: 11px;
 }
 
-.modelChip span {
+.modelChip > span:not(.chainSeparator) {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.chainSeparator {
+  flex-shrink: 0;
+  color: var(--text-2);
 }
 
 .metadata {
@@ -191,16 +206,18 @@
   gap: 4px 10px;
   margin-top: 6px;
   color: var(--text-2);
+  font-family: var(--font-mono);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
 
 .judgeButton {
   display: inline-flex;
-  min-width: 0;
-  max-width: 100%;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 28px;
   padding: 4px 8px;
   border: 1px solid var(--line-2);
   border-radius: var(--r1);
@@ -216,45 +233,51 @@
   white-space: nowrap;
 }
 
-.comboActions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
 .iconAction {
-  display: inline-flex;
-  min-width: 44px;
-  min-height: 40px;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--r1);
-  color: var(--text-2);
-  font-size: 10px;
-  line-height: 1.25;
-  transition: background-color 150ms, color 150ms;
+  composes: iconButton from "../../../../shared/components/DashboardControls.module.css";
 }
 
-.iconAction:hover {
-  background: var(--surface-2);
-  color: var(--text);
+.resetJudge {
+  composes: iconButton from "../../../../shared/components/DashboardControls.module.css";
 }
 
-.dangerAction {
+.comboActions,
+.priorityActions {
+  flex-shrink: 0;
+  gap: 2px;
+}
+
+.dangerAction,
+.dangerAction:hover:not(:disabled) {
   color: var(--danger);
 }
 
-.dangerAction:hover {
-  background: color-mix(in srgb, var(--danger) 8%, transparent);
+.success {
+  color: var(--pos);
+}
+
+.deleteButton,
+.dialog button[data-variant="danger"] {
+  background: color-mix(in srgb, var(--danger) 3%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 25%, transparent);
   color: var(--danger);
 }
 
-.empty {
-  padding: 32px 16px;
-  border: 1px dashed var(--line-2);
-  border-radius: var(--r2);
+.dialog button[data-variant="primary"] {
+  background: var(--text);
+  color: var(--bg);
+}
+
+.dialog button[data-variant="primary"]:hover:not(:disabled) {
+  background: var(--text-2);
+}
+
+.empty,
+.modalEmpty {
+  padding: 24px 0;
   color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.6;
   text-align: center;
 }
 
@@ -265,53 +288,35 @@
   font-weight: 500;
 }
 
-.adapterCard {
-  min-width: 0;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--r2);
-  background: var(--surface);
-  box-shadow: none;
-}
-
 .tableWrap {
+  min-width: 0;
   margin-top: 12px;
-  overflow-x: auto;
-  border: 1px solid var(--line);
-  border-radius: var(--r2);
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
   text-align: left;
   font-size: 12px;
 }
 
 .table th {
-  background: var(--surface-2);
   color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
   font-weight: 500;
 }
 
 .table :is(th, td) {
-  padding: 8px 12px;
+  padding: 8px;
   border-bottom: 1px solid var(--line);
 }
 
-.table th:first-child,
-.table th:nth-child(3),
-.table th:last-child,
-.table td:first-child,
-.table td:nth-child(3),
-.table td:last-child {
+.table :is(th, td):first-child,
+.table :is(th, td):nth-child(3),
+.table :is(th, td):last-child {
   text-align: center;
-}
-
-.table td:first-child {
-  color: var(--text-2);
-  font-family: var(--font-sans);
-  font-size: 11px;
 }
 
 .table tbody tr:last-child td {
@@ -322,88 +327,82 @@
   background: color-mix(in srgb, var(--text) 3%, transparent);
 }
 
+.poolModel {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.modelValue {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .modelItem {
   display: flex;
-  min-width: 0;
   align-items: center;
   gap: 6px;
-  padding: 6px 8px;
-  border-radius: var(--r1);
-  background: var(--surface-2);
+  min-width: 0;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
   color: var(--text);
-  transition: background-color 150ms;
 }
 
-.modelItem:hover {
-  background: var(--surface-hover);
+.modelItem:last-child {
+  border-bottom: 0;
 }
 
-.modelEditor {
+.dragHandle {
+  cursor: grab;
+  touch-action: none;
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
+.modelEditor,
+.inlineModel {
   min-width: 0;
   flex: 1;
-  border: 1px solid var(--line-2);
-  border-radius: var(--r1);
-  background: var(--surface);
   color: var(--text);
   font-family: var(--font-mono);
   font-size: 12px;
 }
 
 .inlineModel {
-  min-width: 0;
-  flex: 1;
   overflow: hidden;
-  color: var(--text);
-  font-family: var(--font-mono);
-  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
   cursor: text;
 }
 
-.modalEmpty {
-  padding: 16px;
-  border: 1px dashed var(--line-2);
-  border-radius: var(--r2);
-  background: var(--surface-2);
+.fieldLabel {
+  margin-bottom: 6px;
   color: var(--text-2);
-  font-size: 12px;
-  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.dialog {
+  composes: dialog from "../../../../shared/components/DashboardControls.module.css";
 }
 
 .page input[type="checkbox"] {
-  appearance: none;
-  -webkit-appearance: none;
   width: 16px;
   height: 16px;
-  background-color: transparent;
-  border: 1px solid #ffffff;
-  border-radius: 4px;
+  accent-color: var(--text);
   cursor: pointer;
-  display: inline-grid;
-  place-content: center;
-  margin: 0;
-  vertical-align: middle;
-  flex-shrink: 0;
-  transition: background-color 150ms, border-color 150ms;
-}
-
-.page input[type="checkbox"]:checked {
-  background-color: #ffffff;
-  border-color: #ffffff;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 16 16' fill='%23000000' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3E%3C/svg%3E");
-  background-size: 100% 100%;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-
-.page input[type="checkbox"]:indeterminate {
-  background-color: #ffffff;
-  border-color: #ffffff;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 8h8' stroke='%23000000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-size: 100% 100%;
-  background-position: center;
-  background-repeat: no-repeat;
 }
 
 .page [role="switch"] {
@@ -422,41 +421,119 @@
   background: var(--bg);
 }
 
-.page [role="switch"]:focus-visible {
+.page :is(button, a, input, select, [tabindex]):focus-visible {
   outline: 2px solid var(--text-2);
   outline-offset: 3px;
 }
 
+@media (max-width: 1199px) {
+  .rowContent {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .rowControls {
+    justify-content: flex-end;
+  }
+}
+
 @media (max-width: 639px) {
-  .panel {
-    padding: 16px;
+  .intro > div,
+  .bulkActions,
+  .strategySelect {
+    width: 100%;
   }
 
-  .strategySelect,
   .bulkActions > button {
-    width: 100%;
+    flex: 1;
   }
 
-  .selectionToolbar {
-    align-items: stretch;
-  }
-
-  .bulkActions {
-    width: 100%;
+  .rowControls {
+    flex-wrap: wrap;
   }
 
   .comboActions {
-    display: grid;
+    justify-content: flex-end;
     width: 100%;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .page button:not([role="switch"]) {
+  .selectionLabel,
+  .page button:not([role="switch"]),
+  .strategySelect select {
     min-height: 44px;
   }
 
-  .iconAction {
-    min-height: 44px;
+  .strategySelect select {
+    font-size: 16px;
+  }
+
+  .page [role="switch"]::before {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+    content: "";
+  }
+
+  .table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .table tbody,
+  .table tr {
+    display: block;
+  }
+
+  .table tbody tr {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) 44px;
+    gap: 4px 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .table tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  .table td {
+    min-width: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .table td:nth-child(2) {
+    grid-column: 2 / -1;
+  }
+
+  .table td:nth-child(3) {
+    grid-column: 2;
+    text-align: right;
+  }
+
+  .modelItem {
+    display: grid;
+    grid-template-columns: 44px 20px minmax(0, 1fr) 44px;
+    gap: 4px;
+  }
+
+  .dragHandle {
+    grid-row: span 2;
+  }
+
+  .modelItem > :is(.inlineModel, .modelEditor) {
+    grid-column: 3 / -1;
+  }
+
+  .priorityActions {
+    grid-column: 2 / 4;
+    justify-content: flex-end;
   }
 }
 
@@ -466,13 +543,8 @@
     animation: none;
     transition: none;
   }
-}
 
-.empty > p:last-child {
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.resetJudge {
-  color: var(--text-2);
+  .page button:active {
+    transform: none;
+  }
 }

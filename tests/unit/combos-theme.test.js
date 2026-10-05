@@ -5,27 +5,48 @@ const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "
 const combosPath = "src/app/(dashboard)/dashboard/combos";
 
 describe("combos dashboard theme", () => {
-  it("uses solid themed panels so nested model pickers escape dashboard layers", () => {
+  it("reuses the shared Dashboard section surface instead of page-specific cards", () => {
     const source = read(`${combosPath}/page.js`);
-    expect(source).toContain("styles.page");
-    expect(source).toContain("styles.panel");
-    expect(source).toContain("styles.comboCard");
+    expect(source).toContain("dashboard-surface ${styles.page}");
+    expect(source.match(/<section className={`ui-card \$\{styles.panel\}`}/g)).toHaveLength(2);
     const css = read(`${combosPath}/combos.module.css`);
-    expect(css).not.toContain("backdrop-filter:");
-    expect(css).toMatch(/\.panel\s*\{[^}]*background: var\(--surface\);/);
-    expect(css).toMatch(/\.comboCard\s*\{[^}]*background: #0A0A0B;/i);
+    expect(css).not.toContain("backdrop-filter");
+    expect(css).not.toContain("comboCard");
+    // .panel only adds density; the surface itself comes from globals + ui-card.
+    expect(css).toMatch(/\.panel\s*\{[^}]*padding: 20px;/);
+    expect(css).not.toMatch(/\.panel\s*\{[^}]*background:/);
+    // Rows reuse the shared control styles rather than re-declaring buttons/dialogs.
+    expect(css).toMatch(/\.iconAction\s*\{\s*composes: iconButton from/);
+    expect(css).toMatch(/\.dialog\s*\{\s*composes: dialog from/);
     expect(source).toContain("<ModelSelectModal");
+    const shared = read("src/app/globals.css");
+    expect(shared).toContain(".dashboard-surface .ui-card");
   });
 
-  it("keeps controls theme-aware with keyboard focus and mobile targets", () => {
+  it("keeps controls theme-aware with semantic status colors", () => {
     const source = read(`${combosPath}/page.js`);
-    expect(source).not.toContain("styles.strategySummary");
-    expect(source).toContain('<Icon className="text-text text-[18px]">layers</Icon>');
-    expect(source).toContain('<Icon className="shrink-0 text-text text-[18px]">{cap.icon}</Icon>');
-    expect(source).not.toMatch(/text-primary|bg-primary|border-primary|bg-black\/\[0\.015\]/);
+    expect(source).not.toMatch(/text-primary|bg-primary|border-primary|bg-black\/\[0\.015\]|!bg-white/);
+    expect(source).toContain('variant="contrast"');
+    expect(source).toContain("<StatusBadge");
+    expect(source).toContain("<Toggle");
     const css = read(`${combosPath}/combos.module.css`);
-    expect(css).toMatch(/\.primary\s*\{[^}]*background: var\(--text\);[^}]*color: var\(--bg\);/);
+    expect(css).toMatch(/\.success\s*\{[^}]*color: var\(--pos\);/);
+    expect(css).toMatch(/\.dangerAction[\s\S]*?color: var\(--danger\);/);
+    expect(css).toContain('[role="switch"][aria-checked="true"]');
+    expect(css).toContain("var(--text-2)");
+    expect(css).toContain("var(--font-mono)");
+  });
+
+  it("keeps keyboard controls visible and mobile content shrinkable", () => {
+    const source = read(`${combosPath}/page.js`);
+    expect(source).toContain("aria-label={`Select ${combo.name}`}");
+    expect(source).toContain('title="Drag to reorder"');
+    expect(source).toContain("aria-label={`Move ${model} up`}");
+    const css = read(`${combosPath}/combos.module.css`);
     expect(css).toContain(":focus-visible");
+    expect(css).toContain(":focus-within");
+    expect(css).toMatch(/\.comboRow,\s*\.adapterRow\s*\{[^}]*border-bottom: 1px solid var\(--line\);/);
+    expect(css).toMatch(/@media \(max-width: 1199px\)\s*\{\s*\.rowContent\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\);/);
     expect(css).toMatch(/@media \(max-width: 639px\)[\s\S]*min-height: 44px;/);
     expect(css).toContain("prefers-reduced-motion: reduce");
   });
