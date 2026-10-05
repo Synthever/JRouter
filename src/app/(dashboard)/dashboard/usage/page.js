@@ -2,9 +2,10 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { RequestLogger, CardSkeleton, SegmentedControl } from "@/shared/components";
+import { RequestLogger, SegmentedControl, Skeleton } from "@/shared/components";
 import UsageStats from "@/shared/components/UsageStats";
 import RequestDetailsTab from "./components/RequestDetailsTab";
+import styles from "./usage.module.css";
 
 const PERIODS = [
   { value: "today", label: "Today" },
@@ -17,9 +18,22 @@ const PERIODS = [
 
 export default function UsagePage() {
   return (
-    <Suspense fallback={<CardSkeleton />}>
+    <Suspense fallback={<UsageFallback />}>
       <UsageContent />
     </Suspense>
+  );
+}
+
+function UsageFallback() {
+  return (
+    <div className={`dashboard-surface ${styles.page}`} aria-busy="true" aria-label="Loading usage">
+      {[0, 1, 2].map((section) => (
+        <div key={section} className={`ui-card ${styles.section}`}>
+          <Skeleton className="mb-4 h-4 w-40" />
+          <Skeleton className="h-24 w-full" />
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -42,31 +56,35 @@ function UsageContent() {
   };
 
   return (
-    <div className="flex min-w-0 flex-col gap-6 px-1 sm:px-0">
-      {/* Tabs + period selector on same row */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <SegmentedControl
-          options={[
-            { value: "overview", label: "Overview" },
-            { value: "details", label: "Details" },
-          ]}
-          value={activeTab}
-          onChange={handleTabChange}
-          className="w-full sm:w-auto"
-        />
-        {activeTab === "overview" && (
+    <div className={`dashboard-surface ${styles.page}`}>
+      <header className={styles.header}>
+        <div className="min-w-0">
+          <p className={styles.description}>Requests, tokens and estimated cost across your providers</p>
+        </div>
+        <div className={styles.controls}>
           <SegmentedControl
-            options={PERIODS}
-            value={period}
-            onChange={setPeriod}
-            size="sm"
-            className="w-full sm:w-auto"
+            options={[
+              { value: "overview", label: "Overview" },
+              { value: "details", label: "Details" },
+            ]}
+            value={activeTab}
+            onChange={handleTabChange}
+            aria-label="Usage view"
           />
-        )}
-      </div>
+          {activeTab === "overview" && (
+            <SegmentedControl
+              options={PERIODS}
+              value={period}
+              onChange={setPeriod}
+              size="sm"
+              aria-label="Usage period"
+            />
+          )}
+        </div>
+      </header>
 
       {activeTab === "overview" && (
-        <Suspense fallback={<CardSkeleton />}>
+        <Suspense fallback={<Skeleton className="h-64 w-full rounded-[var(--r3)]" />}>
           <UsageStats period={period} setPeriod={setPeriod} hidePeriodSelector />
         </Suspense>
       )}

@@ -11,11 +11,12 @@ function isLLMProvider(id) {
   if (!p?.serviceKinds) return true;
   return p.serviceKinds.includes("llm");
 }
-import Badge from "./Badge";
-import Card from "./Card";
+import { Select, SegmentedControl, Skeleton } from "@/shared/components";
+import StatusBadge from "@/shared/components/StatusBadge";
 import OverviewCards from "@/app/(dashboard)/dashboard/usage/components/OverviewCards";
 import UsageTable, { fmt, fmtTime } from "@/app/(dashboard)/dashboard/usage/components/UsageTable";
 import dynamic from "next/dynamic";
+import styles from "@/app/(dashboard)/dashboard/usage/usage.module.css";
 // Lazy-load: keeps @xyflow/react and recharts out of the initial bundle
 const ProviderTopology = dynamic(() => import("@/app/(dashboard)/dashboard/usage/components/ProviderTopology"), { ssr: false });
 const UsageChart = dynamic(() => import("@/app/(dashboard)/dashboard/usage/components/UsageChart"), { ssr: false });
@@ -33,51 +34,55 @@ function timeAgo(timestamp) {
 // Auto-update time display every second without re-rendering parent
 function TimeAgo({ timestamp }) {
   const [, setTick] = useState(0);
-  
+
   useEffect(() => {
     const timer = setInterval(() => setTick(t => t + 1), 1000);
     return () => clearInterval(timer);
   }, []);
-  
+
   return <>{timeAgo(timestamp)}</>;
 }
 
 function RecentRequests({ requests = [] }) {
   return (
-    <Card className="flex min-w-0 flex-col overflow-hidden" padding="sm" style={{ height: 480 }}>
-      {/* Header */}
-      <div className="px-1 py-2 border-b border-border shrink-0">
-        <span className="text-xs font-semibold text-text-muted uppercase tracking-wide">Recent Requests</span>
+    <section className={`ui-card ${styles.section}`} aria-labelledby="usage-recent-heading">
+      <div className={styles.sectionHeader}>
+        <h2 id="usage-recent-heading" className="ui-eyebrow">Recent Requests</h2>
       </div>
 
       {!requests.length ? (
-        <div className="flex-1 flex items-center justify-center text-text-muted text-sm">No requests yet.</div>
+        <div className={styles.inset} style={{ height: 240 }}>No requests yet</div>
       ) : (
-        <div className="flex-1 overflow-y-auto">
-          <table className="w-full min-w-[300px] border-collapse text-xs">
-            <thead className="sticky top-0 bg-bg z-10">
-              <tr className="border-b border-border">
-                <th className="py-1.5 text-left font-semibold text-text-muted w-2"></th>
-                <th className="py-1.5 text-left font-semibold text-text-muted">Model</th>
-                <th className="py-1.5 text-right font-semibold text-text-muted whitespace-nowrap">In / Out</th>
-                <th className="py-1.5 text-right font-semibold text-text-muted">When</th>
+        <div className={`${styles.tableWrap} max-h-[380px] overflow-y-auto`}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th scope="col"><span className="sr-only">Status</span></th>
+                <th scope="col">Model</th>
+                <th scope="col" className={styles.num}>In / Out</th>
+                <th scope="col" className={styles.num}>When</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/50">
+            <tbody>
               {requests.map((r, i) => {
                 const ok = !r.status || r.status === "ok" || r.status === "success";
                 return (
-                  <tr key={i} className="hover:bg-bg-subtle transition-colors">
-                    <td className="py-1.5">
-                      <span className={`block w-1.5 h-1.5 rounded-full ${ok ? "bg-success" : "bg-error"}`} />
+                  <tr key={i}>
+                    <td>
+                      <StatusBadge variant={ok ? "success" : "error"} className="!px-0">
+                        <span className="sr-only">{ok ? "Success" : "Error"}</span>
+                      </StatusBadge>
                     </td>
-                    <td className="py-1.5 font-mono truncate max-w-[120px]" title={r.model}>{r.model}</td>
-                    <td className="py-1.5 text-right whitespace-nowrap">
-                      <span className="text-primary">{fmt(r.promptTokens)}↑</span>
-                      {" "}
-                      <span className="text-success">{fmt(r.completionTokens)}↓</span>
+                    <td className="font-mono" title={r.model}>
+                      <span className="block max-w-[104px] truncate sm:max-w-[160px]">{r.model}</span>
                     </td>
-                    <td className="py-1.5 text-right text-text-muted whitespace-nowrap"><TimeAgo timestamp={r.timestamp} /></td>
+                    <td className={styles.num}>
+                      <span className={styles.muted}>{fmt(r.promptTokens)}↑</span>{" "}
+                      <span className="text-[var(--pos)]">{fmt(r.completionTokens)}↓</span>
+                    </td>
+                    <td className={`${styles.num} ${styles.subtle} whitespace-nowrap`}>
+                      <TimeAgo timestamp={r.timestamp} />
+                    </td>
                   </tr>
                 );
               })}
@@ -85,7 +90,7 @@ function RecentRequests({ requests = [] }) {
           </table>
         </div>
       )}
-    </Card>
+    </section>
   );
 }
 
@@ -204,6 +209,16 @@ const PERIODS = [
   { value: "all", label: "All" },
 ];
 
+const VIEW_MODES = [
+  { value: "costs", label: "Costs" },
+  { value: "tokens", label: "Tokens" },
+];
+
+const NUM_CELL = styles.num;
+const MUTED_CELL = `${styles.num} ${styles.muted}`;
+const SUBTLE_CELL = `${styles.num} ${styles.subtle} whitespace-nowrap`;
+const PROVIDER_CELL = "align-middle";
+
 export default function UsageStats({ period: periodProp, setPeriod: setPeriodProp, hidePeriodSelector = false } = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -258,7 +273,7 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
 
   // Fetch filtered stats via REST when period changes
   useEffect(() => {
-    // First load: show full spinner; subsequent: show subtle fetching indicator
+    // First load: skeleton placeholders; subsequent: subtle fetching indicator
     if (isInitialLoad.current) {
       isInitialLoad.current = false;
       setLoading(true);
@@ -334,17 +349,17 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
           emptyMessage: "No usage recorded yet.",
           renderSummaryCells: (group) => (
             <>
-              <td className="px-6 py-3 text-text-muted">—</td>
-              <td className="px-6 py-3 text-right">{fmt(group.summary.requests)}</td>
-              <td className="px-6 py-3 text-right text-text-muted whitespace-nowrap">{fmtTime(group.summary.lastUsed)}</td>
+              <td className={MUTED_CELL}>—</td>
+              <td className={NUM_CELL}>{fmt(group.summary.requests)}</td>
+              <td className={SUBTLE_CELL}>{fmtTime(group.summary.lastUsed)}</td>
             </>
           ),
           renderDetailCells: (item) => (
             <>
-              <td className={`px-6 py-3 font-medium transition-colors ${item.pending > 0 ? "text-primary" : ""}`}>{item.rawModel}</td>
-              <td className="px-6 py-3"><Badge variant={item.pending > 0 ? "primary" : "neutral"} size="sm">{item.provider}</Badge></td>
-              <td className="px-6 py-3 text-right">{fmt(item.requests)}</td>
-              <td className="px-6 py-3 text-right text-text-muted whitespace-nowrap">{fmtTime(item.lastUsed)}</td>
+              <td className={`font-medium ${item.pending > 0 ? styles.pending : ""}`}>{item.rawModel}</td>
+              <td className={PROVIDER_CELL}><StatusBadge dot={false}>{item.provider}</StatusBadge></td>
+              <td className={NUM_CELL}>{fmt(item.requests)}</td>
+              <td className={SUBTLE_CELL}>{fmtTime(item.lastUsed)}</td>
             </>
           ),
         };
@@ -367,19 +382,19 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
           emptyMessage: "No account-specific usage recorded yet.",
           renderSummaryCells: (group) => (
             <>
-              <td className="px-6 py-3 text-text-muted">—</td>
-              <td className="px-6 py-3 text-text-muted">—</td>
-              <td className="px-6 py-3 text-right">{fmt(group.summary.requests)}</td>
-              <td className="px-6 py-3 text-right text-text-muted whitespace-nowrap">{fmtTime(group.summary.lastUsed)}</td>
+              <td className={MUTED_CELL}>—</td>
+              <td className={MUTED_CELL}>—</td>
+              <td className={NUM_CELL}>{fmt(group.summary.requests)}</td>
+              <td className={SUBTLE_CELL}>{fmtTime(group.summary.lastUsed)}</td>
             </>
           ),
           renderDetailCells: (item) => (
             <>
-              <td className={`px-6 py-3 font-medium transition-colors ${item.pending > 0 ? "text-primary" : ""}`}>{item.accountName || `Account ${item.connectionId?.slice(0, 8)}...`}</td>
-              <td className={`px-6 py-3 font-medium transition-colors ${item.pending > 0 ? "text-primary" : ""}`}>{item.rawModel}</td>
-              <td className="px-6 py-3"><Badge variant={item.pending > 0 ? "primary" : "neutral"} size="sm">{item.provider}</Badge></td>
-              <td className="px-6 py-3 text-right">{fmt(item.requests)}</td>
-              <td className="px-6 py-3 text-right text-text-muted whitespace-nowrap">{fmtTime(item.lastUsed)}</td>
+              <td className={`font-medium ${item.pending > 0 ? styles.pending : ""}`}>{item.accountName || `Account ${item.connectionId?.slice(0, 8)}...`}</td>
+              <td className={`font-medium ${item.pending > 0 ? styles.pending : ""}`}>{item.rawModel}</td>
+              <td className={PROVIDER_CELL}><StatusBadge dot={false}>{item.provider}</StatusBadge></td>
+              <td className={NUM_CELL}>{fmt(item.requests)}</td>
+              <td className={SUBTLE_CELL}>{fmtTime(item.lastUsed)}</td>
             </>
           ),
         };
@@ -392,19 +407,19 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
           emptyMessage: "No API key usage recorded yet.",
           renderSummaryCells: (group) => (
             <>
-              <td className="px-6 py-3 text-text-muted">—</td>
-              <td className="px-6 py-3 text-text-muted">—</td>
-              <td className="px-6 py-3 text-right">{fmt(group.summary.requests)}</td>
-              <td className="px-6 py-3 text-right text-text-muted whitespace-nowrap">{fmtTime(group.summary.lastUsed)}</td>
+              <td className={MUTED_CELL}>—</td>
+              <td className={MUTED_CELL}>—</td>
+              <td className={NUM_CELL}>{fmt(group.summary.requests)}</td>
+              <td className={SUBTLE_CELL}>{fmtTime(group.summary.lastUsed)}</td>
             </>
           ),
           renderDetailCells: (item) => (
             <>
-              <td className="px-6 py-3 font-medium">{item.keyName}</td>
-              <td className="px-6 py-3">{item.rawModel}</td>
-              <td className="px-6 py-3"><Badge variant="neutral" size="sm">{item.provider}</Badge></td>
-              <td className="px-6 py-3 text-right">{fmt(item.requests)}</td>
-              <td className="px-6 py-3 text-right text-text-muted whitespace-nowrap">{fmtTime(item.lastUsed)}</td>
+              <td className="font-medium">{item.keyName}</td>
+              <td>{item.rawModel}</td>
+              <td className={PROVIDER_CELL}><StatusBadge dot={false}>{item.provider}</StatusBadge></td>
+              <td className={NUM_CELL}>{fmt(item.requests)}</td>
+              <td className={SUBTLE_CELL}>{fmtTime(item.lastUsed)}</td>
             </>
           ),
         };
@@ -418,19 +433,19 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
           emptyMessage: "No endpoint usage recorded yet.",
           renderSummaryCells: (group) => (
             <>
-              <td className="px-6 py-3 text-text-muted">—</td>
-              <td className="px-6 py-3 text-text-muted">—</td>
-              <td className="px-6 py-3 text-right">{fmt(group.summary.requests)}</td>
-              <td className="px-6 py-3 text-right text-text-muted whitespace-nowrap">{fmtTime(group.summary.lastUsed)}</td>
+              <td className={MUTED_CELL}>—</td>
+              <td className={MUTED_CELL}>—</td>
+              <td className={NUM_CELL}>{fmt(group.summary.requests)}</td>
+              <td className={SUBTLE_CELL}>{fmtTime(group.summary.lastUsed)}</td>
             </>
           ),
           renderDetailCells: (item) => (
             <>
-              <td className="px-6 py-3 font-medium font-mono text-sm">{item.endpoint}</td>
-              <td className="px-6 py-3">{item.rawModel}</td>
-              <td className="px-6 py-3"><Badge variant="neutral" size="sm">{item.provider}</Badge></td>
-              <td className="px-6 py-3 text-right">{fmt(item.requests)}</td>
-              <td className="px-6 py-3 text-right text-text-muted whitespace-nowrap">{fmtTime(item.lastUsed)}</td>
+              <td className="font-mono">{item.endpoint}</td>
+              <td>{item.rawModel}</td>
+              <td className={PROVIDER_CELL}><StatusBadge dot={false}>{item.provider}</StatusBadge></td>
+              <td className={NUM_CELL}>{fmt(item.requests)}</td>
+              <td className={SUBTLE_CELL}>{fmtTime(item.lastUsed)}</td>
             </>
           ),
         };
@@ -438,43 +453,71 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
     }
   }, [stats, tableView, sortBy, sortOrder]);
 
-  if (!stats && !loading) return <div className="text-text-muted">Failed to load usage statistics.</div>;
-
-  const spinner = (
-    <div className="flex items-center justify-center py-12 text-text-muted">
-      <Icon className="text-[32px] animate-spin">progress_activity</Icon>
-    </div>
-  );
+  if (!stats && !loading) {
+    return (
+      <div className={styles.page}>
+        <section className={`ui-card ${styles.section}`}>
+          <div className={styles.inset}>
+            <Icon className="text-[20px] text-[var(--danger)]">error</Icon>
+            <p>Failed to load usage statistics.</p>
+            <p className={styles.insetHint}>The usage store could not be read. Reload to retry.</p>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex min-w-0 flex-col gap-6">
+    <div className={styles.page}>
       {/* Period selector (hidden when controlled by parent) */}
-      {!hidePeriodSelector && (
-        <div className="flex w-full items-center gap-2 sm:w-auto sm:self-end">
-          <div className="grid flex-1 grid-cols-6 items-center gap-1 rounded-lg border border-border bg-bg-subtle p-1 sm:flex sm:flex-none">
-            {PERIODS.map((p) => (
-              <button
-                key={p.value}
-                onClick={() => setPeriod(p.value)}
-                disabled={fetching}
-                className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${period === p.value ? "bg-primary text-white shadow-sm" : "text-text-muted hover:bg-bg-hover hover:text-text"}`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
+      {(!hidePeriodSelector || fetching) && (
+        <div className={`${styles.controls} w-full sm:w-auto sm:self-end`}>
+          {!hidePeriodSelector && (
+            <SegmentedControl
+              options={PERIODS}
+              value={period}
+              onChange={setPeriod}
+              size="sm"
+              aria-label="Usage period"
+              className="max-w-full"
+            />
+          )}
           {fetching && (
-            <Icon className="text-[16px] text-text-muted animate-spin">progress_activity</Icon>
+            <Icon
+              className="animate-spin text-[16px] text-[var(--text-3)]"
+              aria-label="Refreshing usage statistics"
+            >
+              progress_activity
+            </Icon>
           )}
         </div>
       )}
 
       {/* Overview cards */}
-      {loading ? spinner : <OverviewCards stats={stats} />}
+      {loading ? (
+        <div className="grid-stats min-w-0">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} className={`ui-card ${styles.metric}`}>
+              <Skeleton className="mb-3 h-3 w-24" />
+              <Skeleton className="h-7 w-28" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <section aria-labelledby="usage-overview-heading">
+          <h2 id="usage-overview-heading" className="sr-only">Overview metrics</h2>
+          <OverviewCards stats={stats} />
+        </section>
+      )}
 
       {/* Provider topology + Recent Requests */}
-      {loading ? spinner : (
-        <div className="grid min-w-0 grid-cols-1 items-stretch gap-2 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+      {loading ? (
+        <div className={styles.gridSplit}>
+          <Skeleton className="h-[320px] w-full rounded-[var(--r3)]" />
+          <Skeleton className="h-[320px] w-full rounded-[var(--r3)]" />
+        </div>
+      ) : (
+        <div className={styles.gridSplit}>
           <ProviderTopology
             providers={providers}
             activeRequests={stats.activeRequests || []}
@@ -486,61 +529,64 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
       )}
 
       {/* Token / Cost chart - sync period */}
-      {loading ? spinner : <UsageChart period={period} />}
+      {loading ? <Skeleton className="h-[300px] w-full rounded-[var(--r3)]" /> : <UsageChart period={period} />}
 
       {/* Provider and model breakdown charts */}
       {!loading && (stats.byProvider || stats.byModel) && (
-        <div className="grid min-w-0 grid-cols-1 gap-2 lg:grid-cols-2">
+        <div className={styles.gridHalves}>
           <ProviderBarChart byProvider={stats.byProvider} />
           <TopModelsChart byModel={stats.byModel} />
         </div>
       )}
 
       {/* Table with dropdown selector */}
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <select
-            value={tableView}
-            onChange={(e) => setTableView(e.target.value)}
-            className="w-full rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-main focus:outline-none focus:ring-2 focus:ring-primary/50 sm:w-auto"
-            style={{ colorScheme: 'auto' }}
-          >
-            {TABLE_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-          <div className="grid grid-cols-2 items-center gap-1 rounded-lg border border-border bg-bg-subtle p-1 sm:flex">
-            <button
-              onClick={() => setViewMode("costs")}
-              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${viewMode === "costs" ? "bg-primary text-white shadow-sm" : "text-text-muted hover:text-text hover:bg-bg-hover"}`}
-            >
-              Costs
-            </button>
-            <button
-              onClick={() => setViewMode("tokens")}
-              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${viewMode === "tokens" ? "bg-primary text-white shadow-sm" : "text-text-muted hover:text-text hover:bg-bg-hover"}`}
-            >
-              Tokens
-            </button>
+      <section className={`ui-card ${styles.section}`} aria-labelledby="usage-breakdown-heading">
+        <div className={styles.sectionHeader}>
+          <div className="min-w-0">
+            <h2 id="usage-breakdown-heading" className="ui-eyebrow flex items-center gap-2">
+              <Icon className="text-[16px]">table_rows</Icon> Breakdown
+            </h2>
+            <p className={styles.sectionDescription}>Grouped usage with expandable detail rows</p>
+          </div>
+          <div className={`${styles.controls} w-full sm:w-auto`}>
+            <Select
+              options={TABLE_OPTIONS}
+              value={tableView}
+              onChange={(e) => setTableView(e.target.value)}
+              aria-label="Usage breakdown dimension"
+              className={styles.dimension}
+              selectClassName="py-1.5 text-xs"
+            />
+            <SegmentedControl
+              options={VIEW_MODES}
+              value={viewMode}
+              onChange={setViewMode}
+              size="sm"
+              aria-label="Value mode"
+            />
           </div>
         </div>
-        {loading ? spinner : activeTableConfig && (
-          <UsageTable
-            title=""
-            columns={activeTableConfig.columns}
-            groupedData={activeTableConfig.groupedData}
-            tableType={tableView}
-            sortBy={sortBy}
-            sortOrder={sortOrder}
-            onToggleSort={toggleSort}
-            viewMode={viewMode}
-            storageKey={activeTableConfig.storageKey}
-            renderSummaryCells={activeTableConfig.renderSummaryCells}
-            renderDetailCells={activeTableConfig.renderDetailCells}
-            emptyMessage={activeTableConfig.emptyMessage}
-          />
+        {loading ? (
+          <Skeleton className="h-48 w-full" />
+        ) : (
+          activeTableConfig && (
+            <UsageTable
+              title=""
+              columns={activeTableConfig.columns}
+              groupedData={activeTableConfig.groupedData}
+              tableType={tableView}
+              sortBy={sortBy}
+              sortOrder={sortOrder}
+              onToggleSort={toggleSort}
+              viewMode={viewMode}
+              storageKey={activeTableConfig.storageKey}
+              renderSummaryCells={activeTableConfig.renderSummaryCells}
+              renderDetailCells={activeTableConfig.renderDetailCells}
+              emptyMessage={activeTableConfig.emptyMessage}
+            />
+          )
         )}
-      </div>
+      </section>
     </div>
   );
 }

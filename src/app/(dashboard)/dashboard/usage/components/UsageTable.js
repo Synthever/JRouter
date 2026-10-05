@@ -3,8 +3,8 @@ import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect, useCallback, useMemo, Fragment } from "react";
 import PropTypes from "prop-types";
-import Card from "@/shared/components/Card";
 import Badge from "@/shared/components/Badge";
+import styles from "../usage.module.css";
 
 const fmt = (n) => new Intl.NumberFormat().format(n || 0);
 const fmtCost = (n) => `$${(n || 0).toFixed(2)}`;
@@ -19,8 +19,8 @@ function fmtTime(iso) {
 }
 
 function SortIcon({ field, currentSort, currentOrder }) {
-  if (currentSort !== field) return <span className="ml-1 opacity-20">↕</span>;
-  return <span className="ml-1">{currentOrder === "asc" ? "↑" : "↓"}</span>;
+  if (currentSort !== field) return <span className="ml-1 opacity-30" aria-hidden="true">↕</span>;
+  return <span className="ml-1" aria-hidden="true">{currentOrder === "asc" ? "↑" : "↓"}</span>;
 }
 
 SortIcon.propTypes = {
@@ -30,22 +30,22 @@ SortIcon.propTypes = {
 };
 
 /**
- * Render 3 token or cost cells based on viewMode
+ * Render 4 token or cost cells based on viewMode
  */
 function ValueCells({ item, viewMode, isSummary = false }) {
   if (viewMode === "tokens") {
     return (
       <>
-        <td className="px-6 py-3 text-right text-text-muted">
+        <td className={`${styles.num} ${styles.muted}`}>
           {isSummary && item.promptTokens === undefined ? "—" : fmt(item.promptTokens)}
         </td>
-        <td className="px-6 py-3 text-right text-text-muted">
+        <td className={`${styles.num} ${styles.muted}`}>
           {item.cachedTokens ? fmt(item.cachedTokens) : "—"}
         </td>
-        <td className="px-6 py-3 text-right text-text-muted">
+        <td className={`${styles.num} ${styles.muted}`}>
           {isSummary && item.completionTokens === undefined ? "—" : fmt(item.completionTokens)}
         </td>
-        <td className="px-6 py-3 text-right font-medium">
+        <td className={`${styles.num} ${styles.total}`}>
           {fmt(item.totalTokens)}
         </td>
       </>
@@ -53,16 +53,16 @@ function ValueCells({ item, viewMode, isSummary = false }) {
   }
   return (
     <>
-      <td className="px-6 py-3 text-right text-text-muted">
+      <td className={`${styles.num} ${styles.muted}`}>
         {isSummary && item.inputCost === undefined ? "—" : fmtCost(item.inputCost)}
       </td>
-      <td className="px-6 py-3 text-right text-text-muted">
+      <td className={`${styles.num} ${styles.muted}`}>
         {item.cachedCost ? fmtCost(item.cachedCost) : "—"}
       </td>
-      <td className="px-6 py-3 text-right text-text-muted">
+      <td className={`${styles.num} ${styles.muted}`}>
         {isSummary && item.outputCost === undefined ? "—" : fmtCost(item.outputCost)}
       </td>
-      <td className="px-6 py-3 text-right font-medium text-warning">
+      <td className={`${styles.num} ${styles.total}`}>
         {fmtCost(item.totalCost || item.cost)}
       </td>
     </>
@@ -79,7 +79,7 @@ ValueCells.propTypes = {
  * Reusable sortable usage table with expandable group rows.
  *
  * @param {object} props
- * @param {string} props.title - Table title
+ * @param {string} props.title - Optional table title
  * @param {Array} props.columns - Column definitions [{field, label}]
  * @param {Array} props.groupedData - Grouped data from groupDataByKey
  * @param {string} props.tableType - Table type key for sort URL params
@@ -139,35 +139,39 @@ export default function UsageTable({
   const valueColumns = useMemo(() => {
     if (viewMode === "tokens") {
       return [
-        { field: "promptTokens", label: "Input Tokens" },
+        { field: "promptTokens", label: "Input" },
         { field: "cachedTokens", label: "Cached" },
-        { field: "completionTokens", label: "Output Tokens" },
-        { field: "totalTokens", label: "Total Tokens" },
+        { field: "completionTokens", label: "Output" },
+        { field: "totalTokens", label: "Total" },
       ];
     }
     return [
-      { field: "promptTokens", label: "Input Cost" },
-      { field: "cachedCost", label: "Cached Cost" },
-      { field: "completionTokens", label: "Output Cost" },
-      { field: "cost", label: "Total Cost" },
+      { field: "promptTokens", label: "Input" },
+      { field: "cachedCost", label: "Cached" },
+      { field: "completionTokens", label: "Output" },
+      { field: "cost", label: "Total" },
     ];
   }, [viewMode]);
 
   const totalColSpan = columns.length + valueColumns.length;
 
   return (
-    <Card className="overflow-hidden">
-      <div className="p-4 border-b border-border bg-bg-subtle/50">
-        <h3 className="font-semibold">{title}</h3>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left">
-          <thead className="bg-bg-subtle/30 text-text-muted uppercase text-xs">
+    <div className="min-w-0">
+      {title ? (
+        <div className={styles.sectionHeader}>
+          <h3 className="ui-eyebrow">{title}</h3>
+        </div>
+      ) : null}
+      <div className={styles.tableWrap}>
+        <table className={styles.table}>
+          <thead>
             <tr>
               {columns.map((col) => (
                 <th
                   key={col.field}
-                  className={`px-6 py-3 cursor-pointer hover:bg-bg-subtle/50 ${col.align === "right" ? "text-right" : ""}`}
+                  scope="col"
+                  aria-sort={sortBy === col.field ? (sortOrder === "asc" ? "ascending" : "descending") : "none"}
+                  className={`${styles.sortable} ${col.align === "right" ? styles.num : ""}`}
                   onClick={() => onToggleSort(tableType, col.field)}
                 >
                   {col.label}{" "}
@@ -177,7 +181,9 @@ export default function UsageTable({
               {valueColumns.map((col) => (
                 <th
                   key={col.field}
-                  className="px-6 py-3 text-right cursor-pointer hover:bg-bg-subtle/50"
+                  scope="col"
+                  aria-sort={sortBy === col.field ? (sortOrder === "asc" ? "ascending" : "descending") : "none"}
+                  className={`${styles.num} ${styles.sortable}`}
                   onClick={() => onToggleSort(tableType, col.field)}
                 >
                   {col.label}{" "}
@@ -186,42 +192,45 @@ export default function UsageTable({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
-            {groupedData.map((group) => (
-              <Fragment key={group.groupKey}>
-                {/* Group summary row */}
-                <tr
-                  className="group-summary cursor-pointer hover:bg-bg-subtle/50 transition-colors"
-                  onClick={() => toggleGroup(group.groupKey)}
-                >
-                  <td className="px-6 py-3">
-                    <div className="flex items-center gap-2">
-                      <Icon className={`text-[18px] text-text-muted transition-transform ${expanded.has(group.groupKey) ? "rotate-90" : ""}`}>
-                        chevron_right
-                      </Icon>
-                      <span className={`font-medium transition-colors ${group.summary.pending > 0 ? "text-primary" : ""}`}>
-                        {group.groupKey}
-                      </span>
-                    </div>
-                  </td>
-                  {renderSummaryCells(group)}
-                  <ValueCells item={group.summary} viewMode={viewMode} isSummary />
-                </tr>
-                {/* Detail rows */}
-                {expanded.has(group.groupKey) && group.items.map((item) => (
+          <tbody>
+            {groupedData.map((group) => {
+              const isOpen = expanded.has(group.groupKey);
+              return (
+                <Fragment key={group.groupKey}>
+                  {/* Group summary row */}
                   <tr
-                    key={`detail-${item.key}`}
-                    className="group-detail hover:bg-bg-subtle/20 transition-colors"
+                    className="group-summary"
+                    aria-expanded={isOpen}
+                    onClick={() => toggleGroup(group.groupKey)}
                   >
-                    {renderDetailCells(item)}
-                    <ValueCells item={item} viewMode={viewMode} />
+                    <td>
+                      <div className={styles.panelRow}>
+                        <Icon
+                          className={`text-[16px] text-[var(--text-2)] transition-transform ${isOpen ? "rotate-90" : ""}`}
+                        >
+                          chevron_right
+                        </Icon>
+                        <span className={`${styles.total} ${group.summary.pending > 0 ? styles.pending : ""}`}>
+                          {group.groupKey}
+                        </span>
+                      </div>
+                    </td>
+                    {renderSummaryCells(group)}
+                    <ValueCells item={group.summary} viewMode={viewMode} isSummary />
                   </tr>
-                ))}
-              </Fragment>
-            ))}
+                  {/* Detail rows */}
+                  {isOpen && group.items.map((item) => (
+                    <tr key={`detail-${item.key}`} className="group-detail">
+                      {renderDetailCells(item)}
+                      <ValueCells item={item} viewMode={viewMode} />
+                    </tr>
+                  ))}
+                </Fragment>
+              );
+            })}
             {groupedData.length === 0 && (
               <tr>
-                <td colSpan={totalColSpan} className="px-6 py-8 text-center text-text-muted">
+                <td colSpan={totalColSpan} className={styles.empty}>
                   {emptyMessage}
                 </td>
               </tr>
@@ -229,12 +238,12 @@ export default function UsageTable({
           </tbody>
         </table>
       </div>
-    </Card>
+    </div>
   );
 }
 
 UsageTable.propTypes = {
-  title: PropTypes.string.isRequired,
+  title: PropTypes.string,
   columns: PropTypes.arrayOf(PropTypes.shape({
     field: PropTypes.string.isRequired,
     label: PropTypes.string.isRequired,

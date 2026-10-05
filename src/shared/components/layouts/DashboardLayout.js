@@ -162,7 +162,7 @@ export default function DashboardLayout({ children }) {
           onMenuClick={handleToggleSidebar}
           isSidebarCollapsed={desktopSidebarCollapsed}
         />
-        <div className={`flex-1 overflow-y-auto custom-scrollbar ${pathname === "/dashboard" || pathname === "/dashboard/endpoint" || pathname === "/dashboard/providers" || pathname === "/dashboard/combos" ? "dashboard-grid-bg" : ""} ${pathname === "/dashboard/basic-chat" ? "" : "p-6 lg:p-8"} ${pathname === "/dashboard/basic-chat" ? "flex flex-col overflow-hidden" : ""}`}>
+        <div className={`flex-1 overflow-y-auto custom-scrollbar ${pathname === "/dashboard" || pathname === "/dashboard/endpoint" || pathname === "/dashboard/providers" || pathname === "/dashboard/combos" || pathname === "/dashboard/usage" ? "dashboard-grid-bg" : ""} ${pathname === "/dashboard/basic-chat" ? "" : "p-6 lg:p-8"} ${pathname === "/dashboard/basic-chat" ? "flex flex-col overflow-hidden" : ""}`}>
           <div className={`${pathname === "/dashboard/basic-chat" ? "flex-1 w-full h-full flex flex-col" : "page"}`}>{children}</div>
         </div>
       </main>

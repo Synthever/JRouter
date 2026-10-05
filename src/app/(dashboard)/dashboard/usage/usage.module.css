@@ -1,0 +1,418 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+  padding-bottom: 40px;
+  color: var(--text);
+}
+
+.header,
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.description,
+.sectionDescription {
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.sectionDescription {
+  margin-top: 8px;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.section {
+  min-width: 0;
+  padding: 20px;
+}
+
+/* Compact sizing for the shared Select used as the breakdown dimension control. */
+.dimension {
+  width: 200px;
+  max-width: 100%;
+}
+
+.dimension select {
+  min-height: 32px;
+  padding: 6px 32px 6px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r1);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+}
+
+/* Matches the shared Input control so the provider filter sits flush with its siblings. */
+.filterSelect {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 8px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r1);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.filterSelect:focus-visible {
+  outline: 2px solid var(--text-2);
+  outline-offset: 2px;
+}
+
+@media (max-width: 639px) {
+  .filterSelect {
+    font-size: 16px;
+  }
+}
+
+.sectionHeader {
+  margin-bottom: 16px;
+}
+
+.gridMetrics,
+.gridSplit,
+.gridHalves {
+  min-width: 0;
+}
+
+.gridSplit > *,
+.gridHalves > * {
+  min-width: 0;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px;
+}
+
+.metricHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.metricValue {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metricMeta {
+  margin-top: 4px;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.tableWrap {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 12px;
+}
+
+.table th {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table tbody tr:hover {
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+}
+
+.table tbody tr[aria-expanded] {
+  cursor: pointer;
+}
+
+.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sortable:hover {
+  color: var(--text);
+}
+
+.num {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.center {
+  text-align: center;
+}
+
+.muted {
+  color: var(--text-2);
+}
+
+.subtle {
+  color: var(--text-3);
+}
+
+.pending {
+  color: var(--pos);
+}
+
+.total {
+  font-weight: 500;
+}
+
+.empty {
+  padding: 32px 12px;
+  color: var(--text-2);
+  font-size: 12px;
+  text-align: center;
+}
+
+.inset {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 24px;
+  border: 1px dashed var(--line);
+  border-radius: var(--r2);
+  background: var(--surface-inset);
+  color: var(--text-2);
+  font-size: 12px;
+  text-align: center;
+}
+
+.insetHint {
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+.insetCode {
+  padding: 2px 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--r1);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-family: var(--font-mono);
+}
+
+.panelRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.chartArea {
+  width: 100%;
+  height: 220px;
+}
+
+/* React Flow canvas matches the inset surface used by the Dashboard's empty states. */
+.topology {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+  background: var(--surface-inset);
+}
+
+.topology :global(.react-flow__attribution) {
+  display: none;
+}
+
+.codeBlock {
+  max-width: 100%;
+  max-height: 300px;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+  background: var(--surface-inset);
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.collapsible {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+}
+
+.collapsibleToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color 150ms;
+}
+
+.collapsibleToggle:hover {
+  background: var(--surface-hover);
+}
+
+.collapsibleLabel {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.collapsibleChevron {
+  color: var(--text-2);
+  transition: transform 150ms;
+}
+
+.collapsibleChevronOpen {
+  transform: rotate(90deg);
+}
+
+.collapsibleBody {
+  padding: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.fieldLabel {
+  margin-bottom: 6px;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  font-size: 12px;
+}
+
+.detailGrid dt {
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.detailGrid dd {
+  margin: 2px 0 0;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.page :is(button, a, input, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--text-2);
+  outline-offset: 2px;
+}
+
+@media (min-width: 640px) {
+  .detailGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 860px) {
+  .gridHalves {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .gridSplit {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+    gap: 16px;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 639px) {
+  /* Stack control rows full-width so segmented controls scroll instead of clipping. */
+  .controls {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .controls > * {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+
+  .header > div:first-child,
+  .sectionHeader > div:first-child {
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page *,
+  .page *::before {
+    animation: none;
+    transition: none;
+  }
+
+  .collapsibleChevron {
+    transition: none;
+  }
+}

@@ -5,16 +5,16 @@ const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "
 const endpointPath = "src/app/(dashboard)/dashboard/endpoint";
 
 describe("endpoint dashboard theme", () => {
-  it("shares the overview background with endpoint, providers, and combos only", () => {
+  it("shares the overview background with endpoint, providers, combos, and usage only", () => {
     const layout = read("src/shared/components/layouts/DashboardLayout.js");
     const expression = layout.match(/\$\{([^{}]*"dashboard-grid-bg"[^{}]*)\}/)?.[1];
     expect(expression).toBeDefined();
     const backgroundClass = new Function("pathname", `return (${expression});`);
 
-    for (const pathname of ["/dashboard", "/dashboard/endpoint", "/dashboard/providers", "/dashboard/combos"]) {
+    for (const pathname of ["/dashboard", "/dashboard/endpoint", "/dashboard/providers", "/dashboard/combos", "/dashboard/usage"]) {
       expect(backgroundClass(pathname)).toBe("dashboard-grid-bg");
     }
-    for (const pathname of ["/dashboard/providers/kiro", "/dashboard/combos/detail", "/dashboard/usage", "/dashboard/basic-chat"]) {
+    for (const pathname of ["/dashboard/providers/kiro", "/dashboard/combos/detail", "/dashboard/usage/detail", "/dashboard/basic-chat"]) {
       expect(backgroundClass(pathname)).toBe("");
     }
   });

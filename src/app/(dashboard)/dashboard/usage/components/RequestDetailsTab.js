@@ -2,12 +2,14 @@
 import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect, useCallback } from "react";
-import Card from "@/shared/components/Card";
 import Button from "@/shared/components/Button";
 import Drawer from "@/shared/components/Drawer";
 import Pagination from "@/shared/components/Pagination";
+import Input from "@/shared/components/Input";
+import StatusBadge from "@/shared/components/StatusBadge";
 import { cn } from "@/shared/utils/cn";
 import { AI_PROVIDERS, getProviderByAlias } from "@/shared/constants/providers";
+import styles from "../usage.module.css";
 
 let providerNameCache = null;
 let providerNodesCache = null;
@@ -54,31 +56,31 @@ function getProviderName(providerId, cache) {
 
 function CollapsibleSection({ title, children, defaultOpen = false, icon = null }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
-  
+
   return (
-    <div className="border border-black/5 dark:border-white/5 rounded-lg overflow-hidden">
-      <button 
+    <div className={styles.collapsible}>
+      <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-3 bg-black/[0.02] dark:bg-white/[0.02] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors"
+        aria-expanded={isOpen}
+        className={styles.collapsibleToggle}
       >
-        <div className="flex items-center gap-2">
-          {icon && <Icon className="text-[18px] text-text-muted">{icon}</Icon>}
-          <span className="font-semibold text-sm text-text-main">{title}</span>
-        </div>
-        <Icon className={cn(
-          "text-[20px] text-text-muted transition-transform duration-200",
-          isOpen ? "rotate-90" : ""
-        )}>
+        <span className="flex min-w-0 items-center gap-2">
+          {icon && <Icon className="shrink-0 text-[16px] text-[var(--text-2)]">{icon}</Icon>}
+          <span className={`${styles.collapsibleLabel} truncate`}>{title}</span>
+        </span>
+        <Icon
+          className={cn(
+            styles.collapsibleChevron,
+            "text-[18px]",
+            isOpen && styles.collapsibleChevronOpen
+          )}
+        >
           chevron_right
         </Icon>
       </button>
-      
-      {isOpen && (
-        <div className="p-4 border-t border-black/5 dark:border-white/5">
-          {children}
-        </div>
-      )}
+
+      {isOpen && <div className={styles.collapsibleBody}>{children}</div>}
     </div>
   );
 }
@@ -180,22 +182,37 @@ export default function RequestDetailsTab() {
     setFilters({ provider: "", startDate: "", endDate: "" });
   };
 
+  const hasFilters = !!(filters.provider || filters.startDate || filters.endDate);
+
   return (
-    <div className="flex min-w-0 flex-col gap-6">
-      <Card padding="md">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="flex min-w-0 flex-col gap-2">
-            <label htmlFor="provider-filter" className="text-sm font-medium text-text-main">Provider</label>
+    <div className={styles.page}>
+      <section className={`ui-card ${styles.section}`} aria-labelledby="usage-filters-heading">
+        <div className={styles.sectionHeader}>
+          <h2 id="usage-filters-heading" className="ui-eyebrow flex items-center gap-2">
+            <Icon className="text-[16px]">filter_list</Icon> Filters
+          </h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClearFilters}
+            disabled={!hasFilters}
+          >
+            Clear Filters
+          </Button>
+        </div>
+        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <label
+              htmlFor="provider-filter"
+              className="font-mono text-xs uppercase tracking-wider text-[var(--text-2)]"
+            >
+              Provider
+            </label>
             <select
               id="provider-filter"
               value={filters.provider}
               onChange={(e) => setFilters({ ...filters, provider: e.target.value })}
-              className={cn(
-                "h-9 px-3 rounded-lg border border-black/10 dark:border-white/10 bg-surface",
-                "text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-primary/20",
-                "w-full min-w-0 cursor-pointer"
-              )}
-              style={{ colorScheme: 'auto' }}
+              className={styles.filterSelect}
             >
               <option value="">All Providers</option>
               {providers.map((provider) => (
@@ -205,121 +222,97 @@ export default function RequestDetailsTab() {
               ))}
             </select>
           </div>
-          
-          <div className="flex min-w-0 flex-col gap-2">
-            <label htmlFor="start-date-filter" className="text-sm font-medium text-text-main">Start Date</label>
-            <input
-              id="start-date-filter"
-              type="datetime-local"
-              value={filters.startDate}
-              onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-              className={cn(
-                "h-9 px-3 rounded-lg border border-black/10 dark:border-white/10 bg-surface",
-                "w-full min-w-0 text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-primary/20"
-              )}
-            />
-          </div>
 
-          <div className="flex min-w-0 flex-col gap-2">
-            <label htmlFor="end-date-filter" className="text-sm font-medium text-text-main">End Date</label>
-            <input
-              id="end-date-filter"
-              type="datetime-local"
-              value={filters.endDate}
-              onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-              className={cn(
-                "h-9 px-3 rounded-lg border border-black/10 dark:border-white/10 bg-surface",
-                "w-full min-w-0 text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-primary/20"
-              )}
-            />
-          </div>
-          
-          <div className="flex min-w-0 flex-col gap-2 sm:col-span-2 lg:col-span-1">
-            <span className="hidden text-sm font-medium text-text-main opacity-0 lg:block" aria-hidden="true">Clear</span>
-            <Button 
-              variant="ghost" 
-              onClick={handleClearFilters}
-              disabled={!filters.provider && !filters.startDate && !filters.endDate}
-              className="w-full"
-            >
-              Clear Filters
-            </Button>
+          <Input
+            id="start-date-filter"
+            type="datetime-local"
+            label="Start Date"
+            value={filters.startDate}
+            onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+          />
+
+          <Input
+            id="end-date-filter"
+            type="datetime-local"
+            label="End Date"
+            value={filters.endDate}
+            onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+          />
+        </div>
+      </section>
+
+      <section className={`ui-card ${styles.section}`} aria-labelledby="usage-history-heading">
+        <div className={styles.sectionHeader}>
+          <div className="min-w-0">
+            <h2 id="usage-history-heading" className="ui-eyebrow flex items-center gap-2">
+              <Icon className="text-[16px]">receipt_long</Icon> Request History
+            </h2>
+            <p className={styles.sectionDescription}>
+              {pagination.totalItems
+                ? `${pagination.totalItems.toLocaleString()} recorded requests`
+                : "Per-request tokens, latency and payloads"}
+            </p>
           </div>
         </div>
-      </Card>
 
-      <Card padding="none">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[880px]">
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
             <thead>
-              <tr className="border-b border-black/5 dark:border-white/5">
-                <th className="text-left p-4 text-sm font-semibold text-text-main">Timestamp</th>
-                <th className="text-left p-4 text-sm font-semibold text-text-main">Model</th>
-                <th className="text-left p-4 text-sm font-semibold text-text-main">Provider</th>
-                <th className="text-right p-4 text-sm font-semibold text-text-main">Input Tokens</th>
-                <th className="text-right p-4 text-sm font-semibold text-text-main">Cached</th>
-                <th className="text-right p-4 text-sm font-semibold text-text-main">Cache Creation</th>
-                <th className="text-right p-4 text-sm font-semibold text-text-main">Output Tokens</th>
-                <th className="text-left p-4 text-sm font-semibold text-text-main">Latency</th>
-                <th className="text-center p-4 text-sm font-semibold text-text-main">Action</th>
+              <tr>
+                <th scope="col">Timestamp</th>
+                <th scope="col">Model</th>
+                <th scope="col">Provider</th>
+                <th scope="col" className={styles.num}>Input</th>
+                <th scope="col" className={styles.num}>Cached</th>
+                <th scope="col" className={styles.num}>Cache Write</th>
+                <th scope="col" className={styles.num}>Output</th>
+                <th scope="col">Latency</th>
+                <th scope="col" className={styles.center}>Action</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="p-8 text-center text-text-muted">
-                    <div className="flex items-center justify-center gap-2">
-                      <Icon className="animate-spin text-[20px]">progress_activity</Icon>
-                      Loading...
-                    </div>
-                  </td>
+                  <td colSpan="9" className={styles.empty}>Loading request details…</td>
                 </tr>
               ) : details.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="p-8 text-center text-text-muted">
-                    No request details found
-                  </td>
+                  <td colSpan="9" className={styles.empty}>No request details found</td>
                 </tr>
               ) : (
                 details.map((detail, index) => (
-                  <tr
-                    key={`${detail.id}-${index}`}
-                    className="border-b border-black/5 dark:border-white/5 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
-                  >
-                    <td className="whitespace-nowrap p-4 text-sm text-text-main">
+                  <tr key={`${detail.id}-${index}`}>
+                    <td className="whitespace-nowrap text-[var(--text-2)]">
                       {new Date(detail.timestamp).toLocaleString()}
                     </td>
-                    <td className="max-w-[260px] truncate p-4 font-mono text-sm text-text-main">
-                      {detail.model}
+                    <td className="font-mono" title={detail.model}>
+                      <span className="block max-w-[260px] truncate">{detail.model}</span>
                     </td>
-                    <td className="max-w-[180px] truncate p-4 text-sm text-text-main">
-                       <span className="font-medium">
-                         {getProviderName(detail.provider, providerNameCache)}
-                       </span>
-                     </td>
-                    <td className="p-4 text-sm text-text-main text-right font-mono">
-                      {getInputTokens(detail.tokens).toLocaleString()}
+                    <td className="max-w-[180px] truncate">
+                      {getProviderName(detail.provider, providerNameCache)}
                     </td>
-                    <td className="p-4 text-sm text-text-main text-right font-mono">
+                    <td className={styles.num}>{getInputTokens(detail.tokens).toLocaleString()}</td>
+                    <td className={`${styles.num} ${styles.muted}`}>
                       {getCachedTokens(detail.tokens) > 0 ? getCachedTokens(detail.tokens).toLocaleString() : "—"}
                     </td>
-                    <td className="p-4 text-sm text-text-main text-right font-mono">
+                    <td className={`${styles.num} ${styles.muted}`}>
                       {getCacheCreationTokens(detail.tokens) > 0 ? getCacheCreationTokens(detail.tokens).toLocaleString() : "—"}
                     </td>
-                    <td className="p-4 text-sm text-text-main text-right font-mono">
+                    <td className={styles.num}>
                       {detail.tokens?.completion_tokens?.toLocaleString() || 0}
                     </td>
-                    <td className="p-4 text-sm text-text-muted">
-                      <div className="flex flex-col gap-0.5">
-                        <div>TTFT: <span className="font-mono">{detail.latency?.ttft || 0}ms</span></div>
-                        <div>Total: <span className="font-mono">{detail.latency?.total || 0}ms</span></div>
+                    <td className={styles.muted}>
+                      <div className="flex flex-col gap-0.5 font-mono text-[11px]">
+                        <div>TTFT: {detail.latency?.ttft || 0}ms</div>
+                        <div>Total: {detail.latency?.total || 0}ms</div>
                       </div>
                     </td>
-                    <td className="p-4 text-center">
+                    <td className={styles.center}>
                       <Button
-                        variant="outline"
+                        variant="secondary"
                         size="sm"
                         onClick={() => handleViewDetail(detail)}
+                        aria-label={`Detail for ${detail.model}`}
                       >
                         Detail
                       </Button>
@@ -332,17 +325,15 @@ export default function RequestDetailsTab() {
         </div>
 
         {!loading && details.length > 0 && (
-          <div className="border-t border-black/5 dark:border-white/5">
-            <Pagination
-              currentPage={pagination.page}
-              pageSize={pagination.pageSize}
-              totalItems={pagination.totalItems}
-              onPageChange={handlePageChange}
-              onPageSizeChange={handlePageSizeChange}
-            />
-          </div>
+          <Pagination
+            currentPage={pagination.page}
+            pageSize={pagination.pageSize}
+            totalItems={pagination.totalItems}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         )}
-      </Card>
+      </section>
 
       <Drawer
         isOpen={isDrawerOpen}
@@ -351,104 +342,99 @@ export default function RequestDetailsTab() {
         width="lg"
       >
         {selectedDetail && (
-          <div className="space-y-6">
-            <div className="grid min-w-0 grid-cols-1 gap-4 text-sm sm:grid-cols-2">
+          <div className="flex flex-col gap-5">
+            <dl className={styles.detailGrid}>
               <div>
-                <span className="text-text-muted">ID:</span>{" "}
-                <span className="break-all font-mono text-text-main">{selectedDetail.id}</span>
+                <dt>ID</dt>
+                <dd className="font-mono">{selectedDetail.id}</dd>
               </div>
               <div>
-                <span className="text-text-muted">Timestamp:</span>{" "}
-                <span className="text-text-main">{new Date(selectedDetail.timestamp).toLocaleString()}</span>
+                <dt>Timestamp</dt>
+                <dd>{new Date(selectedDetail.timestamp).toLocaleString()}</dd>
               </div>
               <div>
-                 <span className="text-text-muted">Provider:</span>{" "}
-                 <span className="text-text-main font-medium">{getProviderName(selectedDetail.provider, providerNameCache)}</span>
-               </div>
-              <div>
-                <span className="text-text-muted">Model:</span>{" "}
-                <span className="text-text-main font-mono">{selectedDetail.model}</span>
+                <dt>Provider</dt>
+                <dd>{getProviderName(selectedDetail.provider, providerNameCache)}</dd>
               </div>
               <div>
-                <span className="text-text-muted">Status:</span>{" "}
-                <span className={cn(
-                  "font-medium",
-                  selectedDetail.status === "success" ? "text-green-600" : "text-red-600"
-                )}>
-                  {selectedDetail.status}
-                </span>
+                <dt>Model</dt>
+                <dd className="font-mono">{selectedDetail.model}</dd>
               </div>
               <div>
-                <span className="text-text-muted">Latency:</span>{" "}
-                <span className="text-text-main font-mono">
-                  TTFT {selectedDetail.latency?.ttft || 0}ms / Total {selectedDetail.latency?.total || 0}ms
-                </span>
+                <dt>Status</dt>
+                <dd>
+                  <StatusBadge variant={selectedDetail.status === "success" ? "success" : "error"}>
+                    {selectedDetail.status}
+                  </StatusBadge>
+                </dd>
               </div>
               <div>
-                <span className="text-text-muted">Input Tokens:</span>{" "}
-                <span className="text-text-main font-mono">
-                  {getInputTokens(selectedDetail.tokens).toLocaleString()}
-                </span>
+                <dt>Latency</dt>
+                <dd className="font-mono">
+                  TTFT {selectedDetail.latency?.ttft || 0}ms · Total {selectedDetail.latency?.total || 0}ms
+                </dd>
+              </div>
+              <div>
+                <dt>Input Tokens</dt>
+                <dd className="font-mono u-tnum">{getInputTokens(selectedDetail.tokens).toLocaleString()}</dd>
+              </div>
+              <div>
+                <dt>Output Tokens</dt>
+                <dd className="font-mono u-tnum">
+                  {selectedDetail.tokens?.completion_tokens?.toLocaleString() || 0}
+                </dd>
               </div>
               {getCachedTokens(selectedDetail.tokens) > 0 && (
                 <div>
-                  <span className="text-text-muted">Cached Tokens:</span>{" "}
-                  <span className="text-text-main font-mono">
+                  <dt>Cached Tokens</dt>
+                  <dd className="font-mono u-tnum">
                     {getCachedTokens(selectedDetail.tokens).toLocaleString()}
-                  </span>
+                  </dd>
                 </div>
               )}
               {getCacheCreationTokens(selectedDetail.tokens) > 0 && (
                 <div>
-                  <span className="text-text-muted">Cache Creation:</span>{" "}
-                  <span className="text-text-main font-mono">
+                  <dt>Cache Creation</dt>
+                  <dd className="font-mono u-tnum">
                     {getCacheCreationTokens(selectedDetail.tokens).toLocaleString()}
-                  </span>
+                  </dd>
                 </div>
               )}
-              <div>
-                <span className="text-text-muted">Output Tokens:</span>{" "}
-                <span className="text-text-main font-mono">
-                  {selectedDetail.tokens?.completion_tokens?.toLocaleString() || 0}
-                </span>
-              </div>
-            </div>
+            </dl>
 
             {selectedDetail.pxpipe && (
-              <div className="rounded-lg border border-black/5 dark:border-white/5 p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Icon className="text-[18px] text-text-muted">image</Icon>
-                  <span className="font-semibold text-sm text-text-main">PXPIPE</span>
-                  <span className={cn(
-                    "text-xs px-2 py-0.5 rounded",
-                    selectedDetail.pxpipe.applied
-                      ? "bg-green-500/15 text-green-600"
-                      : "bg-amber-500/15 text-amber-600"
-                  )}>
+              <div className={`ui-card ${styles.section}`}>
+                <div className={styles.sectionHeader}>
+                  <h3 className="ui-eyebrow flex items-center gap-2">
+                    <Icon className="text-[16px]">image</Icon> PXPIPE
+                  </h3>
+                  <StatusBadge variant={selectedDetail.pxpipe.applied ? "success" : "warning"}>
                     {selectedDetail.pxpipe.applied ? "Activated" : "Skipped"}
-                  </span>
+                  </StatusBadge>
                 </div>
                 {selectedDetail.pxpipe.applied ? (
-                  <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+                  <div className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-4">
                     <div>
-                      <span className="text-text-muted block text-xs">Original (est.)</span>
-                      <span className="font-mono">{(selectedDetail.pxpipe.tokensBeforeEst || 0).toLocaleString()} tokens</span>
+                      <span className={`${styles.fieldLabel} block`}>Original (est.)</span>
+                      <span className="font-mono u-tnum">{(selectedDetail.pxpipe.tokensBeforeEst || 0).toLocaleString()}</span>
                     </div>
                     <div>
-                      <span className="text-text-muted block text-xs">Compressed (est.)</span>
-                      <span className="font-mono">{(selectedDetail.pxpipe.tokensAfterEst || 0).toLocaleString()} tokens</span>
+                      <span className={`${styles.fieldLabel} block`}>Compressed (est.)</span>
+                      <span className="font-mono u-tnum">{(selectedDetail.pxpipe.tokensAfterEst || 0).toLocaleString()}</span>
                     </div>
                     <div>
-                      <span className="text-text-muted block text-xs">Saved</span>
-                      <span className="font-mono text-green-600">{selectedDetail.pxpipe.savedPct || 0}%</span>
+                      <span className={`${styles.fieldLabel} block`}>Saved</span>
+                      <span className="font-mono u-tnum text-[var(--pos)]">{selectedDetail.pxpipe.savedPct || 0}%</span>
                     </div>
                     <div>
-                      <span className="text-text-muted block text-xs">Images</span>
-                      <span className="font-mono">{selectedDetail.pxpipe.imageCount || 0} ({selectedDetail.pxpipe.durationMs || 0}ms)</span>
+                      <span className={`${styles.fieldLabel} block`}>Images</span>
+                      <span className="font-mono u-tnum">
+                        {selectedDetail.pxpipe.imageCount || 0} ({selectedDetail.pxpipe.durationMs || 0}ms)
+                      </span>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-text-muted">
+                  <p className={styles.description}>
                     Reason: <span className="font-mono">{selectedDetail.pxpipe.reason}</span>
                     {selectedDetail.pxpipe.detail ? ` — ${selectedDetail.pxpipe.detail}` : ""}
                   </p>
@@ -456,16 +442,16 @@ export default function RequestDetailsTab() {
               </div>
             )}
 
-            <div className="space-y-4">
+            <div className="flex flex-col gap-3">
               <CollapsibleSection title="1. Client Request (Input)" defaultOpen={true} icon="input">
-                <pre className="max-h-[300px] max-w-full overflow-auto rounded-lg border border-black/5 bg-black/5 p-3 font-mono text-xs text-text-main dark:border-white/5 dark:bg-white/5 sm:p-4">
+                <pre className={styles.codeBlock}>
                   {JSON.stringify(selectedDetail.request, null, 2)}
                 </pre>
               </CollapsibleSection>
 
               {selectedDetail.providerRequest && (
                 <CollapsibleSection title="2. Provider Request (Translated)" icon="translate">
-                  <pre className="max-h-[300px] max-w-full overflow-auto rounded-lg border border-black/5 bg-black/5 p-3 font-mono text-xs text-text-main dark:border-white/5 dark:bg-white/5 sm:p-4">
+                  <pre className={styles.codeBlock}>
                     {JSON.stringify(selectedDetail.providerRequest, null, 2)}
                   </pre>
                 </CollapsibleSection>
@@ -473,7 +459,7 @@ export default function RequestDetailsTab() {
 
               {selectedDetail.providerResponse && (
                 <CollapsibleSection title="3. Provider Response (Raw)" icon="data_object">
-                  <pre className="max-h-[300px] max-w-full overflow-auto rounded-lg border border-black/5 bg-black/5 p-3 font-mono text-xs text-text-main dark:border-white/5 dark:bg-white/5 sm:p-4">
+                  <pre className={styles.codeBlock}>
                     {typeof selectedDetail.providerResponse === 'object'
                       ? JSON.stringify(selectedDetail.providerResponse, null, 2)
                       : selectedDetail.providerResponse
@@ -481,24 +467,17 @@ export default function RequestDetailsTab() {
                   </pre>
                 </CollapsibleSection>
               )}
-              
+
               <CollapsibleSection title="4. Client Response (Final)" defaultOpen={true} icon="output">
                 {selectedDetail.response?.thinking && (
                   <div className="mb-4">
-                    <h4 className="font-semibold text-text-main mb-2 flex items-center gap-2 text-xs uppercase tracking-wide opacity-70">
-                      <Icon className="text-[16px]">psychology</Icon>
-                      Thinking Process
-                    </h4>
-                    <pre className="max-h-[200px] max-w-full overflow-auto rounded-lg border border-amber-200 bg-amber-50 p-3 font-mono text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100 sm:p-4">
-                      {selectedDetail.response.thinking}
-                    </pre>
+                    <h4 className={styles.fieldLabel}>Thinking Process</h4>
+                    <pre className={styles.codeBlock}>{selectedDetail.response.thinking}</pre>
                   </div>
                 )}
-                
-                <h4 className="font-semibold text-text-main mb-2 text-xs uppercase tracking-wide opacity-70">
-                  Content
-                </h4>
-                <pre className="max-h-[300px] max-w-full overflow-auto rounded-lg border border-black/5 bg-black/5 p-3 font-mono text-xs text-text-main dark:border-white/5 dark:bg-white/5 sm:p-4">
+
+                <h4 className={styles.fieldLabel}>Content</h4>
+                <pre className={styles.codeBlock}>
                   {selectedDetail.response?.content || "[No content]"}
                 </pre>
               </CollapsibleSection>

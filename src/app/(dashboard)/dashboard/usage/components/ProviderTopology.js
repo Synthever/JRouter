@@ -1,4 +1,5 @@
 "use client";
+import Icon from "@/shared/components/Icon";
 
 import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import PropTypes from "prop-types";
@@ -14,6 +15,7 @@ import "@xyflow/react/dist/style.css";
 import { AI_PROVIDERS } from "@/shared/constants/providers";
 import { getProviderIconSrc, markProviderIconMissing } from "@/shared/utils/providerIcon";
 import AppLogo from "@/shared/components/AppLogo";
+import styles from "../usage.module.css";
 
 // Force-stop FE animation if a provider stays active longer than this
 const FE_ACTIVE_TIMEOUT_MS = 60000;
@@ -100,10 +102,10 @@ function RouterNode({ data }) {
   const powering = (data.activeCount || 0) > 0;
   return (
     <div
-      className={`relative z-[1] flex items-center justify-center px-5 py-3 rounded-xl border-2 min-w-[130px] ${
+      className={`relative z-[1] flex items-center justify-center px-5 py-3 rounded-xl border min-w-[130px] ${
         powering
-          ? "topology-router-core border-yellow-300 bg-gradient-to-br from-primary/30 via-yellow-400/20 to-cyan-400/25"
-          : "border-primary bg-primary/5 shadow-md"
+          ? "topology-router-core border-[var(--pos)] bg-[var(--surface-2)]"
+          : "border-[var(--line-2)] bg-[var(--surface-2)]"
       }`}
     >
       <Handle type="source" position={Position.Top} id="top" className="!bg-transparent !border-0 !w-0 !h-0" />
@@ -114,13 +116,13 @@ function RouterNode({ data }) {
       <AppLogo
         size={24}
         alt="JRouter"
-        className={`mr-2 ${powering ? "topology-router-icon" : ""}`}
+        className="mr-2"
       />
-      <span className={`text-sm font-bold ${powering ? "topology-router-label text-yellow-300" : "text-primary"}`}>
+      <span className={`text-sm font-bold ${powering ? "text-[var(--pos)]" : "text-[var(--text)]"}`}>
         JRouter
       </span>
       {data.activeCount > 0 && (
-        <span className="ml-2 px-1.5 py-0.5 rounded-full bg-yellow-400 text-black text-xs font-bold topology-router-badge">
+        <span className="ml-2 px-1.5 py-0.5 rounded-full bg-[var(--pos)] text-[var(--bg)] text-xs font-bold u-tnum">
           {data.activeCount}
         </span>
       )}
@@ -170,13 +172,13 @@ function TopologyEdge({
           <feDisplacementMap in="SourceGraphic" in2="noise" scale="3.5" xChannelSelector="R" yChannelSelector="G" />
         </filter>
       </defs>
-      {/* Outer electric halo */}
+      {/* Outer halo */}
       <path
         d={edgePath}
         fill="none"
-        stroke="#22d3ee"
-        strokeWidth={10}
-        strokeOpacity={0.35}
+        stroke="var(--pos)"
+        strokeWidth={9}
+        strokeOpacity={0.25}
         strokeLinecap="round"
         filter={`url(#${filterId})`}
         className="topology-edge-halo"
@@ -185,28 +187,27 @@ function TopologyEdge({
       <path
         d={edgePath}
         fill="none"
-        stroke="#4ade80"
-        strokeWidth={5}
-        strokeOpacity={0.85}
+        stroke="var(--pos)"
+        strokeWidth={4}
+        strokeOpacity={0.7}
         strokeLinecap="round"
         filter={`url(#${filterId})`}
         className="topology-edge-plasma"
       />
-      {/* Hot white core */}
+      {/* Core */}
       <BaseEdge
         id={id}
         path={edgePath}
-        style={{ stroke: "#f8fafc", strokeWidth: 2.2, opacity: 1 }}
+        style={{ stroke: "var(--text)", strokeWidth: 2, opacity: 1 }}
         className="topology-edge-kame"
       />
       {/* Energy orbs */}
       {Array.from({ length: KAME_PARTICLE_COUNT }, (_, i) => (
         <circle
           key={`${id}-p-${i}`}
-          r={i % 2 === 0 ? 4 : 2.5}
-          fill={i % 3 === 0 ? "#fde047" : i % 3 === 1 ? "#67e8f9" : "#fff"}
-          opacity={0.95}
-          style={{ filter: "drop-shadow(0 0 4px #22d3ee)" }}
+          r={i % 2 === 0 ? 3 : 2}
+          fill="var(--text)"
+          opacity={0.9}
         >
           <animateMotion
             dur={`${0.4 + i * 0.08}s`}
@@ -216,12 +217,12 @@ function TopologyEdge({
           />
         </circle>
       ))}
-      {/* Electric sparks (short-lived blink along path) */}
+      {/* Brief sparks along the path */}
       {Array.from({ length: SPARK_COUNT }, (_, i) => (
         <circle
           key={`${id}-s-${i}`}
-          r={1.8}
-          fill="#e0f2fe"
+          r={1.6}
+          fill="var(--pos)"
           opacity={0}
         >
           <animate
@@ -436,37 +437,50 @@ export default function ProviderTopology({ providers = [], activeRequests = [], 
   }, [nodes.length]);
 
   return (
-    <div ref={containerRef} className="h-[320px] w-full min-w-0 rounded-lg border border-border bg-bg-subtle/30 sm:h-[480px]">
-      {providers.length === 0 ? (
-        <div className="h-full flex items-center justify-center text-text-muted text-sm">
-          No providers connected
+    <section className={`ui-card ${styles.section}`} aria-labelledby="usage-topology-heading">
+      <div className={styles.sectionHeader}>
+        <div className="min-w-0">
+          <h2 id="usage-topology-heading" className="ui-eyebrow flex items-center gap-2">
+            <Icon className="text-[16px]">hub</Icon> Live Routing
+          </h2>
+          <p className={styles.sectionDescription}>
+            Active requests flowing through your connected providers
+          </p>
         </div>
-      ) : (
-        <ReactFlow
-          key={providersKey}
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          fitView
-          fitViewOptions={fitOpts}
-          minZoom={0.1}
-          maxZoom={2}
-          onInit={onInit}
-          proOptions={{ hideAttribution: true }}
-          panOnDrag
-          zoomOnScroll
-          zoomOnPinch
-          zoomOnDoubleClick
-          preventScrolling={false}
-          nodesDraggable={false}
-          nodesConnectable={false}
-          elementsSelectable={false}
-        >
-          <Controls showInteractive={false} className="react-flow-controls-custom" />
-        </ReactFlow>
-      )}
-    </div>
+      </div>
+      <div
+        ref={containerRef}
+        className={`${styles.topology} h-[320px] w-full min-w-0 sm:h-[420px]`}
+      >
+        {providers.length === 0 ? (
+          <div className={styles.inset + " h-full"}>No providers connected</div>
+        ) : (
+          <ReactFlow
+            key={providersKey}
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            fitView
+            fitViewOptions={fitOpts}
+            minZoom={0.1}
+            maxZoom={2}
+            onInit={onInit}
+            proOptions={{ hideAttribution: true }}
+            panOnDrag
+            zoomOnScroll
+            zoomOnPinch
+            zoomOnDoubleClick
+            preventScrolling={false}
+            nodesDraggable={false}
+            nodesConnectable={false}
+            elementsSelectable={false}
+          >
+            <Controls showInteractive={false} className="react-flow-controls-custom" />
+          </ReactFlow>
+        )}
+      </div>
+    </section>
   );
 }
 

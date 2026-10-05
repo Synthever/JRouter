@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useId } from "react";
 import { cn } from "@/shared/utils/cn";
 import Icon from "./Icon";
 
@@ -12,6 +12,8 @@ export default function Drawer({
   width = "md",
   className
 }) {
+  const titleId = useId();
+
   const widths = {
     sm: "w-[400px]",
     md: "w-[500px]",
@@ -49,25 +51,31 @@ export default function Drawer({
       />
 
       {/* Drawer panel */}
-      <div className={cn(
-        "absolute right-0 top-0 h-full bg-surface flex flex-col",
-        "shadow-[var(--shadow-elev)]",
-        "slide-in-right",
-        "border-l border-border-subtle",
-        widths[width] || widths.md,
-        className
-      )}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
+        className={cn(
+          "absolute right-0 top-0 h-full bg-[var(--surface)] flex flex-col",
+          "shadow-[var(--shadow-elev)]",
+          "slide-in-right",
+          "border-l border-[var(--line)]",
+          widths[width] || widths.md,
+          className
+        )}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border-subtle flex-shrink-0">
+        <div className="flex items-center justify-between p-6 border-b border-[var(--line)] flex-shrink-0">
           <div className="flex items-center gap-3">
             {title && (
-              <h2 className="text-lg font-semibold text-text-main">{title}</h2>
+              <h2 id={titleId} className="text-lg font-semibold text-[var(--text)]">{title}</h2>
             )}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-[10px] text-text-muted hover:bg-surface-2 hover:text-text-main transition-colors"
+            aria-label="Close"
+            className="p-1.5 rounded-[var(--r2)] text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--text-2)]"
           >
             <Icon name="close" className="text-[20px]" />
           </button>
