@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-import { Badge, Button, Input, Modal, Select } from "@/shared/components";
+import { Button, Input, Modal, Select } from "@/shared/components";
+import StatusBadge from "@/shared/components/StatusBadge";
 import styles from "../providers.module.css";
 
 const VARIANT_CONFIG = {
@@ -119,23 +120,23 @@ function AddCompatibleModal({ variant, isOpen, onClose, onCreated }) {
     if (valid) {
       return (
         <>
-          <Badge variant="success">Valid</Badge>
+          <StatusBadge variant="success">Valid</StatusBadge>
           {method === "chat" && (
-            <span className="text-sm text-text-muted">(via inference test)</span>
+            <span className="text-xs text-text-muted">(via inference test)</span>
           )}
         </>
       );
     }
     return (
       <div className="flex flex-col gap-1">
-        <Badge variant="error">Invalid</Badge>
-        {error && <span className="text-sm text-red-500">{error}</span>}
+        <StatusBadge variant="error" className={styles.errorBadge}>Invalid</StatusBadge>
+        {error && <span className={`text-xs break-words ${styles.error}`}>{error}</span>}
       </div>
     );
   };
 
   return (
-    <Modal isOpen={isOpen} title={config.title} onClose={onClose}>
+    <Modal isOpen={isOpen} title={config.title} onClose={onClose} className={styles.dialog}>
       <div className="flex flex-col gap-4">
         <Input
           label="Name"
@@ -184,7 +185,7 @@ function AddCompatibleModal({ variant, isOpen, onClose, onCreated }) {
             onClick={handleValidate}
             disabled={!checkKey || validating || !formData.baseUrl.trim()}
             variant="secondary"
-            className={`${styles.action} w-full sm:w-auto`}
+            className="w-full sm:w-auto"
           >
             {validating ? "Checking..." : "Check"}
           </Button>
@@ -194,7 +195,7 @@ function AddCompatibleModal({ variant, isOpen, onClose, onCreated }) {
           <Button
             onClick={handleSubmit}
             fullWidth
-            className={`${styles.action} ${styles.primary}`}
+            variant="contrast"
             disabled={
               !formData.name.trim() ||
               !formData.prefix.trim() ||

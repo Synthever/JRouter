@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/shared/utils/cn";
 import { AnimatedBackground } from "@/components/core/animated-background";
+import StatusBadge from "@/shared/components/StatusBadge";
 import { fmtTokens } from "./KpiBentoGrid";
 
 function timeAgo(timestamp) {
@@ -29,25 +30,22 @@ function renderStatusBadge(status) {
   const s = String(status || "ok").toLowerCase();
   if (s === "ok" || s === "success" || s === "200") {
     return (
-      <span className="badge-success">
-        <span className="size-1.5 rounded-full bg-[var(--pos)]" />
+      <StatusBadge variant="success">
         OK
-      </span>
+      </StatusBadge>
     );
   }
   if (s === "partial" || s.startsWith("3") || s.includes("stream")) {
     return (
-      <span className="badge-warning">
-        <span className="size-1.5 rounded-full bg-[var(--warn)]" />
+      <StatusBadge variant="warning">
         Partial
-      </span>
+      </StatusBadge>
     );
   }
   return (
-    <span className="badge-danger">
-      <span className="size-1.5 rounded-full bg-[var(--danger)]" />
+    <StatusBadge variant="error">
       {s.startsWith("4") || s.startsWith("5") ? s : "Error"}
-    </span>
+    </StatusBadge>
   );
 }
 

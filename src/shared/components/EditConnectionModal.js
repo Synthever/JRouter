@@ -5,7 +5,7 @@ import PropTypes from "prop-types";
 import Modal from "@/shared/components/Modal";
 import Input from "@/shared/components/Input";
 import Button from "@/shared/components/Button";
-import Badge from "@/shared/components/Badge";
+import StatusBadge from "@/shared/components/StatusBadge";
 import { isOpenAICompatibleProvider, isAnthropicCompatibleProvider, AI_PROVIDERS } from "@/shared/constants/providers";
 import Select from "@/shared/components/Select";
 
@@ -221,9 +221,9 @@ export default function EditConnectionModal({ isOpen, connection, proxyPools, on
               </div>
             </div>
             {validationResult && (
-              <Badge variant={validationResult === "success" ? "success" : "error"}>
+              <StatusBadge variant={validationResult === "success" ? "success" : "error"}>
                 {validationResult === "success" ? "Valid" : "Invalid"}
-              </Badge>
+              </StatusBadge>
             )}
           </>
         )}
@@ -279,15 +279,15 @@ export default function EditConnectionModal({ isOpen, connection, proxyPools, on
               {testing ? "Testing..." : "Test Connection"}
             </Button>
             {testResult && (
-              <Badge variant={testResult === "success" ? "success" : "error"}>
+              <StatusBadge variant={testResult === "success" ? "success" : "error"}>
                 {testResult === "success" ? "Valid" : "Failed"}
-              </Badge>
+              </StatusBadge>
             )}
           </div>
         )}
 
         <div className="flex gap-2">
-          <Button onClick={handleSubmit} fullWidth disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
+          <Button onClick={handleSubmit} variant="contrast" fullWidth disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
           <Button onClick={onClose} variant="ghost" fullWidth>Cancel</Button>
         </div>
       </div>

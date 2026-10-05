@@ -5,25 +5,26 @@ const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "
 const providersPath = "src/app/(dashboard)/dashboard/providers";
 
 describe("providers dashboard theme", () => {
-  it("uses scoped section panels without nesting backdrop filters on provider cards", () => {
+  it("shares Dashboard section surfaces and uses separated rows", () => {
     const source = read(`${providersPath}/page.js`);
-    expect(source).toContain("styles.page");
-    expect(source.match(/<section className={styles.panel}/g)).toHaveLength(4);
+    expect(source).toContain("dashboard-surface ${styles.page}");
+    expect(source.match(/<section className={`ui-card \$\{styles.panel\}`}/g)).toHaveLength(4);
     const css = read(`${providersPath}/providers.module.css`);
-    expect(css).toContain("backdrop-filter: blur(18px) saturate(130%);");
-    expect(css).toContain("backdrop-filter: blur(24px);");
-    expect(css).toContain("background-color: #131315;");
-    expect(css).toMatch(/\.providerCard\s*\{[^}]*--provider-card-bg: var\(--surface\);[^}]*background: var\(--provider-card-bg\);/);
-    expect(css).toMatch(/:global\(\.dark\) \.providerCard\s*\{[^}]*--provider-card-bg: var\(--bg\);/);
-    expect(css).toMatch(/\.providerCard:focus-within\s*\{[^}]*background: color-mix\(in srgb, var\(--text\) 4%, var\(--provider-card-bg\)\);/);
-    expect(css).toMatch(/prefers-reduced-transparency: reduce[\s\S]*background: var\(--surface\);/);
+    expect(css).not.toContain("backdrop-filter");
+    expect(css).not.toContain("providerCard");
+    expect(css).toMatch(/\.providerRow\s*\{[^}]*border-bottom: 1px solid var\(--line\);/);
+    const shared = read("src/app/globals.css");
+    expect(shared).toContain(".dashboard-surface .ui-card");
+    expect(shared).toContain("prefers-reduced-transparency: reduce");
   });
 
   it("uses theme-aware controls and semantic status colors", () => {
     const source = read(`${providersPath}/page.js`);
     expect(source).not.toMatch(/!bg-white|border-primary|bg-primary|text-primary/);
     const css = read(`${providersPath}/providers.module.css`);
-    expect(css).toMatch(/\.primary\s*\{[^}]*background: var\(--text\);[^}]*color: var\(--bg\);/);
+    expect(source).toContain('variant="contrast"');
+    expect(source).toContain("<StatusBadge");
+    expect(source).toContain("<Toggle");
     expect(css).toMatch(/\.success\s*\{[^}]*color: var\(--pos\);/);
     expect(css).toMatch(/\.error\s*\{[^}]*color: var\(--danger\);/);
     expect(css).toContain('[role="switch"][aria-checked="true"]');
@@ -33,11 +34,12 @@ describe("providers dashboard theme", () => {
     const source = read(`${providersPath}/page.js`);
     expect(source).toContain('htmlFor="provider-status-filter"');
     expect(source).toContain('id="provider-status-filter"');
-    expect(source.match(/aria-label={`\$\{allDisabled \? "Enable" : "Disable"\} \$\{provider.name\}`}/g)).toHaveLength(2);
+    expect(source).toContain('aria-label={`${allDisabled ? "Enable" : "Disable"} ${provider.name}`}');
+    expect(source).toContain('<ul className={styles.list}>');
     const css = read(`${providersPath}/providers.module.css`);
     expect(css).toContain(":focus-visible");
     expect(css).toContain(":focus-within");
-    expect(css).toMatch(/\.grid\s*\{[^}]*minmax\(min\(100%, 240px\), 1fr\)/);
+    expect(css).toContain("grid-template-columns: 36px minmax(0, 1fr);");
     expect(css).toMatch(/@media \(max-width: 639px\)[\s\S]*min-height: 44px;/);
     expect(css).toContain("prefers-reduced-motion: reduce");
   });

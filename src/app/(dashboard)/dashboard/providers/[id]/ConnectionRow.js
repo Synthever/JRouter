@@ -6,6 +6,8 @@ import { getStatusVariant as getConnectionStatusVariant } from "@/shared/utils/c
 import PropTypes from "prop-types";
 import { Badge, Toggle, Tooltip } from "@/shared/components";
 import CooldownTimer from "./CooldownTimer";
+import StatusBadge from "@/shared/components/StatusBadge";
+import styles from "../providers.module.css";
 
 export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst, isLast, onMoveUp, onMoveDown, onToggleActive, onUpdateProxy, onEdit, onDelete, oneByOneStatus = null, autoPing = null }) {
   const [showProxyDropdown, setShowProxyDropdown] = useState(false);
@@ -142,6 +144,7 @@ export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst
         {/* Priority arrows */}
         <div className="flex shrink-0 flex-col">
           <button
+            aria-label={`Move ${displayName} up`}
             onClick={onMoveUp}
             disabled={isFirst}
             className={`p-0.5 rounded ${isFirst ? "text-text-muted/30 cursor-not-allowed" : "hover:bg-sidebar text-text-muted hover:text-primary"}`}
@@ -149,6 +152,7 @@ export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst
             <Icon className="text-sm">keyboard_arrow_up</Icon>
           </button>
           <button
+            aria-label={`Move ${displayName} down`}
             onClick={onMoveDown}
             disabled={isLast}
             className={`p-0.5 rounded ${isLast ? "text-text-muted/30 cursor-not-allowed" : "hover:bg-sidebar text-text-muted hover:text-primary"}`}
@@ -165,9 +169,9 @@ export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst
             <p className="text-xs text-text-muted truncate">{secondaryDisplayName}</p>
           )}
           <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2">
-            <Badge variant={getStatusVariant()} size="sm" dot>
+            <StatusBadge variant={getStatusVariant()} className={getStatusVariant() === "error" ? styles.errorBadge : undefined}>
               {connection.isActive === false ? "disabled" : (effectiveStatus || "Unknown")}
-            </Badge>
+            </StatusBadge>
             <Badge variant="default" size="sm">
               {authLabel}
             </Badge>
@@ -258,18 +262,17 @@ export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst
               </button>
             </Tooltip>
           )}
-          <button onClick={onEdit} className="flex flex-col items-center rounded px-2 py-1 text-text-muted hover:bg-black/5 hover:text-primary dark:hover:bg-white/5">
+          <button onClick={onEdit} className={styles.iconButton} aria-label={`Edit ${displayName}`} title={`Edit ${displayName}`}>
             <Icon className="text-[18px]">edit</Icon>
-            <span className="text-[10px] leading-tight">Edit</span>
           </button>
-          <button onClick={onDelete} className="flex flex-col items-center rounded px-2 py-1 text-red-500 hover:bg-red-500/10">
+          <button onClick={onDelete} className={`${styles.iconButton} ${styles.error}`} aria-label={`Delete ${displayName}`} title={`Delete ${displayName}`}>
             <Icon className="text-[18px]">delete</Icon>
-            <span className="text-[10px] leading-tight">Delete</span>
           </button>
         </div>
         <Toggle
           size="sm"
           checked={connection.isActive ?? true}
+          aria-label={`${connection.isActive === false ? "Enable" : "Disable"} ${displayName}`}
           onChange={onToggleActive}
           title={(connection.isActive ?? true) ? "Disable connection" : "Enable connection"}
         />

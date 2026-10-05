@@ -3,35 +3,32 @@ import Icon from "@/shared/components/Icon";
 
 import { useState } from "react";
 import PropTypes from "prop-types";
-import { Button } from "@/shared/components";
+import { Button, Input } from "@/shared/components";
 import { getProviderCustomModelRows } from "@/shared/utils/providerCustomModels";
+import styles from "../providers.module.css";
 function CompatibleModelRow({ modelId, fullModel, copied, onCopy, onDeleteAlias, onTest, testStatus, isTesting }) {
-  const borderColor = testStatus === "ok"
-    ? "border-green-500/40"
-    : testStatus === "error"
-    ? "border-red-500/40"
-    : "border-border";
-
   const iconColor = testStatus === "ok"
-    ? "#22c55e"
+    ? "var(--pos)"
     : testStatus === "error"
-    ? "#ef4444"
+    ? "var(--danger)"
     : undefined;
 
   return (
-    <div className={`flex items-center gap-3 p-3 rounded-lg border ${borderColor} hover:bg-sidebar/50`}>
+    <div className={styles.modelRow}>
       <Icon className="text-base text-text-muted"
         style={iconColor ? { color: iconColor } : undefined}>
         {testStatus === "ok" ? "check_circle" : testStatus === "error" ? "cancel" : "smart_toy"}
       </Icon>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{modelId}</p>
-        <div className="flex items-center gap-1 mt-1">
-          <code className="text-xs text-text-muted font-mono bg-sidebar px-1.5 py-0.5 rounded">{fullModel}</code>
+        <div className="flex min-w-0 flex-wrap items-center gap-1 mt-1">
+          <code className="min-w-0 text-xs text-text-muted font-mono break-all">{fullModel}</code>
           <div className="relative group/btn">
             <button
               onClick={() => onCopy(fullModel, `model-${modelId}`)}
-              className="p-0.5 hover:bg-sidebar rounded text-text-muted hover:text-primary"
+              className={styles.iconButton}
+              aria-label={`Copy ${fullModel}`}
+              title={`Copy ${fullModel}`}
             >
               <Icon className="text-sm">
                 {copied === `model-${modelId}` ? "check" : "content_copy"}
@@ -46,7 +43,9 @@ function CompatibleModelRow({ modelId, fullModel, copied, onCopy, onDeleteAlias,
               <button
                 onClick={onTest}
                 disabled={isTesting}
-                className="p-0.5 hover:bg-sidebar rounded text-text-muted hover:text-primary transition-colors"
+                className={styles.iconButton}
+                aria-label={`Test ${modelId}`}
+                title={`Test ${modelId}`}
               >
                 <Icon className="text-sm" style={isTesting ? { animation: "spin 1s linear infinite" } : undefined}>
                   {isTesting ? "progress_activity" : "science"}
@@ -61,7 +60,8 @@ function CompatibleModelRow({ modelId, fullModel, copied, onCopy, onDeleteAlias,
       </div>
       <button
         onClick={onDeleteAlias}
-        className="p-1 hover:bg-red-50 rounded text-red-500"
+        className={`${styles.iconButton} ${styles.error}`}
+        aria-label={`Remove ${modelId}`}
         title="Remove model"
       >
         <Icon className="text-sm">delete</Icon>
@@ -161,24 +161,22 @@ export default function CompatibleModelsSection({ providerStorageAlias, provider
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-text-muted">
+      <p className={styles.description}>
         Add {isAnthropic ? "Anthropic" : "OpenAI"}-compatible models manually or import them from the /models endpoint.
       </p>
 
       <div className="flex items-end gap-2 flex-wrap">
-        <div className="flex-1 min-w-[240px]">
-          <label htmlFor="new-compatible-model-input" className="text-xs text-text-muted mb-1 block">Model ID</label>
-          <input
+        <Input
+            className="flex-[1_1_200px] min-w-0"
+            label="Model ID"
             id="new-compatible-model-input"
             type="text"
             value={newModel}
             onChange={(e) => setNewModel(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
             placeholder={isAnthropic ? "claude-3-opus-20240229" : "gpt-4o"}
-            className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary"
           />
-        </div>
-        <Button size="sm" icon="add" onClick={handleAdd} disabled={!newModel.trim() || adding}>
+        <Button size="sm" variant="contrast" icon="add" onClick={handleAdd} disabled={!newModel.trim() || adding}>
           {adding ? "Adding..." : "Add"}
         </Button>
         <Button size="sm" variant="secondary" icon="download" onClick={handleImport} disabled={!canImport || importing}>
@@ -193,7 +191,7 @@ export default function CompatibleModelsSection({ providerStorageAlias, provider
       )}
 
       {allModels.length > 0 && (
-        <div className="flex flex-col gap-3">
+        <div className="flex min-w-0 flex-col">
           {allModels.map(({ id, alias, source }) => (
             <CompatibleModelRow
               key={`${source}-${providerStorageAlias}/${id}`}

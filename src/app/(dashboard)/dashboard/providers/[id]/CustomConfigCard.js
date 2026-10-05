@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import PropTypes from "prop-types";
-import { Card, Badge } from "@/shared/components";
+import { Card, Button, Input } from "@/shared/components";
+import Icon from "@/shared/components/Icon";
+import StatusBadge from "@/shared/components/StatusBadge";
+import styles from "../providers.module.css";
 import { useNotificationStore } from "@/store/notificationStore";
 
 // Mirrors the server-side gate in /api/providers/[id]/overrides — client check is UX only
@@ -87,22 +90,20 @@ export default function CustomConfigCard({ providerId }) {
   if (Object.keys(builtin).length === 0 && !hasOverride) return null;
 
   return (
-    <Card padding="xs">
+    <Card className={`ui-card ${styles.panel}`}>
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
         className="flex w-full items-center justify-between text-left"
       >
         <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-primary text-[20px]">tune</span>
-          <span className="text-sm font-semibold">Custom Headers</span>
+          <span className="ui-eyebrow"><Icon className="text-[16px]">tune</Icon>Custom Headers</span>
           {hasOverride && (
-            <Badge variant="success" size="sm">Active</Badge>
+            <StatusBadge variant="success">Active</StatusBadge>
           )}
         </div>
-        <span className="material-symbols-outlined text-text-muted">
-          {expanded ? "expand_less" : "expand_more"}
-        </span>
+        <Icon className="text-[16px] text-text-muted">{expanded ? "expand_less" : "expand_more"}</Icon>
       </button>
 
       {expanded && (
@@ -111,31 +112,33 @@ export default function CustomConfigCard({ providerId }) {
             {rows.map((row, i) => {
               const overridden = row.name.trim() in builtin && row.value !== builtin[row.name.trim()];
               return (
-                <div key={i} className="flex items-center gap-2">
-                  <input
+                <div key={i} className={styles.customHeaderRow}>
+                  <Input
+                    aria-label={`Header ${i + 1} name`}
                     value={row.name}
                     onChange={(e) => setRow(i, "name", e.target.value)}
                     placeholder="Header-Name"
                     spellCheck={false}
-                    className="w-44 rounded-md border border-border bg-background px-2 py-1.5 text-sm focus:border-primary focus:outline-none"
+                    className="min-w-0"
                   />
-                  <input
+                  <Input
+                    aria-label={`Header ${i + 1} value`}
                     value={row.value}
                     onChange={(e) => setRow(i, "value", e.target.value)}
                     placeholder="Value"
                     spellCheck={false}
                     title={overridden ? "Overridden" : row.name.trim() in builtin ? "Registry default" : ""}
-                    className={`min-w-0 flex-1 rounded-md border bg-background px-2 py-1.5 text-sm focus:border-primary focus:outline-none ${
-                      overridden ? "border-amber-400/60" : "border-border"
-                    }`}
+                    className="min-w-0"
+                    inputClassName={overridden ? "border-[var(--warn)]" : undefined}
                   />
                   <button
                     type="button"
                     title="Remove header"
+                    aria-label={`Remove header ${i + 1}`}
                     onClick={() => setRows((prev) => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : [{ name: "", value: "" }]))}
-                    className="shrink-0 text-text-muted hover:text-red-500"
+                    className={`${styles.iconButton} ${styles.error}`}
                   >
-                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                    <Icon className="text-[16px]">delete</Icon>
                   </button>
                 </div>
               );
@@ -143,31 +146,31 @@ export default function CustomConfigCard({ providerId }) {
           </div>
 
           <div className="mt-3 flex items-center justify-between gap-2">
-            <button
-              type="button"
+            <Button
+              size="sm"
+              variant="ghost"
+              icon="add"
               onClick={() => setRows((prev) => [...prev, { name: "", value: "" }])}
-              className="flex items-center gap-1 text-xs text-primary hover:underline"
             >
-              <span className="material-symbols-outlined text-[16px]">add</span>
               Add header
-            </button>
+            </Button>
             <div className="flex gap-2">
-              <button
-                type="button"
+              <Button
+                size="sm"
+                variant="secondary"
                 disabled={saving}
                 onClick={resetToBuiltin}
-                className="rounded-md border border-border px-3 py-1.5 text-xs hover:bg-black/[0.03] dark:hover:bg-white/[0.03] disabled:opacity-50"
               >
                 Reset
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                size="sm"
+                variant="contrast"
                 disabled={saving}
                 onClick={save}
-                className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
               >
                 {saving ? "Saving..." : "Save"}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

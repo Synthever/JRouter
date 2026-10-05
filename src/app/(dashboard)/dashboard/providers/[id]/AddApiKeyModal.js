@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import PropTypes from "prop-types";
-import { Button, Badge, Input, Modal, Select } from "@/shared/components";
+import { Button, Input, Modal, Select } from "@/shared/components";
+import StatusBadge from "@/shared/components/StatusBadge";
+import styles from "../providers.module.css";
 import { AI_PROVIDERS } from "@/shared/constants/providers";
 import { planBulkAdd } from "@/shared/utils/bulkAdd";
 
@@ -188,12 +190,12 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
   if (!provider) return null;
 
   return (
-    <Modal isOpen={isOpen} title={`Add ${providerName || provider} ${credentialLabel}`} onClose={onClose}>
+    <Modal isOpen={isOpen} title={`Add ${providerName || provider} ${credentialLabel}`} onClose={onClose} className={styles.dialog}>
       <div className="flex flex-col gap-4">
         {/* Mode switcher */}
         <div className="flex gap-2">
-          <Button size="sm" variant={mode === "single" ? "primary" : "ghost"} onClick={() => { setMode("single"); setBulkResult(null); }}>Single</Button>
-          <Button size="sm" variant={mode === "bulk" ? "primary" : "ghost"} onClick={() => { setMode("bulk"); setBulkResult(null); }}>Bulk Add</Button>
+          <Button size="sm" variant={mode === "single" ? "contrast" : "ghost"} aria-pressed={mode === "single"} onClick={() => { setMode("single"); setBulkResult(null); }}>Single</Button>
+          <Button size="sm" variant={mode === "bulk" ? "contrast" : "ghost"} aria-pressed={mode === "bulk"} onClick={() => { setMode("bulk"); setBulkResult(null); }}>Bulk Add</Button>
         </div>
 
         {mode === "bulk" && (
@@ -207,18 +209,19 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
               }
             </p>
             <textarea
-              className="w-full rounded border border-accent/30 bg-sidebar p-2 text-sm font-mono resize-y min-h-[140px] focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full font-mono resize-y min-h-[140px]"
+              aria-label="API keys to add in bulk"
               placeholder={bulkPlaceholder}
               value={bulkText}
               onChange={(e) => setBulkText(e.target.value)}
             />
             {bulkResult && (
-              <div className={`text-sm font-medium ${bulkResult.failed > 0 ? "text-yellow-400" : "text-green-400"}`}>
+              <div className={`text-xs font-medium ${bulkResult.failed > 0 ? "text-[var(--warn)]" : styles.success}`} role="status">
                 ✓ {bulkResult.success} added{bulkResult.failed > 0 ? `, ✗ ${bulkResult.failed} failed` : ""}
               </div>
             )}
             <div className="flex gap-2">
-              <Button onClick={handleBulkSubmit} fullWidth disabled={saving || !bulkText.trim()}>
+              <Button onClick={handleBulkSubmit} variant="contrast" fullWidth disabled={saving || !bulkText.trim()}>
                 {saving ? "Adding..." : "Add All Keys"}
               </Button>
               <Button onClick={onClose} variant="ghost" fullWidth>Cancel</Button>
@@ -234,7 +237,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
           placeholder={isOllamaLocal ? "Ollama Local" : "Production Key"}
         />
         {isOllamaLocal && (
-          <div className="flex gap-2">
+          <div className={styles.fieldGroup}>
             <Input
               label="Ollama Host URL"
               value={formData.ollamaHostUrl}
@@ -250,7 +253,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
           </div>
         )}
         {!isOllamaLocal && (
-          <div className="flex gap-2">
+          <div className={styles.fieldGroup}>
             <Input
               label={credentialLabel}
               type={isCookie ? "text" : "password"}
@@ -306,12 +309,12 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
           </p>
         )}
         {validationResult && (
-          <Badge variant={validationResult === "success" ? "success" : "error"}>
+          <StatusBadge variant={validationResult === "success" ? "success" : "error"} className={validationResult === "success" ? undefined : styles.errorBadge}>
             {validationResult === "success" ? "Valid" : "Invalid"}
-          </Badge>
+          </StatusBadge>
         )}
         {error && (
-          <p className="text-xs text-red-500 break-words">{error}</p>
+          <p className={`text-xs break-words ${styles.error}`} role="alert">{error}</p>
         )}
         {isCompatible && (
           <p className="text-xs text-text-muted">
@@ -319,7 +322,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
           </p>
         )}
         {isCloudflareAi && (
-          <div className="bg-sidebar/50 p-4 rounded-lg border border-accent/20">
+          <div className={styles.settingsGroup}>
             <h3 className="font-semibold mb-3 text-sm">Cloudflare Workers AI</h3>
             <Input
               label="Account ID"
@@ -333,7 +336,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
           </div>
         )}
         {isAzure && (
-          <div className="bg-sidebar/50 p-4 rounded-lg border border-accent/20">
+          <div className={styles.settingsGroup}>
             <h3 className="font-semibold mb-3 text-sm">Azure OpenAI Configuration</h3>
             <div className="flex flex-col gap-3">
               <Input
@@ -393,7 +396,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
         </p>
 
         <div className="flex gap-2">
-          <Button onClick={handleSubmit} fullWidth disabled={saving || (!isOllamaLocal && (!formData.name || !formData.apiKey)) || (isCompatible && !formData.defaultModel.trim()) || (isAzure && (!azureData.azureEndpoint || !azureData.deployment || !azureData.organization)) || (isCloudflareAi && !cloudflareData.accountId)}>
+          <Button onClick={handleSubmit} variant="contrast" fullWidth disabled={saving || (!isOllamaLocal && (!formData.name || !formData.apiKey)) || (isCompatible && !formData.defaultModel.trim()) || (isAzure && (!azureData.azureEndpoint || !azureData.deployment || !azureData.organization)) || (isCloudflareAi && !cloudflareData.accountId)}>
             {saving ? "Saving..." : "Save"}
           </Button>
           <Button onClick={onClose} variant="ghost" fullWidth>

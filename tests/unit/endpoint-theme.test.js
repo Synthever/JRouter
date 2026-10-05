@@ -21,21 +21,26 @@ describe("endpoint dashboard theme", () => {
 
   it("uses scoped overview-style panels and opaque reduced-transparency fallback", () => {
     const source = read(`${endpointPath}/EndpointPageClient.js`);
-    expect(source).toContain("styles.page");
-    expect(source.match(/<Card className={styles.panel}/g)).toHaveLength(2);
+    expect(source).toContain("dashboard-surface ${styles.page}");
+    expect(source.match(/<Card className=\{`ui-card \$\{styles.panel\}`\}/g)).toHaveLength(2);
 
     const css = read(`${endpointPath}/endpoint.module.css`);
-    expect(css).toContain("backdrop-filter: blur(18px) saturate(130%);");
-    expect(css).toContain("backdrop-filter: blur(24px);");
-    expect(css).toContain("background-color: #131315;");
-    expect(css).toMatch(/prefers-reduced-transparency: reduce[\s\S]*background: var\(--surface\);/);
+    expect(css).not.toMatch(/backdrop-filter|#131315|linear-gradient/);
+    const shared = read("src/app/globals.css");
+    expect(shared).toMatch(/\.dashboard-surface \.ui-card,\s*\.dashboard-overview :is\(\.stat-card, \.ui-card\)\s*\{/);
+    expect(shared).toContain("backdrop-filter: blur(18px) saturate(130%);");
+    expect(shared).toContain("backdrop-filter: blur(24px);");
+    expect(shared).toMatch(/prefers-reduced-transparency: reduce[\s\S]*\.dashboard-surface \.ui-card,[\s\S]*background-color: var\(--surface\);/);
   });
 
   it("keeps primary actions and switches neutral in both themes", () => {
     const source = read(`${endpointPath}/EndpointPageClient.js`);
     expect(source).not.toMatch(/text-primary|bg-primary|from-indigo|to-purple|bg-input/);
     const css = read(`${endpointPath}/endpoint.module.css`);
-    expect(css).toMatch(/\.primary\s*\{[^}]*background: var\(--text\);[^}]*color: var\(--bg\);/);
+    expect(source).toContain('variant="contrast"');
+    expect(source).not.toContain("styles.primary");
+    const button = read("src/shared/components/Button.js");
+    expect(button).toMatch(/contrast: "bg-\[var\(--text\)\].*text-\[var\(--bg\)\]/);
     expect(css).toMatch(/\[role="switch"\]\[aria-checked="true"\][\s\S]*background: var\(--text\);/);
     expect(css).toContain(":focus-visible");
   });

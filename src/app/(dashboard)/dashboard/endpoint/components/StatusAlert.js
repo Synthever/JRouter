@@ -13,7 +13,7 @@ export default function StatusAlert({ status, className = "" }) {
   };
 
   return (
-    <div className={`${styles.alert} ${className} ${status.type === "success" ? styles.success :
+    <div role="status" className={`${styles.alert} ${className} ${status.type === "success" ? styles.success :
         status.type === "warning" ? styles.warning :
         status.type === "info" ? styles.info :
           styles.error

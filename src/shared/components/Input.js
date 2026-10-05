@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/shared/utils/cn";
+import { useId } from "react";
 import Icon from "@/shared/components/Icon";
 
 export default function Input({
@@ -16,12 +17,16 @@ export default function Input({
   required = false,
   className,
   inputClassName,
+  id,
   ...props
 }) {
+  const generatedId = useId();
+  const inputId = id || generatedId;
+  const messageId = `${inputId}-message`;
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
       {label && (
-        <label className="text-xs font-mono text-[var(--text-2)] uppercase tracking-wider">
+        <label htmlFor={inputId} className="text-xs font-mono text-[var(--text-2)] uppercase tracking-wider">
           {label}
           {required && <span className="text-[var(--danger)] ml-1">*</span>}
         </label>
@@ -33,6 +38,9 @@ export default function Input({
           </div>
         )}
         <input
+          id={inputId}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error || hint ? messageId : undefined}
           type={type}
           placeholder={placeholder}
           value={value}
@@ -53,13 +61,13 @@ export default function Input({
         />
       </div>
       {error && (
-        <p className="text-xs text-[var(--danger)] flex items-center gap-1 font-mono">
+        <p id={messageId} className="text-xs text-[var(--danger)] flex items-center gap-1 font-mono">
           <Icon name="error" className="text-[14px]" />
           {error}
         </p>
       )}
       {hint && !error && (
-        <p className="text-xs text-[var(--text-3)] font-mono">{hint}</p>
+        <p id={messageId} className="text-xs text-[var(--text-3)] font-mono">{hint}</p>
       )}
     </div>
   );

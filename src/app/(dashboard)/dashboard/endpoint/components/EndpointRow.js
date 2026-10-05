@@ -4,12 +4,10 @@ import Icon from "@/shared/components/Icon";
 import styles from "../endpoint.module.css";
 
 /** Reusable endpoint row component */
-export default function EndpointRow({ label, url, copyId, copied, onCopy, badge, actions }) {
+export default function EndpointRow({ label, url, copyId, copied, onCopy, actions }) {
   return (
     <div className={styles.row}>
-      <span className={`${styles.label} ${
-          (badge === "CF" || badge === "TS") ? styles.enabled : ""
-        }`}>{label}</span>
+      <span className={styles.label}>{label}</span>
       <div className={styles.field}>
         <output
           className={`${styles.endpointValue} font-mono`}

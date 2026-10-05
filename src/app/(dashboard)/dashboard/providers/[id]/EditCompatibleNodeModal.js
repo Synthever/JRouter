@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-import { Button, Badge, Input, Modal, Select } from "@/shared/components";
+import { Button, Input, Modal, Select } from "@/shared/components";
+import StatusBadge from "@/shared/components/StatusBadge";
+import styles from "../providers.module.css";
 
 export default function EditCompatibleNodeModal({ isOpen, node, onSave, onClose, isAnthropic }) {
   const [formData, setFormData] = useState({
@@ -76,7 +78,7 @@ export default function EditCompatibleNodeModal({ isOpen, node, onSave, onClose,
   if (!node) return null;
 
   return (
-    <Modal isOpen={isOpen} title={`Edit ${isAnthropic ? "Anthropic" : "OpenAI"} Compatible`} onClose={onClose}>
+    <Modal isOpen={isOpen} title={`Edit ${isAnthropic ? "Anthropic" : "OpenAI"} Compatible`} onClose={onClose} className={styles.dialog}>
       <div className="flex flex-col gap-4">
         <Input
           label="Name"
@@ -107,7 +109,7 @@ export default function EditCompatibleNodeModal({ isOpen, node, onSave, onClose,
           placeholder={isAnthropic ? "https://api.anthropic.com/v1" : "https://api.openai.com/v1"}
           hint={`Use the base URL (ending in /v1) for your ${isAnthropic ? "Anthropic" : "OpenAI"}-compatible API.`}
         />
-        <div className="flex gap-2">
+        <div className={styles.fieldGroup}>
           <Input
             label="API Key (for Check)"
             type="password"
@@ -129,12 +131,12 @@ export default function EditCompatibleNodeModal({ isOpen, node, onSave, onClose,
           hint="If provider lacks /models endpoint, enter a model ID to validate via chat/completions instead."
         />
         {validationResult && (
-          <Badge variant={validationResult === "success" ? "success" : "error"}>
+          <StatusBadge variant={validationResult === "success" ? "success" : "error"} className={validationResult === "success" ? undefined : styles.errorBadge}>
             {validationResult === "success" ? "Valid" : "Invalid"}
-          </Badge>
+          </StatusBadge>
         )}
         <div className="flex gap-2">
-          <Button onClick={handleSubmit} fullWidth disabled={!formData.name.trim() || !formData.prefix.trim() || !formData.baseUrl.trim() || saving}>
+          <Button onClick={handleSubmit} variant="contrast" fullWidth disabled={!formData.name.trim() || !formData.prefix.trim() || !formData.baseUrl.trim() || saving}>
             {saving ? "Saving..." : "Save"}
           </Button>
           <Button onClick={onClose} variant="ghost" fullWidth>

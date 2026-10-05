@@ -508,15 +508,18 @@ body:has(.landing-page)::-webkit-scrollbar,
   overflow: hidden;
 }
 
-/* Overview-only glass surfaces; nested cards share the parent's blur. */
+/* Dashboard surfaces; nested cards share the parent's blur. */
+.dashboard-surface,
 .dashboard-overview {
   --glass-highlight: rgba(255, 255, 255, 0.2);
 }
 
+.dark .dashboard-surface,
 .dark .dashboard-overview {
   --text-3: color-mix(in srgb, var(--text-2) 85%, var(--surface));
 }
 
+.dashboard-surface .ui-card,
 .dashboard-overview :is(.stat-card, .ui-card) {
   background-color: transparent;
   background-image: linear-gradient(135deg, var(--glass-highlight), transparent 60%);
@@ -524,12 +527,14 @@ body:has(.landing-page)::-webkit-scrollbar,
   box-shadow: none;
 }
 
+.dark .dashboard-surface .ui-card,
 .dark .dashboard-overview :is(.stat-card, .ui-card) {
   background-color: var(--surface);
   background-image: none;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
 }
 
+.dashboard-surface .dashboard-card-inset,
 .dashboard-overview .dashboard-card-inset {
   background-color: transparent;
   border: 0;
@@ -537,11 +542,13 @@ body:has(.landing-page)::-webkit-scrollbar,
 }
 
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .dashboard-surface .ui-card,
   .dashboard-overview :is(.stat-card, .ui-card) {
     -webkit-backdrop-filter: blur(18px) saturate(130%);
     backdrop-filter: blur(18px) saturate(130%);
   }
 
+  .dark .dashboard-surface .ui-card,
   .dark .dashboard-overview :is(.stat-card, .ui-card) {
     -webkit-backdrop-filter: blur(24px);
     backdrop-filter: blur(24px);
@@ -549,6 +556,8 @@ body:has(.landing-page)::-webkit-scrollbar,
 }
 
 @media (prefers-reduced-transparency: reduce) {
+  .dashboard-surface .ui-card,
+  .dark .dashboard-surface .ui-card,
   .dashboard-overview :is(.stat-card, .ui-card),
   .dark .dashboard-overview :is(.stat-card, .ui-card) {
     background-color: var(--surface);
@@ -557,6 +566,7 @@ body:has(.landing-page)::-webkit-scrollbar,
     backdrop-filter: none;
   }
 
+  .dashboard-surface .dashboard-card-inset,
   .dashboard-overview .dashboard-card-inset {
     background-color: var(--surface-inset);
   }
@@ -1024,6 +1034,19 @@ body:has(.landing-page)::-webkit-scrollbar,
 }
 
 /* Status Badges */
+.badge-neutral {
+  background-color: var(--surface-2);
+  color: var(--text-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-full);
+  padding: 2px 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
 .badge-success {
   background-color: var(--pos-bg);
   color: var(--pos);

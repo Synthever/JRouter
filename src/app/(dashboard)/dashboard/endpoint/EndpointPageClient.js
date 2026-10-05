@@ -4,6 +4,7 @@ import Icon from "@/shared/components/Icon";
 import { useState, useEffect, useRef, useCallback } from "react";
 import PropTypes from "prop-types";
 import { Card, Button, Input, Modal, CardSkeleton, Toggle, ConfirmModal } from "@/shared/components";
+import StatusBadge from "@/shared/components/StatusBadge";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import {
   TUNNEL_BENEFITS,
@@ -20,6 +21,32 @@ import StatusAlert from "./components/StatusAlert";
 import Tooltip from "./components/Tooltip";
 import SecurityWarning from "./components/SecurityWarning";
 import styles from "./endpoint.module.css";
+
+function ConnectionBadge({ enabled, reachable, loading, checking, previouslyReachable, error, loadingLabel }) {
+  let label = "Disabled";
+  let variant = "default";
+  if (loading) {
+    label = loadingLabel;
+  } else if (enabled) {
+    label = reachable ? "Connected" : previouslyReachable ? "Reconnecting" : "Checking";
+    variant = reachable ? "success" : "warning";
+  } else if (error) {
+    label = "Error";
+    variant = "error";
+  } else if (checking) {
+    label = "Checking";
+  }
+
+  return (
+    <StatusBadge
+      variant={variant}
+      className={`${styles.statusBadge} ${variant === "warning" ? styles.statusWarning : variant === "error" ? styles.statusError : ""}`}
+    >
+      {label}
+    </StatusBadge>
+  );
+}
+
 export default function APIPageClient({ machineId }) {
   const [keys, setKeys] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -701,7 +728,7 @@ export default function APIPageClient({ machineId }) {
 
   if (loading) {
     return (
-      <div className={styles.page}>
+      <div className={`dashboard-surface ${styles.page}`} aria-busy="true" aria-label="Loading endpoint settings">
         <CardSkeleton />
         <CardSkeleton />
       </div>
@@ -711,18 +738,21 @@ export default function APIPageClient({ machineId }) {
   const currentEndpoint = baseUrl;
 
   return (
-    <div className={styles.page}>
+    <div className={`dashboard-surface ${styles.page}`}>
       {/* Endpoint Card */}
-      <Card className={styles.panel}>
+      <Card className={`ui-card ${styles.panel}`}>
         <div className={styles.header}>
-          <h2 className={styles.heading}>
-            <Icon>api</Icon>
-            API Endpoint
-          </h2>
+          <div>
+            <h2 className="ui-eyebrow">
+              <Icon className="text-[16px]">api</Icon>
+              API Endpoint
+            </h2>
+            <p className={styles.description}>Connect your tools locally or enable secure remote access.</p>
+          </div>
         </div>
 
         {/* Endpoint rows */}
-        <div className="flex flex-col gap-4 sm:gap-3">
+        <div className="flex flex-col">
           {/* Local */}
           <EndpointRow
             label="Local"
@@ -733,12 +763,25 @@ export default function APIPageClient({ machineId }) {
           />
           {/* Cloudflare Tunnel */}
           <div className={styles.row}>
-            <span className={`${styles.label} ${
-              tunnelEnabled ? styles.enabled : ""
-            }`}>Tunnel</span>
+            <span className={styles.label}>
+              Tunnel
+              <ConnectionBadge
+                enabled={tunnelEnabled}
+                reachable={tunnelReachable}
+                loading={tunnelLoading}
+                checking={tunnelChecking}
+                previouslyReachable={tunnelEverReachable}
+                error={tunnelStatus?.type === "error"}
+                loadingLabel="Starting"
+              />
+            </span>
             {tunnelEnabled && !tunnelLoading && tunnelReachable ? (
               <>
-                <Input value={`${tunnelPublicUrl || tunnelUrl}/v1`} readOnly className={styles.field} inputClassName="font-mono" aria-label="Tunnel endpoint" />
+                <div className={styles.field}>
+                  <output className={`${styles.endpointValue} font-mono`} aria-label="Tunnel endpoint" tabIndex={0}>
+                    {`${tunnelPublicUrl || tunnelUrl}/v1`}
+                  </output>
+                </div>
                 <button
                   onClick={() => copy(`${tunnelPublicUrl || tunnelUrl}/v1`, "tunnel_url")}
                   className={styles.iconButton}
@@ -750,6 +793,7 @@ export default function APIPageClient({ machineId }) {
                   onClick={() => setShowDisableTunnelModal(true)}
                   className={`${styles.iconButton} ${styles.dangerButton}`}
                   title="Disable Tunnel"
+                  aria-label="Disable Tunnel"
                 >
                   <Icon className="text-[18px]">power_settings_new</Icon>
                 </button>
@@ -764,6 +808,7 @@ export default function APIPageClient({ machineId }) {
                   onClick={() => setShowDisableTunnelModal(true)}
                   className={`${styles.iconButton} ${styles.dangerButton}`}
                   title="Disable Tunnel"
+                  aria-label="Disable Tunnel"
                 >
                   <Icon className="text-[18px]">power_settings_new</Icon>
                 </button>
@@ -778,6 +823,7 @@ export default function APIPageClient({ machineId }) {
                   onClick={() => { setTunnelLoading(false); setTunnelProgress(""); }}
                   className={`${styles.iconButton} ${styles.dangerButton}`}
                   title="Stop"
+                  aria-label="Stop creating tunnel"
                 >
                   <Icon className="text-[18px]">power_settings_new</Icon>
                 </button>
@@ -788,7 +834,7 @@ export default function APIPageClient({ machineId }) {
                   <Icon className="text-sm">error</Icon>
                   {tunnelStatus.message}
                 </div>
-                <Button className={styles.primary} size="sm" icon="cloud_upload" onClick={() => setShowEnableTunnelModal(true)}>Enable</Button>
+                <Button variant="secondary" size="sm" icon="cloud_upload" onClick={() => setShowEnableTunnelModal(true)}>Enable</Button>
               </>
             ) : tunnelChecking ? (
               <>
@@ -800,13 +846,14 @@ export default function APIPageClient({ machineId }) {
                   onClick={() => setTunnelChecking(false)}
                   className={`${styles.iconButton} ${styles.dangerButton}`}
                   title="Stop"
+                  aria-label="Stop checking tunnel"
                 >
                   <Icon className="text-[18px]">power_settings_new</Icon>
                 </button>
               </>
             ) : (
               <Button
-                className={styles.primary}
+                variant="secondary"
                 size="sm"
                 icon="cloud_upload"
                 onClick={() => {
@@ -827,12 +874,24 @@ export default function APIPageClient({ machineId }) {
           </div>
           {/* Tailscale */}
           <div className={styles.row}>
-            <span className={`${styles.label} ${
-              tsEnabled ? styles.enabled : ""
-            }`}>Tailscale</span>
+            <span className={styles.label}>
+              Tailscale
+              <ConnectionBadge
+                enabled={tsEnabled}
+                reachable={tsReachable}
+                loading={tsLoading || tsConnecting}
+                previouslyReachable={tsEverReachable}
+                error={tsStatus?.type === "error"}
+                loadingLabel="Connecting"
+              />
+            </span>
             {tsEnabled && !tsLoading && tsReachable ? (
               <>
-                <Input value={`${tsUrl}/v1`} readOnly className={styles.field} inputClassName="font-mono" aria-label="Tailscale endpoint" />
+                <div className={styles.field}>
+                  <output className={`${styles.endpointValue} font-mono`} aria-label="Tailscale endpoint" tabIndex={0}>
+                    {`${tsUrl}/v1`}
+                  </output>
+                </div>
                 <button
                   onClick={() => copy(`${tsUrl}/v1`, "ts_url")}
                   className={styles.iconButton}
@@ -844,6 +903,7 @@ export default function APIPageClient({ machineId }) {
                   onClick={() => setShowDisableTsModal(true)}
                   className={`${styles.iconButton} ${styles.dangerButton}`}
                   title="Disable Tailscale"
+                  aria-label="Disable Tailscale"
                 >
                   <Icon className="text-[18px]">power_settings_new</Icon>
                 </button>
@@ -858,6 +918,7 @@ export default function APIPageClient({ machineId }) {
                   onClick={() => setShowDisableTsModal(true)}
                   className={`${styles.iconButton} ${styles.dangerButton}`}
                   title="Disable Tailscale"
+                  aria-label="Disable Tailscale"
                 >
                   <Icon className="text-[18px]">power_settings_new</Icon>
                 </button>
@@ -870,7 +931,7 @@ export default function APIPageClient({ machineId }) {
                 </div>
                 {tsAuthUrl && (
                   <Button
-                    className={styles.primary}
+                    variant="secondary"
                     size="sm"
                     icon="open_in_new"
                     onClick={() => window.open(tsAuthUrl, "tailscale_auth", "width=600,height=700,noopener,noreferrer")}
@@ -882,6 +943,7 @@ export default function APIPageClient({ machineId }) {
                   onClick={() => { setTsLoading(false); setTsConnecting(false); setTsProgress(""); clearUserAuth(); }}
                   className={`${styles.iconButton} ${styles.dangerButton}`}
                   title="Stop"
+                  aria-label="Stop connecting Tailscale"
                 >
                   <Icon className="text-[18px]">power_settings_new</Icon>
                 </button>
@@ -892,7 +954,7 @@ export default function APIPageClient({ machineId }) {
                   <Icon className="text-sm">error</Icon>
                   {tsStatus.message}
                 </div>
-                <Button className={styles.primary} size="sm" icon="vpn_lock" onClick={handleOpenTsModal}>Enable</Button>
+                <Button variant="secondary" size="sm" icon="vpn_lock" onClick={handleOpenTsModal}>Enable</Button>
               </>
             ) : (
               <Button
@@ -905,7 +967,7 @@ export default function APIPageClient({ machineId }) {
                   }
                   handleOpenTsModal();
                 }}
-                className={styles.primary}
+                variant="secondary"
               >
                 Enable
               </Button>
@@ -952,6 +1014,7 @@ export default function APIPageClient({ machineId }) {
         {(tunnelEnabled || tsEnabled) && (
           <div className="mt-5 pt-5 border-t border-border-subtle flex items-center gap-3">
             <Toggle
+              aria-label="Allow dashboard access via tunnel"
               checked={tunnelDashboardAccess}
               onChange={() => handleTunnelDashboardAccess(!tunnelDashboardAccess)}
             />
@@ -964,13 +1027,16 @@ export default function APIPageClient({ machineId }) {
       </Card>
 
       {/* API Keys */}
-      <Card className={styles.panel} id="require-api-key">
+      <Card className={`ui-card ${styles.panel}`} id="require-api-key">
         <div className={styles.header}>
-          <h2 className={styles.heading}>
-            <Icon>vpn_key</Icon>
-            API Keys
-          </h2>
-          <Button className={styles.primary} icon="add" onClick={() => setShowAddModal(true)}>
+          <div>
+            <h2 className="ui-eyebrow">
+              <Icon className="text-[16px]">vpn_key</Icon>
+              API Keys
+            </h2>
+            <p className={styles.description}>Manage credentials used to authenticate API requests.</p>
+          </div>
+          <Button variant="contrast" icon="add" onClick={() => setShowAddModal(true)}>
             Create Key
           </Button>
         </div>
@@ -978,11 +1044,12 @@ export default function APIPageClient({ machineId }) {
         <div className={styles.settingsRow}>
           <div>
             <p className="text-sm font-medium">Require API key</p>
-            <p className="text-sm text-text-muted">
+            <p className="text-xs text-text-muted mt-1">
               Requests without a valid key will be rejected
             </p>
           </div>
           <Toggle
+            aria-label="Require API key"
             checked={requireApiKey}
             onChange={() => handleRequireApiKey(!requireApiKey)}
           />
@@ -995,13 +1062,13 @@ export default function APIPageClient({ machineId }) {
         )}
 
         {keys.length === 0 ? (
-          <div className="text-center py-12">
+          <div className="text-center py-8">
             <div className="inline-flex items-center justify-center text-text-muted mb-4">
               <Icon className="text-[32px]">vpn_key</Icon>
             </div>
             <p className="text-text-main font-medium mb-1">No API keys yet</p>
             <p className="text-sm text-text-muted mb-4">Create your first API key to get started</p>
-            <Button className={styles.primary} icon="add" onClick={() => setShowAddModal(true)}>
+            <Button variant="contrast" icon="add" onClick={() => setShowAddModal(true)}>
               Create Key
             </Button>
           </div>
@@ -1013,7 +1080,12 @@ export default function APIPageClient({ machineId }) {
                 className={styles.keyRow}
               >
                 <div className={styles.keyDetails}>
-                  <p className={`${styles.keyName} text-sm font-medium`}>{key.name}</p>
+                  <div className={styles.keyName}>
+                    <p className="text-sm font-medium break-words min-w-0">{key.name}</p>
+                    <StatusBadge variant={key.isActive === false ? "default" : "success"} className={styles.statusBadge}>
+                      {key.isActive === false ? "Paused" : "Active"}
+                    </StatusBadge>
+                  </div>
                   <div className={styles.keyCredential}>
                     <code className={`${styles.keyValue} text-xs text-text-muted font-mono`} data-i18n-skip>
                       {visibleKeys.has(key.id) ? key.key : maskKey(key.key)}
@@ -1022,6 +1094,8 @@ export default function APIPageClient({ machineId }) {
                       onClick={() => toggleKeyVisibility(key.id)}
                       className={styles.iconButton}
                       title={visibleKeys.has(key.id) ? "Hide key" : "Show key"}
+                      aria-label={visibleKeys.has(key.id) ? "Hide key" : "Show key"}
+                      aria-pressed={visibleKeys.has(key.id)}
                     >
                       <Icon className="text-[14px]">
                         {visibleKeys.has(key.id) ? "visibility_off" : "visibility"}
@@ -1040,12 +1114,10 @@ export default function APIPageClient({ machineId }) {
                   <p className={`${styles.keyMeta} text-xs text-text-muted mt-1`}>
                     Created {new Date(key.createdAt).toLocaleDateString()}
                   </p>
-                  {key.isActive === false && (
-                    <p className={`${styles.keyPaused} text-xs text-[var(--warn)] mt-1`}>Paused</p>
-                  )}
                 </div>
                 <div className={styles.keyActions}>
                   <Toggle
+                    aria-label={`${key.isActive === false ? "Resume" : "Pause"} ${key.name}`}
                     size="sm"
                     checked={key.isActive ?? true}
                     onChange={(checked) => {
@@ -1080,6 +1152,7 @@ export default function APIPageClient({ machineId }) {
 
       {/* Add Key Modal */}
       <Modal
+        className={styles.dialog}
         isOpen={showAddModal}
         title="Create API Key"
         onClose={() => {
@@ -1096,7 +1169,7 @@ export default function APIPageClient({ machineId }) {
             placeholder="Production Key"
           />
           <div className="flex gap-2">
-            <Button className={styles.primary} onClick={handleCreateKey} fullWidth disabled={!newKeyName.trim()}>
+            <Button variant="contrast" onClick={handleCreateKey} fullWidth disabled={!newKeyName.trim()}>
               Create
             </Button>
             <Button
@@ -1115,6 +1188,7 @@ export default function APIPageClient({ machineId }) {
 
       {/* Created Key Modal */}
       <Modal
+        className={styles.dialog}
         isOpen={!!createdKey}
         title="API Key Created"
         onClose={() => setCreatedKey(null)}
@@ -1144,7 +1218,7 @@ export default function APIPageClient({ machineId }) {
               {copied === "created_key" ? "Copied!" : "Copy"}
             </Button>
           </div>
-          <Button className={styles.primary} onClick={() => setCreatedKey(null)} fullWidth>
+          <Button variant="contrast" onClick={() => setCreatedKey(null)} fullWidth>
             Done
           </Button>
         </div>
@@ -1152,6 +1226,7 @@ export default function APIPageClient({ machineId }) {
 
       {/* Enable Tunnel Modal */}
       <Modal
+        className={styles.dialog}
         isOpen={showEnableTunnelModal}
         title="Enable Tunnel"
         onClose={() => setShowEnableTunnelModal(false)}
@@ -1186,7 +1261,7 @@ export default function APIPageClient({ machineId }) {
           </p>
 
           <div className="flex gap-2">
-            <Button className={styles.primary} onClick={handleEnableTunnel} fullWidth>
+            <Button variant="contrast" onClick={handleEnableTunnel} fullWidth>
               Start Tunnel
             </Button>
             <Button onClick={() => setShowEnableTunnelModal(false)} variant="ghost" fullWidth>Cancel</Button>
@@ -1196,6 +1271,7 @@ export default function APIPageClient({ machineId }) {
 
       {/* Disable Cloudflare Tunnel Modal */}
       <Modal
+        className={styles.dialog}
         isOpen={showDisableTunnelModal}
         title="Disable Tunnel"
         onClose={() => !tunnelLoading && setShowDisableTunnelModal(false)}
@@ -1213,6 +1289,7 @@ export default function APIPageClient({ machineId }) {
 
       {/* Tailscale Modal */}
       <Modal
+        className={styles.dialog}
         isOpen={showTsModal}
         title="Tailscale Funnel"
         onClose={() => { if (!tsInstalling) { setShowTsModal(false); setTsSudoPassword(""); setTsStatus(null); } }}
@@ -1231,7 +1308,7 @@ export default function APIPageClient({ machineId }) {
             <div className="flex flex-col gap-3">
               <p className="text-sm text-text-muted">Tailscale is not installed. Install it to enable Funnel.</p>
               <div className="flex gap-2">
-                <Button className={styles.primary} onClick={handleInstallTailscale} fullWidth>
+                <Button variant="contrast" onClick={handleInstallTailscale} fullWidth>
                   Install Tailscale
                 </Button>
                 <Button onClick={() => setShowTsModal(false)} variant="ghost" fullWidth>Cancel</Button>
@@ -1265,7 +1342,7 @@ export default function APIPageClient({ machineId }) {
               </div>
               <div className="flex gap-2">
                 <Button
-                  className={styles.primary}
+                  variant="contrast"
                   onClick={() => handleConnectTailscale()}
                   fullWidth
                 >
@@ -1282,6 +1359,7 @@ export default function APIPageClient({ machineId }) {
 
       {/* Disable Tailscale Modal */}
       <Modal
+        className={styles.dialog}
         isOpen={showDisableTsModal}
         title="Disable Tailscale"
         onClose={() => !tsLoading && setShowDisableTsModal(false)}
@@ -1299,6 +1377,7 @@ export default function APIPageClient({ machineId }) {
 
       {/* Confirm Modal */}
       <ConfirmModal
+        className={styles.dialog}
         isOpen={!!confirmState}
         onClose={() => setConfirmState(null)}
         onConfirm={confirmState?.onConfirm}

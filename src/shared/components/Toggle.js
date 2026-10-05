@@ -10,6 +10,7 @@ export default function Toggle({
   disabled = false,
   size = "md",
   className,
+  ...props
 }) {
   const sizes = {
     sm: { track: "w-8 h-4", thumb: "size-3", translate: "translate-x-4" },
@@ -43,6 +44,7 @@ export default function Toggle({
           sizes[size].track,
           disabled && "cursor-not-allowed"
         )}
+        {...props}
       >
         <span
           className={cn(

@@ -25,6 +25,7 @@ import AddCustomModelModal from "./AddCustomModelModal";
 import BulkImportCodexModal from "./BulkImportCodexModal";
 import BulkImportGrokCliModal from "./BulkImportGrokCliModal";
 import CustomConfigCard from "./CustomConfigCard";
+import styles from "../providers.module.css";
 
 const ONE_BY_ONE_DELAY_MS = 1000;
 
@@ -1366,12 +1367,12 @@ export default function ProviderDetailPage() {
   };
 
   return (
-    <div className="flex min-w-0 flex-col gap-6 px-1 sm:gap-8 sm:px-0">
+    <div className={`dashboard-surface ${styles.page}`}>
       {/* Header */}
       <div className="min-w-0">
         <Link
           href="/dashboard/providers"
-          className="inline-flex items-center gap-1 text-sm text-text-muted hover:text-primary transition-colors mb-4"
+          className={styles.detailLink}
         >
           <Icon className="text-lg">arrow_back</Icon>
           Back to Providers
@@ -1404,20 +1405,20 @@ export default function ProviderDetailPage() {
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="truncate text-2xl font-semibold tracking-tight sm:text-3xl">{providerInfo.name}</h1>
+              <h1 className={styles.detailTitle}>{providerInfo.name}</h1>
               {(providerInfo.notice?.apiKeyUrl || providerInfo.notice?.signupUrl || providerInfo.website) && (
                 <a
                   href={providerInfo.notice?.apiKeyUrl || providerInfo.notice?.signupUrl || providerInfo.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                  className="text-xs text-text-muted hover:text-text-main hover:underline inline-flex items-center gap-1"
                 >
                   <Icon className="text-sm">open_in_new</Icon>
                   {providerInfo.notice?.apiKeyUrl ? "Get API Key" : "Sign up / Learn more"}
                 </a>
               )}
             </div>
-            <p className="text-text-muted">
+            <p className={styles.description}>
               {connections.length} connection{connections.length === 1 ? "" : "s"}
             </p>
           </div>
@@ -1449,11 +1450,11 @@ export default function ProviderDetailPage() {
       )}
 
       {isCompatible && providerNode && (
-        <Card>
+        <Card className={`ui-card ${styles.panel}`}>
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
-              <h2 className="text-lg font-semibold">{isAnthropicCompatible ? "Anthropic Compatible Details" : "OpenAI Compatible Details"}</h2>
-              <p className="break-all text-sm text-text-muted">
+              <h2 className="ui-eyebrow"><Icon className="text-[16px]">api</Icon>{isAnthropicCompatible ? "Anthropic Compatible Details" : "OpenAI Compatible Details"}</h2>
+              <p className={`break-all mt-2 ${styles.description}`}>
                 {isAnthropicCompatible ? "Messages API" : (providerNode.apiType === "responses" ? "Responses API" : "Chat Completions")} · {(providerNode.baseUrl || "").replace(/\/$/, "")}/
                 {isAnthropicCompatible ? "messages" : (providerNode.apiType === "responses" ? "responses" : "chat/completions")}
               </p>
@@ -1461,6 +1462,7 @@ export default function ProviderDetailPage() {
             <div className="grid grid-cols-1 gap-2 sm:flex sm:items-center">
               <Button
                 size="sm"
+                variant="contrast"
                 icon="add"
                 onClick={() => {
                   setAddConnectionError("");
@@ -1481,7 +1483,7 @@ export default function ProviderDetailPage() {
               </Button>
               <Button
                 size="sm"
-                variant="secondary"
+                variant="ghost"
                 icon="delete"
                 onClick={async () => {
                   setConfirmState({
@@ -1500,7 +1502,7 @@ export default function ProviderDetailPage() {
                     }
                   });
                 }}
-                className="w-full sm:w-auto"
+                className={`w-full sm:w-auto ${styles.error}`}
               >
                 Delete
               </Button>
@@ -1513,9 +1515,9 @@ export default function ProviderDetailPage() {
       {isFreeNoAuth ? (
         <NoAuthProxyCard providerId={providerId} />
       ) : (
-        <Card>
+        <Card className={`ui-card ${styles.panel}`}>
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-lg font-semibold">Connections</h2>
+            <h2 className="ui-eyebrow"><Icon className="text-[16px]">vpn_key</Icon>Connections</h2>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
               {connections.length > 0 && proxyPools.length > 0 && (
                 <Button
@@ -1588,7 +1590,7 @@ export default function ProviderDetailPage() {
           {connections.length === 0 ? (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
-                <div className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-primary/10 text-primary shrink-0">
+                <div className="inline-flex items-center justify-center w-9 h-9 text-text-muted shrink-0">
                   <Icon className="text-[18px]">{isOAuth ? "lock" : "key"}</Icon>
                 </div>
                 <div className="min-w-0">
@@ -1606,7 +1608,7 @@ export default function ProviderDetailPage() {
                     <Button size="sm" icon="lock" variant="secondary" onClick={triggerOAuthConnection}>
                       {oauthConnectionLabel}
                     </Button>
-                    <Button size="sm" icon="key" onClick={triggerApiKeyConnection}>
+                    <Button size="sm" variant="contrast" icon="key" onClick={triggerApiKeyConnection}>
                       {apiKeyConnectionLabel}
                     </Button>
                   </>
@@ -1749,10 +1751,11 @@ export default function ProviderDetailPage() {
       <CustomConfigCard providerId={providerId} />
 
       {/* Models */}
-      <Card>
+      <Card className={`ui-card ${styles.panel}`}>
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold">
+            <h2 className="ui-eyebrow">
+              <Icon className="text-[16px]">smart_toy</Icon>
               {"Available Models"}
             </h2>
             {providerThinkingLevels && (

@@ -5,6 +5,7 @@ import Icon from "@/shared/components/Icon";
 
 const variants = {
   primary: "bg-white hover:bg-[#EDEDEE] text-[#0A0A0B] border border-transparent shadow-xs disabled:opacity-40",
+  contrast: "bg-[var(--text)] hover:bg-[var(--text-2)] text-[var(--bg)] border border-transparent shadow-none disabled:opacity-40",
   secondary: "bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] text-[var(--text)] border border-[var(--line-2)] disabled:opacity-40",
   outline: "bg-transparent hover:bg-[var(--surface-2)] text-[var(--text)] border border-[var(--line-2)] hover:border-[var(--accent-line)]",
   ghost: "bg-transparent hover:bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text)] border border-transparent",
@@ -32,6 +33,7 @@ export default function Button({
 }) {
   return (
     <button
+      data-variant={variant}
       className={cn(
         "inline-flex items-center justify-center gap-2 font-semibold transition-all duration-150 ease-out cursor-pointer",
         "active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100",

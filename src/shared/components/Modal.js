@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useId } from "react";
 import { cn } from "@/shared/utils/cn";
 import Button from "./Button";
 import Tooltip from "./Tooltip";
@@ -17,6 +17,7 @@ export default function Modal({
   showTrafficLights = true,
   className,
 }) {
+  const titleId = useId();
   const sizes = {
     sm: "max-w-sm",
     md: "max-w-md",
@@ -54,6 +55,9 @@ export default function Modal({
 
       {/* Modal content */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
         className={cn(
           "relative w-full bg-[var(--surface)]",
           "border border-[var(--line-2)]",
@@ -85,7 +89,7 @@ export default function Modal({
                 </div>
               )}
               {title && (
-                <h2 className="text-sm sm:text-base font-semibold text-[var(--text)] tracking-tight">{title}</h2>
+                <h2 id={titleId} className="text-sm sm:text-base font-semibold text-[var(--text)] tracking-tight">{title}</h2>
               )}
             </div>
             {/* X button — mobile only */}
@@ -123,6 +127,7 @@ export function ConfirmModal({
   cancelText = "Cancel",
   variant = "danger",
   loading = false,
+  className,
 }) {
   return (
     <Modal
@@ -130,6 +135,7 @@ export function ConfirmModal({
       onClose={onClose}
       title={title}
       size="sm"
+      className={className}
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={loading}>
