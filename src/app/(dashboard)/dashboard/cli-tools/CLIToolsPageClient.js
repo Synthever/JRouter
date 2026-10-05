@@ -2,10 +2,11 @@
 import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect } from "react";
-import { CardSkeleton } from "@/shared/components";
+import { Card, Skeleton } from "@/shared/components";
 import { CLI_TOOLS, MITM_TOOLS } from "@/shared/constants/cliTools";
 import { MitmLinkCard } from "./components";
 import ToolSummaryCard from "./components/ToolSummaryCard";
+import styles from "./cli-tools.module.css";
 
 const ALL_STATUSES_URL = "/api/cli-tools/all-statuses";
 
@@ -30,13 +31,18 @@ export default function CLIToolsPageClient({ machineId }) {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        <CardSkeleton />
-        <CardSkeleton />
-        <CardSkeleton />
-        <CardSkeleton />
-        <CardSkeleton />
-        <CardSkeleton />
+      <div className={styles.page} aria-busy="true" aria-label="Loading CLI tools">
+        <div className={styles.grid}>
+          {Array.from({ length: 6 }, (_, index) => (
+            <Card key={index} padding="none" className={styles.tile}>
+              <Skeleton className="size-8 shrink-0" />
+              <div className={styles.identity}>
+                <Skeleton className="h-4 w-28 max-w-full" />
+                <Skeleton className="mt-2 h-4 w-20 max-w-full" />
+              </div>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
@@ -45,18 +51,18 @@ export default function CLIToolsPageClient({ machineId }) {
   const mitmTools = Object.entries(MITM_TOOLS);
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-1 sm:px-0">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+    <div className={styles.page}>
+      <div className={styles.grid}>
         {regularTools.map(([toolId, tool]) => (
           <ToolSummaryCard key={toolId} toolId={toolId} tool={tool} status={toolStatuses[toolId]} />
         ))}
       </div>
-      <div className="flex flex-col gap-3 sm:gap-4">
-        <div className="flex items-center gap-2 px-1">
-          <Icon className="text-[18px] text-primary">security</Icon>
-          <h2 className="text-sm font-semibold text-text-main">MITM Tools</h2>
+      <div className={styles.group}>
+        <div className={styles.groupHeader}>
+          <Icon className="text-[18px]">security</Icon>
+          <h2>MITM Tools</h2>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        <div className={styles.grid}>
           {mitmTools.map(([toolId, tool]) => (
             <MitmLinkCard key={toolId} tool={tool} />
           ))}

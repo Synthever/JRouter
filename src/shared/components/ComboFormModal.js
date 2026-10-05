@@ -1,5 +1,6 @@
 "use client";
 import Icon from "@/shared/components/Icon";
+import controls from "./DashboardControls.module.css";
 
 import { useState, useEffect } from "react";
 import Modal from "./Modal";
@@ -28,18 +29,18 @@ function ModelItem({ index, model, isFirst, isLast, onEdit, onMoveUp, onMoveDown
       <span className="text-[10px] font-medium text-text-muted w-3 text-center shrink-0">{index + 1}</span>
       {editing ? (
         <input autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={commit} onKeyDown={handleKeyDown}
-          className="min-w-0 flex-1 rounded border border-primary/40 bg-white px-1.5 py-0.5 font-mono text-xs text-text-main outline-none dark:bg-black/20" />
+          className="min-w-0 flex-1 rounded border border-[var(--line-2)] bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-xs text-text-main outline-none" />
       ) : (
         <div className="min-w-0 flex-1 cursor-text truncate rounded px-1.5 py-0.5 font-mono text-xs text-text-main hover:bg-black/5 dark:hover:bg-white/5"
           onClick={() => setEditing(true)} title="Click to edit">{model}</div>
       )}
       <div className="flex shrink-0 items-center gap-0.5">
         <button onClick={onMoveUp} disabled={isFirst}
-          className={`p-0.5 rounded ${isFirst ? "text-text-muted/20 cursor-not-allowed" : "text-text-muted hover:text-primary hover:bg-black/5 dark:hover:bg-white/5"}`} title="Move up">
+          className={`p-0.5 rounded ${isFirst ? "text-text-muted/20 cursor-not-allowed" : "text-text-muted hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5"}`} title="Move up">
           <Icon className="text-[12px]">arrow_upward</Icon>
         </button>
         <button onClick={onMoveDown} disabled={isLast}
-          className={`p-0.5 rounded ${isLast ? "text-text-muted/20 cursor-not-allowed" : "text-text-muted hover:text-primary hover:bg-black/5 dark:hover:bg-white/5"}`} title="Move down">
+          className={`p-0.5 rounded ${isLast ? "text-text-muted/20 cursor-not-allowed" : "text-text-muted hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5"}`} title="Move down">
           <Icon className="text-[12px]">arrow_downward</Icon>
         </button>
       </div>
@@ -111,7 +112,7 @@ export default function ComboFormModal({ isOpen, combo, onClose, onSave, activeP
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={onClose} title={title || (isEdit ? "Edit Combo" : "Create Combo")}>
+      <Modal isOpen={isOpen} onClose={onClose} title={title || (isEdit ? "Edit Combo" : "Create Combo")} className={controls.dialog}>
         <div className="flex flex-col gap-3">
           <div>
             {forcePrefix ? (
@@ -151,11 +152,10 @@ export default function ComboFormModal({ isOpen, combo, onClose, onSave, activeP
                 ))}
               </div>
             )}
-            <button onClick={() => setShowModelSelect(true)}
-              className="w-full mt-2 py-2 border border-dashed border-black/10 dark:border-white/10 rounded-lg text-xs text-primary font-medium hover:text-primary hover:border-primary/50 transition-colors flex items-center justify-center gap-1">
+            <Button onClick={() => setShowModelSelect(true)} variant="outline" fullWidth size="sm" className="mt-2">
               <Icon className="text-[16px]">add</Icon>
               Add Model
-            </button>
+            </Button>
           </div>
 
           <div className="flex flex-col gap-2 pt-1 sm:flex-row">
@@ -168,7 +168,7 @@ export default function ComboFormModal({ isOpen, combo, onClose, onSave, activeP
       </Modal>
 
       {showModelSelect && (
-        <ModelSelectModal isOpen={showModelSelect} onClose={() => setShowModelSelect(false)}
+        <ModelSelectModal className={controls.modelPicker} isOpen={showModelSelect} onClose={() => setShowModelSelect(false)}
           onSelect={handleAddModel} onDeselect={handleDeselectModel}
           activeProviders={activeProviders} modelAliases={modelAliases}
           title="Add Model to Combo" kindFilter={kindFilter}

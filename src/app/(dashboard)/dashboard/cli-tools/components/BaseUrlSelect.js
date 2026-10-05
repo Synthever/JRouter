@@ -167,6 +167,7 @@ export default function BaseUrlSelect({
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-2">
         <select
+          aria-label="Endpoint"
           value={mode}
           onChange={handleSelect}
           className="flex-1 min-w-0 px-2 py-2 bg-surface rounded text-xs border border-border focus:outline-none focus:ring-1 focus:ring-primary/50 sm:py-1.5"
@@ -184,6 +185,7 @@ export default function BaseUrlSelect({
       </div>
       {isCustom && (
         <input
+          aria-label="Custom endpoint URL"
           type="text"
           value={customInput}
           onChange={handleCustomInput}

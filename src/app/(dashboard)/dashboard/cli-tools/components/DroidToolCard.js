@@ -1,5 +1,7 @@
 "use client";
 import Icon from "@/shared/components/Icon";
+import StatusBadge from "@/shared/components/StatusBadge";
+import styles from "../cli-tools.module.css";
 
 import { useState, useEffect, useRef } from "react";
 import { Card, Button, ModelSelectModal, ManualConfigModal } from "@/shared/components";
@@ -226,8 +228,8 @@ export default function DroidToolCard({
   };
 
   return (
-    <Card padding="xs" className="overflow-hidden">
-      <div className="flex items-start justify-between gap-3 hover:cursor-pointer sm:items-center" onClick={onToggle}>
+    <Card padding="none" className={styles.panel}>
+      <div className={styles.panelHeader} onClick={onToggle}>
         <div className="flex min-w-0 items-center gap-3">
           <div className="size-8 flex items-center justify-center shrink-0">
             <Image src="/providers/droid.png" alt={tool.name} width={32} height={32} className="size-8 object-contain rounded-lg" sizes="32px" onError={(e) => { e.target.style.display = "none"; }} loading="lazy" decoding="async" />
@@ -235,9 +237,9 @@ export default function DroidToolCard({
           <div className="min-w-0">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <h3 className="font-medium text-sm">{tool.name}</h3>
-              {configStatus === "configured" && <span className="px-1.5 py-0.5 text-[10px] font-medium bg-green-500/10 text-green-600 dark:text-green-400 rounded-full">Connected</span>}
-              {configStatus === "not_configured" && <span className="px-1.5 py-0.5 text-[10px] font-medium bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 rounded-full">Not configured</span>}
-              {configStatus === "other" && <span className="px-1.5 py-0.5 text-[10px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full">Other</span>}
+              {configStatus === "configured" && <StatusBadge variant="success" className={styles.status}>Connected</StatusBadge>}
+              {configStatus === "not_configured" && <StatusBadge variant="warning" className={styles.status}>Not configured</StatusBadge>}
+              {configStatus === "other" && <StatusBadge variant="default" dot={false} className={styles.status}>Other</StatusBadge>}
             </div>
             <p className="text-xs text-text-muted truncate">{tool.description}</p>
           </div>
@@ -246,7 +248,7 @@ export default function DroidToolCard({
       </div>
 
       {isExpanded && (
-        <div className="mt-4 pt-4 border-t border-border flex flex-col gap-4">
+        <div className={styles.body}>
           {checkingDroid && (
             <div className="flex items-center gap-2 text-text-muted">
               <Icon className="animate-spin">progress_activity</Icon>
@@ -256,16 +258,16 @@ export default function DroidToolCard({
 
           {!checkingDroid && droidStatus && !droidStatus.installed && (
             <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-3 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+              <div className={`flex flex-col gap-3 p-4 border ${styles.notice} ${styles.warning}`}>
                 <div className="flex items-start gap-3">
-                  <Icon className="text-yellow-500">warning</Icon>
+                  <Icon className="text-[var(--warn)]">warning</Icon>
                   <div className="flex-1">
-                    <p className="font-medium text-yellow-600 dark:text-yellow-400">Factory Droid CLI not detected locally</p>
+                    <p className="font-medium text-[var(--warn)]">Factory Droid CLI not detected locally</p>
                     <p className="text-sm text-text-muted">Manual configuration is still available if 9router is deployed on a remote server.</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 pl-9">
-                  <Button variant="secondary" size="sm" onClick={() => setShowManualConfigModal(true)} className="!bg-yellow-500/20 !border-yellow-500/40 !text-yellow-700 dark:!text-yellow-300 hover:!bg-yellow-500/30">
+                <div className="flex flex-wrap items-center gap-2 sm:pl-9">
+                  <Button variant="secondary" size="sm" onClick={() => setShowManualConfigModal(true)}>
                     <Icon className="text-[18px] mr-1">content_copy</Icon>
                     Manual Config
                   </Button>
@@ -295,7 +297,7 @@ export default function DroidToolCard({
               <div className="flex flex-col gap-2">
                 {/* Endpoint (selector) */}
                 <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr] sm:items-center sm:gap-2">
-                  <span className="text-xs font-semibold text-text-main sm:text-right sm:text-sm">Select Endpoint</span>
+                  <span className={`sm:text-right ${styles.fieldLabel}`}>Select Endpoint</span>
                   <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
                   <BaseUrlSelect
                     value={customBaseUrl || getDisplayUrl()}
@@ -312,7 +314,7 @@ export default function DroidToolCard({
                 {/* Current configured */}
                 {droidStatus?.settings?.customModels?.find(m => m.id?.startsWith("custom:9Router"))?.baseUrl && (
                   <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr_auto] sm:items-center sm:gap-2">
-                    <span className="text-xs font-semibold text-text-main sm:text-right sm:text-sm">Current</span>
+                    <span className={`sm:text-right ${styles.fieldLabel}`}>Current</span>
                     <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
                     <span className="min-w-0 truncate rounded bg-surface/40 px-2 py-2 text-xs text-text-muted sm:py-1.5">
                       {droidStatus.settings.customModels.find(m => m.id?.startsWith("custom:9Router")).baseUrl}
@@ -322,15 +324,15 @@ export default function DroidToolCard({
 
                 {/* API Key */}
                 <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr_auto] sm:items-center sm:gap-2">
-                  <span className="text-xs font-semibold text-text-main sm:text-right sm:text-sm">API Key</span>
+                  <span className={`sm:text-right ${styles.fieldLabel}`}>API Key</span>
                   <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
                   <ApiKeySelect value={selectedApiKey} onChange={setSelectedApiKey} apiKeys={apiKeys} cloudEnabled={cloudEnabled} />
                 </div>
 
                 {/* Models */}
                 <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr_auto] sm:items-center sm:gap-2">
-                  <span className="text-xs font-semibold text-text-main sm:text-right sm:text-sm">
-                    Models {modelList.length > 0 && <span className="text-primary">({modelList.length})</span>}
+                  <span className={`sm:text-right ${styles.fieldLabel}`}>
+                    Models {modelList.length > 0 && <span className="text-text-main">({modelList.length})</span>}
                   </span>
                   <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
                   <div className="flex-1 flex flex-col gap-1">
@@ -340,7 +342,7 @@ export default function DroidToolCard({
                         {modelList.map((id) => (
                           <div key={id} className="flex items-center gap-1.5 px-2 py-1 bg-bg-secondary rounded border border-border">
                             <span className="flex-1 text-xs font-mono truncate">{id}</span>
-                            <button onClick={() => removeModel(id)} className="text-text-muted hover:text-red-500 transition-colors shrink-0" title="Remove">
+                            <button onClick={() => removeModel(id)} className="text-text-muted hover:text-[var(--danger)] transition-colors shrink-0" title="Remove">
                               <Icon className="text-[12px]">close</Icon>
                             </button>
                           </div>
@@ -360,11 +362,11 @@ export default function DroidToolCard({
                       <button
                         onClick={() => setModalOpen(true)}
                         disabled={!hasActiveProviders}
-                        className={`px-2 py-1.5 rounded border text-xs shrink-0 ${hasActiveProviders ? "bg-surface border-border hover:border-primary cursor-pointer" : "opacity-50 cursor-not-allowed border-border"}`}
+                        className={`px-2 py-1.5 rounded border text-xs shrink-0 ${hasActiveProviders ? "bg-surface border-border hover:border-[var(--text-2)] cursor-pointer" : "opacity-50 cursor-not-allowed border-border"} ${styles.selectButton}`}
                       >
                         Select
                       </button>
-                      <button onClick={addModel} disabled={!modelInput.trim()} className="px-2 py-1.5 rounded border bg-surface border-border hover:border-primary text-xs shrink-0 disabled:opacity-50" title="Add model">
+                      <button onClick={addModel} disabled={!modelInput.trim()} className="px-2 py-1.5 rounded border bg-surface border-border hover:border-[var(--text-2)] text-xs shrink-0 disabled:opacity-50" title="Add model">
                         <Icon className="text-[14px]">add</Icon>
                       </button>
                     </div>
@@ -373,7 +375,7 @@ export default function DroidToolCard({
               </div>
 
               {message && (
-                <div className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs ${message.type === "success" ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-600"}`}>
+                <div className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs ${message.type === "success" ? styles.positive : styles.danger}`}>
                   <Icon className="text-[14px]">{message.type === "success" ? "check_circle" : "error"}</Icon>
                   <span>{message.text}</span>
                 </div>
@@ -397,6 +399,7 @@ export default function DroidToolCard({
 
       {modalOpen && (
         <ModelSelectModal
+          className={styles.modelPicker}
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
           onSelect={handleModelSelect}

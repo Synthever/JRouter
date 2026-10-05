@@ -1,0 +1,217 @@
+.page {
+  composes: page from "../usage/usage.module.css";
+  composes: formScope from "../../../../shared/components/DashboardControls.module.css";
+}
+
+.header {
+  composes: header from "../usage/usage.module.css";
+}
+
+.description {
+  composes: description from "../usage/usage.module.css";
+}
+
+.section {
+  composes: section from "../usage/usage.module.css";
+}
+
+.sectionHeader {
+  composes: sectionHeader from "../usage/usage.module.css";
+}
+
+.sectionDescription {
+  composes: sectionDescription from "../usage/usage.module.css";
+}
+
+/* Quick-start command block: same code treatment as the other developer surfaces. */
+.hint {
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.command {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r1);
+  background: var(--surface-inset);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+/* One coherent section surface holds every skill; rows are separated by hairlines. */
+.rows {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.row:first-child {
+  padding-top: 0;
+}
+
+.row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.identity {
+  display: flex;
+  align-items: flex-start;
+  flex: 1 1 320px;
+  gap: 12px;
+  min-width: 0;
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+
+/* The entry skill is the one visual anchor on the page; emphasis stays monochrome. */
+.icon[data-entry="true"] {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--bg);
+}
+
+.titleLine {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.title {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.endpoint {
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--r1);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.metadata {
+  margin-top: 4px;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.url {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 4px;
+  max-width: 100%;
+  margin-top: 6px;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.url:hover {
+  color: var(--text);
+}
+
+.urlText {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  gap: 8px;
+  min-width: 0;
+}
+
+.linkButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 8px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r1);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.linkButton:hover {
+  background: var(--surface-hover);
+}
+
+.page :is(button, a, [tabindex]):focus-visible {
+  outline: 2px solid var(--text-2);
+  outline-offset: 3px;
+}
+
+@media (max-width: 639px) {
+  .identity {
+    flex: 1 1 100%;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .actions > button,
+  .actions > a {
+    width: 100%;
+  }
+
+  .linkButton {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page *,
+  .page *::before {
+    transition: none;
+    animation: none;
+  }
+}

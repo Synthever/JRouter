@@ -3,6 +3,8 @@ import Icon from "@/shared/components/Icon";
 
 import { useEffect, useMemo, useState } from "react";
 import Modal from "./Modal";
+import Button from "./Button";
+import controls from "./DashboardControls.module.css";
 
 const REGISTRY_ENDPOINT = "/api/cli-tools/cowork-mcp-registry";
 const TOOLS_ENDPOINT = "/api/cli-tools/cowork-mcp-tools";
@@ -105,7 +107,7 @@ export default function McpMarketplaceModal({ isOpen, onClose, onAdd, addedNames
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Browse MCP Marketplace" size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title="Browse MCP Marketplace" size="lg" className={controls.dialog}>
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2">
           <input
@@ -113,7 +115,7 @@ export default function McpMarketplaceModal({ isOpen, onClose, onAdd, addedNames
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name or description..."
-            className="flex-1 px-2 py-1.5 bg-surface rounded text-xs border border-border focus:outline-none focus:ring-1 focus:ring-primary/50"
+            className="flex-1 min-w-0 px-2 py-1.5 bg-surface rounded text-xs border border-border"
           />
           <select
             value={filter}
@@ -175,19 +177,13 @@ export default function McpMarketplaceModal({ isOpen, onClose, onAdd, addedNames
                         <p className="text-[10px] text-text-muted line-clamp-2 mt-0.5">{s.description}</p>
                       )}
                     </div>
-                    <button
+                    <Button variant="secondary" size="sm"
                       onClick={() => added ? null : expandServer(s)}
                       disabled={added}
-                      className={`shrink-0 px-2 py-1 rounded text-[10px] font-medium transition-colors ${
-                        added
-                          ? "bg-green-500/10 text-green-600 cursor-default"
-                          : expanded
-                          ? "bg-surface border border-border text-text-muted hover:bg-black/5"
-                          : "bg-primary/10 border border-primary/40 text-primary hover:bg-primary/20"
-                      }`}
+                      className="shrink-0"
                     >
                       {added ? "Added" : expanded ? "Cancel" : "+ Add"}
-                    </button>
+                    </Button>
                   </div>
                   {expanded && (
                     <div className="px-3 py-2 bg-surface/40 border-t border-border flex flex-col gap-2">
@@ -213,9 +209,9 @@ export default function McpMarketplaceModal({ isOpen, onClose, onAdd, addedNames
                           <div className="flex items-center justify-between">
                             <span className="text-[10px] text-text-muted">{selectedCount}/{toolKeys.length} tools enabled</span>
                             <div className="flex gap-1">
-                              <button onClick={() => setAllTools(s.url, true)} className="text-[10px] text-primary hover:underline">All</button>
+                              <button onClick={() => setAllTools(s.url, true)} className="text-[11px] text-text-muted hover:underline">All</button>
                               <span className="text-[10px] text-text-muted">·</span>
-                              <button onClick={() => setAllTools(s.url, false)} className="text-[10px] text-primary hover:underline">None</button>
+                              <button onClick={() => setAllTools(s.url, false)} className="text-[11px] text-text-muted hover:underline">None</button>
                             </div>
                           </div>
                           <div className="grid grid-cols-2 gap-1 max-h-40 overflow-y-auto">
@@ -233,12 +229,12 @@ export default function McpMarketplaceModal({ isOpen, onClose, onAdd, addedNames
                           </div>
                         </>
                       )}
-                      <button
+                      <Button size="sm"
                         onClick={() => confirmAdd(s)}
-                        className="self-end px-2 py-1 rounded text-[10px] font-medium bg-primary text-white hover:bg-primary/90"
+                        className="self-end"
                       >
                         ✓ Confirm Add
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </div>

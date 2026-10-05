@@ -109,6 +109,15 @@ describe("dashboard navigation styling contract", () => {
     expect(sidebar).not.toContain("#FF5F56");
   });
 
+  it("omits the 9Remote and 9English promotions from the sidebar", () => {
+    const sidebar = read("src/shared/components/Sidebar.js");
+    expect(sidebar).not.toContain("9Remote");
+    expect(sidebar).not.toContain("9English");
+    expect(sidebar).not.toContain("9english.net");
+    expect(sidebar).not.toContain("NineRemotePromoModal");
+    expect(sidebar).toContain('href="/dashboard/profile"');
+  });
+
   it("retains mobile sizing, reduced motion and opaque surface fallbacks", () => {
     const css = read("src/app/globals.css");
     expect(css).toMatch(/@media \(max-width: 1023px\)[\s\S]*?\.dashboard-sidebar__item[\s\S]*?min-height: 44px/);

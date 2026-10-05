@@ -1,5 +1,6 @@
 "use client";
 import Icon from "@/shared/components/Icon";
+import styles from "../cli-tools.module.css";
 
 import { useState } from "react";
 import { Card, ModelSelectModal } from "@/shared/components";
@@ -63,16 +64,16 @@ export default function DefaultToolCard({ toolId, tool, isExpanded, onToggle, ba
           value={modelValue}
           onChange={(e) => setModelValue(e.target.value)}
           placeholder="provider/model-id"
-          className="w-full sm:w-auto flex-1 px-3 py-2 bg-bg-secondary rounded-lg text-sm border border-border focus:outline-none focus:ring-1 focus:ring-primary/50"
+          className="w-full min-w-0 sm:w-auto flex-1 px-3 py-2 bg-bg-secondary rounded-lg text-sm border border-border focus:outline-none focus:ring-1 focus:ring-primary/50"
         />
         <button
           onClick={() => setShowModelModal(true)}
           disabled={!hasActiveProviders}
           className={`shrink-0 px-3 py-2 rounded-lg border text-sm transition-colors ${
             hasActiveProviders
-              ? "bg-bg-secondary border-border text-text-main hover:border-primary cursor-pointer"
+              ? "bg-bg-secondary border-border text-text-main hover:border-[var(--text-2)] cursor-pointer"
               : "opacity-50 cursor-not-allowed border-border"
-          }`}
+          } ${styles.selectButton}`}
         >
           Select Model
         </button>
@@ -80,7 +81,8 @@ export default function DefaultToolCard({ toolId, tool, isExpanded, onToggle, ba
           <>
             <button
               onClick={() => handleCopy(modelValue, "model")}
-              className="shrink-0 px-3 py-2 bg-bg-secondary hover:bg-bg-tertiary rounded-lg border border-border transition-colors"
+              className={styles.iconButton}
+              aria-label="Copy model"
             >
               <Icon className="text-lg">
                 {copiedField === "model" ? "check" : "content_copy"}
@@ -88,7 +90,7 @@ export default function DefaultToolCard({ toolId, tool, isExpanded, onToggle, ba
             </button>
             <button
               onClick={() => setModelValue("")}
-              className="p-2 text-text-muted hover:text-red-500 rounded transition-colors"
+              className="p-2 text-text-muted hover:text-[var(--danger)] rounded transition-colors"
               title="Clear"
             >
               <Icon className="text-lg">close</Icon>
@@ -111,27 +113,27 @@ export default function DefaultToolCard({ toolId, tool, isExpanded, onToggle, ba
           const isWarning = note.type === "warning";
           const isError = note.type === "cloudCheck" && !cloudEnabled && !tunnelEnabled;
           
-          let bgClass = "bg-blue-500/10 border-blue-500/30";
-          let textClass = "text-blue-600 dark:text-blue-400";
-          let iconClass = "text-blue-500";
+          let bgClass = styles.neutral;
+          let textClass = "text-text-muted";
+          let iconClass = "text-text-muted";
           let icon = "info";
           
           if (isWarning) {
-            bgClass = "bg-yellow-500/10 border-yellow-500/30";
-            textClass = "text-yellow-600 dark:text-yellow-400";
-            iconClass = "text-yellow-500";
+            bgClass = styles.warning;
+            textClass = "text-[var(--warn)]";
+            iconClass = "text-[var(--warn)]";
             icon = "warning";
           } else if (isError) {
-            bgClass = "bg-red-500/10 border-red-500/30";
-            textClass = "text-red-600 dark:text-red-400";
-            iconClass = "text-red-500";
+            bgClass = styles.danger;
+            textClass = "text-[var(--danger)]";
+            iconClass = "text-[var(--danger)]";
             icon = "error";
           }
           
           return (
             <div key={index} className={`flex items-start gap-3 p-3 rounded-lg border ${bgClass}`}>
               <Icon className={`text-lg ${iconClass}`}>{icon}</Icon>
-              <p className={`text-sm ${textClass}`}>{note.text}</p>
+              <p className={`text-xs ${textClass}`}>{note.text}</p>
             </div>
           );
         })}
@@ -161,18 +163,19 @@ export default function DefaultToolCard({ toolId, tool, isExpanded, onToggle, ba
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-medium text-text">{item.title}</p>
-              {item.desc && <p className="text-sm text-text-muted mt-0.5">{item.desc}</p>}
+              {item.desc && <p className="text-xs text-text-muted mt-0.5">{item.desc}</p>}
               {item.type === "apiKeySelector" && renderApiKeySelector()}
               {item.type === "modelSelector" && renderModelSelector()}
               {item.value && (
                 <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2">
-                  <code className="w-full sm:w-auto flex-1 px-3 py-2 bg-bg-secondary rounded-lg text-sm font-mono border border-border truncate">
+                  <code className="w-full min-w-0 sm:w-auto flex-1 px-3 py-2 bg-bg-secondary rounded-lg text-sm font-mono border border-border truncate">
                     {replaceVars(item.value)}
                   </code>
                   {item.copyable && (
                     <button
                       onClick={() => handleCopy(item.value, `${item.step}-${item.title}`)}
-                      className="shrink-0 px-3 py-2 bg-bg-secondary hover:bg-bg-tertiary rounded-lg border border-border transition-colors"
+                      className={styles.iconButton}
+                      aria-label="Copy value"
                     >
                       <Icon className="text-lg">
                         {copiedField === `${item.step}-${item.title}` ? "check" : "content_copy"}
@@ -200,7 +203,7 @@ export default function DefaultToolCard({ toolId, tool, isExpanded, onToggle, ba
               </button>
             </div>
             <pre className="p-4 bg-bg-secondary rounded-lg border border-border overflow-x-auto">
-              <code className="text-sm font-mono whitespace-pre">{replaceVars(tool.codeBlock.code)}</code>
+              <code className="whitespace-pre">{replaceVars(tool.codeBlock.code)}</code>
             </pre>
           </div>
         )}
@@ -250,9 +253,9 @@ export default function DefaultToolCard({ toolId, tool, isExpanded, onToggle, ba
   };
 
   return (
-    <Card padding="xs" className="overflow-hidden overflow-x-hidden">
-      <div className="flex items-center justify-between hover:cursor-pointer" onClick={onToggle}>
-        <div className="flex items-center gap-3">
+    <Card padding="none" className={styles.panel}>
+      <div className={styles.panelHeader} onClick={onToggle}>
+        <div className="flex min-w-0 items-center gap-3">
           <div className="size-8 rounded-lg flex items-center justify-center shrink-0">
             {renderIcon()}
           </div>
@@ -265,13 +268,14 @@ export default function DefaultToolCard({ toolId, tool, isExpanded, onToggle, ba
       </div>
 
       {isExpanded && (
-        <div className="mt-6 pt-6 border-t border-border">
+        <div className={styles.body}>
           {renderGuideSteps()}
         </div>
       )}
 
       {showModelModal && (
         <ModelSelectModal
+          className={styles.modelPicker}
           isOpen={showModelModal}
           onClose={() => setShowModelModal(false)}
           onSelect={handleSelectModel}

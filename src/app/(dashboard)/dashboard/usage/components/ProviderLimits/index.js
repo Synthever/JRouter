@@ -1189,7 +1189,7 @@ export default function ProviderLimits() {
                     <div className="min-w-0">
                       <h3 className={styles.providerName}>
                         {providerLabel(conn.provider)}
-                        <StatusBadge variant={error ? "error" : "default"}>{isInactive ? "Disabled" : isLoading ? "Loading" : error ? "Error" : quota?.message ? "Unavailable" : "Active"}</StatusBadge>
+                        <StatusBadge variant={error ? "error" : isInactive || isLoading || quota?.message ? "default" : "success"}>{isInactive ? "Disabled" : isLoading ? "Loading" : error ? "Error" : quota?.message ? "Unavailable" : "Active"}</StatusBadge>
                       </h3>
                       {getConnectionLabel(conn) ? (
                         <p className={styles.metadata}>

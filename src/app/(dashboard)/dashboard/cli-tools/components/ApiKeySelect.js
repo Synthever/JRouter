@@ -83,6 +83,7 @@ export default function ApiKeySelect({ value, onChange, apiKeys = [], cloudEnabl
     <div className={`flex flex-col gap-1.5 ${className}`}>
       <div className="flex items-center gap-2">
         <select
+          aria-label="API key"
           value={mode}
           onChange={handleSelect}
           className="flex-1 min-w-0 px-2 py-2 bg-surface rounded text-xs border border-border focus:outline-none focus:ring-1 focus:ring-primary/50 sm:py-1.5"
@@ -100,6 +101,7 @@ export default function ApiKeySelect({ value, onChange, apiKeys = [], cloudEnabl
       </div>
       {isCustom && (
         <input
+          aria-label="Custom API key"
           type="text"
           value={inputValue}
           onChange={handleCustomInput}

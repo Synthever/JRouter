@@ -1,0 +1,368 @@
+.page {
+  composes: page from "../usage/usage.module.css";
+  composes: formScope from "../../../../shared/components/DashboardControls.module.css";
+  gap: 24px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  min-width: 0;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.groupHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-2);
+}
+
+.groupHeader h2 {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.toolLink {
+  display: block;
+  min-width: 0;
+  border-radius: var(--r3);
+}
+
+.tile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 100%;
+  min-width: 0;
+  min-height: 88px;
+  padding: 16px;
+  box-shadow: none;
+}
+
+.toolLink:hover .tile {
+  border-color: var(--line-2);
+  background: color-mix(in srgb, var(--text) 3%, var(--surface));
+}
+
+.toolIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+}
+
+.identity {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.tile .title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.titleLine {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.description {
+  composes: description from "../usage/usage.module.css";
+  overflow-wrap: anywhere;
+}
+
+.tile .description {
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status {
+  flex-shrink: 0;
+  max-width: 100%;
+}
+
+.tile .status {
+  margin-top: 4px;
+}
+
+.infoStatus {
+  composes: status;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, var(--color-info) 25%, transparent);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.status:global(.badge-warning) {
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+  border-color: color-mix(in srgb, var(--warn) 25%, transparent);
+  color: var(--warn);
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--text-2);
+}
+
+.toolLink:hover .chevron {
+  color: var(--text);
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  color: var(--text-2);
+  font-size: 12px;
+  border-radius: var(--r1);
+}
+
+.backLink:hover {
+  color: var(--text);
+}
+
+.detailHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.panel {
+  composes: section from "../usage/usage.module.css";
+  overflow: hidden;
+  box-shadow: none;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.panelHeader > div {
+  min-width: 0;
+}
+
+.panelHeader p {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  min-width: 0;
+}
+
+.configuration {
+  min-width: 0;
+  color: var(--text);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.configuration :is(input:not([type="checkbox"]), select, textarea) {
+  min-width: 0;
+  min-height: 34px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r1);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.configuration select {
+  padding-right: 32px;
+}
+
+.configuration input[type="checkbox"] {
+  accent-color: var(--text-2);
+}
+
+.configuration [role="dialog"] input[type="checkbox"] {
+  min-height: 0;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+}
+
+.configuration :is(input, select, textarea):focus {
+  border-color: var(--text-2);
+  outline: 2px solid var(--text-2);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+.configuration button[data-variant] {
+  min-height: 34px;
+  border-radius: var(--r1);
+  box-shadow: none;
+}
+
+.configuration button[data-variant="primary"] {
+  background: var(--text);
+  color: var(--bg);
+}
+
+.configuration button[data-variant="primary"]:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.configuration button[data-variant="secondary"] {
+  background: var(--surface-2);
+  border-color: var(--line-2);
+  color: var(--text);
+}
+
+.configuration :is(pre, code) {
+  max-width: 100%;
+  background: var(--surface-inset);
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.configuration pre {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+  overflow: auto;
+}
+
+.configuration :is(pre, code):focus-visible,
+.page :is(button, a):focus-visible {
+  outline: 2px solid var(--text-2);
+  outline-offset: 3px;
+}
+
+.configuration :global(.group):focus-within button {
+  opacity: 1;
+}
+
+.fieldLabel {
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.notice {
+  border-radius: var(--r2);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.warning {
+  background: color-mix(in srgb, var(--warn) 8%, var(--surface));
+  border-color: color-mix(in srgb, var(--warn) 25%, transparent);
+  color: var(--warn);
+}
+
+.positive {
+  background: var(--pos-bg);
+  border-color: color-mix(in srgb, var(--pos) 25%, transparent);
+  color: var(--pos);
+}
+
+.danger {
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 25%, transparent);
+  color: var(--danger);
+}
+
+.neutral {
+  background: var(--surface-2);
+  border-color: var(--line);
+  color: var(--text-2);
+}
+
+.selectButton {
+  min-height: 34px;
+  border-color: var(--line-2);
+  border-radius: var(--r1);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.selectButton:hover:not(:disabled) {
+  border-color: var(--text-2);
+}
+
+.iconButton {
+  composes: iconButton from "../../../../shared/components/DashboardControls.module.css";
+}
+
+.modelPicker {
+  composes: modelPicker from "../../../../shared/components/DashboardControls.module.css";
+}
+
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .panelHeader {
+    align-items: center;
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 639px) {
+  .panel {
+    padding: 16px;
+  }
+
+  .configuration :is(input:not([type="checkbox"]), select, textarea) {
+    font-size: 16px;
+  }
+
+  .configuration button[data-variant],
+  .selectButton {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page * {
+    transition: none;
+  }
+}

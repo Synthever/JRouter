@@ -1,7 +1,8 @@
 "use client";
 import Icon from "@/shared/components/Icon";
 
-import { Card, Badge } from "@/shared/components";
+import { Button } from "@/shared/components";
+import StatusBadge from "@/shared/components/StatusBadge";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import {
   SKILLS,
@@ -9,105 +10,119 @@ import {
   getSkillRawUrl,
   getSkillBlobUrl,
 } from "@/shared/constants/skills";
+import styles from "./skills.module.css";
 
-function CopyButton({ value, label = "Copy link" }) {
+function CopyButton({ value, skillName, label = "Copy link" }) {
   const { copied, copy } = useCopyToClipboard(2000);
   return (
-    <button
+    <Button
+      variant="secondary"
+      size="sm"
+      icon={copied ? "check" : "content_copy"}
       onClick={() => copy(value)}
-      className="px-2 py-1 rounded-md bg-primary text-white text-[11px] font-medium hover:bg-primary/90 transition-colors cursor-pointer shrink-0 inline-flex items-center gap-1"
       title={value}
+      aria-label={copied ? `Copied ${skillName} link` : `${label} for ${skillName}`}
     >
-      <Icon className="text-[12px]">
-        {copied ? "check" : "content_copy"}
-      </Icon>
       {copied ? "Copied!" : label}
-    </button>
+    </Button>
   );
 }
 
 function SkillRow({ skill }) {
   const url = getSkillRawUrl(skill.id);
   return (
-    <div
-      className={`flex items-start gap-3 p-4 rounded-[14px] border shadow-[var(--shadow-soft)] transition-colors ${
-        skill.isEntry
-          ? "border-brand-500/40 bg-brand-500/5"
-          : "border-border-subtle bg-surface hover:bg-surface-2"
-      }`}
-    >
-      <div
-        className={`size-9 rounded-lg flex items-center justify-center shrink-0 ${
-          skill.isEntry ? "bg-primary text-white" : "bg-primary/10 text-primary"
-        }`}
-      >
-        <Icon className="text-[18px]">{skill.icon}</Icon>
-      </div>
+    <li className={styles.row}>
+      <div className={styles.identity}>
+        <span className={styles.icon} data-entry={skill.isEntry ? "true" : "false"} aria-hidden="true">
+          <Icon className="text-[18px]">{skill.icon}</Icon>
+        </span>
 
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 flex-wrap">
-          <h3 className="font-semibold text-sm text-text-main">{skill.name}</h3>
-          {skill.isEntry && (
-            <Badge variant="primary" size="sm">START HERE</Badge>
-          )}
-          {skill.endpoint && (
-            <Badge variant="default" size="sm">
-              <code className="text-[10px]">{skill.endpoint}</code>
-            </Badge>
-          )}
+        <div className="min-w-0">
+          <div className={styles.titleLine}>
+            <h3 className={styles.title}>{skill.name}</h3>
+            {skill.isEntry && <StatusBadge dot={false}>Start here</StatusBadge>}
+            {skill.endpoint && <code className={styles.endpoint}>{skill.endpoint}</code>}
+          </div>
+          <p className={styles.metadata}>{skill.description}</p>
+          <a
+            className={styles.url}
+            href={getSkillBlobUrl(skill.id)}
+            target="_blank"
+            rel="noreferrer"
+            title={url}
+          >
+            <span className={styles.urlText}>{url}</span>
+            <Icon className="mt-[3px] shrink-0 text-[13px]">open_in_new</Icon>
+          </a>
         </div>
-        <p className="text-xs text-text-muted mt-0.5">{skill.description}</p>
-        <a
-          href={getSkillBlobUrl(skill.id)}
-          target="_blank"
-          rel="noreferrer"
-          className="text-[11px] text-text-muted hover:text-primary mt-1 inline-flex items-center gap-1 break-all"
-        >
-          {url}
-          <Icon className="text-[12px]">open_in_new</Icon>
-        </a>
       </div>
 
-      <CopyButton value={url} />
-    </div>
+      <div className={styles.actions}>
+        <CopyButton value={url} skillName={skill.name} />
+      </div>
+    </li>
   );
 }
 
 export default function SkillsPage() {
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <Card padding="md">
-        <div className="text-xs text-text-muted mb-2">Paste this to your AI:</div>
-        <div className="px-3 py-2 rounded bg-surface-2 font-mono text-[12px] text-text-main">
-          Read this skill and use it: {getSkillRawUrl("9router")}
+    <div className={`dashboard-surface ${styles.page}`}>
+      <header className={styles.header}>
+        <div className="min-w-0">
+          <h1 className="ui-eyebrow flex items-center gap-2">
+            <Icon className="text-[16px]">extension</Icon> Skills
+          </h1>
+          <p className={styles.description}>
+            Reusable agent skills — copy a raw URL and paste it into any AI agent
+          </p>
         </div>
-      </Card>
+      </header>
 
-      <div className="space-y-2">
-        {SKILLS.map((skill) => (
-          <SkillRow key={skill.id} skill={skill} />
-        ))}
-      </div>
+      <section className={`ui-card ${styles.section}`} aria-labelledby="skills-quickstart-heading">
+        <div className={styles.sectionHeader}>
+          <h2 id="skills-quickstart-heading" className="ui-eyebrow">Quick start</h2>
+        </div>
+        <p className={styles.hint}>Paste this to your AI:</p>
+        <div className={styles.command}>
+          <code>Read this skill and use it: {getSkillRawUrl("9router")}</code>
+        </div>
+      </section>
 
-      <Card padding="md">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <h2 className="text-sm font-semibold text-text-main">More on GitHub</h2>
-            <p className="text-xs text-text-muted mt-0.5">
-              Browse source, README, and examples.
+      <section className={`ui-card ${styles.section}`} aria-labelledby="skills-list-heading">
+        <div className={styles.sectionHeader}>
+          <div className="min-w-0">
+            <h2 id="skills-list-heading" className="ui-eyebrow flex items-center gap-2">
+              <Icon className="text-[16px]">list_alt</Icon> Available skills
+            </h2>
+            <p className={styles.sectionDescription}>
+              {SKILLS.length} skills · each one is a single SKILL.md you can hand to an agent
             </p>
           </div>
+        </div>
+        <ul className={styles.rows}>
+          {SKILLS.map((skill) => (
+            <SkillRow key={skill.id} skill={skill} />
+          ))}
+        </ul>
+      </section>
+
+      <section className={`ui-card ${styles.section}`} aria-labelledby="skills-repo-heading">
+        <div className={styles.sectionHeader}>
+          <div className="min-w-0">
+            <h2 id="skills-repo-heading" className="ui-eyebrow">More on GitHub</h2>
+            <p className={styles.sectionDescription}>Browse source, README, and examples.</p>
+          </div>
           <a
+            className={styles.linkButton}
             href={`${SKILLS_REPO_URL}/tree/master/skills`}
             target="_blank"
             rel="noreferrer"
-            className="text-sm text-primary hover:underline inline-flex items-center gap-1"
           >
             <Icon className="text-[16px]">open_in_new</Icon>
             View on GitHub
           </a>
         </div>
-      </Card>
+      </section>
     </div>
   );
 }
