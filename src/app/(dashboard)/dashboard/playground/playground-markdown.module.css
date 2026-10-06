@@ -9,7 +9,7 @@
 /* Block rhythm: one consistent gap between blocks instead of browser margins. The
    :is() list keeps this above the per-block `margin: 0` whatever the rule order. */
 .prose > * + :is(h1, h2, h3, h4, h5, h6, p, ul, ol, blockquote, hr, div) {
-  margin-top: 10px;
+  margin-top: 14px;
 }
 
 .prose > .heading {

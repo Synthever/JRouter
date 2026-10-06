@@ -3,16 +3,27 @@
 
 .popover {
   position: absolute;
+  display: flex;
+  flex-direction: column;
   top: calc(100% + 8px);
   left: 0;
   z-index: 30;
   width: min(460px, calc(100vw - 48px));
+  max-height: var(--picker-max-height);
   padding: 12px;
   border: 1px solid var(--line-2);
   border-radius: var(--r3);
   background: var(--surface);
   box-shadow: var(--shadow-pop);
   animation: pickerIn 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.popover > :not([data-model-scroll]) {
+  flex-shrink: 0;
+}
+
+.popover [data-model-scroll] {
+  min-height: 0;
 }
 
 @keyframes pickerIn {

@@ -679,7 +679,8 @@ export default function PlaygroundPageClient() {
         </div>
       </header>
 
-      <div className={styles.toolbar}>
+      <div className={styles.workspace}>
+      <div className={`${styles.column} ${styles.toolbar}`}>
         <div className={styles.modelTriggerWrap}>
           <button
             type="button"
@@ -824,8 +825,8 @@ export default function PlaygroundPageClient() {
         </div>
       </div>
 
-      <div className={styles.scroll} ref={scrollRef} onScroll={handleScroll}>
-        <div className={styles.canvas}>
+      <div className={styles.scroll} ref={scrollRef} onScroll={handleScroll} role="region" aria-label="Conversation" tabIndex={0}>
+        <div className={`${styles.column} ${styles.canvas}`}>
           {loadError ? (
             <p className={styles.loadError} role="alert">
               <Icon>error</Icon>
@@ -859,7 +860,7 @@ export default function PlaygroundPageClient() {
         </div>
       </div>
 
-      <div className={styles.composerWrap}>
+      <div className={`${styles.column} ${styles.composerWrap}`}>
         <div className={styles.composer}>
           <textarea
             ref={inputRef}
@@ -924,11 +925,11 @@ export default function PlaygroundPageClient() {
               )}
             </span>
           </div>
+          <p className={styles.hint}>
+            <kbd>Enter</kbd> to send · <kbd>Shift</kbd> + <kbd>Enter</kbd> for a new line
+          </p>
         </div>
-
-        <p className={styles.hint}>
-          <kbd>Enter</kbd> to send · <kbd>Shift</kbd> + <kbd>Enter</kbd> for a new line
-        </p>
+      </div>
       </div>
     </div>
   );

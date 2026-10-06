@@ -1,7 +1,7 @@
 "use client";
 
 import PropTypes from "prop-types";
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { useModelCatalog } from "@/shared/hooks/useModelCatalog";
 import ModelPickerList from "@/shared/components/ModelPickerList";
 import styles from "./ModelPickerPopover.module.css";
@@ -24,6 +24,18 @@ export default function ModelPickerPopover({
     activeProviders,
     modelAliases,
   });
+
+  useLayoutEffect(() => {
+    if (!isOpen) return undefined;
+    const popover = ref.current;
+    const updateHeight = () => {
+      const top = popover.offsetParent.getBoundingClientRect().top + popover.offsetTop;
+      popover.style.setProperty("--picker-max-height", `${Math.max(0, window.innerHeight - top - 12)}px`);
+    };
+    updateHeight();
+    window.addEventListener("resize", updateHeight);
+    return () => window.removeEventListener("resize", updateHeight);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return undefined;

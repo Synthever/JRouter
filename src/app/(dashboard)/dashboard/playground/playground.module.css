@@ -1,6 +1,4 @@
-/* Model Playground — an open AI workspace: one centered conversation column,
-   a compact toolbar and an anchored composer. Chrome is deliberately minimal —
-   separation comes from whitespace and typography, not from nested cards. */
+/* Full-width chat workspace inside the existing dashboard shell. */
 
 .page {
   position: relative;
@@ -9,33 +7,27 @@
   flex-direction: column;
   min-height: 0;
   width: 100%;
-  --pg-col: 860px;
+  height: 100%;
+  container-type: inline-size;
   --pg-pad-x: 32px;
+  --pg-inset: 20px;
   /* globals.css declares --font-mono/--font-sans from next/font variables that are
      never set at runtime, which makes them guaranteed-invalid. Keep a real stack. */
   --pg-mono: var(--font-mono, "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace);
   --pg-sans: var(--font-sans, "Geist", system-ui, -apple-system, "Segoe UI", sans-serif);
-  /* The dashboard paints a visible grid behind every full-height page. The
-     conversation reads better on calm ground, so this page fades it out. */
-  --pg-veil: radial-gradient(
-    ellipse 46% 54% at 50% 50%,
-    var(--bg) 0%,
-    color-mix(in srgb, var(--bg) 86%, transparent) 52%,
-    color-mix(in srgb, var(--bg) 40%, transparent) 80%,
-    transparent 100%
-  );
   color: var(--text);
 }
 
 @media (max-width: 1023px) {
   .page {
-    --pg-pad-x: 20px;
+    --pg-pad-x: 24px;
   }
 }
 
 @media (max-width: 639px) {
   .page {
-    --pg-pad-x: 14px;
+    --pg-pad-x: 12px;
+    --pg-inset: 12px;
   }
 }
 
@@ -47,7 +39,8 @@
   justify-content: space-between;
   gap: 16px;
   width: 100%;
-  padding: 18px var(--pg-pad-x) 10px;
+  flex-shrink: 0;
+  padding: 28px var(--pg-pad-x) 0;
 }
 
 .eyebrow {
@@ -55,6 +48,9 @@
 }
 
 .headerText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   min-width: 0;
 }
 
@@ -68,14 +64,14 @@
 }
 
 .subtitle {
-  margin-top: 3px;
+  margin-top: 4px;
   color: var(--text-2);
   font-size: 12px;
 }
 
 @media (max-width: 639px) {
   .header {
-    padding: 14px var(--pg-pad-x) 10px;
+    padding: 20px var(--pg-pad-x) 0;
   }
 
   .title {
@@ -85,21 +81,39 @@
 
 /* -------------------------------------------------------------------- toolbar */
 
+.workspace {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  width: calc(100% - 2 * var(--pg-pad-x));
+  margin: 16px var(--pg-pad-x) max(24px, env(safe-area-inset-bottom));
+  border: 1px solid var(--line);
+  border-radius: var(--r3);
+  background: var(--surface);
+  container-type: inline-size;
+}
+
+.column {
+  width: calc(100cqw - 2 * var(--pg-inset));
+  min-width: 0;
+  margin-inline: auto;
+}
+
 .toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
+  flex-shrink: 0;
   gap: 8px;
-  width: 100%;
-  max-width: var(--pg-col);
-  margin: 0 auto;
-  padding: 10px var(--pg-pad-x) 9px;
+  padding: 12px 0;
   border-bottom: 1px solid var(--line);
 }
 
 .modelTriggerWrap {
   position: relative;
+  flex: 0 1 auto;
   min-width: 0;
 }
 
@@ -107,7 +121,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  max-width: 320px;
+  max-width: min(320px, 100%);
   min-height: 34px;
   padding: 5px 9px 5px 8px;
   border: 1px solid var(--line-2);
@@ -251,36 +265,28 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  /* Softens the ancestor dashboard grid under the reading column. Painted as the
-     scroll background with a fixed attachment, so it stays put while messages
-     scroll and can never tint content or code surfaces. */
-  background-image: var(--pg-veil);
-  background-attachment: fixed;
-  background-size: 100% 100%;
+  scrollbar-gutter: stable both-edges;
+  scrollbar-width: thin;
+  background: var(--surface);
 }
 
 .canvas {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 26px;
-  width: 100%;
-  max-width: var(--pg-col);
-  min-height: 100%;
-  margin: 0 auto;
-  padding: 26px var(--pg-pad-x) 8px;
+  gap: 32px;
+  padding: 36px 0 12px;
 }
 
 /* ------------------------------------------------------------------ empty state */
 
 .empty {
   display: flex;
-  flex: 1;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 7px;
-  padding: 24px 0 40px;
+  padding: 64px 0 24px;
   text-align: center;
 }
 
@@ -347,6 +353,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  width: 100%;
 }
 
 .rowUser {
@@ -354,7 +361,7 @@
 }
 
 .userBubble {
-  max-width: min(78%, 560px);
+  max-width: 70%;
   padding: 9px 13px;
   border: 1px solid var(--line-2);
   border-radius: 14px;
@@ -370,7 +377,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   min-width: 0;
 }
 
@@ -496,7 +503,7 @@
 }
 
 .thinking {
-  margin-bottom: 10px;
+  margin-bottom: 16px;
 }
 
 .thinkingToggle {
@@ -690,7 +697,7 @@
 .composerWrap {
   position: relative;
   flex-shrink: 0;
-  padding: 0 var(--pg-pad-x) 14px;
+  padding: 12px 0 16px;
 }
 
 /* Messages scrolling up fade under the composer instead of being cut by a border. */
@@ -700,15 +707,13 @@
   bottom: 100%;
   left: 0;
   height: 26px;
-  background: linear-gradient(to top, var(--bg), transparent);
+  background: linear-gradient(to top, var(--surface), transparent);
   content: "";
   pointer-events: none;
 }
 
 .composer {
   position: relative;
-  max-width: var(--pg-col);
-  margin: 0 auto;
   padding: 12px 13px 9px;
   border: 1px solid var(--line-2);
   border-radius: 16px;
@@ -829,8 +834,7 @@
 }
 
 .hint {
-  max-width: var(--pg-col);
-  margin: 7px auto 0;
+  margin: 6px auto 0;
   color: var(--text-3);
   font-size: 10.5px;
   text-align: center;
@@ -969,7 +973,7 @@
 
 @media (max-width: 639px) {
   .toolbar {
-    padding: 8px var(--pg-pad-x);
+    padding: 12px 0 10px;
   }
 
   .modelTrigger {
@@ -982,8 +986,20 @@
   }
 
   .canvas {
-    gap: 22px;
-    padding-top: 18px;
+    gap: 28px;
+    padding-top: 24px;
+  }
+
+  .empty {
+    padding-top: 56px;
+  }
+
+  .workspace {
+    margin-bottom: max(20px, env(safe-area-inset-bottom));
+  }
+
+  .hint {
+    display: none;
   }
 
   .userBubble {
@@ -995,9 +1011,9 @@
   }
 
   .settingsPopover {
-    right: var(--pg-pad-x);
-    left: var(--pg-pad-x);
-    width: auto;
+    right: 0;
+    left: auto;
+    width: min(264px, calc(100cqw - 24px));
   }
 }
 
