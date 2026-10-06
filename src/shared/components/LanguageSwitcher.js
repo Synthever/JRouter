@@ -1,7 +1,7 @@
 "use client";
 import Icon from "@/shared/components/Icon";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useId } from "react";
 import { createPortal } from "react-dom";
 import { LOCALES, LOCALE_COOKIE, normalizeLocale } from "@/i18n/config";
 import { reloadTranslations } from "@/i18n/runtime";
@@ -57,7 +57,8 @@ const getLocaleInfo = (locale) => {
   return locales[locale] || { name: locale, flag: "🌐" };
 };
 
-export default function LanguageSwitcher({ className = "", isOpen: controlledOpen, onClose, hideTrigger = false }) {
+export default function LanguageSwitcher({ className = "", dialogClassName = "", isOpen: controlledOpen, onClose, hideTrigger = false }) {
+  const titleId = useId();
   const [locale, setLocale] = useState("en");
   const [isPending, setIsPending] = useState(false);
   const [internalOpen, setInternalOpen] = useState(false);
@@ -76,6 +77,17 @@ export default function LanguageSwitcher({ className = "", isOpen: controlledOpe
   useEffect(() => {
     setLocale(getLocaleFromCookie());
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleEscape = (event) => {
+      if (event.key !== "Escape") return;
+      if (isControlled) onClose?.(locale);
+      else setInternalOpen(false);
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [isOpen, isControlled, onClose, locale]);
 
   // Close modal when clicking outside
   useEffect(() => {
@@ -141,11 +153,14 @@ export default function LanguageSwitcher({ className = "", isOpen: controlledOpe
           {/* Modal content */}
           <div
             ref={modalRef}
-            className="relative w-full bg-surface border border-black/10 dark:border-white/10 rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-w-2xl flex flex-col max-h-[80vh]"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            className={`relative w-full bg-surface border border-black/10 dark:border-white/10 rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-w-2xl flex flex-col max-h-[80vh] ${dialogClassName}`}
           >
             {/* Modal header */}
             <div className="flex items-center justify-between p-3 border-b border-black/5 dark:border-white/5">
-              <h2 className="text-lg font-semibold text-text-main">Select Language</h2>
+              <h2 id={titleId} className="text-lg font-semibold text-text-main">Select Language</h2>
               <button
                 onClick={() => setIsOpen(false)}
                 className="p-1.5 rounded-lg text-text-muted hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
@@ -166,6 +181,7 @@ export default function LanguageSwitcher({ className = "", isOpen: controlledOpe
                       key={item}
                       onClick={() => handleSetLocale(item)}
                       disabled={isPending}
+                      aria-pressed={active}
                       className={`flex flex-col items-center justify-start gap-1 px-2 py-3 rounded-lg text-xs font-medium transition-colors w-full ${
                         active
                           ? "bg-primary/15 text-primary ring-2 ring-primary"

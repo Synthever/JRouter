@@ -1,15 +1,55 @@
 "use client";
 import Icon from "@/shared/components/Icon";
 
-import { useState, useEffect, useRef } from "react";
-import { Card, Button, Toggle, Input } from "@/shared/components";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Card, Button, Toggle, Input, SegmentedControl, Skeleton } from "@/shared/components";
 import Modal, { ConfirmModal } from "@/shared/components/Modal";
 import LanguageSwitcher from "@/shared/components/LanguageSwitcher";
 import { useTheme } from "@/shared/hooks/useTheme";
-import { cn } from "@/shared/utils/cn";
 import { APP_CONFIG } from "@/shared/constants/config";
 import { LOCALE_COOKIE, normalizeLocale } from "@/i18n/config";
 import { LOCALE_FLAGS } from "@/shared/constants/locales";
+import styles from "./profile.module.css";
+
+function ProfileSection({ id, title, icon, description, children }) {
+  return (
+    <section aria-labelledby={id}>
+      <Card padding="none" className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <div className="min-w-0">
+            <h2 id={id} className="ui-eyebrow">
+              <Icon className="text-[16px]" aria-hidden="true">{icon}</Icon>
+              {title}
+            </h2>
+            {description && <p className={styles.sectionDescription}>{description}</p>}
+          </div>
+        </div>
+        {children}
+      </Card>
+    </section>
+  );
+}
+
+function ProfileStatus({ status }) {
+  if (!status.message) return null;
+  return (
+    <p className={styles.status} data-status={status.type} role={status.type === "error" ? "alert" : "status"}>
+      <Icon className="shrink-0 text-[14px]" aria-hidden="true">{status.type === "error" ? "error" : "check_circle"}</Icon>
+      {status.message}
+    </p>
+  );
+}
+
+function ProfileHeader() {
+  return (
+    <header className={styles.header}>
+      <div className="min-w-0">
+        <h1 className="ui-eyebrow"><Icon className="text-[16px]" aria-hidden="true">person</Icon>Profile</h1>
+        <p className={styles.description}>Preferences, security, and settings for your JRouter instance.</p>
+      </div>
+    </header>
+  );
+}
 
 function getLocaleFromCookie() {
   if (typeof document === "undefined") return "en";
@@ -21,13 +61,14 @@ function getLocaleFromCookie() {
 }
 
 export default function ProfilePage() {
-  const { theme, setTheme, isDark } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [locale, setLocale] = useState(() => getLocaleFromCookie());
   const [langOpen, setLangOpen] = useState(false);
   const [shutdownOpen, setShutdownOpen] = useState(false);
   const [isShuttingDown, setIsShuttingDown] = useState(false);
   const [settings, setSettings] = useState({ fallbackStrategy: "fill-first" });
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [passwords, setPasswords] = useState({ current: "", new: "", confirm: "" });
   const [passStatus, setPassStatus] = useState({ type: "", message: "" });
   const [passLoading, setPassLoading] = useState(false);
@@ -88,9 +129,12 @@ export default function ProfilePage() {
       setIsRemoteHost(!["localhost", "127.0.0.1", "::1"].includes(window.location.hostname));
   }, []);
 
-  useEffect(() => {
+  const loadSettings = useCallback(() => {
     fetch("/api/settings")
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load settings");
+        return res.json();
+      })
       .then((data) => {
         setSettings(data);
         setOidcForm({
@@ -127,9 +171,12 @@ export default function ProfilePage() {
       })
       .catch((err) => {
         console.error("Failed to fetch settings:", err);
+        setLoadError("Could not load your instance settings. Try again.");
         setLoading(false);
       });
   }, []);
+
+  useEffect(() => { loadSettings(); }, [loadSettings]);
 
   const updateOutboundProxy = async (e) => {
     e.preventDefault();
@@ -765,49 +812,65 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-0">
-      <div className="flex flex-col gap-6">
+    <div className={`dashboard-surface ${styles.page}`}>
+      <ProfileHeader />
+      {loading ? (
+        <div className={styles.stack} aria-busy="true" aria-label="Loading profile settings">
+          {["Preferences", "Security", "Routing and network"].map((section) => (
+            <Card key={section} padding="none" className={styles.section}>
+              <Skeleton className="mb-5 h-4 w-32" />
+              <div className={styles.formGrid}>
+                <Skeleton className="h-10" />
+                <Skeleton className="h-10" />
+              </div>
+              <Skeleton className="mt-4 h-4 w-48 max-w-full" />
+            </Card>
+          ))}
+          <p className={styles.description} role="status">Loading profile settings…</p>
+        </div>
+      ) : loadError ? (
+        <Card padding="none" className={styles.section}>
+          <ProfileStatus status={{ type: "error", message: loadError }} />
+          <Button variant="secondary" onClick={() => { setLoading(true); setLoadError(""); loadSettings(); }} className="mt-3" icon="refresh">Retry</Button>
+        </Card>
+      ) : (
+      <div className={styles.stack}>
         {/* Local Mode Info */}
-        <Card>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-            <div className="flex items-center gap-3 sm:gap-4">
-              <div className="size-10 sm:size-12 rounded-lg bg-green-500/10 text-green-500 flex items-center justify-center shrink-0">
-                <Icon className="text-xl sm:text-2xl">computer</Icon>
-              </div>
-              <div>
-                <h2 className="text-lg sm:text-xl font-semibold">Local Mode</h2>
-                <p className="text-sm text-text-muted">Running on your machine</p>
-              </div>
+        <ProfileSection id="profile-preferences" title="Preferences & data" icon="settings" description="Display preferences and database backups.">
+          <div className={styles.settingRow}>
+            <div className="min-w-0">
+              <p className={styles.settingTitle}>Appearance</p>
+              <p className={styles.settingDescription}>Use a light, dark, or system theme.</p>
             </div>
-            <div className="inline-flex p-1 rounded-lg bg-black/5 dark:bg-white/5 w-full sm:w-auto">
-              {["light", "dark", "system"].map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => setTheme(option)}
-                  className={cn(
-                    "flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-md font-medium transition-all flex-1 sm:flex-initial",
-                    theme === option
-                      ? "bg-white dark:bg-white/10 text-text-main shadow-sm"
-                      : "text-text-muted hover:text-text-main"
-                  )}
-                >
-                  <Icon className="text-[18px]">
-                    {option === "light" ? "light_mode" : option === "dark" ? "dark_mode" : "contrast"}
-                  </Icon>
-                  <span className="capitalize text-xs sm:text-sm">{option}</span>
-                </button>
-              ))}
+            <SegmentedControl aria-label="Appearance" value={theme} onChange={setTheme} options={[
+              { value: "light", label: "Light", icon: "light_mode" },
+              { value: "dark", label: "Dark", icon: "dark_mode" },
+              { value: "system", label: "System", icon: "contrast" },
+            ]} />
+          </div>
+          <div className={styles.settingRow}>
+            <div className="min-w-0">
+              <p className={styles.settingTitle}>Display language</p>
+              <p className={styles.settingDescription}>Choose the language used in the dashboard.</p>
+            </div>
+            <Button variant="secondary" onClick={() => setLangOpen(true)} aria-label="Change display language" data-i18n-skip="true">
+              <span aria-hidden="true">{LOCALE_FLAGS[locale] || "🌐"}</span>
+              <span>{locale}</span>
+              <Icon className="text-[14px]" aria-hidden="true">expand_more</Icon>
+            </Button>
+          </div>
+          <div className={styles.settingRow}>
+            <div className="min-w-0">
+              <p className={styles.settingTitle}>{isRemoteHost ? "Remote Mode" : "Local Mode"}</p>
+              <p className={styles.settingDescription}>{isRemoteHost ? "Connected to a remote instance." : "Running on your machine."}</p>
             </div>
           </div>
-          <div className="flex flex-col gap-3 pt-4 border-t border-border">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 rounded-lg bg-bg border border-border gap-2">
-              <div>
-                <p className="font-medium text-sm sm:text-base">Database Location</p>
-                <p className="text-xs sm:text-sm text-text-muted font-mono break-all">~/.9router/db/data.sqlite</p>
-              </div>
+          <div className={styles.settingRow}>
+            <div className="min-w-0">
+              <p className={styles.settingTitle}>Database Location</p>
+              <code className={styles.settingDescription}>~/.9router/db/data.sqlite</code>
             </div>
-            <div className="flex flex-col sm:flex-row gap-2">
+            <div className={styles.actions}>
               <Button
                 variant="secondary"
                 icon="download"
@@ -818,7 +881,7 @@ export default function ProfilePage() {
                 Download Backup
               </Button>
               <Button
-                variant="outline"
+                variant="secondary"
                 icon="upload"
                 onClick={() => importFileRef.current?.click()}
                 disabled={dbLoading}
@@ -834,42 +897,14 @@ export default function ProfilePage() {
                 onChange={handleImportDatabase}
               />
             </div>
-            {dbStatus.message && (
-              <p className={`text-sm ${dbStatus.type === "error" ? "text-red-500" : "text-green-600 dark:text-green-400"}`}>
-                {dbStatus.message}
-              </p>
-            )}
           </div>
-        </Card>
-
-        {/* Language */}
-        <Card>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="size-10 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
-              <Icon className="text-[20px]">language</Icon>
-            </div>
-            <h3 className="text-base sm:text-lg font-semibold">Language</h3>
-          </div>
-          <button
-            onClick={() => setLangOpen(true)}
-            className="flex items-center justify-between w-full p-3 rounded-lg bg-bg border border-border hover:border-primary/50 transition-colors"
-            data-i18n-skip="true"
-          >
-            <span className="text-sm text-text-muted">Display language</span>
-            <span className="text-2xl">{LOCALE_FLAGS[locale] || "🌐"}</span>
-          </button>
-        </Card>
+          <ProfileStatus status={dbStatus} />
+        </ProfileSection>
 
         {/* Security */}
-        <Card>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
-              <Icon className="text-[20px]">shield</Icon>
-            </div>
-            <h3 className="text-base sm:text-lg font-semibold">Security</h3>
-          </div>
+        <ProfileSection id="profile-security" title="Security" icon="shield" description="Dashboard access and password management.">
           <div className="flex flex-col gap-4">
-            <div className="flex items-start sm:items-center justify-between gap-4">
+            <div className={styles.settingRow}>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm sm:text-base">Require login</p>
                 <p className="text-xs sm:text-sm text-text-muted">
@@ -877,17 +912,19 @@ export default function ProfilePage() {
                 </p>
               </div>
               <Toggle
+                aria-label="Require login"
                 checked={settings.requireLogin === true}
                 onChange={() => updateRequireLogin(!settings.requireLogin)}
                 disabled={loading}
               />
             </div>
             {settings.requireLogin === true && (
-              <form onSubmit={handlePasswordChange} className="flex flex-col gap-4 pt-4 border-t border-border/50">
+              <form onSubmit={handlePasswordChange} className={styles.form}>
                 {settings.hasPassword && (
                   <div className="flex flex-col gap-2">
-                    <label className="text-xs sm:text-sm font-medium">Current Password</label>
                     <Input
+                      label="Current Password"
+                      autoComplete="current-password"
                       type="password"
                       placeholder="Enter current password"
                       value={passwords.current}
@@ -896,17 +933,11 @@ export default function ProfilePage() {
                     />
                   </div>
                 )}
-                {/* {!settings.hasPassword && (
-                  <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                    <p className="text-sm text-blue-600 dark:text-blue-400">
-                      Setting password for the first time. Leave current password empty or use default: <code className="bg-blue-500/20 px-1 rounded">123456</code>
-                    </p>
-                  </div>
-                )} */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className={styles.formGrid}>
                   <div className="flex flex-col gap-2">
-                    <label className="text-xs sm:text-sm font-medium">New Password</label>
                     <Input
+                      label="New Password"
+                      autoComplete="new-password"
                       type="password"
                       placeholder="Enter new password"
                       value={passwords.new}
@@ -915,8 +946,9 @@ export default function ProfilePage() {
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <label className="text-xs sm:text-sm font-medium">Confirm New Password</label>
                     <Input
+                      label="Confirm New Password"
+                      autoComplete="new-password"
                       type="password"
                       placeholder="Confirm new password"
                       value={passwords.confirm}
@@ -926,35 +958,31 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {passStatus.message && (
-                  <p className={`text-xs sm:text-sm ${passStatus.type === "error" ? "text-red-500" : "text-green-500"}`}>
-                    {passStatus.message}
-                  </p>
-                )}
+                <ProfileStatus status={passStatus} />
 
                 <div className="pt-2">
-                  <Button type="submit" variant="primary" loading={passLoading} className="w-full sm:w-auto">
+                  <Button type="submit" variant="contrast" loading={passLoading} className="w-full sm:w-auto">
                     {settings.hasPassword ? "Update Password" : "Set Password"}
                   </Button>
                 </div>
               </form>
             )}
           </div>
-        </Card>
+        </ProfileSection>
 
         {/* Single Sign-On (SSO) */}
-        <Card>
+        <section aria-labelledby="profile-sso">
+        <Card padding="none" className={styles.section}>
           <button
             type="button"
             onClick={() => setOidcExpanded((v) => !v)}
-            className="w-full flex items-center gap-3 text-left"
+            className={styles.disclosure}
+            aria-expanded={oidcExpanded}
+            aria-controls="profile-sso-settings"
           >
-            <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-500 shrink-0">
-              <Icon className="text-[20px]">lock_open</Icon>
-            </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-base sm:text-lg font-semibold">Single Sign-On (SSO)</h3>
-              <p className="text-xs text-text-muted">
+              <h2 id="profile-sso" className="ui-eyebrow"><Icon className="text-[16px]" aria-hidden="true">lock_open</Icon>Single Sign-On (SSO)</h2>
+              <p className={styles.sectionDescription}>
                 {settings.authMode === "sso" || settings.authMode === "oidc" || settings.authMode === "saml"
                   ? `${settings.ssoType === "saml" ? "SAML 2.0" : "OIDC"} SSO active`
                   : settings.authMode === "both"
@@ -967,45 +995,23 @@ export default function ProfilePage() {
             </Icon>
           </button>
           {oidcExpanded && (
-            <div className="flex flex-col gap-4 mt-4">
+            <div id="profile-sso-settings" className={styles.ssoForm}>
               <p className="text-xs sm:text-sm text-text-muted">
                 Configure enterprise Single Sign-On (SSO) for dashboard access using SAML 2.0 or OIDC.
               </p>
 
               {/* SSO Protocol Switcher Tabs */}
               <div className="flex flex-col gap-2">
-                <label className="font-medium text-sm sm:text-base">SSO Protocol</label>
-                <div className="flex p-1 rounded-lg bg-black/5 dark:bg-white/5 border border-border">
-                  <button
-                    type="button"
-                    onClick={() => setSsoTypeTab("saml")}
-                    className={cn(
-                      "flex-1 py-1.5 px-3 rounded-md font-medium text-xs sm:text-sm transition-all text-center",
-                      ssoTypeTab === "saml"
-                        ? "bg-white dark:bg-white/10 text-text-main shadow-sm"
-                        : "text-text-muted hover:text-text-main"
-                    )}
-                  >
-                    SAML 2.0
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSsoTypeTab("oidc")}
-                    className={cn(
-                      "flex-1 py-1.5 px-3 rounded-md font-medium text-xs sm:text-sm transition-all text-center",
-                      ssoTypeTab === "oidc"
-                        ? "bg-white dark:bg-white/10 text-text-main shadow-sm"
-                        : "text-text-muted hover:text-text-main"
-                    )}
-                  >
-                    OIDC
-                  </button>
-                </div>
+                <p className={styles.fieldLabel}>SSO Protocol</p>
+                <SegmentedControl aria-label="SSO Protocol" value={ssoTypeTab} onChange={setSsoTypeTab} options={[
+                  { value: "saml", label: "SAML 2.0" },
+                  { value: "oidc", label: "OIDC" },
+                ]} className="self-start" />
               </div>
 
               {/* Auth Mode selection */}
               <div className="flex flex-col gap-2">
-                <label className="font-medium text-sm sm:text-base">Auth Mode</label>
+                <p className={styles.fieldLabel}>Auth Mode</p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {[
                     {
@@ -1032,21 +1038,18 @@ export default function ProfilePage() {
                           ? currentMode === "sso" || currentMode === "saml" || currentMode === "oidc"
                           : currentMode === "both";
                     return (
-                      <button
+                      <Button
                         key={option.value}
                         type="button"
                         onClick={() => updateOidcForm("authMode", option.value)}
-                        className={cn(
-                          "text-left rounded-lg border p-3 transition-colors",
-                          active
-                            ? "border-primary bg-primary/5"
-                            : "border-border bg-bg hover:bg-black/5 dark:hover:bg-white/5"
-                        )}
+                        variant="outline"
+                        className={styles.choice}
+                        aria-pressed={active}
                         disabled={loading || oidcLoading || samlLoading}
                       >
-                        <p className="font-medium text-sm sm:text-base">{option.title}</p>
-                        <p className="text-xs sm:text-sm text-text-muted mt-1">{option.desc}</p>
-                      </button>
+                        <span className={styles.settingTitle}>{option.title}</span>
+                        <span className={styles.settingDescription}>{option.desc}</span>
+                      </Button>
                     );
                   })}
                 </div>
@@ -1056,14 +1059,16 @@ export default function ProfilePage() {
                 /* SAML Configuration Panel */
                 <div className="flex flex-col gap-4 pt-2 border-t border-border/50">
                   {/* IdP Setup Guidelines Banner & Collapsible Drawer */}
-                  <div className="rounded-lg border border-border bg-bg/80 overflow-hidden">
+                  <div className={styles.inset}>
                     <button
                       type="button"
                       onClick={() => setShowSamlGuide((prev) => !prev)}
-                      className="w-full p-3 flex items-center justify-between gap-2 text-left hover:bg-surface/50 transition-colors"
+                      className={styles.disclosure}
+                      aria-expanded={showSamlGuide}
+                      aria-controls="profile-saml-guide"
                     >
                       <div className="flex items-center gap-2">
-                        <Icon className="text-primary text-lg">menu_book</Icon>
+                        <Icon className="text-text-muted text-lg" aria-hidden="true">menu_book</Icon>
                         <div>
                           <p className="font-semibold text-xs sm:text-sm text-text-main">
                             IdP Setup Guidelines & Provider Configuration Instructions
@@ -1080,9 +1085,9 @@ export default function ProfilePage() {
                     </button>
 
                     {showSamlGuide && (
-                      <div className="p-4 border-t border-border bg-surface/30 text-xs text-text-main flex flex-col gap-3">
-                        <div className="p-2.5 rounded border border-primary/20 bg-primary/5 text-primary text-xs">
-                          <p className="font-semibold mb-1">🔑 Required Service Provider (SP) Values for your IdP Setup:</p>
+                      <div id="profile-saml-guide" className={styles.guide}>
+                        <div className={styles.inset}>
+                          <p className="font-semibold mb-1">Required Service Provider (SP) Values for your IdP Setup:</p>
                           <ul className="list-disc pl-4 space-y-1 font-mono text-[11px]">
                             <li>
                               <b>Assertion Consumer Service (ACS) URL:</b>{" "}
@@ -1102,7 +1107,7 @@ export default function ProfilePage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
                           <div className="p-3 rounded border border-border bg-bg/50 flex flex-col gap-1.5">
                             <p className="font-semibold text-text-main flex items-center gap-1.5">
-                              <span>☁️</span> AWS IAM Identity Center
+                              AWS IAM Identity Center
                             </p>
                             <ol className="list-decimal pl-4 text-text-muted space-y-1">
                               <li>Applications → <b>Add application</b> → Select <b>Add custom SAML 2.0 application</b>.</li>
@@ -1115,7 +1120,7 @@ export default function ProfilePage() {
 
                           <div className="p-3 rounded border border-border bg-bg/50 flex flex-col gap-1.5">
                             <p className="font-semibold text-text-main flex items-center gap-1.5">
-                              <span>🔷</span> Microsoft Entra ID (Azure AD)
+                              Microsoft Entra ID (Azure AD)
                             </p>
                             <ol className="list-decimal pl-4 text-text-muted space-y-1">
                               <li>Enterprise Applications → <b>New application</b> → <b>Create your own application</b>.</li>
@@ -1128,7 +1133,7 @@ export default function ProfilePage() {
 
                           <div className="p-3 rounded border border-border bg-bg/50 flex flex-col gap-1.5">
                             <p className="font-semibold text-text-main flex items-center gap-1.5">
-                              <span>🟢</span> Okta / Auth0
+                              Okta / Auth0
                             </p>
                             <ol className="list-decimal pl-4 text-text-muted space-y-1">
                               <li>Applications → <b>Create App Integration</b> → Select <b>SAML 2.0</b>.</li>
@@ -1141,7 +1146,7 @@ export default function ProfilePage() {
 
                           <div className="p-3 rounded border border-border bg-bg/50 flex flex-col gap-1.5">
                             <p className="font-semibold text-text-main flex items-center gap-1.5">
-                              <span>🛡️</span> Keycloak / Authentik
+                              Keycloak / Authentik
                             </p>
                             <ol className="list-decimal pl-4 text-text-muted space-y-1">
                               <li>Clients → <b>Create client</b> → Select <b>SAML</b>.</li>
@@ -1156,7 +1161,7 @@ export default function ProfilePage() {
                   </div>
 
                   {/* Quick Import Card */}
-                  <div className="p-3 rounded-lg border border-dashed border-primary/40 bg-primary/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className={styles.settingRow}>
                     <div>
                       <p className="font-medium text-sm text-text-main">1-Click IdP Metadata XML Import</p>
                       <p className="text-xs text-text-muted">Auto-fill SSO URL, Issuer & Cert from XML metadata</p>
@@ -1181,8 +1186,8 @@ export default function ProfilePage() {
 
                   <div className="grid grid-cols-1 gap-4">
                     <div className="flex flex-col gap-2">
-                      <label className="font-medium text-sm sm:text-base">Single Sign-On Service URL (samlEntryPoint)</label>
                       <Input
+                        label="Single Sign-On Service URL (samlEntryPoint)"
                         placeholder="https://idp.example.com/app/saml/sso/..."
                         value={samlForm.samlEntryPoint}
                         onChange={(e) => updateSamlForm("samlEntryPoint", e.target.value)}
@@ -1191,8 +1196,8 @@ export default function ProfilePage() {
                     </div>
 
                     <div className="flex flex-col gap-2">
-                      <label className="font-medium text-sm sm:text-base">SP Entity ID / Audience (samlIssuer)</label>
                       <Input
+                        label="SP Entity ID / Audience (samlIssuer)"
                         placeholder="urn:9router:sp"
                         value={samlForm.samlIssuer}
                         onChange={(e) => updateSamlForm("samlIssuer", e.target.value)}
@@ -1201,8 +1206,8 @@ export default function ProfilePage() {
                     </div>
 
                     <div className="flex flex-col gap-2">
-                      <div className="flex items-center justify-between">
-                        <label className="font-medium text-sm sm:text-base">IdP X.509 Certificate (samlCert)</label>
+                      <div className={styles.actions}>
+                        <label htmlFor="profile-saml-cert" className={styles.fieldLabel}>IdP X.509 Certificate (samlCert)</label>
                         <Button
                           type="button"
                           variant="outline"
@@ -1221,20 +1226,22 @@ export default function ProfilePage() {
                         />
                       </div>
                       <textarea
+                        id="profile-saml-cert"
+                        aria-describedby="profile-saml-cert-hint"
                         rows={4}
                         placeholder="-----BEGIN CERTIFICATE-----&#10;MIIC...&#10;-----END CERTIFICATE-----"
                         value={samlForm.samlCert}
                         onChange={(e) => updateSamlForm("samlCert", e.target.value)}
-                        className="w-full p-2.5 rounded-lg border border-border bg-bg text-xs font-mono text-text-main focus:outline-none focus:border-primary"
+                        className="w-full font-mono resize-y"
                         disabled={loading || samlLoading}
                       />
-                      <p className="text-xs text-text-muted">Paste raw Base64 certificate or PEM block.</p>
+                      <p id="profile-saml-cert-hint" className={styles.settingDescription}>Paste raw Base64 certificate or PEM block.</p>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className={styles.formGrid}>
                       <div className="flex flex-col gap-2">
-                        <label className="font-medium text-sm sm:text-base">Login Button Label</label>
                         <Input
+                          label="Login Button Label"
                           placeholder="Sign in with SAML SSO"
                           value={samlForm.samlLoginLabel}
                           onChange={(e) => updateSamlForm("samlLoginLabel", e.target.value)}
@@ -1243,8 +1250,8 @@ export default function ProfilePage() {
                       </div>
 
                       <div className="flex flex-col gap-2">
-                        <label className="font-medium text-sm sm:text-base">Email Claim Attribute</label>
                         <Input
+                          label="Email Claim Attribute"
                           placeholder="email"
                           value={samlForm.samlAttributeEmail}
                           onChange={(e) => updateSamlForm("samlAttributeEmail", e.target.value)}
@@ -1253,8 +1260,8 @@ export default function ProfilePage() {
                       </div>
 
                       <div className="flex flex-col gap-2">
-                        <label className="font-medium text-sm sm:text-base">Display Name Claim</label>
                         <Input
+                          label="Display Name Claim"
                           placeholder="name"
                           value={samlForm.samlAttributeName}
                           onChange={(e) => updateSamlForm("samlAttributeName", e.target.value)}
@@ -1264,9 +1271,9 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-2 p-3 rounded-lg border border-border bg-bg text-xs sm:text-sm text-text-muted">
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
+                  <div className={styles.inset}>
+                    <div className={styles.settingRow}>
+                      <div className="min-w-0">
                         <p className="font-medium text-text-main">ACS Callback URL</p>
                         <code className="block break-all font-mono text-xs">{samlAcsUrl}</code>
                       </div>
@@ -1275,6 +1282,7 @@ export default function ProfilePage() {
                         variant="outline"
                         size="sm"
                         icon="content_copy"
+                        aria-label="Copy ACS Callback URL"
                         onClick={() => {
                           navigator.clipboard.writeText(samlAcsUrl);
                           setSamlStatus({ type: "success", message: "ACS URL copied to clipboard!" });
@@ -1283,8 +1291,8 @@ export default function ProfilePage() {
                         Copy
                       </Button>
                     </div>
-                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/50">
-                      <div>
+                    <div className={styles.settingRow}>
+                      <div className="min-w-0">
                         <p className="font-medium text-text-main">SP XML Metadata</p>
                         <code className="block break-all font-mono text-xs">{samlMetadataUrl}</code>
                       </div>
@@ -1293,7 +1301,7 @@ export default function ProfilePage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         download="9router-sp-metadata.xml"
-                        className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                        className={styles.linkButton}
                       >
                         <Icon className="text-[16px]">download</Icon>
                         Download XML
@@ -1304,7 +1312,7 @@ export default function ProfilePage() {
                   <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-border/50">
                     <Button
                       type="button"
-                      variant="primary"
+                      variant="contrast"
                       loading={samlLoading}
                       onClick={() => saveSamlSettings(oidcForm.authMode)}
                       className="w-full sm:w-auto"
@@ -1322,25 +1330,16 @@ export default function ProfilePage() {
                     </Button>
                   </div>
 
-                  {samlTestStatus.message && (
-                    <p className={`text-xs sm:text-sm ${samlTestStatus.type === "error" ? "text-red-500" : "text-green-500"}`}>
-                      {samlTestStatus.message}
-                    </p>
-                  )}
-
-                  {samlStatus.message && (
-                    <p className={`text-xs sm:text-sm ${samlStatus.type === "error" ? "text-red-500" : "text-green-500"}`}>
-                      {samlStatus.message}
-                    </p>
-                  )}
+                  <ProfileStatus status={samlTestStatus} />
+                  <ProfileStatus status={samlStatus} />
                 </div>
               ) : (
                 /* OIDC Panel */
                 <div className="flex flex-col gap-4 pt-2 border-t border-border/50">
-                  <div className="grid grid-cols-1 gap-4">
+                  <div className={styles.formGrid}>
                     <div className="flex flex-col gap-2">
-                      <label className="font-medium text-sm sm:text-base">Issuer URL</label>
                       <Input
+                        label="Issuer URL"
                         placeholder="https://auth.example.com/application/o/9router/"
                         value={oidcForm.oidcIssuerUrl}
                         onChange={(e) => updateOidcForm("oidcIssuerUrl", e.target.value)}
@@ -1349,8 +1348,8 @@ export default function ProfilePage() {
                     </div>
 
                     <div className="flex flex-col gap-2">
-                      <label className="font-medium text-sm sm:text-base">Client ID</label>
                       <Input
+                        label="Client ID"
                         placeholder="9router-dashboard"
                         value={oidcForm.oidcClientId}
                         onChange={(e) => updateOidcForm("oidcClientId", e.target.value)}
@@ -1359,20 +1358,20 @@ export default function ProfilePage() {
                     </div>
 
                     <div className="flex flex-col gap-2">
-                      <label className="font-medium text-sm sm:text-base">Client Secret</label>
                       <Input
+                        label="Client Secret"
+                        hint="This value is write-only after saving."
                         type="password"
                         placeholder="Leave blank to keep existing secret"
                         value={oidcClientSecret}
                         onChange={(e) => setOidcClientSecret(e.target.value)}
                         disabled={loading || oidcLoading}
                       />
-                      <p className="text-xs sm:text-sm text-text-muted">This value is write-only after saving.</p>
                     </div>
 
                     <div className="flex flex-col gap-2">
-                      <label className="font-medium text-sm sm:text-base">Scopes</label>
                       <Input
+                        label="Scopes"
                         placeholder="openid profile email"
                         value={oidcForm.oidcScopes}
                         onChange={(e) => updateOidcForm("oidcScopes", e.target.value)}
@@ -1381,8 +1380,8 @@ export default function ProfilePage() {
                     </div>
 
                     <div className="flex flex-col gap-2">
-                      <label className="font-medium text-sm sm:text-base">Login Button Label</label>
                       <Input
+                        label="Login Button Label"
                         placeholder="Sign in with OIDC"
                         value={oidcForm.oidcLoginLabel}
                         onChange={(e) => updateOidcForm("oidcLoginLabel", e.target.value)}
@@ -1391,13 +1390,13 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
-                  <div className="rounded-lg border border-border bg-bg p-3 text-xs sm:text-sm text-text-muted">
+                  <div className={styles.inset}>
                     <p className="font-medium text-text-main mb-1">Redirect URI</p>
                     <code className="block break-all font-mono">{oidcRedirectUri}</code>
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-border/50">
-                    <Button type="button" variant="primary" loading={oidcLoading} onClick={() => saveOidcSettings()} className="w-full sm:w-auto">
+                    <Button type="button" variant="contrast" loading={oidcLoading} onClick={() => saveOidcSettings()} className="w-full sm:w-auto">
                       Save OIDC settings
                     </Button>
                     <Button type="button" variant="outline" loading={oidcTestLoading} onClick={testOidcConnection} className="w-full sm:w-auto">
@@ -1405,45 +1404,31 @@ export default function ProfilePage() {
                     </Button>
                   </div>
 
-                  {oidcTestStatus.message && (
-                    <p className={`text-xs sm:text-sm ${oidcTestStatus.type === "error" ? "text-red-500" : "text-green-500"}`}>
-                      {oidcTestStatus.message}
-                    </p>
-                  )}
-
-                  {oidcStatus.message && (
-                    <p className={`text-xs sm:text-sm ${oidcStatus.type === "error" ? "text-red-500" : "text-green-500"}`}>
-                      {oidcStatus.message}
-                    </p>
-                  )}
+                  <ProfileStatus status={oidcTestStatus} />
+                  <ProfileStatus status={oidcStatus} />
                 </div>
               )}
 
               {settings.authMode === "oidc" || settings.authMode === "saml" || settings.authMode === "sso" ? (
-                <p className="text-xs sm:text-sm text-amber-600 dark:text-amber-400">
+                <p className={styles.notice} role="status">
                   SSO login ({settings.ssoType === "saml" ? "SAML 2.0" : "OIDC"}) is currently active. Password login is disabled until you switch back.
                 </p>
               ) : null}
 
               {settings.authMode === "both" && (
-                <p className="text-xs sm:text-sm text-amber-600 dark:text-amber-400">
+                <p className={styles.notice} role="status">
                   Password and SSO login ({settings.ssoType === "saml" ? "SAML 2.0" : "OIDC"}) are both active.
                 </p>
               )}
             </div>
           )}
         </Card>
+        </section>
 
         {/* Routing Preferences */}
-        <Card>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500 shrink-0">
-              <Icon className="text-[20px]">route</Icon>
-            </div>
-            <h3 className="text-base sm:text-lg font-semibold">Routing Strategy</h3>
-          </div>
-          <div className="flex flex-col gap-4">
-            <div className="flex items-start sm:items-center justify-between gap-4">
+        <ProfileSection id="profile-routing" title="Routing Strategy" icon="route" description="Account and combo rotation preferences.">
+          <div>
+            <div className={styles.settingRow}>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm sm:text-base">Round Robin</p>
                 <p className="text-xs sm:text-sm text-text-muted">
@@ -1451,6 +1436,7 @@ export default function ProfilePage() {
                 </p>
               </div>
               <Toggle
+                aria-label="Round Robin"
                 checked={settings.fallbackStrategy === "round-robin"}
                 onChange={() => updateFallbackStrategy(settings.fallbackStrategy === "round-robin" ? "fill-first" : "round-robin")}
                 disabled={loading}
@@ -1459,7 +1445,7 @@ export default function ProfilePage() {
 
             {/* Sticky Round Robin Limit */}
             {settings.fallbackStrategy === "round-robin" && (
-              <div className="flex items-start sm:items-center justify-between gap-4 pt-2 border-t border-border/50">
+              <div className={styles.settingRow}>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm sm:text-base">Sticky Limit</p>
                   <p className="text-xs sm:text-sm text-text-muted">
@@ -1467,6 +1453,7 @@ export default function ProfilePage() {
                   </p>
                 </div>
                 <Input
+                  aria-label="Sticky Limit"
                   type="number"
                   min="1"
                   max="10"
@@ -1479,7 +1466,7 @@ export default function ProfilePage() {
             )}
 
             {/* Combo Round Robin */}
-            <div className="flex items-start sm:items-center justify-between gap-4 pt-4 border-t border-border/50">
+            <div className={styles.settingRow}>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm sm:text-base">Combo Round Robin</p>
                 <p className="text-xs sm:text-sm text-text-muted">
@@ -1487,6 +1474,7 @@ export default function ProfilePage() {
                 </p>
               </div>
               <Toggle
+                aria-label="Combo Round Robin"
                 checked={settings.comboStrategy === "round-robin"}
                 onChange={() => updateComboStrategy(settings.comboStrategy === "round-robin" ? "fallback" : "round-robin")}
                 disabled={loading}
@@ -1495,14 +1483,15 @@ export default function ProfilePage() {
 
             {/* Combo Sticky Round Robin Limit */}
             {settings.comboStrategy === "round-robin" && (
-              <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                <div>
+              <div className={styles.settingRow}>
+                <div className="min-w-0">
                   <p className="font-medium">Combo Sticky Limit</p>
                   <p className="text-sm text-text-muted">
                     Calls per combo model before switching
                   </p>
                 </div>
                 <Input
+                  aria-label="Combo Sticky Limit"
                   type="number"
                   min="1"
                   max="100"
@@ -1523,24 +1512,18 @@ export default function ProfilePage() {
                 : " Combos always start with their first model."}
             </p>
           </div>
-        </Card>
+        </ProfileSection>
 
         {/* Network */}
-        <Card>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500 shrink-0">
-              <Icon className="text-[20px]">wifi</Icon>
-            </div>
-            <h3 className="text-base sm:text-lg font-semibold">Network</h3>
-          </div>
-
+        <ProfileSection id="profile-network" title="Network" icon="wifi" description="Outbound connections for OAuth and provider requests.">
           <div className="flex flex-col gap-4">
-            <div className="flex items-start sm:items-center justify-between gap-4">
+            <div className={styles.settingRow}>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm sm:text-base">Outbound Proxy</p>
                 <p className="text-xs sm:text-sm text-text-muted">Enable proxy for OAuth + provider outbound requests.</p>
               </div>
               <Toggle
+                aria-label="Outbound Proxy"
                 checked={settings.outboundProxyEnabled === true}
                 onChange={() => updateOutboundProxyEnabled(!(settings.outboundProxyEnabled === true))}
                 disabled={loading || proxyLoading}
@@ -1548,27 +1531,29 @@ export default function ProfilePage() {
             </div>
 
             {settings.outboundProxyEnabled === true && (
-              <form onSubmit={updateOutboundProxy} className="flex flex-col gap-4 pt-2 border-t border-border/50">
+              <form onSubmit={updateOutboundProxy} className={styles.form}>
+                <div className={styles.formGrid}>
                 <div className="flex flex-col gap-2">
-                  <label className="font-medium text-sm sm:text-base">Proxy URL</label>
                   <Input
+                    label="Proxy URL"
+                    hint="Leave empty to inherit existing env proxy (if any)."
                     placeholder="http://127.0.0.1:7897"
                     value={proxyForm.outboundProxyUrl}
                     onChange={(e) => setProxyForm((prev) => ({ ...prev, outboundProxyUrl: e.target.value }))}
                     disabled={loading || proxyLoading}
                   />
-                  <p className="text-xs sm:text-sm text-text-muted">Leave empty to inherit existing env proxy (if any).</p>
                 </div>
 
-                <div className="flex flex-col gap-2 pt-2 border-t border-border/50">
-                  <label className="font-medium text-sm sm:text-base">No Proxy</label>
+                <div className="flex flex-col gap-2">
                   <Input
+                    label="No Proxy"
+                    hint="Comma-separated hostnames/domains to bypass the proxy."
                     placeholder="localhost,127.0.0.1"
                     value={proxyForm.outboundNoProxy}
                     onChange={(e) => setProxyForm((prev) => ({ ...prev, outboundNoProxy: e.target.value }))}
                     disabled={loading || proxyLoading}
                   />
-                  <p className="text-xs sm:text-sm text-text-muted">Comma-separated hostnames/domains to bypass the proxy.</p>
+                </div>
                 </div>
 
                 <div className="pt-2 border-t border-border/50 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
@@ -1582,30 +1567,20 @@ export default function ProfilePage() {
                   >
                     Test proxy URL
                   </Button>
-                  <Button type="submit" variant="primary" loading={proxyLoading} className="w-full sm:w-auto">
+                  <Button type="submit" variant="contrast" loading={proxyLoading} className="w-full sm:w-auto">
                     Apply
                   </Button>
                 </div>
               </form>
             )}
 
-            {proxyStatus.message && (
-              <p className={`text-xs sm:text-sm ${proxyStatus.type === "error" ? "text-red-500" : "text-green-500"} pt-2 border-t border-border/50`}>
-                {proxyStatus.message}
-              </p>
-            )}
+            <ProfileStatus status={proxyStatus} />
           </div>
-        </Card>
+        </ProfileSection>
 
         {/* Observability Settings */}
-        <Card>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-orange-500/10 text-orange-500 shrink-0">
-              <Icon className="text-[20px]">monitoring</Icon>
-            </div>
-            <h3 className="text-base sm:text-lg font-semibold">Observability</h3>
-          </div>
-          <div className="flex items-start sm:items-center justify-between gap-4">
+        <ProfileSection id="profile-observability" title="Observability" icon="monitoring">
+          <div className={styles.settingRow}>
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm sm:text-base">Enable Observability</p>
               <p className="text-xs sm:text-sm text-text-muted">
@@ -1613,42 +1588,55 @@ export default function ProfilePage() {
               </p>
             </div>
             <Toggle
+              aria-label="Enable Observability"
               checked={observabilityEnabled}
               onChange={updateObservabilityEnabled}
               disabled={loading}
             />
           </div>
-        </Card>
+        </ProfileSection>
 
         {/* Account actions */}
-        <div className="flex flex-col sm:flex-row gap-2">
+        <ProfileSection id="profile-session" title="Session & server" icon="logout">
+        <div className={styles.settingRow}>
+          <div className="min-w-0">
+            <p className={styles.settingTitle}>Dashboard session</p>
+            <p className={styles.settingDescription}>Sign out of the dashboard.</p>
+          </div>
           <Button
-            variant="outline"
-            fullWidth
-            icon="power_settings_new"
-            onClick={() => setShutdownOpen(true)}
-            className="text-red-500 border-red-200 hover:bg-red-50 hover:border-red-300"
-          >
-            Shutdown
-          </Button>
-          <Button
-            variant="outline"
-            fullWidth
+            variant="secondary"
             icon="logout"
             onClick={handleLogout}
           >
             Logout
           </Button>
         </div>
+        <div className={styles.settingRow}>
+          <div className="min-w-0">
+            <p className={styles.settingTitle}>Stop proxy server</p>
+            <p className={styles.settingDescription}>Shut down this JRouter instance.</p>
+          </div>
+          <Button
+            variant="danger"
+            icon="power_settings_new"
+            onClick={() => setShutdownOpen(true)}
+            className={styles.dangerButton}
+          >
+            Shutdown
+          </Button>
+        </div>
+        </ProfileSection>
 
         {/* App Info */}
-        <div className="text-center text-xs sm:text-sm text-text-muted py-4">
+        <div className={styles.appInfo}>
           <p>{APP_CONFIG.name} v{APP_CONFIG.version}</p>
           <p className="mt-1">{isRemoteHost ? "Remote Mode" : "Local Mode - All data stored on your machine"}</p>
         </div>
       </div>
+      )}
 
       <LanguageSwitcher
+        dialogClassName={styles.languageDialog}
         hideTrigger
         isOpen={langOpen}
         onClose={(next) => {
@@ -1657,6 +1645,7 @@ export default function ProfilePage() {
         }}
       />
       <ConfirmModal
+        className={styles.dialog}
         isOpen={shutdownOpen}
         onClose={() => setShutdownOpen(false)}
         onConfirm={handleShutdown}
@@ -1669,6 +1658,7 @@ export default function ProfilePage() {
       />
 
       <Modal
+        className={styles.dialog}
         isOpen={dbAuth.open}
         onClose={() => setDbAuth({ open: false, mode: "", password: "" })}
         title="Confirm Password"
@@ -1678,7 +1668,7 @@ export default function ProfilePage() {
             <Button variant="ghost" onClick={() => setDbAuth({ open: false, mode: "", password: "" })} disabled={dbLoading}>
               Cancel
             </Button>
-            <Button variant="primary" onClick={handleDbAuthConfirm} loading={dbLoading} disabled={!dbAuth.password}>
+            <Button variant="contrast" onClick={handleDbAuthConfirm} loading={dbLoading} disabled={!dbAuth.password}>
               Confirm
             </Button>
           </>
@@ -1688,6 +1678,8 @@ export default function ProfilePage() {
           Enter your current password to {dbAuth.mode === "export" ? "export" : "import"} the database.
         </p>
         <Input
+          label="Current password"
+          autoComplete="current-password"
           type="password"
           value={dbAuth.password}
           onChange={(e) => setDbAuth((s) => ({ ...s, password: e.target.value }))}

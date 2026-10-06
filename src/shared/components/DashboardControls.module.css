@@ -5,12 +5,17 @@
   overflow-wrap: anywhere;
 }
 
+.fields {
+  min-width: 0;
+}
+
 .dialog > div:first-child > div,
 .formScope [role="dialog"] > div:first-child > div {
   min-width: 0;
 }
 
 .dialog :is(input, select, textarea),
+.fields :is(input, select, textarea),
 .formScope [role="dialog"] :is(input, select, textarea) {
   min-width: 0;
   min-height: 36px;
@@ -23,11 +28,13 @@
 }
 
 .dialog select,
+.fields select,
 .formScope [role="dialog"] select {
   padding-right: 36px;
 }
 
 .dialog label,
+.fields label,
 .formScope [role="dialog"] label {
   color: var(--text-2);
   font-family: var(--font-mono);
@@ -38,6 +45,7 @@
 }
 
 .dialog :is(input, select, textarea):focus,
+.fields :is(input, select, textarea):focus,
 .formScope [role="dialog"] :is(input, select, textarea):focus {
   border-color: var(--text-2);
   outline: 2px solid var(--text-2);
@@ -46,6 +54,7 @@
 }
 
 .dialog input::placeholder,
+.fields input::placeholder,
 .formScope [role="dialog"] input::placeholder {
   color: var(--text-2);
 }
@@ -130,6 +139,7 @@
 
 @media (max-width: 639px) {
   .dialog :is(input, select, textarea),
+  .fields :is(input, select, textarea),
   .formScope [role="dialog"] :is(input, select, textarea) {
     font-size: 16px;
   }

@@ -1,0 +1,260 @@
+.page {
+  composes: page from "../token-saver/token-saver.module.css";
+  composes: fields from "../../../../shared/components/DashboardControls.module.css";
+  --text-3: var(--text-2);
+}
+
+.header {
+  composes: header from "../usage/usage.module.css";
+}
+
+.description {
+  composes: description from "../usage/usage.module.css";
+  margin-top: 8px;
+}
+
+.section {
+  composes: section from "../usage/usage.module.css";
+  box-shadow: none;
+}
+
+.sectionHeader {
+  composes: sectionHeader from "../usage/usage.module.css";
+}
+
+.sectionDescription {
+  composes: sectionDescription from "../usage/usage.module.css";
+}
+
+.fieldLabel {
+  composes: fieldLabel from "../usage/usage.module.css";
+}
+
+.inset {
+  composes: inset from "../usage/usage.module.css";
+  align-items: stretch;
+  padding: 12px;
+  border-style: solid;
+  text-align: left;
+}
+
+.dialog {
+  composes: dialog from "../../../../shared/components/DashboardControls.module.css";
+}
+
+.dangerButton {
+  composes: dangerButton from "../endpoint/endpoint.module.css";
+}
+
+.linkButton {
+  composes: linkButton from "../skills/skills.module.css";
+  flex-shrink: 0;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.settingRow {
+  composes: settingsRow from "../endpoint/endpoint.module.css";
+  flex-wrap: wrap;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.settingRow:first-child {
+  padding-top: 0;
+}
+
+.settingRow:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.settingRow > div:first-child {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.settingTitle {
+  composes: title from "../token-saver/token-saver.module.css";
+}
+
+.settingDescription {
+  composes: metadata from "../token-saver/token-saver.module.css";
+}
+
+.settingRow > div:first-child > p:first-child {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.settingRow > div:first-child > p + p {
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.form,
+.ssoForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 760px;
+  min-width: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.ssoForm {
+  margin-top: 16px;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  min-width: 0;
+}
+
+.formGrid > * {
+  min-width: 0;
+}
+
+.disclosure {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  border-radius: var(--r1);
+  color: var(--text-2);
+  text-align: left;
+  cursor: pointer;
+}
+
+.page .choice {
+  height: auto;
+  align-items: flex-start;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 4px;
+  padding: 12px;
+  white-space: normal;
+  text-align: left;
+}
+
+.choice[aria-pressed="true"] {
+  border-color: var(--text-2);
+  background: var(--surface-2);
+}
+
+.choice .settingDescription {
+  margin-top: 0;
+  font-weight: 400;
+}
+
+.guide {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.status {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--pos);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.status > svg {
+  margin-top: 3px;
+}
+
+.status[data-status="error"] {
+  color: var(--danger);
+}
+
+.notice {
+  color: var(--warn);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.appInfo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.languageDialog {
+  composes: dialog from "../../../../shared/components/DashboardControls.module.css";
+  border-color: var(--line-2);
+  box-shadow: var(--shadow-pop);
+}
+
+.languageDialog h2 {
+  font-size: 14px;
+}
+
+.languageDialog button[aria-pressed="true"] {
+  background: var(--surface-2);
+  color: var(--text);
+  box-shadow: none;
+  outline: 1px solid var(--text-2);
+}
+
+@media (max-width: 639px) {
+  .section {
+    padding: 16px;
+  }
+
+  .formGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .settingRow > div:first-child {
+    flex-basis: 180px;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .actions > button {
+    flex: 1 1 160px;
+  }
+
+  .linkButton,
+  .languageDialog button {
+    min-height: 44px;
+  }
+}

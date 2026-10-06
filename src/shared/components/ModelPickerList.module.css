@@ -1,0 +1,190 @@
+/* Model picker list — the shared body of the ModelSelectModal and the inline
+   Playground popover. Chips stay flat and token-driven so the list reads the same
+   inside a modal, inside a popover, and on the Combo pages. */
+
+.search {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.searchIcon {
+  position: absolute;
+  top: 50%;
+  left: 9px;
+  color: var(--text-3);
+  font-size: 15px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  min-height: 34px;
+  padding: 7px 10px 7px 32px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r1);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12.5px;
+  outline: none;
+  transition: border-color 150ms;
+}
+
+.searchInput::placeholder {
+  color: var(--text-3);
+}
+
+.searchInput:focus-visible {
+  border-color: var(--text-3);
+  outline: 2px solid var(--text-2);
+  outline-offset: 1px;
+}
+
+.scroll {
+  max-height: 400px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.group + .group {
+  margin-top: 14px;
+}
+
+.groupHead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  padding: 2px 0;
+  background: var(--surface);
+  color: var(--text-2);
+}
+
+.groupIcon {
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.groupName {
+  overflow: hidden;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.groupCount {
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  min-height: 26px;
+  padding: 4px 9px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r1);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 11.5px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms, border-color 150ms, color 150ms;
+}
+
+.chip:hover {
+  border-color: var(--text-3);
+  background: var(--surface-hover);
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--text-2);
+  outline-offset: 2px;
+}
+
+.chip[aria-pressed="true"] {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--bg);
+}
+
+.chip[aria-pressed="true"] :is(svg, .chipTag) {
+  color: inherit;
+}
+
+.chipLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chipCheck,
+.chipHint {
+  flex-shrink: 0;
+  font-size: 11px;
+}
+
+.chipHint {
+  color: var(--text-3);
+}
+
+.chipTag {
+  color: var(--text-3);
+  font-size: 9px;
+  font-weight: 400;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 20px 12px;
+  color: var(--text-3);
+  font-size: 12px;
+  text-align: center;
+}
+
+.emptyIcon {
+  font-size: 20px;
+}
+
+@media (max-width: 639px) {
+  .chip {
+    min-height: 34px;
+  }
+
+  .searchInput {
+    font-size: 16px;
+  }
+
+  .scroll {
+    max-height: 52vh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .searchInput,
+  .chip {
+    transition: none;
+  }
+}

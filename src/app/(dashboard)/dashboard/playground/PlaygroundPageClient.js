@@ -1,26 +1,43 @@
 "use client";
 import Icon from "@/shared/components/Icon";
 
-import { useEffect, useRef, useState } from "react";
-import { Button, ModelSelectModal } from "@/shared/components";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Button, Tooltip } from "@/shared/components";
 import ProviderIcon from "@/shared/components/ProviderIcon";
-import controls from "@/shared/components/DashboardControls.module.css";
+import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
+import { useModelCatalog } from "@/shared/hooks/useModelCatalog";
 import PlaygroundMarkdown from "./PlaygroundMarkdown";
+import ModelPickerPopover from "./ModelPickerPopover";
 import styles from "./playground.module.css";
 
 // Chat goes through the same OpenAI-compatible JRouter endpoint every other client uses,
 // so combos, provider fallback, translation and usage tracking all apply unchanged.
 const CHAT_ENDPOINT = "/api/v1/chat/completions";
 const MAX_COMPOSER_HEIGHT = 200;
+const SUGGESTIONS = [
+  "Explain your capabilities",
+  "Write a short TypeScript example",
+  "Compare REST and GraphQL",
+];
 
 function createId() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
   return `pg_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
+// Elapsed-time measurements happen in event handlers and stream callbacks, never
+// during render — reading the clock through one helper keeps that explicit.
+function now() {
+  return Date.now();
+}
+
 function formatLatency(ms) {
   if (!Number.isFinite(ms) || ms <= 0) return "";
   return ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(1)}s`;
+}
+
+function formatCount(value) {
+  return Number.isFinite(value) ? value.toLocaleString("en-US") : "";
 }
 
 function providerInitials(name) {
@@ -59,16 +76,81 @@ function toRequestMessages(messages) {
     .map((message) => ({ role: message.role, content: message.content }));
 }
 
-function formatMeta(meta) {
+// Reasoning fields some providers stream alongside (or instead of) the answer text.
+function reasoningDeltaFrom(delta) {
+  const raw = delta?.reasoning_content ?? delta?.reasoning;
+  return typeof raw === "string" ? raw : "";
+}
+
+// Latency · prompt tokens · completion tokens · finish reason · routed model.
+function buildMetaParts(meta) {
   const parts = [];
-  if (meta.latencyMs) parts.push(formatLatency(meta.latencyMs));
-  if (meta.usage?.prompt_tokens) parts.push(`${meta.usage.prompt_tokens} input`);
-  if (meta.usage?.completion_tokens) parts.push(`${meta.usage.completion_tokens} output tokens`);
-  else if (meta.usage?.total_tokens) parts.push(`${meta.usage.total_tokens} tokens`);
+  const latency = formatLatency(meta.latencyMs);
+  if (latency) parts.push(latency);
+  const prompt = formatCount(meta.usage?.prompt_tokens);
+  if (prompt) parts.push(`${prompt} in`);
+  const completion = formatCount(meta.usage?.completion_tokens);
+  if (completion) {
+    parts.push(`${completion} out`);
+  } else {
+    const total = formatCount(meta.usage?.total_tokens);
+    if (total) parts.push(`${total} tokens`);
+  }
   if (meta.finishReason) parts.push(meta.finishReason);
-  if (meta.responseModel && meta.responseModel !== meta.requestedModel) parts.push(`routed ${meta.responseModel}`);
+  if (meta.responseModel && meta.responseModel !== meta.requestedModel) parts.push(meta.responseModel);
   if (meta.stopped) parts.push("stopped");
-  return parts.join(" • ");
+  return parts;
+}
+
+function ModelIcon({ model, providerId, providerName, providerColor, isCombo, size = 16 }) {
+  const connectionId = providerId && !isCombo ? providerId : "";
+  if (!connectionId) {
+    return (
+      <span className={styles.modelFallback} style={{ width: size, height: size }}>
+        <Icon style={{ fontSize: Math.max(10, Math.round(size * 0.7)) }}>{isCombo ? "layers" : "science"}</Icon>
+      </span>
+    );
+  }
+  return (
+    <ProviderIcon
+      providerId={connectionId}
+      alt={providerName || "model"}
+      size={size}
+      fallbackText={providerInitials(providerName)}
+      fallbackColor={providerColor}
+    />
+  );
+}
+
+// Nine-cell grid whose cells light up in sequence while the model works.
+function ActivityGlyph() {
+  return (
+    <span className={styles.activityGrid} aria-hidden="true">
+      {Array.from({ length: 9 }, (_, index) => <span key={index} />)}
+    </span>
+  );
+}
+
+// Waiting-for-first-token state. The running clock lives here so the 120ms ticks
+// re-render this row instead of the whole conversation.
+function ActivityState({ label, startedAt }) {
+  const [elapsedMs, setElapsedMs] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => setElapsedMs(Date.now() - startedAt), 120);
+    return () => clearInterval(timer);
+  }, [startedAt]);
+
+  return (
+    <p className={styles.activity} role="status">
+      <ActivityGlyph />
+      <span className={styles.activityText}>{label}</span>
+      <span className={styles.activityDots} aria-hidden="true">
+        <span /><span /><span />
+      </span>
+      <span className={styles.activityElapsed}>{formatLatency(elapsedMs)}</span>
+    </p>
+  );
 }
 
 export default function PlaygroundPageClient() {
@@ -85,11 +167,15 @@ export default function PlaygroundPageClient() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [generation, setGeneration] = useState({ temperature: "", maxTokens: "", topP: "" });
+  const [thinkingOpen, setThinkingOpen] = useState({});
 
   const abortRef = useRef(null);
   const inputRef = useRef(null);
   const scrollRef = useRef(null);
   const settingsRef = useRef(null);
+  const atBottomRef = useRef(true);
+  const streamingRef = useRef(false);
+  const { copied, copy } = useCopyToClipboard();
 
   // Model picker sources: same connections/aliases data the Combo picker uses.
   useEffect(() => {
@@ -138,10 +224,16 @@ export default function PlaygroundPageClient() {
     element.style.height = `${Math.min(element.scrollHeight, MAX_COMPOSER_HEIGHT)}px`;
   }, [input]);
 
-  useEffect(() => {
+  const scrollToBottom = useCallback(() => {
     const element = scrollRef.current;
     if (element) element.scrollTop = element.scrollHeight;
-  }, [messages]);
+  }, []);
+
+  // Follow new output only while the reader is already at the bottom, so scrolling
+  // back through a long answer is not yanked away by incoming tokens.
+  useEffect(() => {
+    if (atBottomRef.current) scrollToBottom();
+  }, [messages, scrollToBottom]);
 
   useEffect(() => {
     if (!settingsOpen) return undefined;
@@ -163,20 +255,31 @@ export default function PlaygroundPageClient() {
 
   const canSend = !isStreaming && !!selectedModel && input.trim().length > 0;
 
+  const handleScroll = () => {
+    const element = scrollRef.current;
+    if (!element) return;
+    atBottomRef.current = element.scrollHeight - element.scrollTop - element.clientHeight < 80;
+  };
+
   const handleNewChat = () => {
     abortRef.current?.abort();
     abortRef.current = null;
+    streamingRef.current = false;
     setIsStreaming(false);
     setMessages([]);
     setInput("");
+    setThinkingOpen({});
     setSettingsOpen(false);
+    setPickerOpen(false);
+    atBottomRef.current = true;
     inputRef.current?.focus();
   };
 
   const handleSelectModel = (model) => {
     if (!model?.value) return;
     const label = model.name || model.value;
-    const changed = selectedModel?.value !== model.value;
+    const previous = selectedModel;
+    const changed = previous?.value !== model.value;
     setSelectedModel({
       value: model.value,
       name: label,
@@ -187,10 +290,16 @@ export default function PlaygroundPageClient() {
     });
     setPickerOpen(false);
     // Keep the transcript so the same context can be replayed against another model.
-    setMessages((previous) => (
-      changed && previous.some((message) => message.role !== "divider")
-        ? [...previous, { id: createId(), role: "divider", content: `Model changed to ${label}` }]
-        : previous
+    setMessages((current) => (
+      changed && current.some((message) => message.role !== "divider")
+        ? [...current, {
+          id: createId(),
+          role: "divider",
+          from: previous?.name || previous?.value || "",
+          to: label,
+          content: `Model switched to ${label}`,
+        }]
+        : current
     ));
     inputRef.current?.focus();
   };
@@ -199,14 +308,19 @@ export default function PlaygroundPageClient() {
     abortRef.current?.abort();
   };
 
-  const sendMessage = async () => {
-    const text = input.trim();
-    if (!text || !selectedModel || isStreaming) return;
+  const patchAssistant = useCallback((assistantId, patch) => {
+    setMessages((previous) => previous.map((message) => (
+      message.id === assistantId ? { ...message, ...patch } : message
+    )));
+  }, []);
 
-    const model = selectedModel;
+  // `base` is the transcript the new turn runs against. Retry passes the history
+  // truncated at the retried question instead of the whole conversation.
+  const runTurn = async (question, base, model, startedAt) => {
+    if (!question || !model || streamingRef.current) return;
+
     const assistantId = createId();
-    const history = [...messages, { id: createId(), role: "user", content: text }];
-    const startedAt = Date.now();
+    const history = [...base, { id: createId(), role: "user", content: question }];
 
     setMessages([
       ...history,
@@ -219,32 +333,36 @@ export default function PlaygroundPageClient() {
         providerId: model.providerId,
         providerName: model.providerName,
         isCombo: model.isCombo,
+        startedAt,
+        reasoning: "",
         meta: null,
       },
     ]);
     setInput("");
+    streamingRef.current = true;
     setIsStreaming(true);
+    atBottomRef.current = true;
 
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const patchAssistant = (patch) => {
-      setMessages((previous) => previous.map((message) => (
-        message.id === assistantId ? { ...message, ...patch } : message
-      )));
-    };
+    const patch = (values) => patchAssistant(assistantId, values);
 
     let content = "";
+    let reasoning = "";
     let usage = null;
     let finishReason = "";
     let responseModel = "";
+    let elapsedMs = null;
 
     const finalize = (status, extra = {}) => {
-      patchAssistant({
+      patch({
         content,
+        reasoning,
         status,
+        elapsedMs,
         meta: {
-          latencyMs: Date.now() - startedAt,
+          latencyMs: elapsedMs ?? Date.now() - startedAt,
           usage,
           finishReason,
           responseModel,
@@ -281,7 +399,9 @@ export default function PlaygroundPageClient() {
         const payload = await response.json().catch(() => null);
         const failure = errorMessageFrom(payload);
         if (failure) throw new Error(failure);
-        content = typeof payload?.choices?.[0]?.message?.content === "string" ? payload.choices[0].message.content : "";
+        const message = payload?.choices?.[0]?.message;
+        content = typeof message?.content === "string" ? message.content : "";
+        reasoning = reasoningDeltaFrom(message);
         usage = payload?.usage || null;
         finishReason = payload?.choices?.[0]?.finish_reason || "";
         responseModel = typeof payload?.model === "string" ? payload.model : "";
@@ -317,10 +437,13 @@ export default function PlaygroundPageClient() {
           if (chunk?.error) throw new Error(errorMessageFrom(chunk) || "Request failed.");
 
           const choice = chunk?.choices?.[0];
-          const delta = typeof choice?.delta?.content === "string" ? choice.delta.content : "";
-          if (delta) {
-            content += delta;
-            patchAssistant({ content });
+          const deltaText = typeof choice?.delta?.content === "string" ? choice.delta.content : "";
+          const deltaReasoning = reasoningDeltaFrom(choice?.delta);
+          if (deltaText || deltaReasoning) {
+            content += deltaText;
+            reasoning += deltaReasoning;
+            if (!elapsedMs) elapsedMs = now() - startedAt;
+            patch({ content, reasoning });
           }
           if (choice?.finish_reason) finishReason = choice.finish_reason;
           if (chunk?.usage && typeof chunk.usage === "object") usage = chunk.usage;
@@ -328,20 +451,63 @@ export default function PlaygroundPageClient() {
         }
       }
 
-      finalize(content ? "done" : "empty");
+      finalize(content || reasoning ? "done" : "empty");
     } catch (error) {
       if (error?.name === "AbortError") {
         finalize("done", { stopped: true });
       } else {
-        patchAssistant({ content, status: "error", error: error?.message || "Request failed." });
+        patch({ content, reasoning, status: "error", error: error?.message || "Request failed." });
         // Hand the prompt back so the user can edit and retry.
-        setInput((current) => current || text);
+        setInput((current) => current || question);
       }
     } finally {
       if (abortRef.current === controller) abortRef.current = null;
+      streamingRef.current = false;
       setIsStreaming(false);
       inputRef.current?.focus();
     }
+  };
+
+  const sendMessage = () => {
+    const text = input.trim();
+    if (!text || !selectedModel || streamingRef.current) return;
+    return runTurn(text, messages, selectedModel, now());
+  };
+
+  // Replay the same question against the model that answered it.
+  const handleRetry = (assistantId) => {
+    if (streamingRef.current) return;
+    const index = messages.findIndex((message) => message.id === assistantId);
+    if (index < 0) return;
+    const answered = messages[index];
+
+    let questionIndex = -1;
+    for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
+      if (messages[cursor].role === "user") {
+        questionIndex = cursor;
+        break;
+      }
+    }
+    if (questionIndex < 0) return;
+
+    const question = messages[questionIndex].content;
+    const base = messages.slice(0, questionIndex);
+    const model = {
+      value: answered.meta?.requestedModel || "",
+      name: answered.modelName || "",
+      providerId: answered.providerId || "",
+      providerName: answered.providerName || "",
+      providerColor: selectedModel?.providerColor || "",
+      isCombo: answered.isCombo === true,
+    };
+    if (!model.value) return;
+    runTurn(question, base, model, now());
+  };
+
+  const copyMessage = (message) => {
+    const text = message.content || message.reasoning || "";
+    if (!text) return;
+    copy(text, message.id);
   };
 
   const handleKeyDown = (event) => {
@@ -355,25 +521,18 @@ export default function PlaygroundPageClient() {
     setGeneration((previous) => ({ ...previous, [field]: event.target.value }));
   };
 
-  const renderModelIcon = ({ providerId, providerName, providerColor, isCombo, fallbackIcon }, size) => {
-    if (!providerId || isCombo) {
-      return (
-        <span className={styles.modelFallback} style={{ width: size, height: size }}>
-          <Icon className="text-[13px]">{isCombo ? "layers" : fallbackIcon || "science"}</Icon>
-        </span>
-      );
-    }
-    return (
-      <ProviderIcon
-        providerId={providerId}
-        alt={providerName || "model"}
-        size={size}
-        className="rounded-[var(--r1)] object-contain"
-        fallbackText={providerInitials(providerName)}
-        fallbackColor={providerColor}
-      />
-    );
+  const handleSuggestion = (suggestion) => {
+    setInput(suggestion);
+    inputRef.current?.focus();
   };
+
+  const toggleThinking = (messageId) => {
+    setThinkingOpen((previous) => ({ ...previous, [messageId]: !previous[messageId] }));
+  };
+
+  const modelCatalog = useModelCatalog({ isOpen: pickerOpen, activeProviders: providers, modelAliases });
+  const hasCatalog = modelCatalog.filteredCombos.length
+    + Object.values(modelCatalog.visibleGroups).reduce((total, group) => total + group.models.length, 0) > 0;
 
   const renderMessage = (message) => {
     if (message.role === "divider") {
@@ -383,73 +542,166 @@ export default function PlaygroundPageClient() {
     if (message.role === "user") {
       return (
         <div key={message.id} className={`${styles.row} ${styles.rowUser}`}>
-          <div className={styles.bubbleUser}>{message.content}</div>
+          <div className={styles.userBubble}>{message.content}</div>
         </div>
       );
     }
 
-    const meta = message.meta;
+    const isThinkingVisible = thinkingOpen[message.id] === true;
+    const reasoningSeconds = message.meta?.latencyMs ? Math.max(1, Math.round(message.meta.latencyMs / 1000)) : 0;
+    const isStreamingMessage = message.status === "streaming";
+    const isWaiting = isStreamingMessage && !message.content && !message.reasoning;
+    const isAnswering = isStreamingMessage && !!message.content;
+    const metaParts = message.meta ? buildMetaParts(message.meta) : [];
+    const canRetry = message.status === "done" && messages[messages.length - 1]?.id === message.id;
+    const actionsVisible = !isStreamingMessage;
 
     return (
       <div key={message.id} className={styles.row}>
         <div className={styles.assistantHead}>
-          {renderModelIcon({ ...message, fallbackIcon: "smart_toy" }, 14)}
+          <ModelIcon
+            providerId={message.providerId}
+            providerName={message.providerName}
+            isCombo={message.isCombo}
+            size={16}
+          />
           <span className={styles.assistantName}>{message.modelName || "Assistant"}</span>
+          {message.providerName ? (
+            <span className={styles.assistantProvider}>{message.providerName}</span>
+          ) : null}
         </div>
 
         {message.status === "error" ? (
-          <div className={styles.errorBox} role="alert">
-            <p className={styles.errorTitle}>
-              <Icon className="text-[14px]">error</Icon> Request failed
+          <div className={styles.error} role="alert">
+            <p className={styles.errorHead}>
+              <Icon>error</Icon> Request failed
             </p>
             <p className={styles.errorBody}>{message.error}</p>
+            <div className={styles.errorActions}>
+              <Button variant="secondary" size="sm" icon="refresh" onClick={() => handleRetry(message.id)}>
+                Retry
+              </Button>
+            </div>
           </div>
-        ) : message.content ? (
-          <div className={styles.assistantBody}>
-            <PlaygroundMarkdown content={message.content} />
-          </div>
-        ) : message.status === "streaming" ? (
-          <p className={styles.statusNote}>Generating…</p>
         ) : (
-          <p className={styles.statusNote}>
-            {meta?.stopped ? "Stopped before any output." : "The model returned no text."}
-          </p>
+          <>
+            {message.reasoning ? (
+              <div className={styles.thinking}>
+                <button
+                  type="button"
+                  className={styles.thinkingToggle}
+                  onClick={() => toggleThinking(message.id)}
+                  aria-expanded={isThinkingVisible}
+                >
+                  <Icon>stars</Icon>
+                  {isStreamingMessage && !message.content
+                    ? "Thinking…"
+                    : reasoningSeconds > 0
+                      ? `Thought for ${reasoningSeconds}s`
+                      : "Thoughts"}
+                  <Icon className={styles.chevronSmall}>{isThinkingVisible ? "expand_less" : "expand_more"}</Icon>
+                </button>
+                {isThinkingVisible ? <div className={styles.thinkingBody}>{message.reasoning}</div> : null}
+              </div>
+            ) : null}
+
+            {isWaiting ? (
+              <ActivityState label="Generating" startedAt={message.startedAt} />
+            ) : null}
+
+            {message.content ? (
+              <div className={styles.assistantBody}>
+                <PlaygroundMarkdown content={message.content} />
+                {isAnswering ? <span className={styles.caret} aria-hidden="true">▍</span> : null}
+              </div>
+            ) : null}
+
+            {!message.content && !message.reasoning && !isStreamingMessage ? (
+              <p className={styles.note}>
+                {message.meta?.stopped ? "Stopped before any output." : "The model returned no text."}
+              </p>
+            ) : null}
+
+            {!message.content && message.reasoning && !isStreamingMessage ? (
+              <p className={styles.note}>This model returned reasoning only.</p>
+            ) : null}
+          </>
         )}
 
-        {meta && message.status !== "error" ? <p className={styles.meta}>{formatMeta(meta)}</p> : null}
+        {actionsVisible && !isWaiting ? (
+          <div className={styles.actions}>
+            <button
+              type="button"
+              className={styles.actionButton}
+              data-state={copied === message.id ? "copied" : undefined}
+              onClick={() => copyMessage(message)}
+              disabled={!message.content && !message.reasoning}
+            >
+              <Icon>{copied === message.id ? "check" : "content_copy"}</Icon>
+              {copied === message.id ? "Copied" : "Copy"}
+            </button>
+            {canRetry ? (
+              <button type="button" className={styles.actionButton} onClick={() => handleRetry(message.id)}>
+                <Icon>refresh</Icon>
+                Retry
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
+        {metaParts.length > 0 ? (
+          <p className={styles.meta}>
+            {metaParts.map((part, index) => (
+              <span key={part}>
+                {index > 0 ? <span className={styles.metaSep}>·</span> : null}
+                {part}
+              </span>
+            ))}
+          </p>
+        ) : null}
       </div>
     );
   };
 
+  const emptyHint = selectedModel
+    ? `Test ${selectedModel.name} through JRouter.`
+    : !loading && providers.length === 0
+      ? "No providers connected yet. Connect one from the Providers page to test models here."
+      : "Pick a model, then send your first message through JRouter.";
+
   return (
-    <div className={`dashboard-surface ${styles.page}`}>
+    <div className={styles.page}>
       <header className={styles.header}>
-        <div className="min-w-0">
-          <h1 className="ui-eyebrow flex items-center gap-2">
-            <Icon className="text-[16px]">science</Icon> Model Playground
-          </h1>
-          <p className={styles.description}>Test and chat with models through JRouter</p>
-        </div>
-        <div className={styles.headerActions}>
-          <Button variant="contrast" icon="add" onClick={handleNewChat} disabled={messages.length === 0}>
-            New Chat
-          </Button>
+        <div className={styles.headerText}>
+          <p className={`ui-eyebrow ${styles.eyebrow}`}>Model Playground</p>
+          <h1 className={styles.title}>Model Playground</h1>
+          <p className={styles.subtitle}>Test and compare models through JRouter.</p>
         </div>
       </header>
 
-      <section className={`ui-card ${styles.panel}`} aria-label="Model playground">
-        <div className={styles.toolbar}>
+      <div className={styles.toolbar}>
+        <div className={styles.modelTriggerWrap}>
           <button
             type="button"
+            data-model-trigger
             className={styles.modelTrigger}
-            onClick={() => setPickerOpen(true)}
+            onClick={() => setPickerOpen((open) => !open)}
             aria-haspopup="dialog"
             aria-expanded={pickerOpen}
           >
-            {renderModelIcon({ ...selectedModel, fallbackIcon: "science" }, 18)}
+            <ModelIcon
+              providerId={selectedModel?.providerId}
+              providerName={selectedModel?.providerName}
+              providerColor={selectedModel?.providerColor}
+              isCombo={selectedModel?.isCombo}
+              size={18}
+            />
             <span className={styles.modelTriggerText}>
-              <span className={styles.modelName}>
-                {selectedModel ? selectedModel.name : loading ? "Loading models…" : "Select a model"}
+              <span className={styles.modelNameRow}>
+                <span className={styles.modelName}>
+                  {selectedModel ? selectedModel.name : loading ? "Loading models…" : "Select a model"}
+                </span>
+                {selectedModel?.isCombo ? <span className={styles.modelBadge}>combo</span> : null}
               </span>
               <span className={styles.modelProvider}>
                 {selectedModel
@@ -459,147 +711,225 @@ export default function PlaygroundPageClient() {
                     : "Choose from connected providers"}
               </span>
             </span>
-            <Icon name="expand_more" className="text-[16px] text-[var(--text-3)]" />
+            <Icon className={styles.chevron}>{pickerOpen ? "expand_less" : "expand_more"}</Icon>
           </button>
 
-          <div className={styles.toolbarActions}>
-            <Button variant="ghost" size="sm" icon="add" onClick={handleNewChat} disabled={messages.length === 0}>
-              New Chat
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              icon="settings"
-              onClick={() => setSettingsOpen((open) => !open)}
-              aria-expanded={settingsOpen}
-            >
-              Settings
-            </Button>
-          </div>
+          <ModelPickerPopover
+            isOpen={pickerOpen}
+            onClose={() => setPickerOpen(false)}
+            onSelect={handleSelectModel}
+            selectedModel={selectedModel?.value}
+            activeProviders={providers}
+            modelAliases={modelAliases}
+          />
         </div>
 
-        <div className={styles.chat} ref={scrollRef}>
+        <div className={styles.toolbarActions}>
+          <Tooltip text="New chat">
+            <button
+              type="button"
+              className={styles.iconButton}
+              onClick={handleNewChat}
+              disabled={messages.length === 0}
+              aria-label="New chat"
+            >
+              <Icon>add</Icon>
+            </button>
+          </Tooltip>
+
+          <span ref={settingsRef} className={styles.settingsAnchor}>
+            <Tooltip text="Generation settings">
+              <button
+                type="button"
+                className={styles.iconButton}
+                onClick={() => setSettingsOpen((open) => !open)}
+                aria-expanded={settingsOpen}
+                aria-label="Generation settings"
+              >
+                <Icon>settings</Icon>
+              </button>
+            </Tooltip>
+
+            {settingsOpen ? (
+              <div className={styles.settingsPopover} role="dialog" aria-label="Generation settings">
+                <div className={styles.settingsHead}>
+                  <span>Generation</span>
+                  <button
+                    type="button"
+                    className={styles.settingsClose}
+                    onClick={() => setSettingsOpen(false)}
+                    aria-label="Close settings"
+                  >
+                    <Icon>close</Icon>
+                  </button>
+                </div>
+
+                <label className={styles.settingsField}>
+                  <span className={styles.settingsLabel}>Temperature</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="2"
+                    step="0.1"
+                    placeholder="default"
+                    value={generation.temperature}
+                    onChange={handleGenerationChange("temperature")}
+                    className={styles.settingsInput}
+                  />
+                </label>
+
+                <label className={styles.settingsField}>
+                  <span className={styles.settingsLabel}>Max tokens</span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    placeholder="default"
+                    value={generation.maxTokens}
+                    onChange={handleGenerationChange("maxTokens")}
+                    className={styles.settingsInput}
+                  />
+                </label>
+
+                <label className={styles.settingsField}>
+                  <span className={styles.settingsLabel}>Top P</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    placeholder="default"
+                    value={generation.topP}
+                    onChange={handleGenerationChange("topP")}
+                    className={styles.settingsInput}
+                  />
+                </label>
+
+                <p className={styles.settingsHint}>
+                  Applied to the next request. Empty fields use the provider default.
+                </p>
+
+                {generation.temperature || generation.maxTokens || generation.topP ? (
+                  <button
+                    type="button"
+                    className={styles.settingsReset}
+                    onClick={() => setGeneration({ temperature: "", maxTokens: "", topP: "" })}
+                  >
+                    Reset to provider defaults
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </span>
+        </div>
+      </div>
+
+      <div className={styles.scroll} ref={scrollRef} onScroll={handleScroll}>
+        <div className={styles.canvas}>
           {loadError ? (
-            <div className={styles.errorBox} role="alert">
-              <p className={styles.errorTitle}>
-                <Icon className="text-[14px]">error</Icon> Models unavailable
-              </p>
-              <p className={styles.errorBody}>{loadError}</p>
-            </div>
+            <p className={styles.loadError} role="alert">
+              <Icon>error</Icon>
+              {loadError}
+            </p>
           ) : null}
 
           {messages.length === 0 ? (
             <div className={styles.empty}>
-              <Icon className="text-[22px] text-[var(--text-3)]">science</Icon>
+              <span className={styles.emptyIcon}>
+                <Icon>science</Icon>
+              </span>
               <p className={styles.emptyTitle}>Start a conversation</p>
-              <p className={styles.emptyHint}>
-                {selectedModel
-                  ? `Send a message to test ${selectedModel.name} through JRouter.`
-                  : !loading && providers.length === 0
-                    ? "No providers connected yet. Connect one from the Providers page to test models here."
-                    : "Pick a model, then send your first message through JRouter."}
-              </p>
+              <p className={styles.emptyHint}>{emptyHint}</p>
+              {selectedModel && hasCatalog ? (
+                <div className={styles.suggestions}>
+                  {SUGGESTIONS.map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      type="button"
+                      className={styles.suggestion}
+                      onClick={() => handleSuggestion(suggestion)}
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : messages.map(renderMessage)}
         </div>
+      </div>
 
-        <div className={styles.composerWrap}>
-          {settingsOpen ? (
-            <div className={styles.settingsPopover} ref={settingsRef} role="dialog" aria-label="Generation settings">
-              <div className={styles.settingsHeader}>
-                <span>Generation</span>
-                <button
-                  type="button"
-                  onClick={() => setSettingsOpen(false)}
-                  aria-label="Close settings"
-                  className="cursor-pointer text-[var(--text-3)] transition-colors hover:text-[var(--text)]"
-                >
-                  <Icon className="text-[14px]">close</Icon>
-                </button>
-              </div>
+      <div className={styles.composerWrap}>
+        <div className={styles.composer}>
+          <textarea
+            ref={inputRef}
+            rows={1}
+            className={styles.textarea}
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={selectedModel ? `Message ${selectedModel.name}...` : "Select a model to start…"}
+            aria-label="Message"
+          />
 
-              <label className={styles.settingsField}>
-                <span className={styles.settingsLabel}>Temperature</span>
-                <input
-                  type="number"
-                  min="0"
-                  max="2"
-                  step="0.1"
-                  placeholder="provider default"
-                  value={generation.temperature}
-                  onChange={handleGenerationChange("temperature")}
-                  className={styles.settingsInput}
+          <div className={styles.composerBar}>
+            {selectedModel ? (
+              <span className={styles.composerContext}>
+                <ModelIcon
+                  providerId={selectedModel.providerId}
+                  providerName={selectedModel.providerName}
+                  providerColor={selectedModel.providerColor}
+                  isCombo={selectedModel.isCombo}
+                  size={13}
                 />
-              </label>
-
-              <label className={styles.settingsField}>
-                <span className={styles.settingsLabel}>Max tokens</span>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  placeholder="provider default"
-                  value={generation.maxTokens}
-                  onChange={handleGenerationChange("maxTokens")}
-                  className={styles.settingsInput}
-                />
-              </label>
-
-              <label className={styles.settingsField}>
-                <span className={styles.settingsLabel}>Top P</span>
-                <input
-                  type="number"
-                  min="0"
-                  max="1"
-                  step="0.05"
-                  placeholder="provider default"
-                  value={generation.topP}
-                  onChange={handleGenerationChange("topP")}
-                  className={styles.settingsInput}
-                />
-              </label>
-
-              <p className={styles.settingsHint}>
-                Applied to the next request. Empty fields use the provider default.
-              </p>
-            </div>
-          ) : null}
-
-          <div className={styles.composer}>
-            <textarea
-              ref={inputRef}
-              rows={1}
-              className={styles.textarea}
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={selectedModel ? `Message ${selectedModel.name}...` : "Select a model to start…"}
-              aria-label="Message"
-            />
-            {isStreaming ? (
-              <Button variant="secondary" size="sm" icon="stop" onClick={handleStop}>
-                Stop
-              </Button>
+                <span className={styles.composerContextName}>
+                  {selectedModel.providerName || selectedModel.name}
+                </span>
+              </span>
             ) : (
-              <Button variant="contrast" size="sm" icon="send" onClick={sendMessage} disabled={!canSend}>
-                Send
-              </Button>
+              <button
+                type="button"
+                className={styles.suggestion}
+                onClick={() => setPickerOpen(true)}
+              >
+                Select a model
+              </button>
             )}
+
+            <span className={styles.composerButtons}>
+              {isStreaming ? (
+                <Tooltip text="Stop generating">
+                  <button
+                    type="button"
+                    className={styles.sendButton}
+                    data-mode="stop"
+                    onClick={handleStop}
+                    aria-label="Stop generating"
+                  >
+                    <Icon>stop</Icon>
+                  </button>
+                </Tooltip>
+              ) : (
+                <Tooltip text="Send">
+                  <button
+                    type="button"
+                    className={styles.sendButton}
+                    onClick={sendMessage}
+                    disabled={!canSend}
+                    aria-label="Send message"
+                  >
+                    <Icon>arrow_upward</Icon>
+                  </button>
+                </Tooltip>
+              )}
+            </span>
           </div>
         </div>
-      </section>
 
-      <ModelSelectModal
-        className={controls.modelPicker}
-        isOpen={pickerOpen}
-        onClose={() => setPickerOpen(false)}
-        onSelect={handleSelectModel}
-        selectedModel={selectedModel?.value}
-        activeProviders={providers}
-        modelAliases={modelAliases}
-        title="Select Model"
-        notice="Pick one model to chat with. Search by name, ID, or provider."
-      />
+        <p className={styles.hint}>
+          <kbd>Enter</kbd> to send · <kbd>Shift</kbd> + <kbd>Enter</kbd> for a new line
+        </p>
+      </div>
     </div>
   );
 }
