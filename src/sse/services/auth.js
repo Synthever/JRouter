@@ -354,8 +354,7 @@ export function extractApiKey(request) {
   if (xApiKey) {
     return xApiKey;
   }
-
-  return null;
+  return request.headers.get("x-goog-api-key") || new URL(request.url).searchParams.get("key");
 }
 
 /**

@@ -24,6 +24,11 @@ vi.mock("@/lib/localDb", () => ({
   getSettings: mocks.getSettings,
 }));
 
+// This suite tests native transport; gateway authorization is covered separately.
+vi.mock("@/lib/apiKeyPolicy/gateway.js", () => ({
+  withApiKeyPolicy: (request, handler) => handler(request),
+}));
+
 const { GET } = await import("../../src/app/api/v1beta/models/route.js");
 const { POST } = await import("../../src/app/api/v1beta/models/[...path]/route.js");
 

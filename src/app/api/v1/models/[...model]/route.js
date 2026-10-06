@@ -1,4 +1,5 @@
 import { buildModelsList } from "../route.js";
+import { withApiKeyCatalogPolicy, filterCatalogModels } from "@/lib/apiKeyPolicy/catalog.js";
 
 // URL slug → service kind(s). `web` covers both webSearch and webFetch.
 const KIND_SLUG_MAP = {
@@ -38,6 +39,10 @@ function json(data, options = {}) {
  * Supported kinds: image, tts, stt, embedding, image-to-text, web.
  */
 export async function GET(_request, { params }) {
+  return withApiKeyCatalogPolicy(_request, (key) => getModel(params, key));
+}
+
+async function getModel(params, key) {
   try {
     const { model } = await params;
     const path = Array.isArray(model) ? model : [model];
@@ -45,13 +50,13 @@ export async function GET(_request, { params }) {
     const kindFilter = path.length === 1 ? KIND_SLUG_MAP[identifier] : null;
 
     if (kindFilter) {
-      const data = await buildModelsList(kindFilter);
+      const data = await filterCatalogModels(key, await buildModelsList(kindFilter));
       return json({ object: "list", data });
     }
 
     // Match the same LLM catalog exposed by GET /v1/models. A catch-all
     // parameter is required because provider-prefixed IDs contain a slash.
-    const models = await buildModelsList([LLM_KIND]);
+    const models = await filterCatalogModels(key, await buildModelsList([LLM_KIND]));
     const matchedModel = models.find((candidate) => candidate.id === identifier);
 
     if (!matchedModel) {

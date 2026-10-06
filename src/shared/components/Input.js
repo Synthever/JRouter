@@ -17,6 +17,7 @@ export default function Input({
   required = false,
   className,
   inputClassName,
+  hintClassName,
   id,
   ...props
 }) {
@@ -67,7 +68,7 @@ export default function Input({
         </p>
       )}
       {hint && !error && (
-        <p id={messageId} className="text-xs text-[var(--text-3)] font-mono">{hint}</p>
+        <p id={messageId} className={cn("text-xs text-[var(--text-3)] font-mono", hintClassName)}>{hint}</p>
       )}
     </div>
   );

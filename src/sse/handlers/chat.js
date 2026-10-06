@@ -1,4 +1,5 @@
 import "open-sse/index.js";
+import { withApiKeyPolicy } from "@/lib/apiKeyPolicy/gateway.js";
 
 import {
   getProviderCredentials,
@@ -32,6 +33,10 @@ import { stripModelContextMarker } from "open-sse/utils/modelMarkers.js";
  * Format detection and translation handled by translator
  */
 export async function handleChat(request, clientRawRequest = null) {
+  return withApiKeyPolicy(request, (req) => handleChatRequest(req, clientRawRequest), { family: "chat" });
+}
+
+async function handleChatRequest(request, clientRawRequest = null) {
   let body;
   try {
     body = await request.json();

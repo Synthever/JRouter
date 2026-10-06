@@ -1,15 +1,23 @@
 import { v4 as uuidv4 } from "uuid";
 import { getAdapter } from "../driver.js";
+import { parseJson, stringifyJson } from "../helpers/jsonCol.js";
+import { policyDefaults, validateKeySettings } from "@/lib/apiKeyPolicy/settings.js";
 
-function rowToKey(row) {
+export function rowToKey(row) {
   if (!row) return null;
   return {
+    ...policyDefaults(parseJson(row.policy, {})),
     id: row.id,
     key: row.key,
     name: row.name,
     machineId: row.machineId,
     isActive: row.isActive === 1 || row.isActive === true,
     createdAt: row.createdAt,
+    updatedAt: row.updatedAt || row.createdAt,
+    lastUsedAt: row.lastUsedAt || null,
+    quotaPeriodStartedAt: row.quotaPeriodStartedAt || null,
+    quotaTokens: row.quotaTokens || 0,
+    quotaCost: row.quotaCost || 0,
   };
 }
 
@@ -46,19 +54,27 @@ export async function createApiKey(name, machineId) {
 }
 
 export async function updateApiKey(id, data) {
+  const validated = validateKeySettings(data);
   const db = await getAdapter();
   let result = null;
   db.transaction(() => {
     const row = db.get(`SELECT * FROM apiKeys WHERE id = ?`, [id]);
     if (!row) return;
-    const merged = { ...rowToKey(row), ...data };
+    const { name, isActive, ...policyChanges } = validated;
+    const policy = { ...parseJson(row.policy, {}), ...policyChanges };
+    const updatedAt = new Date().toISOString();
     db.run(
-      `UPDATE apiKeys SET key = ?, name = ?, machineId = ?, isActive = ? WHERE id = ?`,
-      [merged.key, merged.name, merged.machineId, merged.isActive ? 1 : 0, id]
+      `UPDATE apiKeys SET name = ?, isActive = ?, policy = ?, updatedAt = ? WHERE id = ?`,
+      [name ?? row.name, isActive === undefined ? row.isActive : (isActive ? 1 : 0), stringifyJson(policy), updatedAt, id]
     );
-    result = merged;
+    result = rowToKey(db.get(`SELECT * FROM apiKeys WHERE id = ?`, [id]));
   });
   return result;
+}
+
+export async function getApiKeyBySecret(secret) {
+  const db = await getAdapter();
+  return rowToKey(db.get("SELECT * FROM apiKeys WHERE key = ?", [secret]));
 }
 
 export async function deleteApiKey(id) {

@@ -1,3 +1,4 @@
+import { withApiKeyPolicy } from "@/lib/apiKeyPolicy/gateway.js";
 import {
   getProviderCredentials,
   markAccountUnavailable,
@@ -22,6 +23,10 @@ const NO_AUTH_PROVIDERS = new Set(["sdwebui", "comfyui"]);
  * @param {Request} request
  */
 export async function handleImageGeneration(request) {
+  return withApiKeyPolicy(request, handleImageGenerationRequest, { family: "images" });
+}
+
+async function handleImageGenerationRequest(request) {
   let body;
   try {
     body = await request.json();
