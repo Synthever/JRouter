@@ -53,6 +53,7 @@ docs/*
 !docs/ARCHITECTURE.md
 !docs/DESIGN.md
 !docs/FRONTEND.md
+!docs/api-key-configuration.md
 !docs/superpowers/
 !docs/superpowers/**
 test/*

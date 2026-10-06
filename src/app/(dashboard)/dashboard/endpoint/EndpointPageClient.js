@@ -21,6 +21,8 @@ import StatusAlert from "./components/StatusAlert";
 import Tooltip from "./components/Tooltip";
 import SecurityWarning from "./components/SecurityWarning";
 import styles from "./endpoint.module.css";
+import ConfigureApiKeyDialog from "./components/ConfigureApiKeyDialog";
+import { useNotificationStore } from "@/store/notificationStore";
 
 function ConnectionBadge({ enabled, reachable, loading, checking, previouslyReachable, error, loadingLabel }) {
   let label = "Disabled";
@@ -54,6 +56,7 @@ export default function APIPageClient({ machineId }) {
   const [newKeyName, setNewKeyName] = useState("");
   const [createdKey, setCreatedKey] = useState(null);
   const [confirmState, setConfirmState] = useState(null);
+  const [configureKeyId, setConfigureKeyId] = useState(null);
 
   const [requireApiKey, setRequireApiKey] = useState(false);
   const [requireLogin, setRequireLogin] = useState(true);
@@ -103,9 +106,6 @@ export default function APIPageClient({ machineId }) {
   const tsEverReachableRef = useRef(false);
   const [tunnelEverReachable, setTunnelEverReachable] = useState(false);
   const [tsEverReachable, setTsEverReachable] = useState(false);
-
-  // API key visibility toggle state
-  const [visibleKeys, setVisibleKeys] = useState(new Set());
 
   // Client-side local/remote detection (UI hint only, not a security gate)
   const [isRemoteHost, setIsRemoteHost] = useState(false);
@@ -277,7 +277,7 @@ export default function APIPageClient({ machineId }) {
   const fetchData = async () => {
     try {
       const fetchKeys = async () => {
-        const res = await fetch("/api/keys");
+        const res = await fetch("/api/keys?view=settings", { cache: "no-store" });
         if (!res.ok) return [];
         const data = await res.json();
         return data.keys || [];
@@ -675,11 +675,6 @@ export default function APIPageClient({ machineId }) {
           const res = await fetch(`/api/keys/${id}`, { method: "DELETE" });
           if (res.ok) {
             setKeys(keys.filter((k) => k.id !== id));
-            setVisibleKeys(prev => {
-              const next = new Set(prev);
-              next.delete(id);
-              return next;
-            });
           }
         } catch (error) {
           console.log("Error deleting key:", error);
@@ -703,18 +698,13 @@ export default function APIPageClient({ machineId }) {
     }
   };
 
-  const maskKey = (fullKey) => {
-    if (!fullKey || fullKey.length <= 10) return fullKey || "";
-    return fullKey.slice(0, 6) + "•".repeat(6) + fullKey.slice(-4);
-  };
-
-  const toggleKeyVisibility = (keyId) => {
-    setVisibleKeys(prev => {
-      const next = new Set(prev);
-      if (next.has(keyId)) next.delete(keyId);
-      else next.add(keyId);
-      return next;
-    });
+  const copyKey = async (keyId) => {
+    try {
+      const response = await fetch(`/api/keys/${keyId}/secret`, { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to copy API key.");
+      await copy(data.key, keyId);
+    } catch (error) { useNotificationStore.getState().error(error.message); }
   };
 
   const [baseUrl, setBaseUrl] = useState("/v1");
@@ -1082,27 +1072,16 @@ export default function APIPageClient({ machineId }) {
                 <div className={styles.keyDetails}>
                   <div className={styles.keyName}>
                     <p className="text-sm font-medium break-words min-w-0">{key.name}</p>
-                    <StatusBadge variant={key.isActive === false ? "default" : "success"} className={styles.statusBadge}>
-                      {key.isActive === false ? "Paused" : "Active"}
+                    <StatusBadge variant={key.isActive === false ? "default" : key.isExpired ? "error" : "success"} className={styles.statusBadge}>
+                      {key.isActive === false ? "Paused" : key.isExpired ? "Expired" : "Active"}
                     </StatusBadge>
                   </div>
                   <div className={styles.keyCredential}>
                     <code className={`${styles.keyValue} text-xs text-text-muted font-mono`} data-i18n-skip>
-                      {visibleKeys.has(key.id) ? key.key : maskKey(key.key)}
+                      {key.keyPrefix}
                     </code>
                     <button
-                      onClick={() => toggleKeyVisibility(key.id)}
-                      className={styles.iconButton}
-                      title={visibleKeys.has(key.id) ? "Hide key" : "Show key"}
-                      aria-label={visibleKeys.has(key.id) ? "Hide key" : "Show key"}
-                      aria-pressed={visibleKeys.has(key.id)}
-                    >
-                      <Icon className="text-[14px]">
-                        {visibleKeys.has(key.id) ? "visibility_off" : "visibility"}
-                      </Icon>
-                    </button>
-                    <button
-                      onClick={() => copy(key.key, key.id)}
+                      onClick={() => copyKey(key.id)}
                       className={styles.iconButton}
                       aria-label="Copy API key"
                     >
@@ -1113,9 +1092,16 @@ export default function APIPageClient({ machineId }) {
                   </div>
                   <p className={`${styles.keyMeta} text-xs text-text-muted mt-1`}>
                     Created {new Date(key.createdAt).toLocaleDateString()}
+                    {key.lastUsedAt && ` · Last used ${new Date(key.lastUsedAt).toLocaleDateString()}`}
+                  </p>
+                  <p className="text-xs text-text-muted mt-1">
+                    {key.maxTokensQuota != null ? `${Number(key.quotaTokens || 0).toLocaleString()} / ${Number(key.maxTokensQuota).toLocaleString()} tokens` : key.maxCostUsd != null ? `$${Number(key.quotaCost || 0).toFixed(2)} / $${Number(key.maxCostUsd).toFixed(2)}` : "Unlimited quota"}
+                    {key.rateLimitRpm != null && ` · ${key.rateLimitRpm} RPM`}
+                    {(key.allowedModels?.length > 0 || key.blockedModels?.length > 0) && " · Restricted models"}
                   </p>
                 </div>
                 <div className={styles.keyActions}>
+                  <Button variant="secondary" size="sm" icon="settings" onClick={() => setConfigureKeyId(key.id)} aria-label={`Configure ${key.name}`}>Configure</Button>
                   <Toggle
                     aria-label={`${key.isActive === false ? "Resume" : "Pause"} ${key.name}`}
                     size="sm"
@@ -1149,6 +1135,8 @@ export default function APIPageClient({ machineId }) {
           </div>
         )}
       </Card>
+
+      {configureKeyId && <ConfigureApiKeyDialog key={configureKeyId} keyId={configureKeyId} onClose={() => setConfigureKeyId(null)} onSaved={(updated) => setKeys((previous) => previous.map((key) => key.id === updated.id ? updated : key))} />}
 
       {/* Add Key Modal */}
       <Modal

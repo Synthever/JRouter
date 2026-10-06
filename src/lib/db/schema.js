@@ -3,7 +3,7 @@
 // pre-change safety backup in migrate.js: when the stored version is lower,
 // one lightweight DB backup is taken before applying schema changes. Forgetting
 // to bump only skips that backup — it does NOT break the additive auto-sync.
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const PRAGMA_SQL = `
 PRAGMA journal_mode = WAL;
@@ -83,8 +83,31 @@ export const TABLES = {
       machineId: "TEXT",
       isActive: "INTEGER DEFAULT 1",
       createdAt: "TEXT NOT NULL",
+      policy: "TEXT NOT NULL DEFAULT '{}'",
+      quotaPeriodStartedAt: "TEXT",
+      quotaTokens: "REAL NOT NULL DEFAULT 0",
+      quotaCost: "REAL NOT NULL DEFAULT 0",
+      lastUsedAt: "TEXT",
+      updatedAt: "TEXT",
     },
     indexes: ["CREATE INDEX IF NOT EXISTS idx_ak_key ON apiKeys(key)"],
+  },
+  apiKeyRequests: {
+    columns: {
+      id: "TEXT PRIMARY KEY",
+      apiKeyId: "TEXT NOT NULL REFERENCES apiKeys(id) ON DELETE CASCADE",
+      startedAt: "INTEGER NOT NULL",
+      usageRecordedAt: "INTEGER NOT NULL DEFAULT 0",
+      expiresAt: "INTEGER NOT NULL",
+      quotaPeriodStartedAt: "TEXT",
+      estimatedTokens: "REAL NOT NULL DEFAULT 0",
+      estimatedCost: "REAL NOT NULL DEFAULT 0",
+      actualTokens: "REAL NOT NULL DEFAULT 0",
+      actualCost: "REAL NOT NULL DEFAULT 0",
+      multiplier: "REAL NOT NULL DEFAULT 1",
+      isPending: "INTEGER NOT NULL DEFAULT 1",
+    },
+    indexes: ["CREATE INDEX IF NOT EXISTS idx_akr_key_time ON apiKeyRequests(apiKeyId, startedAt)"],
   },
   combos: {
     columns: {

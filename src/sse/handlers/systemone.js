@@ -1,3 +1,4 @@
+import { withApiKeyPolicy } from "@/lib/apiKeyPolicy/gateway.js";
 import {
   getProviderCredentials,
   markAccountUnavailable,
@@ -21,6 +22,10 @@ import { saveRequestUsage } from "@/lib/usageDb.js";
  * @param {Request} request
  */
 export async function handleSystemone(request) {
+  return withApiKeyPolicy(request, handleSystemoneRequest, { family: "systemone" });
+}
+
+async function handleSystemoneRequest(request) {
   let body;
   try {
     body = await request.json();

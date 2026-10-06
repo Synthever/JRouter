@@ -1,3 +1,5 @@
+import { withApiKeyPolicy } from "@/lib/apiKeyPolicy/gateway.js";
+import { assertCurrentModelAllowed } from "@/lib/apiKeyPolicy/context.js";
 import {
   getProviderCredentials,
   markAccountUnavailable,
@@ -21,6 +23,10 @@ import { handleComboChat, getComboModelsFromData } from "open-sse/services/combo
  * @param {Request} request
  */
 export async function handleSearch(request) {
+  return withApiKeyPolicy(request, handleSearchRequest, { family: "web" });
+}
+
+async function handleSearchRequest(request) {
   let body;
   try {
     body = await request.json();
@@ -93,6 +99,7 @@ export async function handleSearch(request) {
 async function handleSingleProviderSearch(body, providerInput, request, apiKey, settings) {
   const query = body.query;
   const providerId = resolveProviderId(providerInput);
+  assertCurrentModelAllowed(providerInput, { provider: providerId, model: providerId });
   const resolvedProvider = AI_PROVIDERS[providerId];
 
   if (!resolvedProvider) {

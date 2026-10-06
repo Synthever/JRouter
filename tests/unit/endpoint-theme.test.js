@@ -82,17 +82,12 @@ describe("endpoint dashboard theme", () => {
     expect(mobile).toMatch(/\.keyActions\s*\{[^}]*grid-column: 2;[^}]*grid-row: 1;/);
   });
 
-  it("keeps masked keys compact without changing revealed or copied credentials", () => {
+  it("renders server-masked keys and fetches credentials only for Copy", () => {
     const source = read(`${endpointPath}/EndpointPageClient.js`);
-    const maskSource = source.match(/const maskKey = \(fullKey\) => \{([\s\S]*?)\n  \};/)?.[1];
-    expect(maskSource).toBeDefined();
-    const maskKey = new Function("fullKey", maskSource);
-    const key = "sk-" + "a".repeat(64) + "b95e";
-    expect(maskKey(key)).toBe(key.slice(0, 6) + "•".repeat(6) + "b95e");
-    expect(maskKey("short")).toBe("short");
-    expect(maskKey(null)).toBe("");
-    expect(source).toContain("visibleKeys.has(key.id) ? key.key : maskKey(key.key)");
-    expect(source).toContain("copy(key.key, key.id)");
+    expect(source).toContain("/api/keys?view=settings");
+    expect(source).toContain("{key.keyPrefix}");
+    expect(source).toContain("/api/keys/${keyId}/secret");
+    expect(source).not.toContain("visibleKeys");
   });
 
   it("keeps the API key delete button transparent, including on hover", () => {

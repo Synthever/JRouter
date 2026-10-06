@@ -1,3 +1,4 @@
+import { withApiKeyPolicy } from "@/lib/apiKeyPolicy/gateway.js";
 import {
   getProviderCredentials,
   markAccountUnavailable,
@@ -107,6 +108,10 @@ function withConnectionHeader(response, connectionId) {
  * POST /v1/videos/{generations|edits|extensions} — async job creation proxy.
  */
 export async function handleVideoCreate(request, action) {
+  return withApiKeyPolicy(request, (req) => handleVideoCreateRequest(req, action), { family: "videos" });
+}
+
+async function handleVideoCreateRequest(request, action) {
   const authError = await requireValidApiKey(request);
   if (authError) return authError;
 
@@ -195,6 +200,10 @@ export async function handleVideoCreate(request, action) {
  * caller pins the creating account via `x-connection-id` (returned on create).
  */
 export async function handleVideoGet(request, requestId) {
+  return withApiKeyPolicy(request, (req) => handleVideoGetRequest(req, requestId), { family: "videos", billable: false });
+}
+
+async function handleVideoGetRequest(request, requestId) {
   const authError = await requireValidApiKey(request);
   if (authError) return authError;
 

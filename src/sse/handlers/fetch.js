@@ -1,3 +1,5 @@
+import { withApiKeyPolicy } from "@/lib/apiKeyPolicy/gateway.js";
+import { assertCurrentModelAllowed } from "@/lib/apiKeyPolicy/context.js";
 import {
   getProviderCredentials,
   markAccountUnavailable,
@@ -22,6 +24,10 @@ import { assertPublicUrlResolved } from "@/shared/utils/ssrfGuard.js";
  * @param {Request} request
  */
 export async function handleFetch(request) {
+  return withApiKeyPolicy(request, handleFetchRequest, { family: "web" });
+}
+
+async function handleFetchRequest(request) {
   let body;
   try {
     body = await request.json();
@@ -115,6 +121,7 @@ async function handleSingleProviderFetch(body, providerInput, request, apiKey, s
   const format = body.format;
   const maxCharacters = body.max_characters;
   const providerId = resolveProviderId(providerInput);
+  assertCurrentModelAllowed(providerInput, { provider: providerId, model: providerId });
   const resolvedProvider = AI_PROVIDERS[providerId];
 
   if (!resolvedProvider) {

@@ -1,3 +1,5 @@
+import { withApiKeyPolicy } from "@/lib/apiKeyPolicy/gateway.js";
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -73,6 +75,10 @@ export function estimateAnthropicInputTokens(body = {}) {
  * POST /v1/messages/count_tokens - Mock token count response
  */
 export async function POST(request) {
+  return withApiKeyPolicy(request, countTokens, { family: "chat", billable: false });
+}
+
+async function countTokens(request) {
   let body;
   try {
     body = await request.json();

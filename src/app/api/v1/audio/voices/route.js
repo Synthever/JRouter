@@ -1,4 +1,5 @@
 import { AI_PROVIDERS } from "@/shared/constants/providers";
+import { withApiKeyPolicy } from "@/lib/apiKeyPolicy/gateway.js";
 
 // Provider → internal voices API. Edge/local-device share the generic endpoint.
 const PROVIDER_API = {
@@ -18,6 +19,10 @@ export async function OPTIONS() {
 // GET /v1/audio/voices?provider={p}[&lang=xx]
 // Returns OpenAI-style list with each voice's full model id ready for /v1/audio/speech
 export async function GET(request) {
+  return withApiKeyPolicy(request, listVoices, { family: "audio", billable: false });
+}
+
+async function listVoices(request) {
   try {
     const { searchParams, origin } = new URL(request.url);
     const provider = searchParams.get("provider");

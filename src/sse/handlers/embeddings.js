@@ -1,3 +1,4 @@
+import { withApiKeyPolicy } from "@/lib/apiKeyPolicy/gateway.js";
 import {
   getProviderCredentials,
   markAccountUnavailable,
@@ -30,6 +31,10 @@ function exactEmbeddingUsage(raw) {
  * @param {Request} request
  */
 export async function handleEmbeddings(request) {
+  return withApiKeyPolicy(request, handleEmbeddingsRequest, { family: "embeddings" });
+}
+
+async function handleEmbeddingsRequest(request) {
   let body;
   try {
     body = await request.json();

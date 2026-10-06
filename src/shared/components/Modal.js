@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId } from "react";
+import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/shared/utils/cn";
 import Button from "./Button";
@@ -17,8 +17,10 @@ export default function Modal({
   closeOnOverlay = true,
   showTrafficLights = true,
   className,
+  trapFocus = false,
 }) {
   const titleId = useId();
+  const dialogRef = useRef(null);
   const sizes = {
     sm: "max-w-sm",
     md: "max-w-md",
@@ -44,6 +46,24 @@ export default function Modal({
     return () => document.removeEventListener("keydown", handleEscape);
   }, [isOpen, onClose]);
 
+  useEffect(() => {
+    if (!isOpen || !trapFocus) return;
+    const previous = document.activeElement;
+    const dialog = dialogRef.current;
+    const focusable = () => [...dialog.querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]')].filter((element) => element.getClientRects().length);
+    (focusable()[0] || dialog).focus();
+    const containFocus = (event) => {
+      if (event.key !== "Tab") return;
+      const elements = focusable();
+      const first = elements[0]; const last = elements.at(-1);
+      if (!first) { event.preventDefault(); dialog.focus(); }
+      else if (event.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", containFocus);
+    return () => { document.removeEventListener("keydown", containFocus); previous?.focus?.(); };
+  }, [isOpen, trapFocus]);
+
   if (!isOpen) return null;
 
   return (
@@ -56,6 +76,8 @@ export default function Modal({
 
       {/* Modal content */}
       <div
+        ref={dialogRef}
+        tabIndex={trapFocus ? -1 : undefined}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}

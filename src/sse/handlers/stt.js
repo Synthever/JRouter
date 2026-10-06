@@ -1,3 +1,4 @@
+import { withApiKeyPolicy } from "@/lib/apiKeyPolicy/gateway.js";
 import {
   extractApiKey, isValidApiKey,
   getProviderCredentials, markAccountUnavailable,
@@ -35,6 +36,10 @@ async function resolveCustomModelTransport(provider, model) {
 }
 
 export async function handleStt(request) {
+  return withApiKeyPolicy(request, handleSttRequest, { family: "audio" });
+}
+
+async function handleSttRequest(request) {
   let formData;
   try {
     formData = await request.formData();

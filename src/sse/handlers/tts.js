@@ -1,3 +1,4 @@
+import { withApiKeyPolicy } from "@/lib/apiKeyPolicy/gateway.js";
 import {
   extractApiKey, isValidApiKey,
   getProviderCredentials, markAccountUnavailable,
@@ -19,6 +20,10 @@ const CREDENTIALED_PROVIDERS = new Set(
 );
 
 export async function handleTts(request) {
+  return withApiKeyPolicy(request, handleTtsRequest, { family: "audio" });
+}
+
+async function handleTtsRequest(request) {
   let body;
   try {
     body = await request.json();

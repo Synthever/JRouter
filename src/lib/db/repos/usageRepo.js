@@ -2,6 +2,8 @@ import { EventEmitter } from "events";
 import { getAdapter } from "../driver.js";
 import { parseJson, stringifyJson } from "../helpers/jsonCol.js";
 import { getMeta, setMeta } from "../helpers/metaStore.js";
+import { getApiKeyPolicyContext } from "@/lib/apiKeyPolicy/context.js";
+import { accountKeyUsage } from "@/lib/apiKeyPolicy/accounting.js";
 
 function maskApiKey(key) {
   if (!key || typeof key !== "string") return null;
@@ -239,7 +241,17 @@ export async function getActiveRequests() {
   return { activeRequests, recentRequests, errorProvider };
 }
 
-export async function saveRequestUsage(entry) {
+export function saveRequestUsage(entry) {
+  const context = getApiKeyPolicyContext();
+  const promise = saveRequestUsageEntry({ ...entry, ...(context ? { apiKey: context.apiKeyId } : {}) }, context);
+  if (context) {
+    context.pending.add(promise);
+    promise.then(() => context.pending.delete(promise), () => context.pending.delete(promise));
+  }
+  return promise;
+}
+
+async function saveRequestUsageEntry(entry, context) {
   try {
     const db = await getAdapter();
 
@@ -273,6 +285,12 @@ export async function saveRequestUsage(entry) {
       );
 
       if (existing) {
+        // Analytics can deduplicate equal entries from distinct requests. Their
+        // admissions still owe raw usage independently of client token buffers.
+        if (context && !context.accounted) {
+          accountKeyUsage(db, context, promptTokens + completionTokens, entry.cost || 0);
+          context.accounted = true;
+        }
         if (!existing.endpoint && entry.endpoint) {
           db.run(`UPDATE usageHistory SET endpoint = ? WHERE id = ?`, [entry.endpoint, existing.id]);
         }
@@ -288,6 +306,11 @@ export async function saveRequestUsage(entry) {
           stringifyJson(tokens), stringifyJson({ latency: entry.latency }),
         ]
       );
+
+      if (context) {
+        accountKeyUsage(db, context, promptTokens + completionTokens, entry.cost || 0);
+        context.accounted = true;
+      }
 
       const dateKey = getLocalDateKey(entry.timestamp);
       const row = db.get(`SELECT data FROM usageDaily WHERE dateKey = ?`, [dateKey]);
@@ -367,7 +390,11 @@ export async function getUsageStats(period = "all") {
   let allApiKeys = [];
   try { allApiKeys = await getApiKeys(); } catch {}
   const apiKeyMap = {};
-  for (const k of allApiKeys) apiKeyMap[k.key] = { name: k.name, id: k.id, createdAt: k.createdAt };
+  for (const k of allApiKeys) {
+    const info = { name: k.name, id: k.id, createdAt: k.createdAt };
+    apiKeyMap[k.key] = info;
+    apiKeyMap[k.id] = info;
+  }
 
   // recentRequests from live history (last 100 entries enough for 20 deduped)
   const recentRows = db.all(`SELECT timestamp, provider, model, tokens, status FROM usageHistory ORDER BY id DESC LIMIT 100`);

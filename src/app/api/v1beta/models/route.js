@@ -1,4 +1,5 @@
 import { PROVIDER_MODELS } from "@/shared/constants/models";
+import { withApiKeyCatalogPolicy, filterCatalogModels } from "@/lib/apiKeyPolicy/catalog.js";
 
 /**
  * Handle CORS preflight
@@ -17,7 +18,11 @@ export async function OPTIONS() {
  * GET /v1beta/models - Gemini compatible models list
  * Returns models in Gemini API format
  */
-export async function GET() {
+export async function GET(request) {
+  return withApiKeyCatalogPolicy(request, (key) => getModels(key));
+}
+
+async function getModels(key) {
   try {
     const models = [];
     const seen = new Set();
@@ -54,7 +59,7 @@ export async function GET() {
       }
     }
 
-    return Response.json({ models });
+    return Response.json({ models: await filterCatalogModels(key, models, (model) => model.name) });
   } catch (error) {
     console.log("Error fetching models:", error);
     return Response.json({ error: { message: error.message } }, { status: 500 });

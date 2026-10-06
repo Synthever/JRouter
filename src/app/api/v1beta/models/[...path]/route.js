@@ -1,4 +1,7 @@
 import { handleChat } from "@/sse/handlers/chat.js";
+import { withApiKeyPolicy } from "@/lib/apiKeyPolicy/gateway.js";
+import { assertCurrentModelAllowed } from "@/lib/apiKeyPolicy/context.js";
+import { ApiKeyPolicyError } from "@/lib/apiKeyPolicy/rules.js";
 import {
   clearAccountError,
   getProviderCredentials,
@@ -51,6 +54,15 @@ export async function OPTIONS() {
  * Gemini SSE format on the fly via transformOpenAISSEToGeminiSSE().
  */
 export async function POST(request, { params }) {
+  const { path } = await params;
+  const model = path.join("/").replace(/:(streamGenerateContent|generateContent)$/, "");
+  let body;
+  try { body = await request.clone().json(); } catch { /* The policy wrapper returns the malformed-body error. */ }
+  const family = isGeminiNativeTtsRequest(model, body) ? "audio" : "chat";
+  return withApiKeyPolicy(request, (req) => handleGeminiRequest(req, { params: Promise.resolve({ path }) }), { model, family });
+}
+
+async function handleGeminiRequest(request, { params }) {
   await ensureInitialized();
 
   try {
@@ -115,6 +127,7 @@ export async function POST(request, { params }) {
       return await convertOpenAIResponseToGemini(response, model);
     }
   } catch (error) {
+    if (error instanceof ApiKeyPolicyError) throw error;
     console.log("Error handling Gemini request:", error);
     return Response.json(
       { error: { message: error.message, code: 500 } },
@@ -240,6 +253,7 @@ async function forwardGeminiNativeRequest(request, body, model, action) {
   if (authError) return authError;
 
   const modelId = normalizeGeminiNativeModel(model);
+  assertCurrentModelAllowed(model, { provider: "gemini", model: modelId });
   if (!GEMINI_NATIVE_MODEL_PATTERN.test(modelId)) {
     return Response.json({ error: { message: "Invalid model" } }, { status: 400 });
   }
