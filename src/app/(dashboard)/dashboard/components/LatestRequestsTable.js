@@ -58,10 +58,10 @@ export default function LatestRequestsTable({ initialRequests = [] }) {
 
   const fetchLogs = useCallback(async () => {
     try {
-      const res = await fetch("/api/usage/request-logs");
+      const res = await fetch("/api/usage/request-logs?format=json", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           setLogs(data.slice(0, 30));
         }
       }

@@ -65,6 +65,19 @@ export function hasValuableContent(chunk, format) {
   return true; // Other formats: keep all chunks
 }
 
+export function hasTokenContent(chunk) {
+  if (!chunk || typeof chunk !== "object") return false;
+  const payload = chunk.data || chunk.response || chunk;
+  const delta = payload.choices?.[0]?.delta || payload.delta || payload.message || payload.content_block;
+  if (typeof delta === "string") return payload.type?.endsWith(".delta") && delta.length > 0;
+  if (delta && typeof delta === "object") {
+    if ([delta.content, delta.reasoning_content, delta.reasoning, delta.text, delta.thinking, delta.partial_json]
+      .some((value) => typeof value === "string" && value.length > 0)) return true;
+    if (delta.tool_calls?.some((call) => call.function?.name || call.function?.arguments)) return true;
+  }
+  return payload.candidates?.some((candidate) => candidate.content?.parts?.some((part) => part.text || part.functionCall)) || false;
+}
+
 // Fix invalid id (generic or too short)
 export function fixInvalidId(parsed) {
   if (parsed.id && (parsed.id === "chat" || parsed.id === "completion" || parsed.id.length < 8)) {

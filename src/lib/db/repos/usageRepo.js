@@ -285,7 +285,7 @@ export async function saveRequestUsage(entry) {
           entry.timestamp, entry.provider || null, entry.model || null,
           entry.connectionId || null, entry.apiKey || null, entry.endpoint || null,
           promptTokens, completionTokens, entry.cost || 0, entry.status || "ok",
-          stringifyJson(tokens), stringifyJson({}),
+          stringifyJson(tokens), stringifyJson({ latency: entry.latency }),
         ]
       );
 
@@ -778,14 +778,32 @@ function formatLogDate(date = new Date()) {
 // No-op: request log is now derived from usageHistory table on read.
 export async function appendRequestLog() {}
 
-export async function getRecentLogs(limit = 200) {
+export async function getRecentLogs(limit = 200, { format = "text" } = {}) {
   try {
     const db = await getAdapter();
     const rows = db.all(
-      `SELECT timestamp, provider, model, connectionId, promptTokens, completionTokens, status, tokens FROM usageHistory ORDER BY id DESC LIMIT ?`,
+      `SELECT id, timestamp, provider, model, connectionId, promptTokens, completionTokens, status, tokens, meta FROM usageHistory ORDER BY id DESC LIMIT ?`,
       [limit],
     );
     if (!rows.length) return [];
+
+    if (format === "json") {
+      return rows.map((r) => {
+        const tokens = parseJson(r.tokens, {}) || {};
+        const latency = parseJson(r.meta, {})?.latency;
+        return {
+          id: r.id,
+          timestamp: r.timestamp,
+          model: r.model,
+          provider: r.provider,
+          status: r.status || "ok",
+          promptTokens: r.promptTokens ?? tokens.prompt_tokens ?? tokens.input_tokens ?? 0,
+          completionTokens: r.completionTokens ?? tokens.completion_tokens ?? tokens.output_tokens ?? 0,
+          ttftMs: Number.isFinite(latency?.ttft) && latency.ttft >= 0 ? latency.ttft : null,
+          durationMs: Number.isFinite(latency?.total) && latency.total >= 0 ? latency.total : null,
+        };
+      });
+    }
 
     const connMap = {};
     try {
