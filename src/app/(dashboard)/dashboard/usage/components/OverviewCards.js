@@ -3,6 +3,7 @@ import Icon from "@/shared/components/Icon";
 
 import PropTypes from "prop-types";
 import styles from "../usage.module.css";
+import { formatCompactTokens } from "./chartTheme";
 
 const fmt = (n) => new Intl.NumberFormat().format(n || 0);
 const fmtCost = (n) => `$${(n || 0).toFixed(2)}`;
@@ -18,19 +19,22 @@ export default function OverviewCards({ stats }) {
     {
       label: "INPUT TOKENS",
       icon: "arrow_upward",
-      value: fmt(stats.totalPromptTokens),
+      value: formatCompactTokens(stats.totalPromptTokens),
+      full: fmt(stats.totalPromptTokens),
       subtitle: "prompt volume",
     },
     {
       label: "CACHED TOKENS",
       icon: "memory",
-      value: fmt(stats.totalCachedTokens),
+      value: formatCompactTokens(stats.totalCachedTokens),
+      full: fmt(stats.totalCachedTokens),
       subtitle: "cache hits",
     },
     {
       label: "OUTPUT TOKENS",
       icon: "arrow_downward",
-      value: fmt(stats.totalCompletionTokens),
+      value: formatCompactTokens(stats.totalCompletionTokens),
+      full: fmt(stats.totalCompletionTokens),
       subtitle: "completion volume",
     },
     {
@@ -50,7 +54,7 @@ export default function OverviewCards({ stats }) {
             <Icon className="shrink-0 text-[16px] text-[var(--text-2)]">{card.icon}</Icon>
           </div>
           <div>
-            <div className={`${styles.metricValue} u-tnum`} title={card.value}>{card.value}</div>
+            <div className={`${styles.metricValue} u-tnum`} title={card.full || card.value}>{card.value}</div>
             <div className={styles.metricMeta}>{card.subtitle}</div>
           </div>
         </div>

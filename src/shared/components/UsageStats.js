@@ -275,29 +275,51 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
       .catch(() => {});
   }, []);
 
-  // Fetch filtered stats via REST when period changes
+  // Fetch filtered stats via REST on period change, then poll every 3s so the
+  // dashboard updates without a manual reload. Background polls stay silent.
   useEffect(() => {
-    // First load: skeleton placeholders; subsequent: subtle fetching indicator
-    if (isInitialLoad.current) {
-      isInitialLoad.current = false;
-      setLoading(true);
-    } else {
-      setFetching(true);
-    }
+    let cancelled = false;
+    let inFlight = false;
 
-    fetch(`/api/usage/stats?period=${period}`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => {
-        if (data) {
+    const load = async ({ silent = false } = {}) => {
+      if (cancelled || inFlight) return;
+      inFlight = true;
+      if (!silent) {
+        // First load: skeleton placeholders; subsequent: subtle fetching indicator
+        if (isInitialLoad.current) {
+          isInitialLoad.current = false;
+          setLoading(true);
+        } else {
+          setFetching(true);
+        }
+      }
+      try {
+        const r = await fetch(`/api/usage/stats?period=${period}`);
+        const data = r.ok ? await r.json() : null;
+        if (!cancelled && data) {
           hasLoadedStats.current = true;
           setStats((prev) => ({ ...prev, ...data }));
         }
-      })
-      .catch(() => {})
-      .finally(() => {
-        setLoading(false);
-        setFetching(false);
-      });
+      } catch {
+        // Keep the last snapshot; the next poll retries.
+      } finally {
+        if (!cancelled && !silent) {
+          setLoading(false);
+          setFetching(false);
+        }
+        inFlight = false;
+      }
+    };
+
+    load();
+    const id = setInterval(() => {
+      if (!document.hidden) load({ silent: true });
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
   }, [period]);
 
   // SSE connection - real-time updates for activeRequests + recentRequests only

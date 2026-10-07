@@ -1,7 +1,7 @@
 "use client";
 import Icon from "@/shared/components/Icon";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import PropTypes from "prop-types";
 import {
   AreaChart,
@@ -38,8 +38,12 @@ export default function UsageChart({ period = "7d" }) {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState("tokens");
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const inFlight = useRef(false);
+
+  const fetchData = useCallback(async ({ silent = false } = {}) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    if (!silent) setLoading(true);
     try {
       const res = await fetch(`/api/usage/chart?period=${period}`);
       if (res.ok) {
@@ -49,12 +53,19 @@ export default function UsageChart({ period = "7d" }) {
     } catch (e) {
       console.error("Failed to fetch chart data:", e);
     } finally {
-      setLoading(false);
+      inFlight.current = false;
+      if (!silent) setLoading(false);
     }
   }, [period]);
 
+  // Refresh alongside the stats poll so the chart tracks new traffic without a reload.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one synchronous loading flag on mount/period change, refreshes stay silent
     fetchData();
+    const id = setInterval(() => {
+      if (!document.hidden) fetchData({ silent: true });
+    }, 3000);
+    return () => clearInterval(id);
   }, [fetchData]);
 
   const cfg = VIEW_CONFIG[viewMode];

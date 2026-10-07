@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { formatCompactTokens } from "@/app/(dashboard)/dashboard/usage/components/chartTheme.js";
 
 const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
 const usagePath = "src/app/(dashboard)/dashboard/usage";
@@ -97,11 +98,50 @@ describe("usage dashboard theme", () => {
 
   it("keeps the usage route on the shared grid background", () => {
     const layout = read("src/shared/components/layouts/DashboardLayout.js");
-    const expression = layout.match(/\$\{([^{}]*"dashboard-grid-bg"[^{}]*)\}/)?.[1];
+    const pages = layout.match(/const GRID_BACKGROUND_PAGES = (\[[\s\S]*?\]);/)?.[1];
+    const expression = layout.match(/const hasGridBackground = ([^;]+);/)?.[1];
+    expect(pages).toBeDefined();
     expect(expression).toBeDefined();
-    const backgroundClass = new Function("pathname", `return (${expression});`);
-    expect(backgroundClass("/dashboard/usage")).toBe("dashboard-grid-bg");
-    expect(backgroundClass("/dashboard/usage/detail")).toBe("");
+    const hasGridBackground = new Function(
+      "pathname",
+      `const GRID_BACKGROUND_PAGES = ${pages}; return (${expression});`
+    );
+    expect(hasGridBackground("/dashboard/usage")).toBe(true);
+    expect(hasGridBackground("/dashboard/usage/detail")).toBe(false);
     for (const file of usageFiles) expect(read(file).length).toBeGreaterThan(0);
+  });
+});
+
+describe("usage stat cards compact tokens + auto refresh", () => {
+  it("truncates token counts to compact M/K/B labels", () => {
+    expect(formatCompactTokens(172954215)).toBe("172M");
+    expect(formatCompactTokens(692588)).toBe("692K");
+    expect(formatCompactTokens(149776300)).toBe("149M");
+    expect(formatCompactTokens(1234567890)).toBe("1B");
+    expect(formatCompactTokens(1000)).toBe("1K");
+    expect(formatCompactTokens(999)).toBe("999");
+    expect(formatCompactTokens(0)).toBe("0");
+  });
+
+  it("wires the compact label into the overview cards, full value kept in the title", () => {
+    const cards = read(`${usagePath}/components/OverviewCards.js`);
+    expect(cards).toContain("formatCompactTokens(stats.totalPromptTokens)");
+    expect(cards).toContain("formatCompactTokens(stats.totalCachedTokens)");
+    expect(cards).toContain("formatCompactTokens(stats.totalCompletionTokens)");
+    expect(cards).toContain("title={card.full || card.value}");
+  });
+
+  it("polls stats and chart data every 3s without a manual reload", () => {
+    const stats = read("src/shared/components/UsageStats.js");
+    expect(stats).toContain("setInterval(() => {");
+    expect(stats).toContain("load({ silent: true })");
+    expect(stats).toContain("}, 3000);");
+    expect(stats).toContain("clearInterval(id)");
+    expect(stats).toContain("if (!document.hidden)");
+    const chart = read(`${usagePath}/components/UsageChart.js`);
+    expect(chart).toContain("fetchData({ silent: true })");
+    expect(chart).toContain("}, 3000);");
+    expect(chart).toContain("clearInterval(id)");
+    expect(chart).toContain("if (!document.hidden)");
   });
 });

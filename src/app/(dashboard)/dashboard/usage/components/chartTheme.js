@@ -35,6 +35,15 @@ export const formatTokenCount = (n) => {
   return String(value);
 };
 
+// Stat-card token label: truncated, no decimals — 172,954,215 reads as "172M".
+export const formatCompactTokens = (n) => {
+  const value = Math.floor(Number(n) || 0);
+  if (value >= 1e9) return `${Math.floor(value / 1e9)}B`;
+  if (value >= 1e6) return `${Math.floor(value / 1e6)}M`;
+  if (value >= 1e3) return `${Math.floor(value / 1e3)}K`;
+  return String(value);
+};
+
 export const formatCost = (n) => `$${(Number(n) || 0).toFixed(4)}`;
 
 export const formatCount = (n) => Number(n || 0).toLocaleString();
