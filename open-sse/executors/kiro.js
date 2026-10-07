@@ -442,6 +442,7 @@ export class KiroExecutor extends BaseExecutor {
       "initial"
     );
     if (first.kind === "complete") return first.bytes;
+    if (args.healthProbe) return this.integrityFailureSSE(first);
     if (first.kind === "terminal_stop" || first.kind === "upstream_error") {
       return this.integrityFailureSSE(first);
     }

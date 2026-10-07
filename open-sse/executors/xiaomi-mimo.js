@@ -99,7 +99,7 @@ export class XiaomiMimoExecutor extends DefaultExecutor {
     const result = await super.execute(args);
 
     // A cached session can expire early — drop it and retry once with a fresh one.
-    if (result.response.status === 401) {
+    if (!args.healthProbe && result.response.status === 401) {
       invalidateMimoAccountCookieCache();
       const fresh = await getMimoAccountCookie(credentials?.providerSpecificData, proxyOptions).catch(() => null);
       if (fresh) {

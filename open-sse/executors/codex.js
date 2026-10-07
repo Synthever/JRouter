@@ -310,7 +310,7 @@ export class CodexExecutor extends BaseExecutor {
         result.response = codexSseErrorResponse(HTTP_STATUS.SERVICE_UNAVAILABLE, peek.message || CODEX_MODEL_CAPACITY_MESSAGE);
         return result;
       }
-      if (attempt >= attempts) {
+      if (args.healthProbe || attempt >= attempts) {
         args.log?.warn?.("RETRY", `CODEX | SSE overloaded "${peek.matched}" — retries exhausted (${attempt}/${attempts})`);
         result.response = codexSseErrorResponse(HTTP_STATUS.SERVICE_UNAVAILABLE, peek.message || peek.matched);
         return result;

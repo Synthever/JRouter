@@ -40,7 +40,7 @@ export class CommandCodeExecutor extends BaseExecutor {
   }
 
   async execute(opts) {
-    const maxRetries = 2;
+    const maxRetries = opts.healthProbe ? 0 : 2;
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       const result = await super.execute(opts);
       if (!result?.response?.ok || !result.response.body) return result;

@@ -227,17 +227,15 @@ async function fetchCompatibleModelIds(connection) {
     return [];
   }
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
     const response = await fetch(url, {
       method: "GET",
       headers: { ...headers, [INTERNAL_MODELS_FETCH_HEADER]: "1" },
       cache: "no-store",
       signal: controller.signal,
     });
-    clearTimeout(timeoutId);
-
     if (!response.ok) return [];
 
     const data = await response.json();
@@ -252,6 +250,8 @@ async function fetchCompatibleModelIds(connection) {
     );
   } catch {
     return [];
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -473,7 +473,7 @@ export async function buildModelsList(kindFilter, options = {}) {
       // -thinking/-agentic variants per account). On failure, fall back to
       // whatever rawModelIds already holds.
       const liveResolver = LIVE_MODEL_RESOLVERS[providerId];
-      if (liveResolver && !hasExplicitEnabledModels) {
+      if (liveResolver && !hasExplicitEnabledModels && !options.skipLiveResolvers) {
         try {
           const live = await liveResolver(conn);
           if (live?.models?.length) {

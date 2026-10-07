@@ -1,0 +1,82 @@
+.page, .drawerScope {
+  composes: formScope from "../../../../shared/components/DashboardControls.module.css";
+  color: var(--text);
+  min-width: 0;
+}
+.page { display: flex; flex-direction: column; gap: 20px; padding-bottom: 40px; width: 100%; }
+.title { font-size: 20px; font-weight: 600; letter-spacing: -0.025em; }
+.description { margin-top: 6px; font-size: 12px; color: var(--text-2); line-height: 1.6; }
+.toolbar, .actions, .filters, .activityLine, .pagination { display: flex; align-items: center; gap: 10px; }
+.toolbar, .activityLine, .pagination { justify-content: space-between; flex-wrap: wrap; }
+.actions { flex-wrap: wrap; }
+.summary { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
+.metric { padding: 18px 20px; min-width: 0; }
+.metricLabel { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-2); }
+.metricValue { margin: 10px 0 5px; font-size: 24px; font-weight: 600; letter-spacing: -0.025em; overflow-wrap: anywhere; }
+.muted { color: var(--text-2); font-size: 11px; line-height: 1.6; }
+.panel { padding: 20px; min-width: 0; }
+.sectionTitle { font-size: 14px; font-weight: 600; margin-bottom: 5px; }
+.filters { flex-wrap: wrap; }
+.search { width: 200px; }
+.select, .field select { background: var(--surface-2); border: 1px solid var(--line-2); color: var(--text); border-radius: var(--r1); min-height: 36px; padding: 7px 10px; font-size: 12px; max-width: 200px; }
+.page :is(button,a,select,input):focus-visible, .drawerScope :is(button,a,select,input):focus-visible { outline: 2px solid var(--text-2); outline-offset: 3px; }
+.tableScroll { overflow-x: auto; min-width: 0; max-width: 100%; margin-top: 16px; }
+.table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
+.table th { color: var(--text-2); font-size: 10px; font-family: var(--font-mono); font-weight: 500; text-transform: uppercase; white-space: nowrap; padding: 10px 12px; background: var(--surface-2); border-bottom: 1px solid var(--line-2); }
+.table td { padding: 12px; border-bottom: 1px solid var(--line); vertical-align: middle; white-space: nowrap; }
+.table tbody tr:last-child td { border-bottom: 0; }
+.modelRow { cursor: pointer; transition: background 150ms; }
+.modelRow:hover { background: var(--surface-2); }
+.modelName { text-align: left; font-weight: 500; cursor: pointer; white-space: normal; max-width: 240px; overflow-wrap: anywhere; }
+.modelId { font-family: var(--font-mono); font-size: 10px; color: var(--text-2); margin-top: 4px; max-width: 250px; overflow: hidden; text-overflow: ellipsis; }
+.dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 500; }
+.healthy { color: var(--pos); }
+.degraded { color: var(--warn); }
+.down, .error { color: var(--danger); }
+.unknown { color: var(--text-2); }
+.timeline { min-width: 0; }
+.timelineValue { font-size: 14px; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.track { display: flex; gap: 3px; margin-top: 22px; width: 100%; }
+.segment { height: 34px; min-width: 0; flex: 1; background: currentColor; border-radius: 2px; opacity: 0.8; cursor: pointer; }
+.segment.unknown { color: var(--line-2); opacity: 1; }
+.segment:hover, .segment:focus-visible { opacity: 1; }
+.axis { display: flex; justify-content: space-between; color: var(--text-2); font-size: 10px; margin-top: 8px; gap: 6px; }
+.timelineFoot { min-height: 50px; display: flex; align-items: center; margin-top: 8px; }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; color: var(--text-2); font-size: 10px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.tooltip { display: flex; flex-direction: column; gap: 4px; background: var(--surface-2); border: 1px solid var(--line-2); border-radius: var(--r1); padding: 8px 10px; font-size: 10px; color: var(--text-2); width: 100%; overflow-wrap: anywhere; }
+.tooltip strong { font-weight: 500; color: var(--text); }
+.empty { display: flex; align-items: center; flex-direction: column; gap: 10px; text-align: center; padding: 44px 16px; color: var(--text-2); font-size: 12px; }
+.empty h3 { color: var(--text); font-size: 14px; font-weight: 500; }
+.link { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+.emptySmall { padding: 20px 0; color: var(--text-2); font-size: 12px; }
+.errorBanner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; border: 1px solid var(--danger); border-radius: var(--r1); padding: 10px 12px; color: var(--danger); font-size: 12px; }
+.feedback, .progress { color: var(--text); font-size: 12px; }
+.drawer { max-width: 100vw; }
+.drawerBody { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.detailsGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; padding: 18px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.detailsGrid dt { color: var(--text-2); font-size: 11px; margin-bottom: 6px; }
+.detailsGrid dd { font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.pagination { margin-top: 12px; }
+.table small { display: block; }
+.settings { border-top: 1px solid var(--line); padding-top: 20px; }
+.form { display: flex; flex-direction: column; gap: 16px; margin-top: 16px; }
+.fieldGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field select { max-width: none; width: 100%; }
+@media (max-width: 1100px) { .summary { gap: 12px; } .metric { padding: 14px; } .metricValue { font-size: 21px; } }
+@media (max-width: 740px) {
+  .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .metric:last-child { grid-column: 1 / -1; }
+  .toolbar { align-items: flex-start; }
+  .panel { padding: 16px; }
+  .filters { width: 100%; }
+  .search { width: 100%; }
+  .select { flex: 1; max-width: none; min-width: 0; }
+  .detailsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .track { gap: 2px; }
+  .legend { gap: 10px; }
+  .timelineValue { font-size: 12px; }
+}
+@media (max-width: 380px) { .fieldGrid { grid-template-columns: 1fr; } .axis { font-size: 9px; } }

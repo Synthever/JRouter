@@ -1,0 +1,17 @@
+import fs from "node:fs";
+import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
+import { TABLES, buildCreateTableSql } from "../../src/lib/db/schema.js";
+const directory = process.argv[2];
+if (!directory || !path.isAbsolute(directory)) throw new Error("Specify an absolute isolated DATA_DIR");
+fs.mkdirSync(path.join(directory, "db"), { recursive: true });
+const db = new DatabaseSync(path.join(directory, "db", "data.sqlite"));
+for (const [name, definition] of Object.entries(TABLES)) db.exec(buildCreateTableSql(name, definition));
+db.prepare("INSERT OR REPLACE INTO settings(id,data) VALUES(1,?)").run(JSON.stringify({ requireLogin: false, requireApiKey: false }));
+const now = new Date().toISOString();
+const provider = "openai-compatible-health-fixture";
+db.prepare("INSERT OR REPLACE INTO providerNodes(id,type,name,data,createdAt,updatedAt) VALUES(?,?,?,?,?,?)").run(provider, "openai-compatible", "Local Health Fixture", JSON.stringify({ prefix: "health-fixture", baseUrl: "http://127.0.0.1:20132/v1", apiType: "chat" }), now, now);
+db.prepare("INSERT OR REPLACE INTO providerConnections(id,provider,authType,name,isActive,data,createdAt,updatedAt) VALUES(?,?,?,?,?,?,?,?)").run("health-fixture-connection", provider, "apikey", "Fixture Connection", 1, JSON.stringify({ apiKey: "fixture-placeholder", providerSpecificData: { prefix: "health-fixture", baseUrl: "http://127.0.0.1:20132/v1", apiType: "chat", enabledModels: ["model-a", "model-b"] } }), now, now);
+if (process.argv.includes("--empty")) db.prepare("UPDATE providerConnections SET isActive=0 WHERE id=?").run("health-fixture-connection");
+db.close();
+console.log("Seeded isolated health fixture database");

@@ -84,6 +84,8 @@ const getPageInfo = (pathname) => {
       icon: "science",
       breadcrumbs: [],
     };
+  if (pathname.includes("/health"))
+    return { title: "Model Health", icon: "monitoring", breadcrumbs: [] };
   if (pathname.includes("/usage"))
     return {
       title: "Usage & Analytics",

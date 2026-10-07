@@ -97,8 +97,8 @@ export class BaseExecutor {
     return { status: response.status, message: bodyText || `HTTP ${response.status}` };
   }
 
-  async execute({ model, body, stream, credentials, signal, log, proxyOptions = null, providerOverrides = null }) {
-    const fallbackCount = this.getFallbackCount();
+  async execute({ model, body, stream, credentials, signal, log, proxyOptions = null, providerOverrides = null, healthProbe = false }) {
+    const fallbackCount = healthProbe ? 1 : this.getFallbackCount();
     let lastError = null;
     let lastStatus = 0;
     const retryAttemptsByUrl = {};
@@ -109,6 +109,7 @@ export class BaseExecutor {
     // Schedule retry via retryConfig[statusKey]. Returns true when caller should `urlIndex--; continue`
     // response (optional) lets a subclass hook compute a dynamic delay (e.g. antigravity Retry-After).
     const tryRetry = async (urlIndex, statusKey, reason, response = null) => {
+      if (healthProbe || signal?.aborted) return false;
       const { attempts, delayMs } = resolveRetryEntry(retryConfig[statusKey]);
       if (attempts <= 0 || retryAttemptsByUrl[urlIndex] >= attempts) return false;
       // Hook: subclass may derive delay from the response (headers/body). null → skip retry, use fallback.
@@ -156,7 +157,7 @@ export class BaseExecutor {
 
         if (await tryRetry(urlIndex, response.status, `status ${response.status}`, response)) { urlIndex--; continue; }
 
-        if (this.shouldRetry(response.status, urlIndex)) {
+        if (!healthProbe && this.shouldRetry(response.status, urlIndex)) {
           log?.debug?.("RETRY", `${response.status} on ${url}, trying fallback ${urlIndex + 1}`);
           lastStatus = response.status;
           continue;

@@ -108,3 +108,5 @@ start-dev-silent.cjs
 debug.log
 .next-ui-check
 /.next-providers-ui
+/.next-health-build
+/.next-health-preview

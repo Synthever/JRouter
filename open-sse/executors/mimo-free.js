@@ -128,7 +128,7 @@ export class MimoFreeExecutor extends BaseExecutor {
     return injectSystemMarker(body);
   }
 
-  async execute({ model, body, stream, credentials, signal, log, proxyOptions = null }) {
+  async execute({ model, body, stream, credentials, signal, log, proxyOptions = null, healthProbe = false }) {
     let jwt;
     try {
       jwt = await bootstrapJwt(proxyOptions);
@@ -146,7 +146,7 @@ export class MimoFreeExecutor extends BaseExecutor {
     const response = await proxyAwareFetch(url, { method: "POST", headers, body: bodyStr, signal }, proxyOptions);
 
     // On auth failure, invalidate cache and retry once with a fresh JWT
-    if (response.status === 401 || response.status === 403) {
+    if (!healthProbe && (response.status === 401 || response.status === 403)) {
       log?.debug?.("AUTH", `MiMo auth failed (${response.status}), re-bootstrapping...`);
       resetJwtCache();
       jwt = await bootstrapJwt(proxyOptions);

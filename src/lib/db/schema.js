@@ -3,7 +3,7 @@
 // pre-change safety backup in migrate.js: when the stored version is lower,
 // one lightweight DB backup is taken before applying schema changes. Forgetting
 // to bump only skips that backup — it does NOT break the additive auto-sync.
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export const PRAGMA_SQL = `
 PRAGMA journal_mode = WAL;
@@ -19,6 +19,34 @@ PRAGMA busy_timeout = 5000;
 // auto-add missing tables/columns/indexes after versioned migrations.
 // For destructive changes (drop/rename/type-change), write a migration file.
 export const TABLES = {
+  modelHealthConfigs: {
+    columns: {
+      modelId: "TEXT PRIMARY KEY", enabled: "INTEGER NOT NULL DEFAULT 0",
+      intervalSeconds: "INTEGER NOT NULL DEFAULT 300", timeoutSeconds: "INTEGER NOT NULL DEFAULT 15",
+      failureThreshold: "INTEGER NOT NULL DEFAULT 3", recoveryThreshold: "INTEGER NOT NULL DEFAULT 2",
+      includeInRouting: "INTEGER NOT NULL DEFAULT 1", status: "TEXT NOT NULL DEFAULT 'UNKNOWN'",
+      failures: "INTEGER NOT NULL DEFAULT 0", successes: "INTEGER NOT NULL DEFAULT 0",
+      lastCheckAt: "INTEGER", lastSuccessAt: "INTEGER", latestLatencyMs: "INTEGER",
+      nextCheckAt: "INTEGER NOT NULL DEFAULT 0", createdAt: "INTEGER NOT NULL", updatedAt: "INTEGER NOT NULL",
+    },
+    indexes: ["CREATE INDEX IF NOT EXISTS idx_mhc_due ON modelHealthConfigs(enabled, nextCheckAt)"],
+  },
+  modelHealthChecks: {
+    columns: {
+      id: "TEXT PRIMARY KEY", modelId: "TEXT NOT NULL", providerId: "TEXT NOT NULL", apiKeyId: "TEXT",
+      source: "TEXT NOT NULL DEFAULT 'active'", status: "TEXT NOT NULL", success: "INTEGER NOT NULL",
+      latencyMs: "INTEGER", httpStatus: "INTEGER", errorType: "TEXT", errorMessage: "TEXT", checkedAt: "INTEGER NOT NULL",
+    },
+    indexes: [
+      "CREATE INDEX IF NOT EXISTS idx_mh_model_time ON modelHealthChecks(modelId, source, checkedAt DESC)",
+      "CREATE INDEX IF NOT EXISTS idx_mh_provider_time ON modelHealthChecks(providerId, checkedAt DESC)",
+      "CREATE INDEX IF NOT EXISTS idx_mh_time ON modelHealthChecks(checkedAt)",
+    ],
+  },
+  modelHealthLeases: {
+    columns: { id: "TEXT PRIMARY KEY", owner: "TEXT NOT NULL", expiresAt: "INTEGER NOT NULL" },
+    indexes: ["CREATE INDEX IF NOT EXISTS idx_mhl_expiry ON modelHealthLeases(expiresAt)"],
+  },
   _meta: {
     columns: {
       key: "TEXT PRIMARY KEY",
