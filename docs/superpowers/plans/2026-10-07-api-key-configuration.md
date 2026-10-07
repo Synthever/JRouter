@@ -57,9 +57,9 @@ Files: `ConfigureApiKeyDialog` and setting sections under endpoint components, `
 
 ### Task 4: Final verification
 
-- [ ] Run available type/syntax checks, lint, relevant tests, and production build.
+- [x] Run available type/syntax checks, lint, relevant tests, and production build.
 - [x] Review full diff and security-sensitive boundaries; fix implementation regressions.
-- [ ] Record evidence, operational semantics, and any pre-existing verification failures.
+- [x] Record evidence, operational semantics, and any pre-existing verification failures.
 
 ## Design decisions
 
@@ -70,9 +70,10 @@ Files: `ConfigureApiKeyDialog` and setting sections under endpoint components, `
 
 ## Verification evidence
 
-- Feature suites: 80 passing Vitest tests across policy, database, gateway, and settings routes. Migration is repeatable and preserves legacy IDs/secrets. Regression cases include quota boundaries, independent admissions, aliases/combos, Gemini Audio permission, long-running TPM reservations, chunked/large JSON usage, canonical cache costs, and sanitized settings.
-- Full unit suite: 2,703 passes, 99 failures. Compared against an archived checkout of the original HEAD with the same dependencies: the same 99 failures, no new failed test names. Existing failures include Windows filesystem/path assumptions, missing unrelated dependencies, and stale source/mocks.
+- Feature suites: 83 passing Vitest tests across policy, database, gateway, and settings routes. Migration is repeatable and preserves legacy IDs/secrets. Regression cases include quota boundaries, independent admissions, aliases/combos, web provider precedence/catalog IDs, Gemini Audio permission, long-running TPM reservations, chunked/large JSON usage, canonical cache costs, and sanitized settings.
+- Full unit suite: 2,706 passes, 99 failures. Compared against an archived checkout of the original HEAD with the same dependencies: the same 99 failures, no new failed test names. Existing failures include Windows filesystem/path assumptions, missing unrelated dependencies, and stale source/mocks.
 - Full source ESLint: 139 errors on both original HEAD and implementation. New policy/constants/migration/dialog modules have no lint findings. JavaScript project check passes using `tsc --noEmit`, `allowJs`, JSX preservation, existing aliases, and explicit `src`/`open-sse` includes; the repository has no dedicated typecheck script.
+- Production `npm run build` passed with exit 0, all 149 pages generated, and standalone assets copied. Windows file tracing emitted copy warnings for absolute AppData paths; a smoke test of the packaged standalone server rendered the dashboard with HTTP 200. The temporary packaged server was stopped afterward.
 - HTTP verification used the real local Next server and a disposable local OpenAI-compatible mock, with no paid provider calls. Legacy key forwarding, saved policies, cap insertion, multiplier/cost settlement, RPM/Retry-After, endpoint/model/output denial, exhausted quota, expiry on inference/catalog, SSE completion, dashboard authorization, raw analytics/internal IDs, and absence of gateway secrets in server logs all passed. Test keys and provider connections were removed afterward.
 - Browser: saved every field, reloaded, and reopened to verify persistence; selected allowed/blocked models with the reused picker; verified Chat-only cards and invalid-save error retention. Desktop modal maximum measured 896px; 375px mobile layout had no horizontal overflow. Dark/light themes and Escape/focus restoration verified. Screenshots are under ignored `.next-ui-check/`.
 - Usage ledger and quota use the same SQLite database as keys/analytics. Unpriced cost-limited models fail closed; modality usage without token metadata retains the existing estimation/zero-cost fallback. See `docs/api-key-configuration.md` for operational semantics.

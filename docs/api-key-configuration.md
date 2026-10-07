@@ -14,6 +14,8 @@ Cost quotas require known model pricing. Missing pricing produces `pricing_unava
 
 Allowed models use the same searchable picker as combo creation. An empty whitelist allows all models, and blocked models take priority. Server settings also accept `*` patterns. Alias resolution, combo members, and capacity adapters are checked before forwarding. Selecting a combo grants access to its members except those explicitly blocked. Model discovery filters supplied key credentials by model access and rejects expired keys.
 
+Web requests select a provider with `provider` or `model`, with `provider` taking precedence. Restrictions recognize both that provider and its catalog operation ID, such as `exa/search` or `exa/fetch`.
+
 Endpoint permissions cover supported Chat/Responses, Embeddings, Images, Audio, Web/Search, Videos, and SystemOne routes. Unchecking every family denies inference. An unrestricted key automatically includes families added in future releases.
 
 ## Settings API

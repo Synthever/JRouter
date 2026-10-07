@@ -53,6 +53,26 @@ describe("gateway API-key enforcement", () => {
     await configure({ blockedModels: ["gpt-4"] });
     const response = await withApiKeyPolicy(request(), success); expect(response.status).toBe(403); expect((await response.json()).error.code).toBe("model_not_allowed");
   });
+  it.each([
+    { path: "/api/v1/search", operation: "search", payload: { provider: "exa", query: "Hi" } },
+    { path: "/api/v1/web/fetch", operation: "fetch", payload: { provider: "exa", url: "https://example.com" } },
+  ])("matches provider-only web requests to their catalog model $operation", async ({ path, operation, payload }) => {
+    await configure({ allowedModels: [`exa/${operation}`] });
+    const response = await withApiKeyPolicy(request(payload, undefined, path), async () => {
+      assertCurrentModelAllowed("exa", { provider: "exa", model: operation });
+      return success();
+    });
+    expect(response.status).toBe(200);
+    await response.text();
+    await configure({ blockedModels: [`exa/${operation}`] });
+    expect((await withApiKeyPolicy(request(payload, undefined, path), success)).status).toBe(403);
+  });
+  it("uses the web handler's provider precedence when model is also present", async () => {
+    await configure({ allowedModels: ["exa"] });
+    const response = await withApiKeyPolicy(request({ provider: "exa", model: "unselected", query: "Hi" }, undefined, "/api/v1/search"), success);
+    expect(response.status).toBe(200);
+    await response.text();
+  });
   it("prevents alias and combo resolution from bypassing blocked models", async () => {
     await configure({ allowedModels: ["production"], blockedModels: ["gpt-blocked"] });
     const response = await withApiKeyPolicy(request({ model: "production", max_tokens: 10 }), async () => {

@@ -5,6 +5,7 @@ import { getModelInfo, getComboModels } from "@/sse/services/model.js";
 import { estimateInputTokens } from "open-sse/utils/usageTracking.js";
 import { calculateCostFromTokens } from "open-sse/providers/pricing.js";
 import { stripModelContextMarker } from "open-sse/utils/modelMarkers.js";
+import { resolveProviderId } from "@/shared/constants/providers.js";
 import { endpointFamily, POLICY_ESTIMATED_OUTPUT_TOKENS } from "@/shared/constants/apiKeyPolicy.js";
 import { ApiKeyPolicyError, assertModelAllowed, enforceOutputLimit } from "./rules.js";
 import { apiKeyPolicyContext, getApiKeyPolicyContext, modelIdentifiers } from "./context.js";
@@ -37,17 +38,21 @@ export async function withApiKeyPolicy(request, handler, { family = null, model 
     let body;
     try { body = await requestBody(request); } catch { throw new ApiKeyPolicyError(400, "invalid_request", "Invalid request body."); }
     if (!body || typeof body !== "object" || Array.isArray(body)) throw new ApiKeyPolicyError(400, "invalid_request", "Request body must be an object.");
-    const endpoint = family || (body.generationConfig?.responseModalities?.includes("AUDIO") ? "audio" : endpointFamily(new URL(request.url).pathname));
+    const pathname = new URL(request.url).pathname;
+    const endpoint = family || (body.generationConfig?.responseModalities?.includes("AUDIO") ? "audio" : endpointFamily(pathname));
     if (key.allowedEndpoints !== null && !key.allowedEndpoints.includes(endpoint)) throw new ApiKeyPolicyError(403, "endpoint_not_allowed", "This endpoint is not allowed for this API key.");
 
-    const requestedModel = stripModelContextMarker(model || body.model || body.provider || "").model;
+    const requestedModel = stripModelContextMarker(model || (endpoint === "web" ? body.provider || body.model : body.model || body.provider) || "").model;
+    const resolvePolicyModel = endpoint === "web"
+      ? async (provider) => ({ provider: resolveProviderId(provider), model: pathname.endsWith("/fetch") ? "fetch" : "search" })
+      : getModelInfo;
     let info = {};
     let pricing = null;
     let isCombo = false;
     if (requestedModel) {
-      info = await getModelInfo(requestedModel);
       const combos = await getComboModels(requestedModel);
       isCombo = Boolean(combos);
+      info = combos ? { provider: null, model: requestedModel } : await resolvePolicyModel(requestedModel);
       if (combos) {
         // The selected combo can grant access to its members; explicit member
         // blocks are checked again at actual model resolution.
@@ -57,7 +62,7 @@ export async function withApiKeyPolicy(request, handler, { family = null, model 
       if (key.maxCostUsd !== null && billable) {
         if (combos) {
           const prices = await Promise.all(combos.map(async (seat) => {
-            const resolved = await getModelInfo(seat);
+            const resolved = await resolvePolicyModel(seat);
             return getPricingForModel(resolved.provider, resolved.model);
           }));
           if (prices.every((price) => price && Number.isFinite(price.input) && Number.isFinite(price.output))) pricing = { input: Math.max(...prices.map((p) => p.input)), output: Math.max(...prices.map((p) => p.output)) };

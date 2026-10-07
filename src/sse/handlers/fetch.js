@@ -121,7 +121,7 @@ async function handleSingleProviderFetch(body, providerInput, request, apiKey, s
   const format = body.format;
   const maxCharacters = body.max_characters;
   const providerId = resolveProviderId(providerInput);
-  assertCurrentModelAllowed(providerInput, { provider: providerId, model: providerId });
+  assertCurrentModelAllowed(providerInput, { provider: providerId, model: "fetch" });
   const resolvedProvider = AI_PROVIDERS[providerId];
 
   if (!resolvedProvider) {

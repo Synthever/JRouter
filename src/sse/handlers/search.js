@@ -99,7 +99,7 @@ async function handleSearchRequest(request) {
 async function handleSingleProviderSearch(body, providerInput, request, apiKey, settings) {
   const query = body.query;
   const providerId = resolveProviderId(providerInput);
-  assertCurrentModelAllowed(providerInput, { provider: providerId, model: providerId });
+  assertCurrentModelAllowed(providerInput, { provider: providerId, model: "search" });
   const resolvedProvider = AI_PROVIDERS[providerId];
 
   if (!resolvedProvider) {
