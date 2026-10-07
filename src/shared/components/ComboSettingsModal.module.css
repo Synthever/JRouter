@@ -45,6 +45,14 @@
   gap: 8px;
 }
 
+.fieldHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .field textarea {
   width: 100%;
   resize: vertical;

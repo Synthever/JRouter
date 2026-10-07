@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import Modal from "./Modal";
 import Button from "./Button";
 import Input from "./Input";
@@ -22,7 +22,22 @@ export default function ComboSettingsModal({ combo, onClose, onSave }) {
   const [samplePrompt, setSamplePrompt] = useState("You are an expert TypeScript developer.");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const fileInputRef = useRef(null);
   const patch = (field, value) => setSettings((previous) => ({ ...previous, [field]: value }));
+
+  const handlePromptFileUpload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      // Strip a UTF-8 BOM so Windows-saved .txt files do not leak it into the prompt.
+      const text = (await file.text()).replace(/^\uFEFF/, "");
+      setSettings((previous) => ({ ...previous, systemPrompt: text || null }));
+      setError("");
+    } catch {
+      setError("Failed to read the selected file. Please upload a .txt file.");
+    }
+  };
   const clientMessage = { role: "system", content: samplePrompt };
   const preview = applyComboPromptInjection(
     { model: combo.name, messages: samplePrompt ? [clientMessage] : [] },
@@ -87,7 +102,25 @@ export default function ComboSettingsModal({ combo, onClose, onSave }) {
           hint="Optional persona name. Routing and usage keep the actual model and provider."
         />
         <div className={styles.field}>
-          <label htmlFor={`${id}-prompt`}>System / Persona Prompt</label>
+          <div className={styles.fieldHeader}>
+            <label htmlFor={`${id}-prompt`}>System / Persona Prompt</label>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              icon="upload_file"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Upload .txt
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".txt,text/plain"
+              className="hidden"
+              onChange={handlePromptFileUpload}
+            />
+          </div>
           <textarea
             id={`${id}-prompt`}
             rows={8}
@@ -98,6 +131,7 @@ export default function ComboSettingsModal({ combo, onClose, onSave }) {
             spellCheck={false}
           />
           <p id={`${id}-variables`} className={styles.help}>
+            {settings.systemPrompt?.length ? `${settings.systemPrompt.length.toLocaleString()} characters · ` : ""}
             Available variables: {COMBO_PROMPT_VARIABLES.map((variable, index) => <span key={variable}>{index > 0 && ", "}<code>{`{{${variable}}}`}</code></span>)}
           </p>
           <p id={`${id}-empty`} className={styles.help}>
