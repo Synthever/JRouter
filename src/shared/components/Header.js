@@ -78,12 +78,6 @@ const getPageInfo = (pathname) => {
       icon: "layers",
       breadcrumbs: [],
     };
-  if (pathname.includes("/playground"))
-    return {
-      title: "Model Playground",
-      icon: "science",
-      breadcrumbs: [],
-    };
   if (pathname.includes("/health"))
     return { title: "Model Health", icon: "monitoring", breadcrumbs: [] };
   if (pathname.includes("/usage"))

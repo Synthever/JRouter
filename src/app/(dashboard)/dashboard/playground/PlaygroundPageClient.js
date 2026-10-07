@@ -671,14 +671,6 @@ export default function PlaygroundPageClient() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.headerText}>
-          <p className={`ui-eyebrow ${styles.eyebrow}`}>Model Playground</p>
-          <h1 className={styles.title}>Model Playground</h1>
-          <p className={styles.subtitle}>Test and compare models through JRouter.</p>
-        </div>
-      </header>
-
       <div className={styles.workspace}>
       <div className={`${styles.column} ${styles.toolbar}`}>
         <div className={styles.modelTriggerWrap}>
