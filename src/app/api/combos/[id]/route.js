@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getComboById, updateCombo, deleteCombo, getComboByName } from "@/lib/localDb";
 import { resetComboRotation } from "open-sse/services/combo.js";
+import { validateComboPromptSettings } from "@/lib/comboPromptInjection";
 
 // Validate combo name: only a-z, A-Z, 0-9, -, _
 const VALID_NAME_REGEX = /^[a-zA-Z0-9_.\-]+$/;
@@ -27,6 +28,11 @@ export async function PUT(request, { params }) {
   try {
     const { id } = await params;
     const body = await request.json();
+    try {
+      validateComboPromptSettings(body);
+    } catch (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     
     // Validate name format if provided
     if (body.name) {

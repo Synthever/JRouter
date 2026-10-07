@@ -1,0 +1,119 @@
+.dialog {
+  min-width: 0;
+}
+
+.heading {
+  margin-bottom: 20px;
+}
+
+.comboName {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--text-2);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.heading h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.heading p,
+.help {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.fields {
+  display: flex;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  flex-direction: column;
+  gap: 20px;
+  border: 0;
+}
+
+.field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field textarea {
+  width: 100%;
+  resize: vertical;
+  font-family: var(--font-mono);
+  line-height: 1.6;
+}
+
+.preview {
+  min-width: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.preview summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.preview summary:focus-visible {
+  outline: 2px solid var(--text-2);
+  outline-offset: 3px;
+}
+
+.previewBody {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+}
+
+.composition {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r1);
+  background: var(--surface-2);
+}
+
+.previewSection + .previewSection {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.previewSection h4 {
+  margin: 0 0 8px;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.previewSection pre {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.error {
+  margin: 16px 0 0;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .field textarea {
+    font-size: 16px;
+  }
+}

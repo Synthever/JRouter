@@ -90,12 +90,10 @@ function openaiToGeminiBase(model, body, stream, signature = DEFAULT_THINKING_AG
       const role = msg.role;
       const content = msg.content;
 
-      if (role === ROLE.SYSTEM && body.messages.length > 1) {
-        result.systemInstruction = {
-          role: GEMINI_ROLE.USER,
-          parts: [{ text: typeof content === "string" ? content : extractTextContent(content) }]
-        };
-      } else if (role === ROLE.USER || (role === ROLE.SYSTEM && body.messages.length === 1)) {
+      if (role === ROLE.SYSTEM || role === ROLE.DEVELOPER) {
+        result.systemInstruction ??= { role: GEMINI_ROLE.USER, parts: [] };
+        result.systemInstruction.parts.push({ text: typeof content === "string" ? content : extractTextContent(content) });
+      } else if (role === ROLE.USER) {
         const parts = convertOpenAIContentToParts(content);
         if (parts.length > 0) {
           result.contents.push({ role: GEMINI_ROLE.USER, parts });

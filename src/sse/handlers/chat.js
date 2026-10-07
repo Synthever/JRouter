@@ -9,7 +9,8 @@ import {
   isValidApiKey,
 } from "../services/auth.js";
 import { handleAntigravityQuotaError, clearAntigravityStrikes } from "../services/antigravityQuota.js";
-import { getSettings } from "@/lib/localDb";
+import { getSettings, getComboByName } from "@/lib/localDb";
+import { applyComboPromptInjection } from "@/lib/comboPromptInjection.js";
 import { getModelInfo, getComboModels } from "../services/model.js";
 import { handleChatCore } from "open-sse/handlers/chatCore.js";
 import { DEFAULT_HEADROOM_URL } from "@/lib/headroom/detect";
@@ -101,6 +102,7 @@ async function handleChatRequest(request, clientRawRequest = null) {
   // Check if model is a combo (has multiple models with fallback)
   const comboModels = await getComboModels(modelStr);
   if (comboModels) {
+    body = await applyComboBehavior(body, modelStr, request, clientRawRequest);
     // Check for combo-specific strategy first, fallback to global
     const comboStrategies = settings.comboStrategies || {};
     const comboSpecificStrategy = comboStrategies[modelStr]?.fallbackStrategy;
@@ -176,6 +178,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
   if (!modelInfo.provider) {
     const comboModels = await getComboModels(modelStr);
     if (comboModels) {
+      body = await applyComboBehavior(body, modelStr, request, clientRawRequest);
       const chatSettings = await getSettings();
       // Check for combo-specific strategy first, fallback to global
       const comboStrategies = chatSettings.comboStrategies || {};
@@ -346,4 +349,15 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
 
     return result.response;
   }
+}
+
+async function applyComboBehavior(body, comboName, request, clientRawRequest) {
+  const combo = await getComboByName(comboName);
+  const requestedModel = clientRawRequest?.body?.model || body.model || comboName;
+  const sourceFormat = request?.url ? detectFormatByEndpoint(new URL(request.url).pathname, body) : null;
+  const transformed = applyComboPromptInjection(body, combo, { requestedModel, sourceFormat });
+  if (transformed !== body) {
+    log.info("COMBO", "Prompt injection applied", { combo: comboName, requestedModel, displayIdentity: combo.displayIdentity || null, mode: combo.promptInjectionMode || "prepend" });
+  }
+  return transformed;
 }

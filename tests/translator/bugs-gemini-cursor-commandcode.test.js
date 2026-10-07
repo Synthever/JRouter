@@ -9,9 +9,7 @@ const O2C = (body) => translateRequest(FORMATS.OPENAI, FORMATS.CURSOR, "m", body
 const O2CC = (body) => translateRequest(FORMATS.OPENAI, FORMATS.COMMANDCODE, "m", body, true, null, "commandcode");
 
 describe("OpenAI → Gemini", () => {
-  // openai-to-gemini.js:92-96 — each system message overwrites systemInstruction → only last kept
-  // KNOWN BUG
-  it.fails("multiple system messages are all kept", () => {
+  it("multiple system messages are all kept", () => {
     const out = O2G({
       messages: [
         { role: "system", content: "RULE_ONE" },
@@ -19,7 +17,7 @@ describe("OpenAI → Gemini", () => {
         { role: "user", content: "hi" },
       ],
     });
-    expect(JSON.stringify(out.systemInstruction), "earlier system lost").toContain("RULE_ONE");
+    expect(out.systemInstruction.parts.map((part) => part.text)).toEqual(["RULE_ONE", "RULE_TWO"]);
   });
 });
 

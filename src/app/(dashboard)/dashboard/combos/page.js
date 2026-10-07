@@ -8,6 +8,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
 import { Card, Button, Modal, Input, Skeleton, ModelSelectModal, ConfirmModal, CapacityBadges, Select, Toggle } from "@/shared/components";
 import StatusBadge from "@/shared/components/StatusBadge";
+import ComboSettingsModal from "@/shared/components/ComboSettingsModal";
 import controls from "@/shared/components/DashboardControls.module.css";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import { useModelCaps } from "@/shared/hooks/useModelCaps";
@@ -61,6 +62,7 @@ export default function CombosPage() {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingCombo, setEditingCombo] = useState(null);
+  const [settingsCombo, setSettingsCombo] = useState(null);
   const [activeProviders, setActiveProviders] = useState([]);
   const [comboStrategies, setComboStrategies] = useState({});
   const [capacityAdapter, setCapacityAdapter] = useState(EMPTY_CAPACITY_ADAPTER);
@@ -496,6 +498,7 @@ export default function CombosPage() {
                   copied={copied}
                   onCopy={copy}
                   onEdit={() => setEditingCombo(combo)}
+                  onSettings={() => setSettingsCombo(combo)}
                   onDelete={() => handleDelete(combo.id)}
                   strategy={comboStrategies[combo.name] || {}}
                   onSetStrategy={(patch) => handleSetComboStrategy(combo.name, patch)}
@@ -548,6 +551,24 @@ export default function CombosPage() {
         />
       )}
 
+      {settingsCombo && (
+        <ComboSettingsModal
+          key={settingsCombo.id}
+          combo={settingsCombo}
+          onClose={() => setSettingsCombo(null)}
+          onSave={async (settings) => {
+            const response = await fetch(`/api/combos/${settingsCombo.id}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(settings),
+            });
+            const updated = await response.json();
+            if (!response.ok) throw new Error(updated.error || "Failed to save combo settings");
+            setCombos((previous) => previous.map((combo) => combo.id === updated.id ? updated : combo));
+          }}
+        />
+      )}
+
       {/* Confirm (delete / generate presets) */}
       <ConfirmModal
         className={styles.dialog}
@@ -573,7 +594,7 @@ const fmtK = (n) => {
   return `${Math.round(n / 1000)}k`;
 };
 
-function ComboRow({ combo, getCaps, comboByName = {}, activeProviders = [], copied, onCopy, onEdit, onDelete, strategy = {}, onSetStrategy, selected = false, onToggleSelect }) {
+function ComboRow({ combo, getCaps, comboByName = {}, activeProviders = [], copied, onCopy, onEdit, onSettings, onDelete, strategy = {}, onSetStrategy, selected = false, onToggleSelect }) {
   const [showJudgeSelect, setShowJudgeSelect] = useState(false);
   const current = strategy.fallbackStrategy || "fallback";
   const judge = strategy.judgeModel || "";
@@ -601,6 +622,7 @@ function ComboRow({ combo, getCaps, comboByName = {}, activeProviders = [], copi
             <div className={styles.nameLine}>
               <code className={styles.comboName} title={combo.name}>{combo.name}</code>
               <StatusBadge dot={false}>{combo.models.length} {combo.models.length === 1 ? "model" : "models"}</StatusBadge>
+              {combo.promptInjectionEnabled && <span className="text-xs text-text-muted" title="Custom system prompt enabled">Prompt Injection</span>}
             </div>
             <div className={styles.modelList} aria-label="Model routing order">
               {combo.models.length === 0 ? (
@@ -672,6 +694,15 @@ function ComboRow({ combo, getCaps, comboByName = {}, activeProviders = [], copi
           </div>
 
           <div className={styles.comboActions}>
+            <button
+              type="button"
+              onClick={onSettings}
+              className={styles.iconAction}
+              title="Combo Settings"
+              aria-label={`Combo Settings for ${combo.name}`}
+            >
+              <Icon className="text-[16px]">settings</Icon>
+            </button>
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onCopy(combo.name, `combo-${combo.id}`); }}

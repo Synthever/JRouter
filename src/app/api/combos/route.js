@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCombos, createCombo, getComboByName } from "@/lib/localDb";
+import { validateComboPromptSettings } from "@/lib/comboPromptInjection";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,12 @@ export async function GET() {
 export async function POST(request) {
   try {
     const body = await request.json();
+    let promptSettings;
+    try {
+      promptSettings = validateComboPromptSettings(body);
+    } catch (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     const { name, models, kind } = body;
 
     if (!name) {
@@ -38,7 +45,7 @@ export async function POST(request) {
       return NextResponse.json({ error: "Combo name already exists" }, { status: 400 });
     }
 
-    const combo = await createCombo({ name, models: models || [], kind: kind || null });
+    const combo = await createCombo({ name, models: models || [], kind: kind || null, ...promptSettings });
 
     return NextResponse.json(combo, { status: 201 });
   } catch (error) {
