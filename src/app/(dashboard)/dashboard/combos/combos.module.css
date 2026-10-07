@@ -211,6 +211,25 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* The ctx/max line is the way into the manual limits dialog — same look, but
+   it has to read as clickable. */
+.metadataButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.metadataButton:hover {
+  color: var(--text);
+}
+
+.metadataButton:focus-visible {
+  outline: 1px solid var(--accent-line);
+  outline-offset: 2px;
+}
+
 .judgeButton {
   display: inline-flex;
   align-items: center;

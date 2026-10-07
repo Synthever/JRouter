@@ -9,6 +9,7 @@ import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifi
 import { Card, Button, Modal, Input, Skeleton, ModelSelectModal, ConfirmModal, CapacityBadges, Select, Toggle } from "@/shared/components";
 import StatusBadge from "@/shared/components/StatusBadge";
 import ComboSettingsModal from "@/shared/components/ComboSettingsModal";
+import ComboLimitsModal from "@/shared/components/ComboLimitsModal";
 import controls from "@/shared/components/DashboardControls.module.css";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import { useModelCaps } from "@/shared/hooks/useModelCaps";
@@ -63,6 +64,7 @@ export default function CombosPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingCombo, setEditingCombo] = useState(null);
   const [settingsCombo, setSettingsCombo] = useState(null);
+  const [limitsCombo, setLimitsCombo] = useState(null);
   const [activeProviders, setActiveProviders] = useState([]);
   const [comboStrategies, setComboStrategies] = useState({});
   const [capacityAdapter, setCapacityAdapter] = useState(EMPTY_CAPACITY_ADAPTER);
@@ -499,6 +501,7 @@ export default function CombosPage() {
                   onCopy={copy}
                   onEdit={() => setEditingCombo(combo)}
                   onSettings={() => setSettingsCombo(combo)}
+                  onEditLimits={() => setLimitsCombo(combo)}
                   onDelete={() => handleDelete(combo.id)}
                   strategy={comboStrategies[combo.name] || {}}
                   onSetStrategy={(patch) => handleSetComboStrategy(combo.name, patch)}
@@ -569,6 +572,14 @@ export default function CombosPage() {
         />
       )}
 
+      {limitsCombo && (
+        <ComboLimitsModal
+          key={limitsCombo.id}
+          combo={limitsCombo}
+          onClose={() => setLimitsCombo(null)}
+        />
+      )}
+
       {/* Confirm (delete / generate presets) */}
       <ConfirmModal
         className={styles.dialog}
@@ -594,7 +605,7 @@ const fmtK = (n) => {
   return `${Math.round(n / 1000)}k`;
 };
 
-function ComboRow({ combo, getCaps, comboByName = {}, activeProviders = [], copied, onCopy, onEdit, onSettings, onDelete, strategy = {}, onSetStrategy, selected = false, onToggleSelect }) {
+function ComboRow({ combo, getCaps, comboByName = {}, activeProviders = [], copied, onCopy, onEdit, onSettings, onEditLimits, onDelete, strategy = {}, onSetStrategy, selected = false, onToggleSelect }) {
   const [showJudgeSelect, setShowJudgeSelect] = useState(false);
   const current = strategy.fallbackStrategy || "fallback";
   const judge = strategy.judgeModel || "";
@@ -645,11 +656,20 @@ function ComboRow({ combo, getCaps, comboByName = {}, activeProviders = [], copi
               )}
             </div>
             {comboCaps && (
-              <div className={styles.metadata}>
+              // Clicking the summary opens the manual limits for these models;
+              // the automatic numbers stay the default.
+              <button
+                type="button"
+                className={`${styles.metadata} ${styles.metadataButton}`}
+                onClick={() => onEditLimits?.()}
+                title="Set the context window and max output by hand"
+                aria-label={`Edit context and output limits for ${combo.name}`}
+              >
                 <span>ctx {fmtK(comboCaps.contextWindow)}</span>
                 <span className="opacity-40">·</span>
                 <span>max {fmtK(comboCaps.maxOutput)}</span>
-              </div>
+                <Icon className="text-[12px] opacity-60">tune</Icon>
+              </button>
             )}
             {/* Fusion: judge picker (Auto = first model) */}
             {isFusion && (

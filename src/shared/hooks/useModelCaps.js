@@ -68,15 +68,18 @@ export function useModelCaps() {
     } else {
       loadModelCaps().then(sync);
     }
-    // Custom models change at runtime — drop the shared cache and refetch
+    // Custom models and manual limits change at runtime — drop the shared cache
+    // and refetch
     const invalidate = () => {
       cache = null;
       loadModelCaps().then(sync);
     };
     window.addEventListener("customModelChanged", invalidate);
+    window.addEventListener("modelLimitsChanged", invalidate);
     return () => {
       alive = false;
       window.removeEventListener("customModelChanged", invalidate);
+      window.removeEventListener("modelLimitsChanged", invalidate);
     };
   }, []);
 

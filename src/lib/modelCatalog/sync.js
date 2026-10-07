@@ -157,12 +157,15 @@ export function build(catalog, entries) {
 
 // Snapshot every registered model with the capabilities the hand-written tables
 // resolve on their own, so build() can tell which upstream values are a change.
+// Manual pins are deliberately skipped here: they are the admin's answer, not
+// the baseline, and folding them in would make every pin look like an upstream
+// change on the next sync.
 //
 // The previous catalog MUST be detached first. Leaving it installed makes each
 // delta relative to the last one, so a value that still agrees with upstream
 // looks like "no change" and is dropped — the file erases itself over two runs.
 async function collectEntries() {
-  const [{ default: registry }, { getCapabilitiesForModel, setCatalogSource }] = await Promise.all([
+  const [{ default: registry }, { getAutoCapabilitiesForModel, setCatalogSource }] = await Promise.all([
     import("open-sse/providers/registry/index.js"),
     import("open-sse/providers/capabilities.js"),
   ]);
@@ -175,7 +178,7 @@ async function collectEntries() {
         provider: provider.id,
         model: model.id,
         contextLength: model.contextLength,
-        current: getCapabilitiesForModel(provider.id, model.id),
+        current: getAutoCapabilitiesForModel(provider.id, model.id),
       });
     }
   }

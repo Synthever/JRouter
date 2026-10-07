@@ -556,6 +556,25 @@ function getCatalogSource() {
   return globalThis.__9rCatalogSource || null;
 }
 
+// Manual limits pinned in the dashboard, installed by the server next to the
+// catalog reader. Same slot pattern and same reason: the pin has to reach every
+// bundle copy, and the browser copy has no file to read.
+let limitOverrideSource = null;
+
+/**
+ * Install the manual-limit reader (server only).
+ * @param {{ getLimits: (provider: string, model: string) => object|null } | null} source
+ */
+export function setLimitOverrideSource(source) {
+  limitOverrideSource = source;
+  if (typeof globalThis !== "undefined") globalThis.__9rLimitOverrideSource = source;
+}
+
+function getLimitOverrideSource() {
+  if (typeof globalThis === "undefined") return limitOverrideSource;
+  return globalThis.__9rLimitOverrideSource || null;
+}
+
 // Apply the synced catalog + name heuristic on top of a table-resolved result.
 // Strictly additive: a capability already true stays true, and a false one only
 // flips when an outside source positively declares support.
@@ -620,7 +639,9 @@ function isCommandCodeTextOnly(model) {
   }
   return false;
 }
-export function getCapabilitiesForModel(provider, model) {
+// Resolution without the manual pins — the 4-step fallback chain, catalog and
+// name heuristic included.
+function resolveCapabilities(provider, model) {
   if (!model) return { ...DEFAULT_CAPABILITIES };
 
   // Canonical exact lookup strips vendor prefix: "anthropic/claude-opus-4.7" -> "claude-opus-4.7".
@@ -665,3 +686,41 @@ export function getCapabilitiesForModel(provider, model) {
   // 4. Floor
   return refine(null, provider, model);
 }
+
+// A manual pin wins over every table and over the catalog: it exists precisely
+// for the cases where the automatic answer is wrong.
+function applyLimitOverrides(caps, provider, model) {
+  const pinned = getLimitOverrideSource()?.getLimits(provider, model);
+  if (!pinned) return caps;
+
+  const result = { ...caps };
+  if (pinned.contextWindow > 0) result.contextWindow = pinned.contextWindow;
+  if (pinned.maxOutput > 0) result.maxOutput = pinned.maxOutput;
+  return result;
+}
+
+/**
+ * Resolve capabilities for a model, with the dashboard's manual limits applied.
+ * Every caller gets the pinned numbers — combo badges, /api/models, /v1/models
+ * and the runtime clamps all funnel through here.
+ *
+ * @param {string} provider
+ * @param {string} model
+ * @returns {object} full capabilities object
+ */
+export function getCapabilitiesForModel(provider, model) {
+  return applyLimitOverrides(resolveCapabilities(provider, model), provider, model);
+}
+
+/**
+ * The automatic resolution with the manual pins skipped, so the dashboard can
+ * show what a pin replaces and what clearing it goes back to.
+ *
+ * @param {string} provider
+ * @param {string} model
+ * @returns {object} full capabilities object
+ */
+export function getAutoCapabilitiesForModel(provider, model) {
+  return resolveCapabilities(provider, model);
+}
+
