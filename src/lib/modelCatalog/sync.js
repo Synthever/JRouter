@@ -77,7 +77,29 @@ function slim(catalog) {
   return out;
 }
 
-export function build(catalog, entries) {
+function normalizeApiUrl(value) {
+  try {
+    const url = new URL(value);
+    if (!["https:", "http:"].includes(url.protocol) || url.username || url.password || url.search || url.hash) return null;
+    const pathname = url.pathname.replace(/\/+$/, "");
+    return url.origin + (pathname === "/v1" ? "" : pathname);
+  } catch {
+    return null;
+  }
+}
+
+export function build(catalog, entries, nodes = []) {
+  const providerAliases = { ...PROVIDER_ALIASES };
+  for (const node of nodes) {
+    const api = normalizeApiUrl(node.baseUrl);
+    if (!api) continue;
+    const matches = Object.keys(catalog).filter((id) => normalizeApiUrl(catalog[id]?.api) === api);
+    // Names and shared endpoints cannot identify a gateway's limits safely.
+    if (matches.length !== 1) continue;
+    for (const id of [node.id, node.prefix].filter(Boolean)) {
+      if (!catalog[id] && !providerAliases[id]) providerAliases[id] = matches[0];
+    }
+  }
   // Upstream provider id -> the local ids it belongs to, taken from the registry
   // snapshot so a gateway listed upstream under another name is still filed
   // under the name requests arrive with. One upstream name can back more than one
@@ -86,7 +108,7 @@ export function build(catalog, entries) {
   // not mention keeps its own name.
   const localIds = new Map();
   for (const { provider } of entries) {
-    const upstreamId = PROVIDER_ALIASES[provider] || provider;
+    const upstreamId = providerAliases[provider] || provider;
     let locals = localIds.get(upstreamId);
     if (!locals) localIds.set(upstreamId, (locals = []));
     if (!locals.includes(provider)) locals.push(provider);
@@ -134,7 +156,7 @@ export function build(catalog, entries) {
   // matching provider's own numbers are used, keyed by provider + model.
   const providers = {};
   for (const { provider, model, contextLength, current } of entries) {
-    const alias = PROVIDER_ALIASES[provider];
+    const alias = providerAliases[provider];
     const upstream = catalog[provider] ? provider : (alias && catalog[alias] ? alias : null);
     const entry = upstream && byProvider[upstream]?.[baseId(model)];
     if (!entry) continue;
@@ -164,7 +186,7 @@ export function build(catalog, entries) {
 // The previous catalog MUST be detached first. Leaving it installed makes each
 // delta relative to the last one, so a value that still agrees with upstream
 // looks like "no change" and is dropped — the file erases itself over two runs.
-async function collectEntries() {
+async function collectEntries(nodes, customModels) {
   const [{ default: registry }, { getAutoCapabilitiesForModel, setCatalogSource }] = await Promise.all([
     import("open-sse/providers/registry/index.js"),
     import("open-sse/providers/capabilities.js"),
@@ -182,6 +204,15 @@ async function collectEntries() {
       });
     }
   }
+  for (const node of nodes) {
+    const models = customModels.filter((model) =>
+      [node.id, node.prefix].includes(model.providerAlias) && (model.type || model.kind || "llm") === "llm");
+    for (const model of models) {
+      for (const provider of new Set([node.id, node.prefix].filter(Boolean))) {
+        entries.push({ provider, model: model.id, current: getAutoCapabilitiesForModel(provider, model.id) });
+      }
+    }
+  }
   return entries;
 }
 
@@ -191,9 +222,8 @@ export async function syncModelCatalog() {
   state.running = true;
   try {
     const headers = { accept: "application/json" };
-    // A file written by an older schema has to be rebuilt even when upstream is
-    // unchanged, so only ask upstream for a 304 when the file is current.
-    if (state.etag && state.fileVersion === CATALOG_VERSION) headers["if-none-match"] = state.etag;
+    // Local custom models can change independently of the upstream ETag.
+    // Rebuild from the full catalog on every daily/manual sync.
     const response = await fetch(CATALOG_URL, { headers, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
 
     let result;
@@ -206,8 +236,10 @@ export async function syncModelCatalog() {
       // point — not worth a worker thread.
       const catalog = await response.json();
       const etag = response.headers.get("etag") || null;
-      const entries = await collectEntries();
-      const { models, providers } = build(catalog, entries);
+      const { getProviderNodes, getCustomModels } = await import("@/lib/db/index.js");
+      const [nodes, customModels] = await Promise.all([getProviderNodes(), getCustomModels()]);
+      const entries = await collectEntries(nodes, customModels);
+      const { models, providers } = build(catalog, entries, nodes);
       const serialized = JSON.stringify({ v: CATALOG_VERSION, etag, syncedAt: Date.now(), models, providers });
 
       writeAtomic(CATALOG_FILE, serialized);
@@ -241,8 +273,7 @@ export async function syncModelCatalog() {
   }
 }
 
-// The etag lives in the file we wrote, so a restart can resume from it instead
-// of re-downloading 4.3MB to be told nothing changed.
+// Restore the previous sync metadata for the status endpoint.
 function restoreEtag() {
   try {
     const parsed = JSON.parse(fs.readFileSync(CATALOG_FILE, "utf8"));

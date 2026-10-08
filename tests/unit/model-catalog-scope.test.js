@@ -84,6 +84,49 @@ describe("model catalog", () => {
     expect(getCatalogModalities(undefined, "glm-4.6v")).toBeNull();
   });
 
+  it("syncs custom provider ids and prefixes only when their API matches upstream", () => {
+    const catalog = {
+      deepseek: {
+        api: "https://api.deepseek.com",
+        models: { "deepseek-flash": { limit: { context: 1000000, output: 393216 } } },
+      },
+    };
+    const nodes = [
+      { id: "openai-compatible-chat-deepseek", prefix: "dps", baseUrl: "https://api.deepseek.com/v1/" },
+      { id: "reseller", prefix: "rs", baseUrl: "https://reseller.example/v1" },
+      { id: "lookalike", prefix: "fake", baseUrl: "https://api.deepseek.com.evil.example/v1" },
+      { id: "other-path", prefix: "tenant", baseUrl: "https://api.deepseek.com/tenant/v1" },
+      { id: "invalid-url", prefix: "invalid", baseUrl: "not-a-url" },
+      { id: "insecure", prefix: "http", baseUrl: "http://api.deepseek.com/v1" },
+      { id: "query", prefix: "q", baseUrl: "https://api.deepseek.com/v1?tenant=other" },
+    ];
+    const customEntries = nodes.flatMap((node) => [node.id, node.prefix].map((provider) => ({
+      provider, model: "deepseek-flash", current: { contextWindow: 128000, maxOutput: 64000 },
+    })));
+    const { providers } = build(catalog, customEntries, nodes);
+    expect(providers["openai-compatible-chat-deepseek"]).toEqual({
+      "deepseek-flash": { contextWindow: 1000000, maxOutput: 393216 },
+    });
+    expect(providers.dps).toEqual(providers["openai-compatible-chat-deepseek"]);
+    for (const provider of ["reseller", "rs", "lookalike", "fake", "other-path", "tenant", "invalid-url", "invalid", "insecure", "http", "query", "q"]) {
+      expect(providers[provider]).toBeUndefined();
+    }
+  });
+
+  it("does not guess a custom provider from its name or an ambiguous API", () => {
+    const model = { limit: { context: 1000000, output: 393216 } };
+    const catalog = {
+      deepseek: { api: "https://shared.example/v1", models: { "deepseek-flash": model } },
+      another: { api: "https://shared.example/v1", models: { "deepseek-flash": model } },
+    };
+    const nodes = [
+      { id: "node", prefix: "dps", name: "DeepSeek", baseUrl: "https://shared.example/v1" },
+    ];
+    expect(build(catalog, [{
+      provider: "node", model: "deepseek-flash", current: { contextWindow: 128000, maxOutput: 64000 },
+    }], nodes).providers).toEqual({});
+  });
+
   it("passes the gateway to the catalog reader when refining", () => {
     const seen = [];
     capabilities.setCatalogSource({
@@ -173,18 +216,37 @@ describe("catalog schema", () => {
     expect(written.models["glm:glm-4.6v"]).toEqual({ vision: true });
   });
 
-  it("asks upstream for a 304 once the file is current", async () => {
+  it("rebuilds for newly added custom models even when the upstream etag is unchanged", async () => {
+    const { createProviderNode, addCustomModel } = await import("../../src/lib/db/index.js");
+    const node = await createProviderNode({
+      id: "openai-compatible-chat-custom", type: "openai-compatible", name: "Custom",
+      prefix: "custom", baseUrl: "https://custom.example/v1",
+    });
+    await addCustomModel({ providerAlias: node.id, id: "canary" });
     const sent = [];
     const realFetch = globalThis.fetch;
     globalThis.fetch = async (_url, options) => {
       sent.push(options?.headers || {});
-      return { ok: false, status: 304, headers: new Map(), json: async () => ({}) };
+      return {
+        ok: true, status: 200, headers: new Map([["etag", 'W/"new"']]),
+        json: async () => ({
+          ...upstream,
+          custom: { api: "https://custom.example", models: { canary: { limit: { context: 1000000, output: 128000 } } } },
+        }),
+      };
     };
     try {
-      expect((await syncModelCatalog()).status).toBe("unchanged");
+      expect((await syncModelCatalog()).status).toBe("updated");
+      const written = JSON.parse(fs.readFileSync(catalogFile, "utf8"));
+      expect(written.providers[node.id]?.canary).toEqual({ contextWindow: 1000000, maxOutput: 128000 });
+      expect(written.providers.custom?.canary).toEqual(written.providers[node.id].canary);
+      expect(capabilities.getAutoCapabilitiesForModel(node.id, "canary").contextWindow).toBe(1000000);
+      expect(capabilities.getAutoCapabilitiesForModel("custom", "canary").contextWindow).toBe(1000000);
+      expect((await syncModelCatalog()).status).toBe("updated");
+      expect(JSON.parse(fs.readFileSync(catalogFile, "utf8")).providers).toEqual(written.providers);
     } finally {
       globalThis.fetch = realFetch;
     }
-    expect(sent[0]["if-none-match"]).toBe('W/"new"');
+    expect(sent[0]["if-none-match"]).toBeUndefined();
   });
 });
