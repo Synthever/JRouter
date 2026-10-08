@@ -116,7 +116,7 @@ export default function DashboardLayout({ children }) {
   const hasGridBackground = GRID_BACKGROUND_PAGES.includes(pathname) || pathname.startsWith("/dashboard/cli-tools/");
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-bg">
+    <div className={`flex w-full overflow-hidden bg-bg ${pathname === "/dashboard/playground" ? "h-dvh" : "h-screen"}`}>
       <div className="fixed top-4 right-4 z-[80] flex w-[min(92vw,380px)] flex-col gap-2">
         {notifications.map((n) => {
           const style = getToastStyle(n.type);
@@ -180,8 +180,8 @@ export default function DashboardLayout({ children }) {
           onMenuClick={handleToggleSidebar}
           isSidebarCollapsed={desktopSidebarCollapsed}
         />
-        <div className={`flex-1 overflow-y-auto custom-scrollbar ${hasGridBackground ? "dashboard-grid-bg" : ""} ${isFullHeightPage ? "flex flex-col overflow-hidden" : "p-6 lg:p-8"}`}>
-          <div className={isFullHeightPage ? "flex-1 w-full h-full flex flex-col" : "page"}>{children}</div>
+        <div className={`flex-1 custom-scrollbar ${hasGridBackground ? "dashboard-grid-bg" : ""} ${isFullHeightPage ? "flex flex-col min-h-0 overflow-hidden" : "overflow-y-auto p-6 lg:p-8"}`}>
+          <div className={isFullHeightPage ? "flex-1 min-h-0 w-full flex flex-col" : "page"}>{children}</div>
         </div>
       </main>
     </div>

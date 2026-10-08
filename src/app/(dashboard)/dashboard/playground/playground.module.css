@@ -946,6 +946,7 @@
   }
 
   .textarea {
+    max-height: min(200px, 25dvh);
     font-size: 16px;
   }
 
@@ -953,6 +954,12 @@
     right: 0;
     left: auto;
     width: min(264px, calc(100cqw - 24px));
+  }
+}
+
+@media (max-width: 1023px) and (max-height: 500px) {
+  .textarea {
+    max-height: min(200px, 20dvh);
   }
 }
 
