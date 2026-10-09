@@ -18,6 +18,7 @@ describe("health inference probe", () => {
   it("uses the shared pipeline with a bounded real inference and returns metadata only", async () => {
     const result = await probeModel(model, { timeoutSeconds: 15 });
     expect(result).toMatchObject({ executed: true, success: true, apiKeyId: "credential-reference", httpStatus: 200 });
+    expect(mocks.credentials).toHaveBeenCalledWith("openai", null, "gpt", { requestedModel: "gpt", healthProbe: true });
     expect(result.latencyMs).toBeGreaterThanOrEqual(0);
     expect(JSON.stringify(result)).not.toMatch(/secret|pong/);
     expect(mocks.core).toHaveBeenCalledWith(expect.objectContaining({ healthProbe: true, signal: expect.any(AbortSignal), body: expect.objectContaining({ messages: [{ role: "user", content: "ping" }], stream: false, max_tokens: 16 }) }));

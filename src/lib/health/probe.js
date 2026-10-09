@@ -17,7 +17,7 @@ export async function probeModel(model, config) {
     timeout = setTimeout(() => { controller.abort(); reject(new DOMException("Health check timed out", "TimeoutError")); }, config.timeoutSeconds * 1000);
   });
   const operation = async () => {
-    const credentials = await getProviderCredentials(model.providerId, null, model.modelId, { requestedModel: model.modelId });
+    const credentials = await getProviderCredentials(model.providerId, null, model.modelId, { requestedModel: model.modelId, healthProbe: true });
     controller.signal.throwIfAborted();
     if (!credentials || credentials.allRateLimited) return { executed: false, success: false, errorType: "AUTH_ERROR", errorMessage: "No available provider connection; check skipped" };
     apiKeyId = credentials.connectionId || null;

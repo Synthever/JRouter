@@ -33,7 +33,7 @@ export function classifyFailure({ httpStatus, message = "", name = "", errorType
   let type = errorType && ERROR_MESSAGES[errorType] ? errorType : "UNKNOWN";
   const text = String(message).toLowerCase();
   if (/timeout|abort/i.test(name) || /timed out/.test(text)) type = "TIMEOUT";
-  else if (/insufficient.quota|quota.exceeded|credit|billing|usage.limit|balance/.test(text)) type = "QUOTA_EXCEEDED";
+  else if (httpStatus === 402 || /insufficient.quota|quota.exceeded|credit|billing|usage.limit|balance/.test(text)) type = "QUOTA_EXCEEDED";
   else if (httpStatus === 429) type = "RATE_LIMITED";
   else if (httpStatus === 401 || httpStatus === 403) type = "AUTH_ERROR";
   else if (httpStatus === 404) type = "MODEL_NOT_FOUND";

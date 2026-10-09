@@ -83,7 +83,7 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
     const antigravityQuotaCache = isAntigravity && model ? getAntigravityQuotaCache() : null;
 
     // Filter out model-locked, excluded, and Antigravity quota-exhausted connections.
-    const availableConnections = connections.filter(c => {
+    let availableConnections = connections.filter(c => {
       if (excludeSet.has(c.id)) return false;
       if (isModelLockActive(c, model)) return false;
       const enabled = c.providerSpecificData?.enabledModels;
@@ -99,6 +99,12 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
       }
       return true;
     });
+
+    if (options.healthProbe) {
+      // Probe once with a working account; keep routing priority and retries unchanged.
+      const workingConnections = availableConnections.filter(c => c.testStatus !== "unavailable");
+      if (workingConnections.length) availableConnections = workingConnections;
+    }
 
     log.debug("AUTH", `${provider} | available: ${availableConnections.length}/${connections.length}`);
     connections.forEach(c => {

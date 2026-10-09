@@ -34,6 +34,7 @@ describe("model health policy", () => {
   });
   it.each([
     [429, "rate limit", "RATE_LIMITED"], [429, "insufficient_quota", "QUOTA_EXCEEDED"],
+    [402, '{"message":"You have reached the limit.","reason":"MONTHLY_REQUEST_COUNT"}', "QUOTA_EXCEEDED"],
     [401, "sk-secret-value", "AUTH_ERROR"], [403, "forbidden", "AUTH_ERROR"],
     [404, "model unknown", "MODEL_NOT_FOUND"], [500, "internal", "PROVIDER_ERROR"],
     [null, "fetch failed", "NETWORK_ERROR"], [200, "invalid response", "INVALID_RESPONSE"],
