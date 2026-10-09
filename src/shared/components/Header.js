@@ -227,16 +227,18 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
       {/* Page title with breadcrumbs */}
       <div className="dashboard-header__title flex flex-col min-w-0 flex-1">
         {breadcrumbs.length > 0 ? (
-          <div className="dashboard-header__breadcrumbs flex items-center gap-2 min-w-0">
+          <div className="dashboard-header__breadcrumbs flex items-center gap-1.5 sm:gap-2 min-w-0">
             {breadcrumbs.map((crumb, index) => (
               <div
                 key={`${crumb.label}-${crumb.href || "current"}`}
-                className="flex items-center gap-2 min-w-0"
+                className={`items-center gap-1.5 sm:gap-2 min-w-0 ${
+                  index < breadcrumbs.length - 1 ? "hidden sm:flex shrink-0" : "flex flex-1"
+                }`}
               >
                 {index > 0 && (
                   <Icon
                     name="chevron_right"
-                    className="text-[var(--text-3)] text-base"
+                    className="text-[var(--text-3)] text-base hidden sm:inline"
                   />
                 )}
                 {crumb.href ? (
@@ -247,13 +249,13 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
                     {crumb.label}
                   </Link>
                 ) : (
-                  <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                     {crumb.image && (
                       <ProviderIcon
                         src={crumb.image}
                         alt={crumb.label}
                         size={28}
-                        className="object-contain rounded-[var(--r1)] max-w-[28px] max-h-[28px]"
+                        className="object-contain rounded-[var(--r1)] max-w-[24px] max-h-[24px] sm:max-w-[28px] sm:max-h-[28px] shrink-0"
                         fallbackText={crumb.label.slice(0, 2).toUpperCase()}
                       />
                     )}

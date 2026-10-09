@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { deleteApiKey, getApiKeyById, updateApiKey } from "@/lib/localDb";
 import { canManageApiKeys } from "@/lib/apiKeyPolicy/dashboardAuth.js";
 import { sanitizeApiKey, validateKeySettings } from "@/lib/apiKeyPolicy/settings.js";
+import { validateKeyAccessInput } from "@/shared/utils/keyAccess.js";
 
 // GET /api/keys/[id] - Get single key
 export async function GET(request, { params }) {
@@ -25,8 +26,17 @@ export async function PATCH(request, { params }) {
   try {
     const { id } = await params;
     let updateData;
-    try { updateData = validateKeySettings(await request.json()); }
-    catch (error) { return NextResponse.json({ error: error instanceof SyntaxError ? "Invalid JSON body" : error.message }, { status: 400 }); }
+    try {
+      const body = await request.json();
+      if (!body || typeof body !== "object" || Array.isArray(body)) validateKeySettings(body);
+      const { access, ...settings } = body;
+      updateData = validateKeySettings(settings);
+      if (access !== undefined) {
+        const checked = validateKeyAccessInput(access);
+        if (!checked.ok) return NextResponse.json({ error: checked.error }, { status: 400 });
+        updateData.access = checked.value;
+      }
+    } catch (error) { return NextResponse.json({ error: error instanceof SyntaxError ? "Invalid JSON body" : error.message }, { status: 400 }); }
 
     const existing = await getApiKeyById(id);
     if (!existing) {

@@ -282,6 +282,11 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
         };
       }
 
+      if (sourceFormat === FORMATS.CLAUDE) {
+        // Lazy import avoids the non-streaming handler's static parser back-reference.
+        const { translateNonStreamingResponse } = await import("./nonStreamingHandler.js");
+        finalResp = translateNonStreamingResponse(finalResp, FORMATS.OPENAI, sourceFormat);
+      }
       return { success: true, response: new Response(JSON.stringify(restoreToolNames(finalResp, toolNameMap)), { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }) };
     } catch (err) {
       console.error("[ChatCore] Responses API SSE→JSON failed:", err);

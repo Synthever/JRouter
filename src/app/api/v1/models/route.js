@@ -7,6 +7,7 @@ import {
 } from "@/shared/constants/providers";
 import { getProviderConnections, getCombos, getCustomModels, getModelAliases } from "@/lib/localDb";
 import { getDisabledModels } from "@/lib/disabledModelsDb";
+import { getKeyAccessContext, filterModelsListForKey } from "@/sse/services/keyAccess.js";
 import { resolveCursorModels } from "open-sse/services/cursorModels.js";
 import { resolveZedModels } from "open-sse/shared/zedAuth.js";
 import { capabilitiesFromServiceKind, getCapabilitiesForModel, aggregateComboCapabilities } from "open-sse/providers/capabilities.js";
@@ -437,7 +438,10 @@ export async function GET(request) {
 
 async function getModels(request, key) {
   try {
-    const data = await filterCatalogModels(key, await buildModelsList([LLM_KIND]));
+    const data = await filterModelsListForKey(
+      await getKeyAccessContext(request),
+      await filterCatalogModels(key, await buildModelsList([LLM_KIND]))
+    );
     return Response.json({ object: "list", data }, {
       headers: { "Access-Control-Allow-Origin": "*" },
     });

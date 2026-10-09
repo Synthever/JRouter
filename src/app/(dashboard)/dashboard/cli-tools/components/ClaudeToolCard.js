@@ -402,19 +402,21 @@ export default function ClaudeToolCard({
 
                 {/* Model Mappings */}
                 {tool.defaultModels.map((model) => (
-                  <div key={model.alias} className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr_auto] sm:items-center sm:gap-2">
+                  <div key={model.alias} className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr] sm:items-center sm:gap-2">
                     <span className={`sm:text-right ${styles.fieldLabel}`}>{model.name}</span>
                     <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
-                    <div className="relative w-full min-w-0">
-                      <input type="text" value={modelMappings[model.alias] || ""} onChange={(e) => onModelMappingChange(model.alias, e.target.value)} placeholder="provider/model-id" className="w-full min-w-0 pl-2 pr-7 py-2 bg-surface rounded border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 sm:py-1.5" />
-                      {modelMappings[model.alias] && <button onClick={() => onModelMappingChange(model.alias, "")} className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-text-muted hover:text-[var(--danger)] rounded transition-colors" title="Clear"><Icon className="text-[14px]">close</Icon></button>}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="relative flex-1 min-w-0">
+                        <input type="text" value={modelMappings[model.alias] || ""} onChange={(e) => onModelMappingChange(model.alias, e.target.value)} placeholder="provider/model-id" className="w-full min-w-0 pl-2 pr-7 py-2 bg-surface rounded border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 sm:py-1.5" />
+                        {modelMappings[model.alias] && <button onClick={() => onModelMappingChange(model.alias, "")} className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-text-muted hover:text-[var(--danger)] rounded transition-colors" title="Clear"><Icon className="text-[14px]">close</Icon></button>}
+                      </div>
+                      <button onClick={() => openModelSelector(model.alias)} disabled={!hasActiveProviders} className={`rounded border px-2.5 py-2 text-xs transition-colors sm:py-1.5 whitespace-nowrap shrink-0 ${hasActiveProviders ? "bg-surface border-border text-text-main hover:border-[var(--text-2)] cursor-pointer" : "opacity-50 cursor-not-allowed border-border"} ${styles.selectButton}`}>Select</button>
                     </div>
-                    <button onClick={() => openModelSelector(model.alias)} disabled={!hasActiveProviders} className={`w-full sm:w-auto rounded border px-2 py-2 text-xs transition-colors sm:py-1.5 whitespace-nowrap sm:shrink-0 ${hasActiveProviders ? "bg-surface border-border text-text-main hover:border-[var(--text-2)] cursor-pointer" : "opacity-50 cursor-not-allowed border-border"} ${styles.selectButton}`}>Select Model</button>
                   </div>
                 ))}
 
                 {/* Auto-compact window */}
-                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr_auto] sm:items-center sm:gap-2">
+                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr] sm:items-center sm:gap-2">
                   <span className={`sm:text-right ${styles.fieldLabel}`}>Auto-compact</span>
                   <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
                   <select value={autoCompactWindow} onChange={(e) => setAutoCompactWindow(e.target.value)} className="w-full min-w-0 px-2 py-2 bg-surface rounded border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 sm:py-1.5">
@@ -425,11 +427,11 @@ export default function ClaudeToolCard({
                 </div>
 
                 {/* 1M context */}
-                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr_auto] sm:items-center sm:gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-1.5 sm:grid sm:grid-cols-[8rem_auto_1fr] sm:items-center sm:gap-2">
                   <span className={`sm:text-right ${styles.fieldLabel}`}>1M context</span>
                   <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
                   <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                    <input type="checkbox" checked={oneMContext} onChange={(e) => handleOneMContextToggle(e.target.checked)} className="w-3.5 h-3.5 accent-primary cursor-pointer" />
+                    <input type="checkbox" checked={oneMContext} onChange={(e) => handleOneMContextToggle(e.target.checked)} className="w-3.5 h-3.5 accent-primary cursor-pointer shrink-0" />
                     <span className="text-xs text-text-muted">Append [1m] to the model name</span>
                     <Tooltip text="Claude Code otherwise assumes a 200K window, which clamps the auto-compact window above. Applied to every mapped model — only enable it for models that really accept 1M.">
                       <Icon className="text-text-muted text-[14px] cursor-help">info</Icon>
@@ -438,11 +440,11 @@ export default function ClaudeToolCard({
                 </div>
 
                 {/* CC Filter Naming */}
-                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr_auto] sm:items-center sm:gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-1.5 sm:grid sm:grid-cols-[8rem_auto_1fr] sm:items-center sm:gap-2">
                   <span className={`sm:text-right ${styles.fieldLabel}`}>Filter naming</span>
                   <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
                   <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                    <input type="checkbox" checked={ccFilterNaming} onChange={handleCcFilterNamingToggle} className="w-3.5 h-3.5 accent-primary cursor-pointer" />
+                    <input type="checkbox" checked={ccFilterNaming} onChange={handleCcFilterNamingToggle} className="w-3.5 h-3.5 accent-primary cursor-pointer shrink-0" />
                     <span className="text-xs text-text-muted">Filter naming requests</span>
                     <Tooltip text="Intercepts Claude Code's topic-naming requests and returns a fake response locally, saving API tokens.">
                       <Icon className="text-text-muted text-[14px] cursor-help">info</Icon>
@@ -451,11 +453,11 @@ export default function ClaudeToolCard({
                 </div>
 
                 {/* Exa MCP — ~/.claude.json mcpServers (not settings.json) */}
-                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr_auto] sm:items-center sm:gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-1.5 sm:grid sm:grid-cols-[8rem_auto_1fr] sm:items-center sm:gap-2">
                   <span className={`sm:text-right ${styles.fieldLabel}`}>Web Search</span>
                   <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
                   <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                    <input type="checkbox" checked={exaMcpEnabled} onChange={(e) => setExaMcpEnabled(e.target.checked)} className="w-3.5 h-3.5 accent-primary cursor-pointer" />
+                    <input type="checkbox" checked={exaMcpEnabled} onChange={(e) => setExaMcpEnabled(e.target.checked)} className="w-3.5 h-3.5 accent-primary cursor-pointer shrink-0" />
                     <span className="text-xs text-text-muted">Exa MCP</span>
                     <Tooltip text="Injects Exa MCP into ~/.claude.json so non-Claude models gain web search. Restart Claude Code after Apply.">
                       <Icon className="text-text-muted text-[14px] cursor-help">info</Icon>
@@ -471,7 +473,7 @@ export default function ClaudeToolCard({
                 </div>
               )}
 
-              <div className="grid grid-cols-1 gap-2 sm:flex sm:items-center">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button variant="primary" size="sm" onClick={handleApplySettings} disabled={!hasActiveProviders} loading={applying}>
                   <Icon className="text-[14px] mr-1">save</Icon>Apply
                 </Button>

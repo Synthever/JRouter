@@ -27,6 +27,14 @@ afterEach(() => db.close());
 async function configure(policy) { await updateApiKey("id", policy); }
 
 describe("gateway API-key enforcement", () => {
+  it("applies the access allow-list to Gemini discovery without inference", async () => {
+    await configure({ access: { restricted: true, allow: ["openai/gpt-4o"] } });
+    const response = await geminiModels(new Request("http://localhost/v1beta/models", { headers: { Authorization: "Bearer secret" } }));
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.models.map((model) => model.name)).toEqual(["models/openai/gpt-4o"]);
+    expect(db.get("SELECT COUNT(*) AS count FROM apiKeyRequests").count).toBe(0);
+  });
   it("allows legacy and optional local requests", async () => {
     expect((await withApiKeyPolicy(request(), success)).status).toBe(200);
     expect((await withApiKeyPolicy(request(undefined, {}), success)).status).toBe(200);

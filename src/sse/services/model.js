@@ -42,7 +42,7 @@ export async function getModelInfo(modelStr) {
   return info;
 }
 
-async function resolveModelInfo(modelStr) {
+export async function resolveModelInfo(modelStr) {
   const parsed = parseModel(modelStr);
 
   if (!parsed.isAlias) {

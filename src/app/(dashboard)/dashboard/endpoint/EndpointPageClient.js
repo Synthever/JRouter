@@ -20,6 +20,7 @@ import EndpointRow from "./components/EndpointRow";
 import StatusAlert from "./components/StatusAlert";
 import Tooltip from "./components/Tooltip";
 import SecurityWarning from "./components/SecurityWarning";
+import KeyAccessControls from "./components/KeyAccessControls";
 import styles from "./endpoint.module.css";
 import ConfigureApiKeyDialog from "./components/ConfigureApiKeyDialog";
 import { useNotificationStore } from "@/store/notificationStore";
@@ -707,6 +708,21 @@ export default function APIPageClient({ machineId }) {
     } catch (error) { useNotificationStore.getState().error(error.message); }
   };
 
+  const handleUpdateKeyAccess = async (id, access) => {
+    try {
+      const res = await fetch(`/api/keys/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.key) throw new Error(data.error || "Unable to update key access.");
+      setKeys(prev => prev.map(k => k.id === id ? { ...k, access: data.key.access } : k));
+    } catch (error) {
+      useNotificationStore.getState().error(error.message);
+    }
+  };
+
   const [baseUrl, setBaseUrl] = useState("/v1");
 
   // Hydration fix: Only access window on client side
@@ -1099,6 +1115,20 @@ export default function APIPageClient({ machineId }) {
                     {key.rateLimitRpm != null && ` · ${key.rateLimitRpm} RPM`}
                     {(key.allowedModels?.length > 0 || key.blockedModels?.length > 0) && " · Restricted models"}
                   </p>
+                  <div className="col-span-full min-w-0">
+                    <KeyAccessControls
+                      apiKey={key}
+                      onChange={(access) => handleUpdateKeyAccess(key.id, access)}
+                      onRequestRestrict={() => setConfirmState({
+                        title: "Restrict API Key",
+                        message: `Restrict API key "${key.name}"?\n\nIt will only be able to call the combos and models you add. Until you add one, it can call nothing.`,
+                        onConfirm: async () => {
+                          setConfirmState(null);
+                          handleUpdateKeyAccess(key.id, { restricted: true, allow: key.access?.allow || [] });
+                        }
+                      })}
+                    />
+                  </div>
                 </div>
                 <div className={styles.keyActions}>
                   <Button variant="secondary" size="sm" icon="settings" onClick={() => setConfigureKeyId(key.id)} aria-label={`Configure ${key.name}`}>Configure</Button>
