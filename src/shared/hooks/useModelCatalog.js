@@ -187,12 +187,14 @@ export function useModelCatalog({
       ? NO_AUTH_PROVIDER_IDS.filter((id) => (AI_PROVIDERS[id]?.serviceKinds || ["llm"]).includes(kindFilter))
       : NO_AUTH_PROVIDER_IDS;
 
-    // Registered compatible models remain selectable without a saved API key.
+    // Custom models can outlive their provider node; do not resurrect deleted providers.
+    const registeredNodeIds = new Set(providerNodes.map((node) => node.id));
     const compatibleNodeIds = kindFilter
       ? []
       : customModels
           .map((m) => m.providerAlias)
-          .filter((alias) => isOpenAICompatibleProvider(alias) || isAnthropicCompatibleProvider(alias));
+          .filter((alias) => registeredNodeIds.has(alias) &&
+            (isOpenAICompatibleProvider(alias) || isAnthropicCompatibleProvider(alias)));
     const providerIdsToShow = new Set([...activeConnectionIds, ...noAuthIds, ...compatibleNodeIds]);
 
     const sortedProviderIds = [...providerIdsToShow].sort((a, b) => {
