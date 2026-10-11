@@ -97,6 +97,34 @@ describe("gateway API-key enforcement", () => {
     });
     expect(response.status).toBe(403);
   });
+  it("rejects an unlisted combo before dispatch even when a member is allowed", async () => {
+    db.run("INSERT INTO combos(id,name,models,createdAt,updatedAt) VALUES(?,?,?,?,?)", ["combo", "unlisted", JSON.stringify(["openai/gpt-4"]), "2026-01-01", "2026-01-01"]);
+    await configure({ allowedModels: ["openai/gpt-4"] });
+    const handler = vi.fn(success);
+    const response = await withApiKeyPolicy(request({ model: "unlisted", max_tokens: 10 }), handler);
+    expect(response.status).toBe(403);
+    expect((await response.json()).error.code).toBe("model_not_allowed");
+    expect(handler).not.toHaveBeenCalled();
+    expect(db.get("SELECT COUNT(*) AS count FROM apiKeyRequests").count).toBe(0);
+  });
+  it("lets an allowed combo fail over while blocking its denied members and direct calls", async () => {
+    const members = ["openai/gpt-blocked", "openai/gpt-4"];
+    db.run("INSERT INTO combos(id,name,models,createdAt,updatedAt) VALUES(?,?,?,?,?)", ["combo", "production", JSON.stringify(members), "2026-01-01", "2026-01-01"]);
+    await configure({ allowedModels: ["production"], blockedModels: ["gpt-blocked"] });
+    const served = [];
+    const response = await withApiKeyPolicy(request({ model: "production", max_tokens: 10 }), () => handleComboChat({
+      body: {}, models: members, log: { info() {}, warn() {}, error() {}, debug() {} },
+      handleSingleModel: async (_body, member) => {
+        assertCurrentModelAllowed(member, { provider: "openai", model: member.split("/")[1] });
+        served.push(member);
+        return success();
+      },
+    }));
+    expect(response.status).toBe(200);
+    await response.text();
+    expect(served).toEqual(["openai/gpt-4"]);
+    expect((await withApiKeyPolicy(request(), success)).status).toBe(403);
+  });
   it("caps omitted output tokens before forwarding and rejects explicit excessive limits", async () => {
     await configure({ maxOutputTokens: 20 });
     const response = await withApiKeyPolicy(request({ model: "openai/gpt-4", messages: [] }), async (req) => { expect((await req.json()).max_tokens).toBe(20); return success(); });

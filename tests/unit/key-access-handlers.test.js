@@ -245,6 +245,22 @@ describe("/v1/models routes filter by key", () => {
     expect(await list("sk-empty")).toEqual([]);
     expect(await list(null)).toEqual(all); // no key: unchanged (middleware governs remote access)
   });
+  it("hides unlisted combos even when they contain an allowed model", async () => {
+    fx.keys["sk-open"].allowedModels = ["openai/model-b"];
+    // model-b is a routing fixture, not a published catalog model.
+    expect(await list("sk-open")).toEqual([]);
+  });
+  it("publishes an allowed combo but never grants discovery of its direct members", async () => {
+    fx.keys["sk-open"].allowedModels = ["Main"];
+    expect(await list("sk-open")).toEqual(["Main"]);
+    fx.keys["sk-open"].blockedModels = ["openai/model-a", "openai/model-b"];
+    expect(await list("sk-open")).toEqual([]);
+  });
+  it("returns 404 for an unlisted combo's single-model lookup", async () => {
+    fx.keys["sk-open"].allowedModels = ["openai/model-b"];
+    const response = await modelsKindRoute.GET(new Request("http://localhost/v1/models/Main", { headers: auth("sk-open") }), { params: Promise.resolve({ model: ["Main"] }) });
+    expect(response.status).toBe(404);
+  });
   it("/v1/models/{kind} and single-model lookup are filtered too", async () => {
     const kind = async (k, path) => modelsKindRoute.GET(new Request(`http://localhost/v1/models/${path.join("/")}`, { headers: auth(k) }), { params: Promise.resolve({ model: path }) });
     const emb = await (await kind("sk-open", ["embedding"])).json();

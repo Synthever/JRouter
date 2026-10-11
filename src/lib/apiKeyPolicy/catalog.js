@@ -19,7 +19,7 @@ export async function filterCatalogModels(key, models, getId = (model) => model.
       const members = info.provider ? null : await getComboModels(identifier);
       if (!members) assertModelAllowed(key, modelIdentifiers(identifier, info));
       else {
-        assertModelAllowed({ ...key, allowedModels: [] }, [identifier]);
+        assertModelAllowed(key, [identifier]);
         const allowed = await Promise.all(members.map(async (member) => {
           try { assertModelAllowed(key, [...modelIdentifiers(member, await getModelInfo(member)), identifier]); return true; }
           catch (error) { if (error instanceof ApiKeyPolicyError) return false; throw error; }

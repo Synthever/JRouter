@@ -53,11 +53,8 @@ export async function withApiKeyPolicy(request, handler, { family = null, model 
       const combos = await getComboModels(requestedModel);
       isCombo = Boolean(combos);
       info = combos ? { provider: null, model: requestedModel } : await resolvePolicyModel(requestedModel);
-      if (combos) {
-        // The selected combo can grant access to its members; explicit member
-        // blocks are checked again at actual model resolution.
-        assertModelAllowed({ ...key, allowedModels: [] }, [requestedModel]);
-      } else assertModelAllowed(key, modelIdentifiers(requestedModel, info));
+      // A combo must be allowed by name before it can grant access to members.
+      assertModelAllowed(key, combos ? [requestedModel] : modelIdentifiers(requestedModel, info));
       if (info.provider) pricing = await getPricingForModel(info.provider, info.model);
       if (key.maxCostUsd !== null && billable) {
         if (combos) {
