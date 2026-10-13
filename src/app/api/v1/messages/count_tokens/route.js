@@ -75,7 +75,7 @@ export function estimateAnthropicInputTokens(body = {}) {
  * POST /v1/messages/count_tokens - Mock token count response
  */
 export async function POST(request) {
-  return withApiKeyPolicy(request, countTokens, { family: "chat", billable: false });
+  return withApiKeyPolicy(request, countTokens, { family: "chat", billable: false, targetAdmission: "public-llm" });
 }
 
 async function countTokens(request) {

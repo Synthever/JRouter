@@ -172,6 +172,8 @@ export default function ComboFormModal({ isOpen, combo, onClose, onSave, activeP
           onSelect={handleAddModel} onDeselect={handleDeselectModel}
           activeProviders={activeProviders} modelAliases={modelAliases}
           title="Add Model to Combo" kindFilter={kindFilter}
+          catalogContext={kindFilter && kindFilter !== "llm" ? "media" : "members"}
+          includeLegacyCombos
           addedModelValues={models} closeOnSelect={false} />
       )}
     </>

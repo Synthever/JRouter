@@ -3,7 +3,8 @@
  * Failure never breaks existing per-model quota display.
  */
 
-import { U, parseResetTime, fetchWithTimeout } from "./shared.js";
+import { U, parseResetTime, fetchWithTimeout, readUsageJson, discardUsageBody } from "./shared.js";
+import { joinSharedOperation } from "../../utils/sharedOperation.js";
 import { ANTIGRAVITY_IDE_USER_AGENT, ANTIGRAVITY_IDE_VERSION } from "../../providers/shared.js";
 
 // — Weekly quota summary config ——————————————————————————————
@@ -14,7 +15,8 @@ const WEEKLY_CONFIG = {
 
 // — Cache: TTL + in-flight dedup per project ———————————————
 const WEEKLY_CACHE_TTL_MS = 180_000; // 3 minutes
-const weeklyCache = new Map(); // cacheKey -> { result, expiresAt } | { promise }
+const weeklyCache = new Map(); // cacheKey -> { result, expiresAt }
+const weeklyInflight = new Map();
 
 function cacheKey(accessToken, projectId) {
   return `${accessToken}::${projectId || ""}`;
@@ -111,23 +113,22 @@ export function parseWeeklyQuotaSummary(data) {
 }
 
 /**
- * Fetch weekly quota summary — cached, deduped, never throws.
+ * Fetch weekly quota summary — cached and deduped; only cancellation throws.
  */
-export async function fetchAntigravityWeeklyQuota(accessToken, projectId, proxyOptions = null) {
+export async function fetchAntigravityWeeklyQuota(accessToken, projectId, proxyOptions = null, { signal } = {}) {
+  signal?.throwIfAborted();
   const key = cacheKey(accessToken, projectId);
-
-  // Serve in-flight or cached
   const hit = weeklyCache.get(key);
-  if (hit?.promise) return hit.promise;
   if (hit && hit.expiresAt > Date.now()) return hit.result;
 
-  const promise = (async () => {
+  return joinSharedOperation(weeklyInflight, key, async sharedSignal => {
     try {
+      sharedSignal.throwIfAborted();
       const url = WEEKLY_CONFIG.quotaSummaryApiUrl;
       if (!url) return {};
-
       const response = await fetchWithTimeout(url, {
         method: "POST",
+        signal: sharedSignal,
         headers: {
           "Authorization": `Bearer ${accessToken}`,
           "User-Agent": WEEKLY_CONFIG.userAgent,
@@ -139,28 +140,22 @@ export async function fetchAntigravityWeeklyQuota(accessToken, projectId, proxyO
           ...(projectId ? { project: projectId } : {}),
         }),
       }, 10000, proxyOptions);
-
-      if (!response.ok) return {};
-
-      const data = await response.json();
-      return parseWeeklyQuotaSummary(data);
+      if (sharedSignal.aborted) discardUsageBody(response, sharedSignal.reason);
+      sharedSignal.throwIfAborted();
+      if (!response.ok) {
+        discardUsageBody(response);
+        return {};
+      }
+      const data = await readUsageJson(response, sharedSignal);
+      sharedSignal.throwIfAborted();
+      const result = parseWeeklyQuotaSummary(data);
+      if (Object.keys(result).length > 0 && weeklyInflight.get(key)?.controller.signal === sharedSignal) {
+        weeklyCache.set(key, { result, expiresAt: Date.now() + WEEKLY_CACHE_TTL_MS });
+      }
+      return result;
     } catch {
+      sharedSignal.throwIfAborted();
       return {};
     }
-  })();
-
-  weeklyCache.set(key, { promise });
-
-  try {
-    const result = await promise;
-    if (result && Object.keys(result).length > 0) {
-      weeklyCache.set(key, { result, expiresAt: Date.now() + WEEKLY_CACHE_TTL_MS });
-    } else {
-      weeklyCache.delete(key);
-    }
-    return result;
-  } catch {
-    weeklyCache.delete(key);
-    return {};
-  }
+  }, { signal });
 }

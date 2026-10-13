@@ -404,6 +404,7 @@ export default function ComboDetailPage() {
           modelAliases={modelAliases}
           title={`Add ${kindLabel} Model`}
           kindFilter={combo.kind}
+          catalogContext="media"
           addedModelValues={providers}
           closeOnSelect={false}
         />

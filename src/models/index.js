@@ -36,3 +36,8 @@ export {
   validateApiKey,
   isCloudEnabled,
 } from "@/lib/localDb";
+
+export {
+  getModelsAliases, getModelsAliasById, getModelsAliasByName,
+  createModelsAlias, updateModelsAlias, deleteModelsAlias,
+} from "@/lib/db/index.js";

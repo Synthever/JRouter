@@ -7,6 +7,7 @@
  * This significantly reduces the risk of being flagged by Google's anti-abuse systems.
  */
 
+import { joinSharedOperation, waitForOperation } from "../utils/sharedOperation.js";
 import { CLOUD_CODE_API, LOAD_CODE_ASSIST_HEADERS, ANTIGRAVITY_LOAD_CODE_ASSIST_HEADERS, LOAD_CODE_ASSIST_METADATA } from "../config/appConstants.js";
 
 // ─── Cache ────────────────────────────────────────────────────────────────────
@@ -83,7 +84,8 @@ startCacheCleanup();
  * @param {string} accessToken  - Valid OAuth access token
  * @returns {Promise<string|null>} Real project ID or null
  */
-export async function getProjectIdForConnection(connectionId, accessToken, provider = "gemini-cli") {
+export async function getProjectIdForConnection(connectionId, accessToken, provider = "gemini-cli", { signal } = {}) {
+    signal?.throwIfAborted();
     if (!connectionId || !accessToken) return null;
 
     // Return cached value if still fresh
@@ -92,17 +94,10 @@ export async function getProjectIdForConnection(connectionId, accessToken, provi
         return cached.projectId;
     }
 
-    // Deduplicate concurrent fetches for the same connection
-    if (pendingFetches.has(connectionId)) {
-        return pendingFetches.get(connectionId).promise;
-    }
-
-    // Each fetch gets its own AbortController so it can be canceled via removeConnection()
-    const controller = new AbortController();
-
-    const promise = (async () => {
+    return joinSharedOperation(pendingFetches, connectionId, async sharedSignal => {
         try {
-            const projectId = await fetchProjectId(accessToken, controller.signal, provider);
+            const projectId = await fetchProjectId(accessToken, sharedSignal, provider);
+            sharedSignal.throwIfAborted();
             if (projectId) {
                 projectIdCache.set(connectionId, {projectId, fetchedAt: Date.now()});
                 return projectId;
@@ -110,15 +105,11 @@ export async function getProjectIdForConnection(connectionId, accessToken, provi
             console.warn("[ProjectId] could not fetch projectId for connection", connectionId.slice(0, 8));
             return null;
         } catch (error) {
+            sharedSignal.throwIfAborted();
             console.warn(`[ProjectId] Error fetching project ID: ${error.message}`);
             return null;
-        } finally {
-            pendingFetches.delete(connectionId);
         }
-    })();
-
-    pendingFetches.set(connectionId, {promise, controller, startedAt: Date.now()});
-    return promise;
+    }, { signal });
 }
 
 /**
@@ -156,6 +147,7 @@ export function removeConnection(connectionId) {
  * @returns {Promise<string|null>}
  */
 async function fetchProjectId(accessToken, signal, provider) {
+    signal.throwIfAborted();
     const endpoints = CLOUD_CODE_API[provider] || CLOUD_CODE_API["gemini-cli"];
     const headers = provider === "antigravity" ? ANTIGRAVITY_LOAD_CODE_ASSIST_HEADERS : LOAD_CODE_ASSIST_HEADERS;
     const response = await fetch(endpoints.loadCodeAssist, {
@@ -165,12 +157,15 @@ async function fetchProjectId(accessToken, signal, provider) {
         signal
     });
 
+    signal.throwIfAborted();
     if (!response.ok) {
         const errorText = await response.text().catch(() => "");
+        signal.throwIfAborted();
         throw new Error(`loadCodeAssist failed: HTTP ${response.status} ${errorText.slice(0, 200)}`);
     }
 
     const data = await response.json();
+    signal.throwIfAborted();
     const projectId = extractProjectId(data);
     if (projectId) return projectId;
 
@@ -208,12 +203,12 @@ async function onboardUser(accessToken, tierID, externalSignal, endpoints, provi
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
         // Bail out immediately if the connection was removed
-        if (externalSignal?.aborted) return null;
+        externalSignal?.throwIfAborted();
 
         // Per-attempt timeout controller; forwards external abort as well
         const localCtrl = new AbortController();
         const timeoutId = setTimeout(() => localCtrl.abort(), 30_000);
-        const forwardAbort = () => localCtrl.abort();
+        const forwardAbort = () => localCtrl.abort(externalSignal.reason);
         externalSignal?.addEventListener("abort", forwardAbort);
 
         try {
@@ -225,13 +220,16 @@ async function onboardUser(accessToken, tierID, externalSignal, endpoints, provi
             });
 
             clearTimeout(timeoutId);
+            externalSignal?.throwIfAborted();
 
             if (!response.ok) {
                 const errorText = await response.text().catch(() => "");
+                externalSignal?.throwIfAborted();
                 throw new Error(`onboardUser HTTP ${response.status}: ${errorText.slice(0, 200)}`);
             }
 
             const data = await response.json();
+            externalSignal?.throwIfAborted();
 
             if (data.done === true) {
                 const projectId = extractProjectIdFromOnboard(data);
@@ -245,13 +243,14 @@ async function onboardUser(accessToken, tierID, externalSignal, endpoints, provi
             // Server not done yet – wait and retry with jitter
             const jitter = Math.floor(Math.random() * 5000);
             console.log(`[ProjectId] Onboard attempt ${attempt}/${MAX_ATTEMPTS}: not done yet, waiting...`);
-            await new Promise(resolve => setTimeout(resolve, BASE_RETRY_DELAY_MS + jitter));
+            await waitForOperation(BASE_RETRY_DELAY_MS + jitter, externalSignal);
 
         } catch (error) {
+            externalSignal?.throwIfAborted();
             clearTimeout(timeoutId);
             if (error.name === "AbortError") {
                 console.warn(`[ProjectId] onboardUser attempt ${attempt} aborted (timeout or connection removed)`);
-                if (externalSignal?.aborted) return null;   // connection gone – stop retrying
+                externalSignal?.throwIfAborted();
                 continue;
             }
             if (attempt === MAX_ATTEMPTS) {
@@ -261,7 +260,7 @@ async function onboardUser(accessToken, tierID, externalSignal, endpoints, provi
             // Wait with jitter before retrying
             const jitter = Math.floor(Math.random() * 5000);
             console.warn(`[ProjectId] onboardUser attempt ${attempt} failed: ${error.message}, retrying...`);
-            await new Promise(resolve => setTimeout(resolve, BASE_RETRY_DELAY_MS + jitter));
+            await waitForOperation(BASE_RETRY_DELAY_MS + jitter, externalSignal);
         } finally {
             clearTimeout(timeoutId);
             externalSignal?.removeEventListener("abort", forwardAbort);

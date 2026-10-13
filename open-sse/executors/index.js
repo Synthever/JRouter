@@ -29,6 +29,7 @@ import WindsurfExecutor from "./windsurf.js";
 import { DefaultExecutor } from "./default.js";
 import { MinimaxCodeExecutor } from "./minimax-code.js";
 import { DevinCliExecutor } from "./devin-cli.js";
+import { resolveProviderAlias } from "../services/model.js";
 
 const executors = {
   antigravity: new AntigravityExecutor(),
@@ -86,6 +87,21 @@ export function getExecutor(provider) {
 
 export function hasSpecializedExecutor(provider) {
   return !!executors[provider];
+}
+
+// Provider-only metadata covers every alias JSON branch, not just its SSE branch.
+const bufferedAliasOutput = new Set([
+  "cursor", // Legacy ChatService buffers EOF even though AgentService emits deltas.
+  "grok-web", "perplexity-web", "bedrock", "bedrock-xai", "zed", // JSON branches do not consume alias force-stream yet.
+  "trae", "windsurf", "devin-cli", // Dormant paths are not certified or activated.
+]);
+
+export function getExecutorOutputObservability(provider) {
+  const canonical = resolveProviderAlias(provider);
+  if (bufferedAliasOutput.has(canonical)) return "buffered";
+  // Kiro observes semantic output before its integrity gate; Qoder always emits SSE.
+  // Default/custom classification describes the transport, not a live upstream SLA.
+  return getExecutor(canonical).supportsUpstreamStreaming() ? "incremental" : "buffered";
 }
 
 export { BaseExecutor } from "./base.js";

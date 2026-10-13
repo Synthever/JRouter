@@ -1,6 +1,8 @@
 import { handleChat } from "@/sse/handlers/chat.js";
 import { initTranslators } from "open-sse/translator/index.js";
 import { transformToOllama } from "open-sse/utils/ollamaTransform.js";
+import { withApiKeyPolicy } from "@/lib/apiKeyPolicy/gateway.js";
+import { getPublicLlmTargetContext } from "@/lib/apiKeyPolicy/context.js";
 
 let initialized = false;
 
@@ -23,15 +25,10 @@ export async function OPTIONS() {
 
 export async function POST(request) {
   await ensureInitialized();
-  
-  const clonedReq = request.clone();
-  let modelName = "llama3.2";
-  try {
-    const body = await clonedReq.json();
-    modelName = body.model || "llama3.2";
-  } catch {}
-
-  const response = await handleChat(request);
-  return transformToOllama(response, modelName);
+  return withApiKeyPolicy(request, async admittedRequest => {
+    const authorized = getPublicLlmTargetContext();
+    const response = await handleChat(admittedRequest, null, { publicTarget: authorized });
+    return transformToOllama(response, authorized.target.publicId, { publicVirtual: true });
+  }, { family: "chat", targetAdmission: "public-llm" });
 }
 

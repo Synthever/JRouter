@@ -11,6 +11,7 @@ import { getKeyAccessContext, filterModelsListForKey } from "@/sse/services/keyA
 import { resolveCursorModels } from "open-sse/services/cursorModels.js";
 import { resolveZedModels } from "open-sse/shared/zedAuth.js";
 import { capabilitiesFromServiceKind, getCapabilitiesForModel, aggregateComboCapabilities } from "open-sse/providers/capabilities.js";
+import { buildPublicLlmModelsList, filterPublicLlmModelsByCapability } from "@/sse/services/publicLlmCatalog.js";
 
 // Combo seats use UI aliases; the model registry also has transport aliases.
 // Capability overrides and catalog limits are keyed by provider id.
@@ -55,11 +56,9 @@ const LIVE_MODEL_RESOLVERS = {
   },
 };
 
-// LLM kind sentinel — combos/models with no explicit kind default to LLM
-const LLM_KIND = "llm";
-
 // Map per-model `type` field (in PROVIDER_MODELS) to service kind.
 // Models without `type` are treated as LLM.
+const LLM_KIND = "llm";
 const MODEL_TYPE_TO_KIND = {
   image: "image",
   tts: "tts",
@@ -433,23 +432,24 @@ export async function OPTIONS() {
  * For other capabilities use /v1/models/{kind} (image, tts, stt, embedding, image-to-text, web).
  */
 export async function GET(request) {
-  return withApiKeyCatalogPolicy(request, (key) => getModels(request, key));
+  try {
+    return await withApiKeyCatalogPolicy(request, (key) => getModels(request, key));
+  } catch {
+    return Response.json({ error: { message: "Unable to load models.", type: "server_error" } }, { status: 500, headers: { "Access-Control-Allow-Origin": "*" } });
+  }
 }
 
 async function getModels(request, key) {
   try {
-    const data = await filterModelsListForKey(
-      await getKeyAccessContext(request),
-      await filterCatalogModels(key, await buildModelsList([LLM_KIND]))
-    );
+    const keyAccess = await getKeyAccessContext(request);
+    const data = await buildPublicLlmModelsList({ policy: key, keyAccess });
     return Response.json({ object: "list", data }, {
       headers: { "Access-Control-Allow-Origin": "*" },
     });
-  } catch (error) {
-    console.log("Error fetching models:", error);
+  } catch {
     return Response.json(
-      { error: { message: error.message, type: "server_error" } },
-      { status: 500 }
+      { error: { message: "Unable to load models.", type: "server_error" } },
+      { status: 500, headers: { "Access-Control-Allow-Origin": "*" } }
     );
   }
 }

@@ -7,6 +7,7 @@ vi.mock("@/lib/db/repos/settingsRepo.js", () => ({ getSettings: async () => ref.
 vi.mock("@/lib/db/repos/pricingRepo.js", () => ({ getPricingForModel: async () => ({ input: 1, output: 2 }) }));
 import { withApiKeyPolicy } from "@/lib/apiKeyPolicy/gateway.js";
 import { updateApiKey } from "@/lib/db/repos/apiKeysRepo.js";
+import { createModelsAlias } from "@/lib/db/repos/modelsAliasesRepo.js";
 import { getApiKeyPolicyContext, assertCurrentModelAllowed } from "@/lib/apiKeyPolicy/context.js";
 import { saveRequestUsage } from "@/lib/db/repos/usageRepo.js";
 import { POST as geminiPost } from "@/app/api/v1beta/models/[...path]/route.js";
@@ -28,11 +29,13 @@ async function configure(policy) { await updateApiKey("id", policy); }
 
 describe("gateway API-key enforcement", () => {
   it("applies the access allow-list to Gemini discovery without inference", async () => {
-    await configure({ access: { restricted: true, allow: ["openai/gpt-4o"] } });
+    db.run("INSERT INTO providerConnections(id,provider,authType,data,createdAt,updatedAt) VALUES(?,?,?,?,?,?)", ["discovery-openai", "openai", "apikey", "{}", "2026-01-01", "2026-01-01"]);
+    await createModelsAlias({ name: "Public", models: ["openai/gpt-4o"], primaryModel: "openai/gpt-4o" });
+    await configure({ access: { restricted: true, allow: ["jrouter/Public"] } });
     const response = await geminiModels(new Request("http://localhost/v1beta/models", { headers: { Authorization: "Bearer secret" } }));
     expect(response.status).toBe(200);
     const data = await response.json();
-    expect(data.models.map((model) => model.name)).toEqual(["models/openai/gpt-4o"]);
+    expect(data.models.map((model) => model.name)).toEqual(["models/jrouter/Public"]);
     expect(db.get("SELECT COUNT(*) AS count FROM apiKeyRequests").count).toBe(0);
   });
   it("allows legacy and optional local requests", async () => {
@@ -208,11 +211,16 @@ describe("gateway API-key enforcement", () => {
     expect(response.status).toBe(401); expect((await response.json()).error.code).toBe("api_key_expired");
   });
   it("filters model discovery by canonical whitelist and blacklist", async () => {
-    await configure({ allowedModels: ["gemini/*"], blockedModels: ["gemini-2.5-flash"] });
+    db.run("INSERT INTO providerConnections(id,provider,authType,data,createdAt,updatedAt) VALUES(?,?,?,?,?,?)", ["discovery-openai", "openai", "apikey", "{}", "2026-01-01", "2026-01-01"]);
+    for (const name of ["Public", "Blocked", "Hidden"]) {
+      await createModelsAlias({ name, models: ["openai/gpt-4o"], primaryModel: "openai/gpt-4o" });
+    }
+    await configure({ allowedModels: ["jrouter/Public", "jrouter/Blocked"], blockedModels: ["jrouter/Blocked"] });
     const response = await geminiModels(new Request("http://localhost/api/v1beta/models?key=secret"));
     const { models } = await response.json();
     expect(models.length).toBeGreaterThan(0);
-    expect(models.some((model) => model.name === "models/gemini/gemini-2.5-flash" || model.name === "models/gemini-2.5-flash")).toBe(false);
-    expect(models.every((model) => model.name.startsWith("models/gemini/") || model.name.startsWith("models/gemini-"))).toBe(true);
+    expect(models.some((model) => model.name === "models/jrouter/Blocked")).toBe(false);
+    expect(models.map((model) => model.name)).toEqual(["models/jrouter/Public"]);
+    expect(db.get("SELECT COUNT(*) AS count FROM apiKeyRequests").count).toBe(0);
   });
 });

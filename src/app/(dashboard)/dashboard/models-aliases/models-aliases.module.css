@@ -1,0 +1,55 @@
+.page { display: flex; flex-direction: column; gap: 20px; min-width: 0; color: var(--text); padding-bottom: 32px; }
+.toolbar, .actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.toolbar { justify-content: space-between; }
+.page h1 { font-size: 20px; font-weight: 600; letter-spacing: -.025em; }
+.page h2, .form h3 { font-size: 14px; font-weight: 600; }
+.help { color: var(--text-2); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.panel, .row { padding: 20px; background: var(--surface); border: 1px solid var(--line-2); border-radius: var(--r3); min-width: 0; }
+.row { display: flex; flex-direction: column; gap: 16px; }
+.identity { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.publicId, .identity code, .runtime code { font-family: var(--font-mono); font-size: 13px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.publicId { display: block; margin-top: 6px; }
+.facts { display: flex; gap: 16px; flex-wrap: wrap; color: var(--text-2); font-size: 13px; }
+.facts dt { font-size: 12px; }
+.facts dd { color: var(--text); overflow-wrap: anywhere; }
+.error { color: var(--danger); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.dialog { --text-3: var(--text-2); min-width: 0; width: min(880px, 100%); border-radius: var(--r3); overflow-wrap: anywhere; }
+.dialog > div:first-child button { min-width: 44px; min-height: 44px; color: var(--text-2); }
+.form, .fields, .group { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.fields, .picker { border: 0; padding: 0; margin: 0; min-width: 0; }
+.group { border-top: 1px solid var(--line-2); padding-top: 20px; }
+.columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.label, .form label { color: var(--text-2); font-size: 13px; }
+.picker { display: flex; flex-direction: column; gap: 12px; }
+.members { list-style: none; margin: 0; padding: 0; }
+.member { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); min-width: 0; }
+.primary { display: inline-block; margin-left: 8px; padding: 2px 6px; background: var(--surface-2); font-size: 12px; }
+.check { display: flex; align-items: center; gap: 10px; min-height: 36px; }
+.dialog :is(input:not([type=checkbox]), select, textarea) { width: 100%; min-width: 0; min-height: 36px; padding: 8px 12px; border: 1px solid var(--text-2); border-radius: var(--r1); background: var(--surface-2); color: var(--text); font-size: 14px; }
+.dialog input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--text); }
+.dialog textarea { resize: vertical; font-family: var(--font-mono); }
+.dialog p { color: var(--text-2); }
+.dialog .error, .dialog [aria-invalid=true] ~ p { color: var(--danger); }
+.page button, .dialog button { min-height: 36px; border-radius: var(--r1); }
+.page button:not([data-variant=contrast]), .dialog button:not([data-variant=contrast]) { color: var(--text); }
+.page button[data-variant=secondary], .dialog button[data-variant=secondary] { border-color: var(--text-2); }
+.page button[data-variant=contrast], .dialog button[data-variant=contrast] { background: var(--text); color: var(--bg); }
+.page button[data-variant=contrast]:hover, .dialog button[data-variant=contrast]:hover { background: var(--text-2); }
+.page :is(button, input, select, a):focus-visible, .dialog :is(button, input, select, textarea):focus-visible { outline: 2px solid var(--text-2); outline-offset: 3px; box-shadow: none; }
+.dialog [data-model-option] { border-color: var(--text-2); }
+.dialog [data-model-option][aria-pressed=true] { background: var(--text); color: var(--bg); }
+.picker [data-model-group] > span[style] { color: var(--text-2) !important; }
+.picker [data-model-option] > span:has([data-tooltip]) { flex-basis: 100%; flex-wrap: wrap; }
+.picker [data-model-option] div:has(> [data-tooltip]) { align-items: center; gap: 4px; min-width: 0; }
+.picker [data-tooltip] { position: static; transform: none; margin: 0; padding: 0; width: auto; max-width: 100%; opacity: 1; background: transparent; color: inherit; overflow-wrap: anywhere; }
+.runtime { border-top: 1px solid var(--line-2); padding-top: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.runtime ol { padding-left: 20px; }
+.runtime li { padding: 6px 0; overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .columns { grid-template-columns: minmax(0, 1fr); }
+  .member { flex-direction: column; align-items: stretch; }
+  .panel, .row { padding: 16px; }
+  .page button, .dialog button { min-height: 44px; }
+  .dialog :is(input:not([type=checkbox]), select, textarea) { min-height: 44px; font-size: 16px; }
+  .dialog .check { min-height: 44px; }
+}

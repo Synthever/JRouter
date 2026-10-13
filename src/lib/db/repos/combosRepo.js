@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import { getAdapter } from "../driver.js";
 import { parseJson, stringifyJson } from "../helpers/jsonCol.js";
 import { normalizeComboPromptSettings, validateComboPromptSettings } from "../../comboPromptInjection.js";
+import { assertAliasComboNameAvailable } from "../helpers/modelsAliasesNamespace.js";
 
 export function rowToCombo(row) {
   if (!row) return null;
@@ -46,10 +47,13 @@ export async function createCombo(data) {
     createdAt: now,
     updatedAt: now,
   };
-  db.run(
-    `INSERT INTO combos(id, name, kind, models, createdAt, updatedAt, promptInjectionEnabled, promptInjectionMode, systemPrompt, displayIdentity) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [combo.id, combo.name, combo.kind, stringifyJson(combo.models), combo.createdAt, combo.updatedAt, combo.promptInjectionEnabled ? 1 : 0, combo.promptInjectionMode, combo.systemPrompt, combo.displayIdentity]
-  );
+  db.transaction(() => {
+    assertAliasComboNameAvailable(db, combo.name);
+    db.run(
+      `INSERT INTO combos(id, name, kind, models, createdAt, updatedAt, promptInjectionEnabled, promptInjectionMode, systemPrompt, displayIdentity) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [combo.id, combo.name, combo.kind, stringifyJson(combo.models), combo.createdAt, combo.updatedAt, combo.promptInjectionEnabled ? 1 : 0, combo.promptInjectionMode, combo.systemPrompt, combo.displayIdentity]
+    );
+  });
   return combo;
 }
 
@@ -61,6 +65,7 @@ export async function updateCombo(id, data) {
     const row = db.get(`SELECT * FROM combos WHERE id = ?`, [id]);
     if (!row) return;
     const merged = { ...rowToCombo(row), ...data, ...promptSettings, updatedAt: new Date().toISOString() };
+    assertAliasComboNameAvailable(db, merged.name, { comboId: id });
     db.run(
       `UPDATE combos SET name = ?, kind = ?, models = ?, updatedAt = ?, promptInjectionEnabled = ?, promptInjectionMode = ?, systemPrompt = ?, displayIdentity = ? WHERE id = ?`,
       [merged.name, merged.kind, stringifyJson(merged.models || []), merged.updatedAt, merged.promptInjectionEnabled ? 1 : 0, merged.promptInjectionMode, merged.systemPrompt, merged.displayIdentity, id]

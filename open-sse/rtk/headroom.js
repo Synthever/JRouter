@@ -212,40 +212,132 @@ function applyKiroHeadroomMessages(projection, compressedMessages, diagnostics) 
   return true;
 }
 
+function throwIfAborted(signal) {
+  if (signal?.aborted) throw signal.reason;
+}
+
+function awaitWithSignal(promise, signal) {
+  if (!signal) return promise;
+  if (signal.aborted) return Promise.reject(signal.reason);
+  return new Promise((resolve, reject) => {
+    const onAbort = () => reject(signal.reason);
+    signal.addEventListener("abort", onAbort, { once: true });
+    Promise.resolve(promise).then(
+      (value) => { signal.removeEventListener("abort", onAbort); resolve(value); },
+      (error) => { signal.removeEventListener("abort", onAbort); reject(error); },
+    );
+  });
+}
+
+function createRequestSignal(signal, timeoutMs) {
+  const controller = new AbortController();
+  const timeoutSignal = AbortSignal.timeout(timeoutMs);
+  const abortFromCaller = () => controller.abort(signal.reason);
+  const abortFromTimeout = () => controller.abort(timeoutSignal.reason);
+  if (signal?.aborted) abortFromCaller();
+  else signal?.addEventListener("abort", abortFromCaller, { once: true });
+  if (timeoutSignal.aborted) abortFromTimeout();
+  else timeoutSignal.addEventListener("abort", abortFromTimeout, { once: true });
+  return {
+    signal: controller.signal,
+    dispose() {
+      signal?.removeEventListener("abort", abortFromCaller);
+      timeoutSignal.removeEventListener("abort", abortFromTimeout);
+    },
+  };
+}
+
+function cancelBody(body) {
+  try { Promise.resolve(body?.cancel()).catch(() => {}); } catch { /* best effort */ }
+}
+
+function cancelReader(reader) {
+  let cancellation;
+  try { cancellation = Promise.resolve(reader?.cancel()); } catch { cancellation = Promise.resolve(); }
+  try { reader?.releaseLock(); } catch { /* pending reads may defer release */ }
+  cancellation.then(() => {
+    try { reader?.releaseLock(); } catch { /* ignore an already released or errored reader */ }
+  }, () => {});
+}
+
+async function readJsonBody(body, signal) {
+  let reader;
+  try { reader = body?.getReader?.(); } catch (error) {
+    cancelBody(body);
+    throw error;
+  }
+  if (!reader) throw new TypeError("proxy response has no readable body");
+  let complete = false;
+  try {
+    const chunks = [];
+    while (true) {
+      const { done, value } = await awaitWithSignal(reader.read(), signal);
+      if (done) { complete = true; break; }
+      chunks.push(Buffer.from(value));
+    }
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  } finally {
+    if (!complete) cancelReader(reader);
+    else { try { reader.releaseLock(); } catch { /* ignore */ } }
+  }
+}
+
 // POST messages to Headroom /v1/compress; returns compressed messages + stats or null.
-async function callCompress(url, messages, model, timeoutMs, compressUserMessages, diagnostics) {
+async function callCompress(url, messages, model, timeoutMs, compressUserMessages, diagnostics, callerSignal) {
+  throwIfAborted(callerSignal);
   const endpoint = buildCompressEndpoint(url);
   diagnostics.endpoint = maskEndpoint(endpoint);
   const payload = { messages, model };
   if (compressUserMessages) payload.config = { compress_user_messages: true };
-  let res;
+  const request = createRequestSignal(callerSignal, timeoutMs);
+  let response;
+  let readerOwnsBody = false;
   try {
-    res = await fetch(endpoint, {
+    throwIfAborted(callerSignal);
+    const pendingResponse = fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(timeoutMs),
+      signal: request.signal,
     });
+    Promise.resolve(pendingResponse).then((lateResponse) => {
+      if (request.signal.aborted) cancelBody(lateResponse?.body);
+    }, () => {});
+    response = await awaitWithSignal(pendingResponse, request.signal);
+    throwIfAborted(callerSignal);
+    if (!response.ok) {
+      cancelBody(response.body);
+      setDiagnostic(diagnostics, `proxy returned HTTP ${response.status}`);
+      return null;
+    }
+    readerOwnsBody = typeof response.body?.getReader === "function";
+    const data = await readJsonBody(response.body, request.signal);
+    throwIfAborted(callerSignal);
+    if (!Array.isArray(data?.messages)) {
+      setDiagnostic(diagnostics, "proxy response missing messages[]");
+      return null;
+    }
+    return data;
   } catch (error) {
+    if (callerSignal?.aborted) throw callerSignal.reason;
     setDiagnostic(diagnostics, `request failed: ${describeFetchError(error)}`);
     return null;
+  } finally {
+    request.dispose();
+    if (!readerOwnsBody && response?.body && response.ok) cancelBody(response.body);
   }
-  if (!res.ok) {
-    setDiagnostic(diagnostics, `proxy returned HTTP ${res.status}`);
-    return null;
-  }
-  const data = await res.json();
-  if (!Array.isArray(data?.messages)) {
-    setDiagnostic(diagnostics, "proxy response missing messages[]");
-    return null;
-  }
-  return data;
 }
 
-// Compress request body via Headroom proxy. Fail-open: returns null on any error.
-// /v1/compress only understands OpenAI shape, so Claude bodies are translated
-// to OpenAI, compressed, then translated back using 9Router's own translators.
-export async function compressWithHeadroom(body, { enabled, url, model, format, compressUserMessages, timeoutMs = DEFAULT_TIMEOUT_MS, diagnostics = null } = {}) {
+/**
+ * Compress a request through Headroom; ordinary upstream errors fail open.
+ * Optional `signal` cancels fetch/response reads and is rethrown with its original
+ * reason (including null); callers must propagate it at the request boundary.
+ * /v1/compress only understands OpenAI shape, so transformed formats are bridged
+ * through the existing translators.
+ */
+// Fail-open applies to timeout and ordinary upstream errors, not caller cancellation.
+export async function compressWithHeadroom(body, { enabled, url, model, format, compressUserMessages, timeoutMs = DEFAULT_TIMEOUT_MS, diagnostics = null, signal } = {}) {
+  throwIfAborted(signal);
   timeoutMs = normalizeTimeout(timeoutMs);
   if (!enabled) {
     setDiagnostic(diagnostics, "disabled");
@@ -270,9 +362,11 @@ export async function compressWithHeadroom(body, { enabled, url, model, format, 
         setDiagnostic(diagnostics, "Claude request did not translate to messages[]");
         return null;
       }
-      const data = await callCompress(url, oai.messages, model, timeoutMs, compressUserMessages, diagnostics || {});
+      const data = await callCompress(url, oai.messages, model, timeoutMs, compressUserMessages, diagnostics || {}, signal);
+      throwIfAborted(signal);
       if (!data) return null;
       const claudeBody = openaiToClaudeRequest(model, { ...oai, messages: data.messages }, false);
+      throwIfAborted(signal);
       if (Array.isArray(claudeBody?.messages)) body.messages = claudeBody.messages;
       if (claudeBody?.system !== undefined) body.system = claudeBody.system;
       if (diagnostics) diagnostics.after = captureSizeSnapshot(body);
@@ -292,7 +386,8 @@ export async function compressWithHeadroom(body, { enabled, url, model, format, 
         setDiagnostic(diagnostics, "openai-responses request did not translate to messages[]");
         return null;
       }
-      const data = await callCompress(url, oai.messages, model, timeoutMs, compressUserMessages, diagnostics || {});
+      const data = await callCompress(url, oai.messages, model, timeoutMs, compressUserMessages, diagnostics || {}, signal);
+      throwIfAborted(signal);
       if (!data) return null;
       // input: undefined so the translator rebuilds input from the compressed
       // messages instead of returning the original input unchanged.
@@ -315,7 +410,8 @@ export async function compressWithHeadroom(body, { enabled, url, model, format, 
         setDiagnostic(diagnostics, "Kiro request did not project to messages[]");
         return null;
       }
-      const data = await callCompress(url, projection.messages, model, timeoutMs, compressUserMessages, diagnostics || {});
+      const data = await callCompress(url, projection.messages, model, timeoutMs, compressUserMessages, diagnostics || {}, signal);
+      throwIfAborted(signal);
       if (!data) return null;
       if (!applyKiroHeadroomMessages(projection, data.messages, diagnostics)) return null;
       if (diagnostics) diagnostics.after = captureSizeSnapshot(body);
@@ -330,12 +426,14 @@ export async function compressWithHeadroom(body, { enabled, url, model, format, 
       setDiagnostic(diagnostics, `unsupported ${format || "unknown"} request shape`);
       return null;
     }
-    const data = await callCompress(url, body[key], model, timeoutMs, compressUserMessages, diagnostics || {});
+    const data = await callCompress(url, body[key], model, timeoutMs, compressUserMessages, diagnostics || {}, signal);
+    throwIfAborted(signal);
     if (!data) return null;
     body[key] = data.messages;
     if (diagnostics) diagnostics.after = captureSizeSnapshot(body);
     return data;
   } catch (error) {
+    if (signal?.aborted) throw signal.reason;
     setDiagnostic(diagnostics, `unexpected error: ${error?.message || String(error)}`);
     return null;
   }

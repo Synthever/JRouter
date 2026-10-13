@@ -4,6 +4,7 @@ import {
   refreshTokenByProvider,
 } from "./tokenRefresh.js";
 import { PROVIDER_OAUTH } from "../providers/index.js";
+import { joinSharedOperation } from "../utils/sharedOperation.js";
 
 // Single source: codex.oauth.maxRefreshAgeMs (8 days) — proactive refresh window
 export const CODEX_MAX_REFRESH_AGE_MS = PROVIDER_OAUTH["codex"]?.maxRefreshAgeMs;
@@ -131,26 +132,18 @@ function getRefreshLockKey(provider, credentials) {
   return `${provider}:${stableId}`;
 }
 
-export async function withCredentialRefreshLock(provider, credentials, refreshFn) {
-  const key = getRefreshLockKey(provider, credentials);
-  const existing = refreshLocks.get(key);
-  if (existing) return existing;
-
-  const pending = Promise.resolve()
-    .then(refreshFn)
-    .finally(() => {
-      refreshLocks.delete(key);
-    });
-
-  refreshLocks.set(key, pending);
-  return pending;
+/** withCredentialRefreshLock(provider, credentials, start(sharedSignal), {signal}) */
+export async function withCredentialRefreshLock(provider, credentials, refreshFn, options = {}) {
+  return joinSharedOperation(refreshLocks, getRefreshLockKey(provider, credentials), refreshFn, options);
 }
 
-export async function refreshProviderCredentials(provider, credentials, log) {
+/** refreshProviderCredentials(provider, credentials, log, {signal,recoveryBudget}) */
+export async function refreshProviderCredentials(provider, credentials, log, options = {}) {
+  options.signal?.throwIfAborted();
   if (!credentials) return null;
-
-  return withCredentialRefreshLock(provider, credentials, async () => {
-    const refreshed = await refreshTokenByProvider(provider, credentials, log);
-    return mergeRefreshedCredentials(provider, credentials, refreshed);
-  });
+  // Concrete token dedup owns acquisition. Every waiter reaches it with its own
+  // budget; an outer lock here would silently borrow the first waiter's claim.
+  const refreshed = await refreshTokenByProvider(provider, credentials, log, options);
+  options.signal?.throwIfAborted();
+  return mergeRefreshedCredentials(provider, credentials, refreshed);
 }

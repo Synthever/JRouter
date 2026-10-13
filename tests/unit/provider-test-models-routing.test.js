@@ -15,6 +15,11 @@ vi.mock("@/shared/utils/machineId", () => ({
   getConsistentMachineId: mocks.getConsistentMachineId,
 }));
 
+vi.mock("@/lib/auth/dashboardSession", () => ({ verifyDashboardAuthToken: vi.fn(async token => token === "dashboard-fixture") }));
+vi.mock("@/lib/db/repos/settingsRepo.js", () => ({ getSettings: vi.fn(async () => ({ requireLogin: true })) }));
+vi.mock("@/sse/services/model.js", () => ({ resolveModelInfo: vi.fn(async model => ({ provider: "huggingface", model: model.slice(model.indexOf("/") + 1) })) }));
+vi.mock("@/sse/handlers/providerChat.js", () => ({ executeProviderChat: vi.fn(async () => ({ response: Response.json({ choices: [{ message: { role: "assistant", content: "ok" } }] }) })) }));
+
 vi.mock("next/server", () => ({
   NextResponse: {
     json(body, init = {}) {
@@ -65,7 +70,7 @@ describe("provider test-models route kind routing", () => {
 
     const req = new Request("http://localhost/api/providers/conn-hf/test-models", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", cookie: "auth_token=dashboard-fixture" },
     });
 
     const res = await POST(req, { params: Promise.resolve({ id: "conn-hf" }) });

@@ -6,6 +6,7 @@
 
 import { resolveConnectionProxyConfig } from "@/lib/network/connectionProxy";
 import { getAntigravityUsage } from "open-sse/services/usage/google.js";
+import { joinSharedOperation } from "open-sse/utils/sharedOperation.js";
 import * as log from "../utils/logger.js";
 
 // In-memory cache: connectionId → { [modelId]: { remainingPercentage, resetAt } }
@@ -187,32 +188,31 @@ export function getAntigravityQuotaCache() {
  * Updates in-memory cache only. Cache expiry is the upstream model resetAt.
  * @returns {object|null} quotas map or null on failure
  */
-export async function refreshAntigravityQuota(connectionId, accessToken, providerSpecificData) {
+export async function refreshAntigravityQuota(connectionId, accessToken, providerSpecificData, { signal } = {}) {
+  signal?.throwIfAborted();
   const now = Date.now();
-  // Coalesce concurrent refreshes before applying the interval gate.
-  const inflight = inflightRefresh.get(connectionId);
-  if (inflight) return inflight;
-
-  const lastRefresh = lastRefreshAt.get(connectionId) || 0;
-  if (now - lastRefresh < MIN_REFRESH_INTERVAL_MS) {
-    log.debug("AG_QUOTA", `${connectionId.slice(0, 8)} | skip refresh (${Math.round((now - lastRefresh) / 1000)}s ago)`);
-    return quotaCache.get(connectionId) || null;
+  // Coalesce owners before applying the interval gate.
+  if (!inflightRefresh.has(connectionId)) {
+    const lastRefresh = lastRefreshAt.get(connectionId) || 0;
+    if (now - lastRefresh < MIN_REFRESH_INTERVAL_MS) {
+      log.debug("AG_QUOTA", `${connectionId.slice(0, 8)} | skip refresh (${Math.round((now - lastRefresh) / 1000)}s ago)`);
+      return quotaCache.get(connectionId) || null;
+    }
   }
 
-  // Record every attempt so failed quota calls cannot amplify an upstream 429 burst.
-  lastRefreshAt.set(connectionId, now);
-  const promise = _doRefresh(connectionId, accessToken, providerSpecificData, now);
-  inflightRefresh.set(connectionId, promise);
-  try {
-    return await promise;
-  } finally {
-    inflightRefresh.delete(connectionId);
-  }
+  return joinSharedOperation(inflightRefresh, connectionId, sharedSignal => {
+    // Retain attempt throttling even if owners leave after dispatch starts.
+    lastRefreshAt.set(connectionId, now);
+    // A signal-less initiating owner is permanent: retain the legacy usage arity.
+    return _doRefresh(connectionId, accessToken, providerSpecificData, sharedSignal, Boolean(signal));
+  }, { signal });
 }
 
-async function _doRefresh(connectionId, accessToken, providerSpecificData, now) {
+async function _doRefresh(connectionId, accessToken, providerSpecificData, signal, cancellable) {
   try {
+    signal.throwIfAborted();
     const proxyCfg = await resolveConnectionProxyConfig(providerSpecificData || {});
+    signal.throwIfAborted();
     const proxyOptions = {
       connectionProxyEnabled: proxyCfg.connectionProxyEnabled === true,
       connectionProxyUrl: proxyCfg.connectionProxyUrl || "",
@@ -221,10 +221,11 @@ async function _doRefresh(connectionId, accessToken, providerSpecificData, now) 
       strictProxy: proxyCfg.strictProxy === true,
     };
 
-    const usage = await getAntigravityUsage(accessToken, providerSpecificData, proxyOptions);
+    const usage = await getAntigravityUsage(accessToken, providerSpecificData, proxyOptions, ...(cancellable ? [{ signal }] : []));
+    signal.throwIfAborted();
     // 401/403 usage responses can contain an empty quotas object plus message.
     // Preserve known cache instead of replacing it with an upstream error response.
-    if (!usage?.quotas || usage.message) return null;
+    if (!usage?.quotas || usage.message || Object.keys(usage.quotas).length === 0) return null;
 
     // Update in-memory cache. Caller logs CACHE_BLOCK only if requested model is exhausted.
     // Strike blocks are re-asserted after every refresh so an optimistic
@@ -233,6 +234,7 @@ async function _doRefresh(connectionId, accessToken, providerSpecificData, now) 
 
     return usage.quotas;
   } catch (e) {
+    signal.throwIfAborted();
     log.warn("AG_QUOTA", `${connectionId.slice(0, 8)} | refresh failed: ${e.message}`);
     return null;
   }
@@ -243,12 +245,14 @@ async function _doRefresh(connectionId, accessToken, providerSpecificData, now) 
  * Called from chat handler error path.
  * @returns {number|null} resetAt timestamp ms (for resetsAtMs passthrough) or null
  */
-export async function handleAntigravityQuotaError(connectionId, status, model, accessToken, providerSpecificData) {
+export async function handleAntigravityQuotaError(connectionId, status, model, accessToken, providerSpecificData, { signal } = {}) {
+  signal?.throwIfAborted();
   log.info("AG_QUOTA", `${connectionId.slice(0, 8)} | ${status} on ${model} — refreshing quota`);
 
   // Throttle applies to error paths too: one quota request per account/30s.
   // The first 409/429 populates cache; concurrent or repeated errors reuse it.
-  const quotas = await refreshAntigravityQuota(connectionId, accessToken, providerSpecificData);
+  const quotas = await refreshAntigravityQuota(connectionId, accessToken, providerSpecificData, ...(signal ? [{ signal }] : []));
+  signal?.throwIfAborted();
   const quota = getAntigravityModelQuota(quotas, model);
 
   // Strike breaker: count every 429 whose quota reading is either optimistic

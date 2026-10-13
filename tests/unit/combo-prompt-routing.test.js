@@ -1,7 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({ combo: null, nested: null, settings: {}, calls: [], failFirst: false }));
 vi.mock("open-sse/index.js", () => ({}));
-vi.mock("@/lib/apiKeyPolicy/gateway.js", () => ({ withApiKeyPolicy: (request, handler) => handler(request) }));
+vi.mock("@/lib/apiKeyPolicy/gateway.js", () => ({
+  extractPolicyApiKey: () => null,
+  withApiKeyPolicy: async (request, handler) => {
+    const { model } = await request.clone().json();
+    const combo = model === state.combo?.name ? state.combo : state.nested;
+    const leaves = combo.models.flatMap(id => id === state.nested?.name ? state.nested.models : [id]);
+    const members = leaves.map(requested => {
+      const slash = requested.indexOf("/");
+      return { requested, provider: requested.slice(0, slash), model: requested.slice(slash + 1), canonicalId: requested };
+    });
+    const { createAuthorizedVirtualTarget } = await import("@/lib/apiKeyPolicy/virtualTargets.js");
+    const { runWithPublicLlmAdmission } = await import("@/lib/apiKeyPolicy/context.js");
+    const authorized = createAuthorizedVirtualTarget({ kind: "combo", name: combo.name, requestedId: model, publicId: `jrouter/${combo.name}`, config: combo, members: combo.models, comboConfigs: [combo, ...(state.nested ? [state.nested] : [])] }, members);
+    return runWithPublicLlmAdmission({ authorized, endpoint: "chat", billable: true, keySecret: null }, () => handler(request));
+  },
+}));
 vi.mock("@/lib/localDb", () => ({ getSettings: async () => state.settings, getComboByName: async (name) => name === state.combo?.name ? state.combo : name === state.nested?.name ? state.nested : null }));
 vi.mock("@/sse/services/model.js", () => ({
   getComboModels: async (name) => name === state.combo?.name ? state.combo.models : name === state.nested?.name ? state.nested.models : null,
@@ -15,6 +30,7 @@ vi.mock("open-sse/handlers/chatCore.js", () => ({ handleChatCore: async (options
   return { success: true, response: Response.json({ choices: [{ message: { content: "answer" } }] }) };
 } }));
 import { handleChat } from "@/sse/handlers/chat.js";
+import { executeProviderChat } from "@/sse/handlers/providerChat.js";
 
 beforeEach(() => {
   state.combo = { name: "smart", models: ["openai/actual", "openai/backup"], promptInjectionEnabled: true, promptInjectionMode: "prepend", systemPrompt: "Persona {{display_name}} for {{requested_model}}", displayIdentity: "Support" };
@@ -62,7 +78,7 @@ describe("combo prompt gateway integration", () => {
   it("leaves disabled combos and direct models unchanged", async () => {
     state.combo.promptInjectionEnabled = false;
     await send({ messages: [{ role: "user", content: "Hello" }] });
-    await send({ model: "openai/actual", messages: [{ role: "user", content: "Hello" }] });
+    await executeProviderChat({ body: { model: "openai/actual", stream: false, messages: [{ role: "user", content: "Hello" }] }, member: { provider: "openai", model: "actual" } });
     for (const options of state.calls) expect(options.body.messages).toHaveLength(1);
   });
 });

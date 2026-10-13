@@ -13,6 +13,101 @@ import { SSE_DONE } from "../utils/sseConstants.js";
 import { ANTHROPIC_API_VERSION } from "../providers/shared.js";
 import crypto from "crypto";
 
+function generationSignal(signal, executionOptions) {
+  const attemptSignal = executionOptions?.attempt?.signal;
+  return signal && attemptSignal && signal !== attemptSignal ? AbortSignal.any([signal, attemptSignal]) : signal || attemptSignal;
+}
+
+function guardGeneration(signal, executionOptions) {
+  const attempt = executionOptions?.attempt;
+  if (!attempt?.outputStarted && Number.isFinite(attempt?.deadlineAt) && Date.now() >= attempt.deadlineAt) {
+    attempt.abort?.("initial-output-deadline");
+  }
+  signal?.throwIfAborted();
+}
+
+function cancelBody(body, reason) {
+  try { Promise.resolve(body?.cancel(reason)).catch(() => {}); } catch { /* Keep the original cancellation reason. */ }
+}
+
+function guardResponse(response, signal, executionOptions) {
+  try {
+    guardGeneration(signal, executionOptions);
+  } catch (error) {
+    cancelBody(response.body, signal?.aborted ? signal.reason : error);
+    throw error;
+  }
+}
+
+async function fetchGeneration(url, headers, transformedBody, signal, proxyOptions, executionOptions) {
+  let response;
+  try {
+    guardGeneration(signal, executionOptions);
+    const fetchOptions = { method: "POST", headers, body: JSON.stringify(transformedBody), signal };
+    guardGeneration(signal, executionOptions);
+    response = executionOptions?.alias === true || executionOptions?.allowNetworkReplay === false
+      ? await proxyAwareFetch(url, fetchOptions, proxyOptions, { allowNetworkReplay: false })
+      : await proxyAwareFetch(url, fetchOptions, proxyOptions);
+    guardGeneration(signal, executionOptions);
+    return response;
+  } catch (error) {
+    if (signal?.aborted) cancelBody(response?.body, signal.reason);
+    signal?.throwIfAborted();
+    throw error;
+  }
+}
+
+// Own the native error reader instead of teeing a clone whose cancel can wait on
+// the unread original branch. Restore exact bytes when no endpoint is selected.
+async function inspectEndpointError(response, signal, executionOptions) {
+  let reader;
+  let onAbort;
+  try {
+    guardGeneration(signal, executionOptions);
+    if (!response.body) return { response, text: "" };
+    reader = response.body.getReader();
+    const aborted = new Promise((resolve, reject) => {
+      onAbort = () => {
+        cancelBody(reader, signal.reason);
+        reject(signal.reason);
+      };
+      signal?.addEventListener("abort", onAbort, { once: true });
+    });
+    aborted.catch(() => {});
+    const chunks = [];
+    let length = 0;
+    while (true) {
+      guardGeneration(signal, executionOptions);
+      const { done, value } = await Promise.race([reader.read(), aborted]);
+      guardGeneration(signal, executionOptions);
+      if (done) break;
+      chunks.push(value);
+      length += value.byteLength;
+      // Ready reads otherwise monopolize microtasks and delay client/config abort.
+      if (signal && chunks.length % 16 === 0) {
+        let timer;
+        try {
+          await Promise.race([new Promise(resolve => { timer = setTimeout(resolve, 0); }), aborted]);
+        } finally { clearTimeout(timer); }
+        guardGeneration(signal, executionOptions);
+      }
+    }
+    const bytes = new Uint8Array(length);
+    let offset = 0;
+    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+    return { text: new TextDecoder().decode(bytes), response: new Response(bytes, {
+      status: response.status, statusText: response.statusText, headers: response.headers
+    }) };
+  } catch (error) {
+    cancelBody(reader || response.body, signal?.aborted ? signal.reason : error);
+    signal?.throwIfAborted();
+    throw error;
+  } finally {
+    signal?.removeEventListener("abort", onAbort);
+    reader?.releaseLock();
+  }
+}
+
 export class GithubExecutor extends BaseExecutor {
   constructor() {
     super("github", PROVIDERS.github);
@@ -95,7 +190,7 @@ export class GithubExecutor extends BaseExecutor {
     return /gpt-5|o[134]-/i.test(model);
   }
 
-  transformRequest(model, body, stream, credentials) {
+  transformRequest(model, body, stream, credentials, executionOptions = null) {
     const transformed = { ...body };
     if (this.requiresMaxCompletionTokens(model) && transformed.max_tokens !== undefined) {
       transformed.max_completion_tokens = transformed.max_tokens;
@@ -121,7 +216,11 @@ export class GithubExecutor extends BaseExecutor {
   }
 
   async execute(options) {
-    const { model, log } = options;
+    const { model, log, executionOptions = null } = options;
+    const signal = generationSignal(options.signal, executionOptions);
+    guardGeneration(signal, executionOptions);
+    options = { ...options, signal };
+    const singleAttempt = executionOptions?.alias === true || executionOptions?.retryPolicy === "single-attempt";
 
     // Claude models: route to Copilot's Anthropic-native /v1/messages shim — the only
     // Copilot endpoint that surfaces prompt-cache token counts for Claude. Detected by
@@ -147,15 +246,26 @@ export class GithubExecutor extends BaseExecutor {
     };
 
     const result = await super.execute({ ...sanitizedOptions, proxyOptions: options.proxyOptions || null });
+    guardResponse(result.response, signal, executionOptions);
 
     // Only escalate to /responses for models that endpoint can actually serve.
     // Gemini/Claude would otherwise loop into a misleading "does not support
     // Responses API" 400 instead of surfacing the real /chat/completions error (#1062).
-    if (!options.healthProbe && result.response.status === HTTP_STATUS.BAD_REQUEST && this.supportsResponsesEndpoint(model)) {
-      const errorBody = await result.response.clone().text();
-
-      if (errorBody.includes("not accessible via the /chat/completions endpoint") || errorBody.includes("The requested model is not supported")) {
+    if (!options.healthProbe && !executionOptions?.attempt?.outputStarted && result.response.status === HTTP_STATUS.BAD_REQUEST && this.supportsResponsesEndpoint(model)) {
+      let errorBody;
+      if (singleAttempt || signal) {
+        const inspected = await inspectEndpointError(result.response, signal, executionOptions);
+        errorBody = inspected.text;
+        result.response = inspected.response;
+      } else {
+        errorBody = await result.response.clone().text();
+      }
+      guardGeneration(signal, executionOptions);
+      if (!executionOptions?.attempt?.outputStarted && (errorBody.includes("not accessible via the /chat/completions endpoint") || (!singleAttempt && errorBody.includes("The requested model is not supported")))) {
         log?.warn("GITHUB", `Model ${model} requires /responses. Switching...`);
+        guardGeneration(signal, executionOptions);
+        if (executionOptions?.attempt?.outputStarted) return result;
+        cancelBody(result.response.body);
         this.knownCodexModels.add(model);
         return this.executeWithResponsesEndpoint(options);
       }
@@ -164,20 +274,19 @@ export class GithubExecutor extends BaseExecutor {
     return result;
   }
 
-  async executeWithResponsesEndpoint({ model, body, stream, credentials, signal, log, proxyOptions = null }) {
+  async executeWithResponsesEndpoint({ model, body, stream, credentials, signal, log, proxyOptions = null, executionOptions = null }) {
+    signal = generationSignal(signal, executionOptions);
+    guardGeneration(signal, executionOptions);
     const url = this.config.responsesUrl;
-    const headers = this.buildHeaders(credentials, stream);
-
-    const transformedBody = openaiToOpenAIResponsesRequest(model, body, stream, credentials);
+    const forceStream = executionOptions?.forceUpstreamStreaming === true;
+    const headers = this.buildHeaders(credentials, forceStream ? true : stream);
+    const attemptBody = executionOptions?.alias === true || forceStream ? structuredClone(body) : body;
+    const transformedBody = openaiToOpenAIResponsesRequest(model, attemptBody, forceStream ? true : stream, credentials);
 
     log?.debug("GITHUB", "Sending translated request to /responses");
 
-    const response = await proxyAwareFetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(transformedBody),
-      signal
-    }, proxyOptions);
+    const response = await fetchGeneration(url, headers, transformedBody, signal, proxyOptions, executionOptions);
+    guardResponse(response, signal, executionOptions);
 
     if (!response.ok) {
       return { response, url, headers, transformedBody };
@@ -231,7 +340,7 @@ export class GithubExecutor extends BaseExecutor {
     if (!response.body) {
       return { response: new Response("", { status: response.status, headers: response.headers }), url, headers, transformedBody };
     }
-    const convertedStream = response.body.pipeThrough(transformStream);
+    const convertedStream = response.body.pipeThrough(transformStream, signal ? { signal } : undefined);
 
     return {
       response: new Response(convertedStream, {
@@ -249,15 +358,19 @@ export class GithubExecutor extends BaseExecutor {
   // see the note in execute() above), so we translate to Anthropic-native ourselves.
   // This is what makes prepareClaudeRequest() (translator/formats/claude.js) inject
   // cache_control — /chat/completions never gets there, so it never sees cache tokens.
-  async executeWithMessagesEndpoint({ model, body, stream, credentials, signal, log, proxyOptions = null }) {
+  async executeWithMessagesEndpoint({ model, body, stream, credentials, signal, log, proxyOptions = null, executionOptions = null }) {
+    signal = generationSignal(signal, executionOptions);
+    guardGeneration(signal, executionOptions);
     const url = this.config.messagesUrl;
-    const headers = this.buildHeaders(credentials, stream);
+    const forceStream = executionOptions?.forceUpstreamStreaming === true;
+    const headers = this.buildHeaders(credentials, forceStream ? true : stream);
+    const attemptBody = executionOptions?.alias === true || forceStream ? structuredClone(body) : body;
 
     // Force stream:true upstream regardless of client preference, same as
     // executeWithResponsesEndpoint below — chatCore.js's non-streaming handler already
     // knows how to buffer an SSE response into a single JSON reply when the client
     // asked for stream:false.
-    const transformedBody = translateRequest(FORMATS.OPENAI, FORMATS.CLAUDE, model, body, true, credentials, "github");
+    const transformedBody = translateRequest(FORMATS.OPENAI, FORMATS.CLAUDE, model, attemptBody, true, credentials, "github");
     // _toolNameMap is internal bookkeeping (see openai-to-claude.js) — chatCore.js
     // normally strips it before dispatch and threads it into the response state to
     // restore original tool names; we must do the same here, or Anthropic's strict
@@ -267,12 +380,8 @@ export class GithubExecutor extends BaseExecutor {
 
     log?.debug("GITHUB", "Sending translated request to /v1/messages");
 
-    const response = await proxyAwareFetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(transformedBody),
-      signal
-    }, proxyOptions);
+    const response = await fetchGeneration(url, headers, transformedBody, signal, proxyOptions, executionOptions);
+    guardResponse(response, signal, executionOptions);
 
     if (!response.ok) {
       return { response, url, headers, transformedBody };
@@ -326,7 +435,7 @@ export class GithubExecutor extends BaseExecutor {
     if (!response.body) {
       return { response: new Response("", { status: response.status, headers: response.headers }), url, headers, transformedBody };
     }
-    const convertedStream = response.body.pipeThrough(transformStream);
+    const convertedStream = response.body.pipeThrough(transformStream, signal ? { signal } : undefined);
 
     return {
       response: new Response(convertedStream, {
@@ -340,8 +449,13 @@ export class GithubExecutor extends BaseExecutor {
     };
   }
 
-  async refreshCopilotToken(githubAccessToken, log, proxyOptions = null) {
+  async refreshCopilotToken(githubAccessToken, log, proxyOptions = null, { signal, recoveryBudget } = {}) {
+    const policy = signal !== undefined || recoveryBudget !== undefined;
     try {
+      signal?.throwIfAborted();
+      if (policy && !githubAccessToken) return null;
+      if (recoveryBudget && !recoveryBudget.claimRefresh()) return null;
+      signal?.throwIfAborted();
       const response = await proxyAwareFetch("https://api.github.com/copilot_internal/v2/token", {
         headers: {
           "Authorization": `token ${githubAccessToken}`,
@@ -350,24 +464,39 @@ export class GithubExecutor extends BaseExecutor {
           "Editor-Plugin-Version": `copilot-chat/${GITHUB_COPILOT.COPILOT_CHAT_VERSION}`,
           "Accept": "application/json",
           "x-github-api-version": GITHUB_COPILOT.API_VERSION
-        }
+        },
+        ...(signal ? { signal } : {})
       }, proxyOptions);
+      if (signal?.aborted) {
+        try { Promise.resolve(response?.body?.cancel(signal.reason)).catch(() => {}); } catch { /* Preserve the abort reason. */ }
+        throw signal.reason;
+      }
       if (!response.ok) {
-        const errorText = await response.text();
+        const errorText = await this.#readRefreshBody(response, "text", signal);
+        signal?.throwIfAborted();
         log?.error?.("TOKEN", `Copilot token refresh failed: ${response.status} ${errorText}`);
+        signal?.throwIfAborted();
         return null;
       }
-      const data = await response.json();
+      const data = await this.#readRefreshBody(response, "json", signal);
+      signal?.throwIfAborted();
       log?.info?.("TOKEN", "Copilot token refreshed");
+      signal?.throwIfAborted();
       return { token: data.token, expiresAt: data.expires_at };
     } catch (error) {
+      if (signal?.aborted) throw signal.reason;
       log?.error?.("TOKEN", `Copilot refresh error: ${error.message}`);
       return null;
     }
   }
 
-  async refreshGitHubToken(refreshToken, log, proxyOptions = null) {
+  async refreshGitHubToken(refreshToken, log, proxyOptions = null, { signal, recoveryBudget } = {}) {
+    const policy = signal !== undefined || recoveryBudget !== undefined;
     try {
+      signal?.throwIfAborted();
+      if (policy && !refreshToken) return null;
+      if (recoveryBudget && !recoveryBudget.claimRefresh()) return null;
+      signal?.throwIfAborted();
       const params = {
         grant_type: "refresh_token",
         refresh_token: refreshToken,
@@ -380,34 +509,136 @@ export class GithubExecutor extends BaseExecutor {
       const response = await proxyAwareFetch(OAUTH_ENDPOINTS.github.token, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" },
-        body: new URLSearchParams(params)
+        body: new URLSearchParams(params),
+        ...(signal ? { signal } : {})
       }, proxyOptions);
+      if (signal?.aborted) {
+        try { Promise.resolve(response?.body?.cancel(signal.reason)).catch(() => {}); } catch { /* Preserve the abort reason. */ }
+        throw signal.reason;
+      }
       if (!response.ok) return null;
-      const tokens = await response.json();
+      const tokens = await this.#readRefreshBody(response, "json", signal);
+      signal?.throwIfAborted();
       log?.info?.("TOKEN", "GitHub token refreshed");
+      signal?.throwIfAborted();
       return { accessToken: tokens.access_token, refreshToken: tokens.refresh_token || refreshToken, expiresIn: tokens.expires_in };
     } catch (error) {
+      if (signal?.aborted) throw signal.reason;
       log?.error?.("TOKEN", `GitHub refresh error: ${error.message}`);
       return null;
     }
   }
 
-  async refreshCredentials(credentials, log, proxyOptions = null) {
-    let copilotResult = await this.refreshCopilotToken(credentials.accessToken, log, proxyOptions);
+  // Read the response body under the concrete GitHub refresh methods' ownership.
+  async #readRefreshBody(response, kind, signal) {
+    if (!signal) return response[kind]();
+    signal.throwIfAborted();
+    const reader = response.body?.getReader?.();
+    if (!reader) {
+      let onAbort;
+      let abortPromise;
+      let cancellationStarted = false;
+      try {
+        abortPromise = new Promise((resolve, reject) => {
+          onAbort = () => {
+            if (cancellationStarted) return;
+            cancellationStarted = true;
+            try { Promise.resolve(response.body?.cancel(signal.reason)).catch(() => {}); } catch { /* Preserve the abort reason. */ }
+            reject(signal.reason);
+          };
+          signal.addEventListener("abort", onAbort, { once: true });
+        });
+        abortPromise.catch(() => {});
+        if (signal.aborted) onAbort();
+        signal.throwIfAborted();
+        const pending = response[kind]();
+        const value = await Promise.race([pending, abortPromise]);
+        signal.throwIfAborted();
+        return value;
+      } finally {
+        signal.removeEventListener("abort", onAbort);
+      }
+    }
+
+    let onAbort;
+    let timer;
+    let cancellationStarted = false;
+    const chunks = [];
+    let length = 0;
+    try {
+      const aborted = new Promise((resolve, reject) => {
+        onAbort = () => {
+          if (cancellationStarted) return;
+          cancellationStarted = true;
+          try { Promise.resolve(reader.cancel(signal.reason)).catch(() => {}); } catch { /* Preserve the abort reason. */ }
+          reject(signal.reason);
+        };
+        signal.addEventListener("abort", onAbort, { once: true });
+      });
+      aborted.catch(() => {});
+      if (signal.aborted) onAbort();
+      signal.throwIfAborted();
+      while (true) {
+        signal.throwIfAborted();
+        const { done, value } = await Promise.race([reader.read(), aborted]);
+        signal.throwIfAborted();
+        if (done) break;
+        chunks.push(value);
+        length += value.byteLength;
+        if (chunks.length % 16 === 0) {
+          await Promise.race([new Promise(resolve => { timer = setTimeout(resolve, 0); }), aborted]);
+          clearTimeout(timer);
+          timer = null;
+          signal.throwIfAborted();
+        }
+      }
+      const bytes = new Uint8Array(length);
+      let offset = 0;
+      for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+      const text = new TextDecoder().decode(bytes);
+      return kind === "json" ? JSON.parse(text) : text;
+    } catch (error) {
+      if (signal.aborted) throw signal.reason;
+      try { Promise.resolve(reader.cancel(error)).catch(() => {}); } catch { /* Preserve the read error. */ }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", onAbort);
+      try { reader.releaseLock(); } catch { /* Native stream cleanup can finish after cancellation. */ }
+    }
+  }
+
+  async refreshCredentials(credentials, log, proxyOptions = null, { signal, recoveryBudget } = {}) {
+    const policy = signal !== undefined || recoveryBudget !== undefined;
+    signal?.throwIfAborted();
+    if (policy && !credentials) return null;
+    const refreshOptions = { signal, recoveryBudget };
+    let copilotResult = policy && !credentials.accessToken
+      ? null
+      : await this.refreshCopilotToken(credentials.accessToken, log, proxyOptions, refreshOptions);
+    signal?.throwIfAborted();
 
     if (!copilotResult && credentials.refreshToken) {
-      const githubTokens = await this.refreshGitHubToken(credentials.refreshToken, log, proxyOptions);
+      const githubTokens = await this.refreshGitHubToken(credentials.refreshToken, log, proxyOptions, refreshOptions);
+      signal?.throwIfAborted();
       if (githubTokens?.accessToken) {
-        copilotResult = await this.refreshCopilotToken(githubTokens.accessToken, log, proxyOptions);
+        copilotResult = await this.refreshCopilotToken(githubTokens.accessToken, log, proxyOptions, refreshOptions);
+        signal?.throwIfAborted();
         if (copilotResult) {
-          return { ...githubTokens, copilotToken: copilotResult.token, copilotTokenExpiresAt: copilotResult.expiresAt };
+          const refreshed = { ...githubTokens, copilotToken: copilotResult.token, copilotTokenExpiresAt: copilotResult.expiresAt };
+          signal?.throwIfAborted();
+          return refreshed;
         }
+        signal?.throwIfAborted();
         return githubTokens;
       }
     }
 
+    signal?.throwIfAborted();
     if (copilotResult) {
-      return { accessToken: credentials.accessToken, refreshToken: credentials.refreshToken, copilotToken: copilotResult.token, copilotTokenExpiresAt: copilotResult.expiresAt };
+      const refreshed = { accessToken: credentials.accessToken, refreshToken: credentials.refreshToken, copilotToken: copilotResult.token, copilotTokenExpiresAt: copilotResult.expiresAt };
+      signal?.throwIfAborted();
+      return refreshed;
     }
 
     return null;

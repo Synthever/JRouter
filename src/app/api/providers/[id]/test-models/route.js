@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { canManageApiKeys } from "@/lib/apiKeyPolicy/dashboardAuth.js";
 import { getProviderConnectionById } from "@/lib/localDb";
 import { getProviderModels, PROVIDER_ID_TO_ALIAS } from "open-sse/config/providerModels.js";
 import { isOpenAICompatibleProvider, isAnthropicCompatibleProvider } from "@/shared/constants/providers";
@@ -11,6 +12,7 @@ import { pingModelByKind } from "@/app/api/models/test/ping";
  * Actual requests go through the internal endpoint that matches each model kind.
  */
 export async function POST(request, { params }) {
+  if (!await canManageApiKeys(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {
     const { id } = await params;
     const connection = await getProviderConnectionById(id);
@@ -29,7 +31,7 @@ export async function POST(request, { params }) {
     // Compatible providers: fetch live model list
     if (isCompatible && models.length === 0) {
       try {
-        const modelsRes = await fetch(`${baseUrl}/api/providers/${id}/models`);
+        const modelsRes = await fetch(`${baseUrl}/api/providers/${id}/models`, { headers: request.headers, signal: request.signal });
         if (modelsRes.ok) {
           const data = await modelsRes.json();
           models = (data.models || []).map((m) => ({ id: m.id || m.name, name: m.name || m.id }));
@@ -45,13 +47,13 @@ export async function POST(request, { params }) {
     // This prevents race condition where multiple requests concurrently refresh the same token.
     const [first, ...rest] = models;
     const firstKind = first.kind || first.type || "llm";
-    const firstResult = await pingModelByKind(`${alias}/${first.id}`, firstKind, baseUrl);
+    const firstResult = await pingModelByKind(`${alias}/${first.id}`, firstKind, baseUrl, { request });
     const results = [{ modelId: first.id, name: first.name || first.id, ...firstResult }];
 
     if (rest.length > 0) {
       const restResults = await Promise.all(
         rest.map(async (model) => {
-          const result = await pingModelByKind(`${alias}/${model.id}`, model.kind || model.type || "llm", baseUrl);
+          const result = await pingModelByKind(`${alias}/${model.id}`, model.kind || model.type || "llm", baseUrl, { request });
           return { modelId: model.id, name: model.name || model.id, ...result };
         })
       );

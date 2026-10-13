@@ -5,6 +5,7 @@ import { extractUsage, mergeUsage, hasValidUsage, estimateUsage, logUsage, addBu
 import { parseSSELine, hasValuableContent, hasTokenContent, fixInvalidId, formatSSE } from "./streamHelpers.js";
 import { getOpenAIResponsesEventName, isOpenAIResponsesTerminalEvent, formatIncompleteOpenAIResponsesStreamFailure } from "./responsesStreamHelpers.js";
 import { dbg, isDebugEnabled } from "./debugLog.js";
+import { readAliasProtocolError, isQualifyingModelOutput } from "./aliasOutput.js";
 
 import { SSE_DONE, SSE_HEADERS, SSE_HEADERS_NO_BUFFER } from "./sseConstants.js";
 
@@ -55,7 +56,11 @@ export function createSSEStream(options = {}) {
     body = null,
     onStreamComplete = null,
     apiKey = null,
-    credentials = null
+    credentials = null,
+    onEvent = null,
+    strict = false,
+    suppressAccounting = false,
+    aliasObserverFrameLimit: testAliasObserverFrameLimit
   } = options;
 
   let buffer = "";
@@ -89,6 +94,122 @@ export function createSSEStream(options = {}) {
   let streamDoneSent = false;  // track duplicate [DONE] across transform + flush
   let finalized = false;
   let completionFlushTimer = null;
+  let rawEventName = null;
+  let rawTerminalSeen = false;
+  let aliasObserverBuffer = "";
+  let aliasObserverLineBytes = 0;
+  let aliasObserverData = [];
+  let aliasObserverDataBytes = 0;
+  let aliasObserverEventName = null;
+  const aliasObserverFrameLimit = testAliasObserverFrameLimit ?? 16 * 1024 * 1024;
+  const rawFormat = targetFormat || sourceFormat || FORMATS.OPENAI;
+  const inspectEventData = (data, eventName) => {
+    if (data === "[DONE]") { rawTerminalSeen = true; return; }
+    let event;
+    try { event = JSON.parse(data); } catch (cause) {
+      if (strict) throw Object.assign(new Error("Invalid provider SSE JSON"), { code: "ALIAS_INVALID_JSON", cause });
+      return;
+    }
+    if (eventName && !event.type) event = { ...event, type: eventName };
+    onEvent?.(event, rawFormat);
+    const detail = readAliasProtocolError(event, rawFormat);
+    if (strict && detail) throw Object.assign(new Error(detail.message), { code: "ALIAS_PROTOCOL_ERROR", detail });
+    if (event.choices?.some(choice => choice.finish_reason) || event.type === "message_stop" ||
+        ["response.completed", "response.done"].includes(event.type) || event.done ||
+        (event.response || event).candidates?.some(candidate => candidate.finishReason)) rawTerminalSeen = true;
+  };
+  const inspectLine = (line) => {
+    if (strict || !onEvent) return;
+    const text = line.trim();
+    if (text.startsWith("event:")) { rawEventName = text.slice(6).trim(); return; }
+    if (!text || text.startsWith(":")) return;
+    if (!text.startsWith("data:") && rawFormat !== FORMATS.OLLAMA) return;
+    const data = text.startsWith("data:") ? text.slice(5).trim() : text;
+    if (data === "[DONE]") { rawTerminalSeen = true; return; }
+    let event;
+    try { event = JSON.parse(data); } catch { return; }
+    if (rawEventName && !event.type) event = { ...event, type: rawEventName };
+    rawEventName = null;
+    onEvent(event, rawFormat);
+    const detail = readAliasProtocolError(event, rawFormat);
+    if (detail) throw Object.assign(new Error(detail.message), { code: "ALIAS_PROTOCOL_ERROR", detail });
+    if (event.choices?.some(choice => choice.finish_reason) || event.type === "message_stop" ||
+        ["response.completed", "response.done"].includes(event.type) || event.done ||
+        (event.response || event).candidates?.some(candidate => candidate.finishReason)) rawTerminalSeen = true;
+  };
+  const dispatchAliasFrame = () => {
+    if (aliasObserverData.length) inspectEventData(aliasObserverData.join("\n"), aliasObserverEventName);
+    aliasObserverData = [];
+    aliasObserverDataBytes = 0;
+    aliasObserverEventName = null;
+  };
+  const processAliasLine = (line) => {
+    aliasObserverLineBytes = 0;
+    if (line === "") { dispatchAliasFrame(); return; }
+    if (!strict || line.startsWith(":")) return;
+    if (rawFormat === FORMATS.OLLAMA && !["data:", "event:", "id:", "retry:"].some(field => line.startsWith(field))) {
+      inspectEventData(line, null);
+      return;
+    }
+    const colon = line.indexOf(":");
+    const field = colon < 0 ? line : line.slice(0, colon);
+    let value = colon < 0 ? "" : line.slice(colon + 1);
+    if (value.startsWith(" ")) value = value.slice(1);
+    if (field === "event") aliasObserverEventName = value;
+    if (field === "data") {
+      aliasObserverDataBytes += sharedEncoder.encode(value).byteLength + (aliasObserverData.length ? 1 : 0);
+      if (aliasObserverDataBytes > aliasObserverFrameLimit) {
+        throw Object.assign(new Error("Provider SSE event exceeded the alias frame limit"), { code: "ALIAS_FRAME_LIMIT" });
+      }
+      aliasObserverData.push(value);
+    } else if (rawFormat === FORMATS.OLLAMA && !field) {
+      inspectEventData(value, null);
+      aliasObserverEventName = null;
+    }
+  };
+  let aliasObserverPendingCR = false;
+  const inspectAliasText = (text, eof = false) => {
+    if (!strict) return;
+    for (const char of text) {
+      if (aliasObserverPendingCR) {
+        processAliasLine(aliasObserverBuffer);
+        aliasObserverBuffer = "";
+        aliasObserverPendingCR = false;
+        if (char === "\n") continue;
+      }
+      if (char === "\r") aliasObserverPendingCR = true;
+      else if (char === "\n") {
+        processAliasLine(aliasObserverBuffer);
+        aliasObserverBuffer = "";
+      } else {
+        aliasObserverBuffer += char;
+        aliasObserverLineBytes += sharedEncoder.encode(char).byteLength;
+        if (aliasObserverLineBytes > aliasObserverFrameLimit) {
+          throw Object.assign(new Error("Provider SSE line exceeded the alias frame limit"), { code: "ALIAS_FRAME_LIMIT" });
+        }
+      }
+    }
+    if (eof) {
+      if (aliasObserverPendingCR) {
+        processAliasLine(aliasObserverBuffer);
+        aliasObserverBuffer = "";
+        aliasObserverPendingCR = false;
+      }
+      if (aliasObserverBuffer) {
+        const lastLine = aliasObserverBuffer;
+        aliasObserverBuffer = "";
+        processAliasLine(lastLine);
+      }
+      if (aliasObserverData.length) {
+        const data = aliasObserverData.join("\n");
+        if (data === "[DONE]") dispatchAliasFrame();
+        else {
+          try { JSON.parse(data); dispatchAliasFrame(); }
+          catch { aliasObserverData = []; aliasObserverDataBytes = 0; aliasObserverEventName = null; }
+        }
+      }
+    }
+  };
 
   // Usage/logging tail, callable from transform() as well as flush(): a client that
   // closes right after the terminal event cancels the reader, and flush() never runs.
@@ -96,11 +217,12 @@ export function createSSEStream(options = {}) {
     if (completionFlushTimer) { clearTimeout(completionFlushTimer); completionFlushTimer = null; }
     if (finalized) return;
     finalized = true;
+    if (suppressAccounting) return;
 
     const isPassthrough = mode === STREAM_MODE.PASSTHROUGH;
     let finalUsage = isPassthrough ? usage : state?.usage;
 
-    if (!hasValidUsage(finalUsage) && totalContentLength > 0) {
+    if (!strict && !hasValidUsage(finalUsage) && totalContentLength > 0) {
       finalUsage = estimateUsage(body, totalContentLength, isPassthrough ? FORMATS.OPENAI : sourceFormat);
       if (isPassthrough) usage = finalUsage; else state.usage = finalUsage;
     }
@@ -136,6 +258,7 @@ export function createSSEStream(options = {}) {
   return new TransformStream({
     transform(chunk, controller) {
       const text = decoder.decode(chunk, { stream: true });
+      if (strict) inspectAliasText(text);
       buffer += text;
       reqLogger?.appendProviderChunk?.(text);
 
@@ -143,6 +266,7 @@ export function createSSEStream(options = {}) {
       buffer = lines.pop() || "";
 
       for (const line of lines) {
+        inspectLine(line);
         const trimmed = line.trim();
         if (isDebugEnabled && trimmed) {
           sseLineCount++;
@@ -166,7 +290,7 @@ export function createSSEStream(options = {}) {
           if (trimmed.startsWith("data:") && trimmed.slice(5).trim() !== "[DONE]") {
             try {
               const parsed = JSON.parse(trimmed.slice(5).trim());
-              if (ttftAt === null && hasTokenContent(parsed)) ttftAt = Date.now();
+              if (ttftAt === null && (strict ? isQualifyingModelOutput(parsed, rawFormat) : hasTokenContent(parsed))) ttftAt = Date.now();
 
               const idFixed = fixInvalidId(parsed);
 
@@ -205,7 +329,7 @@ export function createSSEStream(options = {}) {
                 }
               }
 
-              if (!hasValuableContent(parsed, FORMATS.OPENAI)) {
+              if (!strict && !hasValuableContent(parsed, FORMATS.OPENAI)) {
                 continue;
               }
 
@@ -229,14 +353,14 @@ export function createSSEStream(options = {}) {
               responsesTerminal = isOpenAIResponsesTerminalEvent(currentOpenAIResponsesEvent, parsed);
 
               const isFinishChunk = parsed.choices?.[0]?.finish_reason;
-              if (isFinishChunk && !hasValidUsage(parsed.usage)) {
+              if (!strict && !suppressAccounting && isFinishChunk && !hasValidUsage(parsed.usage)) {
                 const estimated = estimateUsage(body, totalContentLength, FORMATS.OPENAI);
                 parsed.usage = filterUsageForFormat(estimated, FORMATS.OPENAI);
                 output = `data: ${JSON.stringify(parsed)}\n`;
                 usage = estimated;
                 injectedUsage = true;
               } else if (isFinishChunk && usage) {
-                const buffered = addBufferToUsage(usage);
+                const buffered = strict ? usage : addBufferToUsage(usage);
                 parsed.usage = filterUsageForFormat(buffered, FORMATS.OPENAI);
                 output = `data: ${JSON.stringify(parsed)}\n`;
                 injectedUsage = true;
@@ -272,7 +396,7 @@ export function createSSEStream(options = {}) {
 
         const parsed = parseSSELine(trimmed, targetFormat);
         if (!parsed) continue;
-        if (ttftAt === null && hasTokenContent(parsed)) ttftAt = Date.now();
+        if (ttftAt === null && (strict ? isQualifyingModelOutput(parsed, rawFormat) : hasTokenContent(parsed))) ttftAt = Date.now();
 
         // Responses API same-format passthrough: preserve event framing + track terminal state
         const isOpenAIResponsesStream = targetFormat === FORMATS.OPENAI_RESPONSES;
@@ -392,13 +516,13 @@ export function createSSEStream(options = {}) {
 
             // Inject estimated usage if finish chunk has no valid usage
             const isFinishChunk = item.type === "message_delta" || item.choices?.[0]?.finish_reason;
-            if (state.finishReason && isFinishChunk && !hasValidUsage(item.usage) && totalContentLength > 0) {
+            if (!strict && !suppressAccounting && state.finishReason && isFinishChunk && !hasValidUsage(item.usage) && totalContentLength > 0) {
               const estimated = estimateUsage(body, totalContentLength, sourceFormat);
               item.usage = filterUsageForFormat(estimated, sourceFormat); // Filter + already has buffer
               state.usage = estimated;
             } else if (state.finishReason && isFinishChunk && state.usage) {
               // Add buffer and filter usage for client (but keep original in state.usage for logging)
-              const buffered = addBufferToUsage(state.usage);
+              const buffered = strict ? state.usage : addBufferToUsage(state.usage);
               item.usage = filterUsageForFormat(buffered, sourceFormat);
             }
 
@@ -412,7 +536,7 @@ export function createSSEStream(options = {}) {
         // The completion deferral can outlive the upstream: a broken chat upstream
         // may stall after finish_reason with no usage trailer and no [DONE], holding
         // the connection open. Bound the wait so the client still gets a terminal event.
-        if (targetFormat === FORMATS.OPENAI && sourceFormat === FORMATS.OPENAI_RESPONSES &&
+        if (!strict && targetFormat === FORMATS.OPENAI && sourceFormat === FORMATS.OPENAI_RESPONSES &&
             state?.completionPending && !state?.completedSent && !completionFlushTimer) {
           completionFlushTimer = setTimeout(() => {
             completionFlushTimer = null;
@@ -424,6 +548,13 @@ export function createSSEStream(options = {}) {
     },
 
     flush(controller) {
+      if (strict) {
+        const remainder = decoder.decode();
+        if (remainder) buffer += remainder;
+        inspectAliasText(remainder, true);
+        if (buffer.trim()) inspectLine(buffer);
+        if (!rawTerminalSeen) throw Object.assign(new Error("Provider stream ended without completion"), { code: "ALIAS_INCOMPLETE_STREAM" });
+      }
       const evtSummary = Object.entries(eventTypeCounts).map(([k, v]) => `${k}=${v}`).join(",") || "none";
       dbg("SSE", `flush | provider=${provider} | model=${model} | recvLines=${sseLineCount} | emitted=${sseEmittedCount} | events=[${evtSummary}]`);
       trackPendingRequest(model, provider, connectionId, false);
@@ -468,7 +599,7 @@ export function createSSEStream(options = {}) {
           // counts — so it has to go through.
           const isDoneSentinel = parsed?.done && targetFormat !== FORMATS.OLLAMA;
           if (parsed && !isDoneSentinel) {
-            if (ttftAt === null && hasTokenContent(parsed)) ttftAt = Date.now();
+            if (ttftAt === null && (strict ? isQualifyingModelOutput(parsed, rawFormat) : hasTokenContent(parsed))) ttftAt = Date.now();
             // Same accumulation the transform loop does, so finalizeStream() can
             // log a tail chunk's tokens instead of falling back to null.
             const extracted = extractUsage(parsed);
@@ -531,6 +662,7 @@ export function createSSEStream(options = {}) {
 
         finalizeStream();
       } catch (error) {
+        if (strict) throw error;
         console.log("Error in flush:", error);
         finalizeStream();
       }
@@ -538,8 +670,9 @@ export function createSSEStream(options = {}) {
   });
 }
 
-export function createSSETransformStreamWithLogger(targetFormat, sourceFormat, provider = null, reqLogger = null, toolNameMap = null, model = null, connectionId = null, body = null, onStreamComplete = null, apiKey = null, customToolNames = null, credentials = null) {
+export function createSSETransformStreamWithLogger(targetFormat, sourceFormat, provider = null, reqLogger = null, toolNameMap = null, model = null, connectionId = null, body = null, onStreamComplete = null, apiKey = null, customToolNames = null, credentials = null, observerOptions = {}) {
   return createSSEStream({
+    ...observerOptions,
     mode: STREAM_MODE.TRANSLATE,
     targetFormat,
     sourceFormat,
@@ -556,8 +689,9 @@ export function createSSETransformStreamWithLogger(targetFormat, sourceFormat, p
   });
 }
 
-export function createPassthroughStreamWithLogger(provider = null, reqLogger = null, model = null, connectionId = null, body = null, onStreamComplete = null, apiKey = null) {
+export function createPassthroughStreamWithLogger(provider = null, reqLogger = null, model = null, connectionId = null, body = null, onStreamComplete = null, apiKey = null, observerOptions = {}) {
   return createSSEStream({
+    ...observerOptions,
     mode: STREAM_MODE.PASSTHROUGH,
     provider,
     reqLogger,

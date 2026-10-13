@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCombos, createCombo, getComboByName } from "@/lib/localDb";
 import { validateComboPromptSettings } from "@/lib/comboPromptInjection";
+import { AliasComboNameConflict } from "@/lib/db/helpers/modelsAliasesNamespace.js";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +50,7 @@ export async function POST(request) {
 
     return NextResponse.json(combo, { status: 201 });
   } catch (error) {
+    if (error instanceof AliasComboNameConflict) return NextResponse.json({ error: "Models Alias or Combo name already exists", code: error.code }, { status: 409 });
     console.log("Error creating combo:", error);
     return NextResponse.json({ error: "Failed to create combo" }, { status: 500 });
   }

@@ -3,7 +3,7 @@
 // pre-change safety backup in migrate.js: when the stored version is lower,
 // one lightweight DB backup is taken before applying schema changes. Forgetting
 // to bump only skips that backup — it does NOT break the additive auto-sync.
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 export const PRAGMA_SQL = `
 PRAGMA journal_mode = WAL;
@@ -154,6 +154,30 @@ export const TABLES = {
       updatedAt: "TEXT NOT NULL",
     },
     indexes: ["CREATE INDEX IF NOT EXISTS idx_combo_name ON combos(name)"],
+  },
+  modelsAliases: {
+    columns: {
+      id: "TEXT PRIMARY KEY",
+      name: "TEXT UNIQUE NOT NULL",
+      models: "TEXT NOT NULL",
+      primaryModel: "TEXT NOT NULL",
+      strategy: "TEXT NOT NULL DEFAULT 'fallback'",
+      judgeModel: "TEXT",
+      initialResponseTimeoutSeconds: "REAL NOT NULL DEFAULT 15",
+      promptInjectionEnabled: "INTEGER NOT NULL DEFAULT 0",
+      promptInjectionMode: "TEXT NOT NULL DEFAULT 'prepend'",
+      systemPrompt: "TEXT",
+      displayIdentity: "TEXT",
+      createdAt: "TEXT NOT NULL",
+      updatedAt: "TEXT NOT NULL",
+    },
+    // SQLite guards also cover direct SQL and concurrent writers outside repositories.
+    indexes: [
+      "CREATE TRIGGER IF NOT EXISTS models_aliases_name_insert BEFORE INSERT ON modelsAliases WHEN EXISTS(SELECT 1 FROM combos WHERE name = NEW.name) BEGIN SELECT RAISE(ABORT, 'alias_combo_namespace_conflict'); END",
+      "CREATE TRIGGER IF NOT EXISTS models_aliases_name_update BEFORE UPDATE OF name ON modelsAliases WHEN EXISTS(SELECT 1 FROM combos WHERE name = NEW.name) BEGIN SELECT RAISE(ABORT, 'alias_combo_namespace_conflict'); END",
+      "CREATE TRIGGER IF NOT EXISTS combos_alias_name_insert BEFORE INSERT ON combos WHEN EXISTS(SELECT 1 FROM modelsAliases WHERE name = NEW.name) BEGIN SELECT RAISE(ABORT, 'alias_combo_namespace_conflict'); END",
+      "CREATE TRIGGER IF NOT EXISTS combos_alias_name_update BEFORE UPDATE OF name ON combos WHEN EXISTS(SELECT 1 FROM modelsAliases WHERE name = NEW.name) BEGIN SELECT RAISE(ABORT, 'alias_combo_namespace_conflict'); END",
+    ],
   },
   kv: {
     columns: {

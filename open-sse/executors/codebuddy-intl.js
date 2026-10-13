@@ -13,8 +13,8 @@ export class CodeBuddyIntlExecutor extends DefaultExecutor {
     super("codebuddy-intl");
   }
 
-  transformRequest(model, body, stream, credentials) {
-    const transformed = super.transformRequest(model, body, stream, credentials);
+  transformRequest(model, body, stream, credentials, executionOptions = null) {
+    const transformed = super.transformRequest(model, body, stream, credentials, executionOptions);
     transformed.stream = true;
 
     const eff = transformed.reasoning_effort;
@@ -28,6 +28,10 @@ export class CodeBuddyIntlExecutor extends DefaultExecutor {
     // leading system prompt + user content as typed blocks, not a bare string.
     const source = Array.isArray(transformed.messages) ? transformed.messages : [];
     transformed.messages = [{ role: "system", content: "You are CodeBuddy Code." }];
+    if (executionOptions?.preserveAliasInstructions === true) {
+      const instructions = source.filter(message => message?.role === "system" || message?.role === "developer");
+      transformed.messages.push(...structuredClone(instructions));
+    }
     for (const message of source) {
       if (!message || typeof message !== "object" || ["system", "developer"].includes(message.role)) continue;
       if (message.role === "user" && typeof message.content === "string") {

@@ -3,6 +3,7 @@ import { BaseExecutor } from "./base.js";
 import { PROVIDERS } from "../config/providers.js";
 import { commandCodeToOpenAIResponse } from "../translator/response/commandcode-to-openai.js";
 import { SSE_DONE } from "../utils/sseConstants.js";
+import { isQualifyingModelOutput } from "../utils/aliasOutput.js";
 
 /**
  * CommandCodeExecutor — talks to https://api.commandcode.ai/alpha/generate
@@ -20,7 +21,7 @@ export class CommandCodeExecutor extends BaseExecutor {
     super("commandcode", PROVIDERS.commandcode);
   }
 
-  transformRequest(model, body, stream, credentials) {
+  transformRequest(model, body, stream, credentials, executionOptions = null) {
     body.stream = true;
     return body;
   }
@@ -40,17 +41,29 @@ export class CommandCodeExecutor extends BaseExecutor {
   }
 
   async execute(opts) {
-    const maxRetries = opts.healthProbe ? 0 : 2;
+    const attemptSignal = opts.executionOptions?.attempt?.signal;
+    const signal = opts.signal && attemptSignal ? AbortSignal.any([opts.signal, attemptSignal]) : opts.signal || attemptSignal;
+    signal?.throwIfAborted();
+    const singleAttempt = opts.executionOptions?.alias === true || opts.executionOptions?.retryPolicy === "single-attempt";
+    const maxRetries = opts.healthProbe || singleAttempt ? 0 : 2;
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       const result = await super.execute(opts);
       if (!result?.response?.ok || !result.response.body) return result;
 
-      const wrappedResponse = await inspectAndWrapCommandCodeResponse(result.response, opts.model);
+      const wrappedResponse = await inspectAndWrapCommandCodeResponse(result.response, opts.model, {
+        signal: opts.signal, attempt: opts.executionOptions?.attempt,
+      });
       if (!wrappedResponse.ok && attempt < maxRetries) {
         const isRetryableStatus = wrappedResponse.status === 502 || wrappedResponse.status === 503 || wrappedResponse.status === 504;
         if (isRetryableStatus) {
           opts.log?.debug?.("RETRY", `CommandCode upstream returned status ${wrappedResponse.status}, retrying ${attempt + 1}/${maxRetries}...`);
-          await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+          signal?.throwIfAborted();
+          await new Promise((resolve, reject) => {
+            const onAbort = () => { clearTimeout(timer); signal.removeEventListener("abort", onAbort); reject(signal.reason); };
+            const timer = setTimeout(() => { signal?.removeEventListener("abort", onAbort); resolve(); }, 1000 * (attempt + 1));
+            signal?.addEventListener("abort", onAbort, { once: true });
+          });
+          signal?.throwIfAborted();
           continue;
         }
       }
@@ -137,29 +150,111 @@ export function parseCommandCodeError(event) {
   return { statusCode, message, type };
 }
 
-export async function inspectAndWrapCommandCodeResponse(originalResponse, model) {
+function ownCommandCodeReader(reader, { signal, attempt } = {}) {
+  const signals = [...new Set([signal, attempt?.signal].filter(Boolean))];
+  let released = false;
+  let terminal = false;
+  let failReplay = null;
+  let boundaries = 0;
+  const release = () => {
+    if (released) return;
+    released = true;
+    try { reader.releaseLock(); } catch { /* Preserve the primary error. */ }
+  };
+  const finish = () => {
+    terminal = true;
+    for (const source of signals) source.removeEventListener("abort", onAbort);
+  };
+  const cancel = (reason) => {
+    if (terminal) return;
+    finish();
+    try { void reader.cancel(reason).catch(() => {}); } catch { /* Cleanup is best effort. */ }
+    release();
+  };
+  const onAbort = () => {
+    const source = signals.find(source => source.aborted);
+    cancel(source.reason);
+    failReplay?.(source.reason);
+  };
+  const check = () => {
+    if (attempt && !attempt.outputStarted && Date.now() >= attempt.deadlineAt) attempt.abort("initial-output-deadline");
+    for (const source of signals) source.throwIfAborted();
+  };
+  for (const source of signals) source.addEventListener("abort", onAbort, { once: true });
+  if (signals.some(source => source.aborted)) onAbort();
+  return {
+    check,
+    async checkpoint() {
+      check();
+      if (attempt && !attempt.outputStarted && ++boundaries % 64 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+        check();
+      }
+    },
+    async read() {
+      check();
+      try {
+        const part = await reader.read();
+        check();
+        return part;
+      } catch (error) { check(); throw error; }
+    },
+    cancel,
+    upstreamDone() { release(); },
+    done() { finish(); release(); },
+    replay(controller) { failReplay = reason => controller.error(reason); check(); }
+  };
+}
+
+export async function inspectAndWrapCommandCodeResponse(originalResponse, model, options = null) {
   const reader = originalResponse.body.getReader();
+  const owner = ownCommandCodeReader(reader, options || {});
   const decoder = new TextDecoder();
+  const inspectState = { model };
+  const attempt = options?.attempt;
+  const namedTools = new Set();
   let buffer = "";
   const rawChunks = [];
   let detectedError = null;
+  let upstreamDone = false;
 
+  const observe = (event) => {
+    if (!attempt || event?.type === "error") return false;
+    // Do not turn a malformed name-less tool into synthetic arguments output.
+    if (event?.type === "tool-call" && (typeof event.toolName !== "string" || !event.toolName.trim())) return false;
+    if (event?.type === "tool-input-start") {
+      if (typeof event.toolName !== "string" || !event.toolName.trim()) return false;
+      namedTools.add(event.id || event.toolCallId);
+    }
+    if (event?.type === "tool-input-delta" && !namedTools.has(event.id || event.toolCallId)) return false;
+    const translated = commandCodeToOpenAIResponse(event, inspectState);
+    for (const chunk of translated == null ? [] : Array.isArray(translated) ? translated : [translated]) {
+      if (isQualifyingModelOutput(chunk, "openai")) {
+        attempt.markOutput(chunk, "openai");
+        owner.check();
+        return attempt.outputStarted;
+      }
+    }
+    return false;
+  };
   try {
     while (true) {
-      const { value, done } = await reader.read();
+      await owner.checkpoint();
+      const { value, done } = await owner.read();
       if (done) {
+        upstreamDone = true;
+        owner.upstreamDone();
         const trimmed = buffer.trim();
+        let parsed = null;
         if (trimmed) {
           try {
             const jsonStr = trimmed.startsWith("data:") ? trimmed.slice(5).trim() : trimmed;
-            const parsed = JSON.parse(jsonStr);
-            if (parsed?.type === "error") {
-              detectedError = parsed;
-            }
-          } catch {
-            /* ignore */
-          }
+            parsed = JSON.parse(jsonStr);
+          } catch { /* Ignore malformed JSON, not cancellation. */ }
         }
+        if (parsed?.type === "error") detectedError = parsed;
+        else observe(parsed);
+        owner.done();
         break;
       }
 
@@ -170,6 +265,7 @@ export async function inspectAndWrapCommandCodeResponse(originalResponse, model)
 
       let stopLoop = false;
       for (const line of lines) {
+        await owner.checkpoint();
         const trimmed = line.trim();
         if (!trimmed) continue;
         const jsonStr = trimmed.startsWith("data:") ? trimmed.slice(5).trim() : trimmed;
@@ -191,6 +287,10 @@ export async function inspectAndWrapCommandCodeResponse(originalResponse, model)
           break;
         }
 
+        if (attempt) {
+          if (observe(event)) { stopLoop = true; break; }
+          continue;
+        }
         if (
           event?.type === "text-delta" ||
           event?.type === "reasoning-delta" ||
@@ -206,13 +306,18 @@ export async function inspectAndWrapCommandCodeResponse(originalResponse, model)
 
       if (stopLoop) break;
     }
-  } catch {
-    try { reader.releaseLock(); } catch { /* ignore */ }
+  } catch (error) {
+    owner.check();
+    if (attempt) {
+      owner.cancel(error);
+      throw error;
+    }
+    owner.done();
     return originalResponse;
   }
 
   if (detectedError) {
-    try { await reader.cancel(); } catch { /* ignore */ }
+    owner.cancel();
     const { statusCode, message, type } = parseCommandCodeError(detectedError);
     return new Response(
       JSON.stringify({
@@ -233,38 +338,38 @@ export async function inspectAndWrapCommandCodeResponse(originalResponse, model)
     );
   }
 
-  const combinedStream = createRawReplayedStream(rawChunks, reader);
+  const combinedStream = createRawReplayedStream(rawChunks, owner, upstreamDone);
   return wrapNdjsonAsOpenAISse(combinedStream, model, originalResponse);
 }
 
-function createRawReplayedStream(rawChunks, reader) {
+function createRawReplayedStream(rawChunks, owner, upstreamDone) {
   let chunkIndex = 0;
-
+  let closed = false;
   return new ReadableStream({
+    start(controller) {
+      try { owner.replay(controller); } catch (error) { closed = true; controller.error(error); }
+    },
     async pull(controller) {
-      if (chunkIndex < rawChunks.length) {
-        controller.enqueue(rawChunks[chunkIndex++]);
-        return;
-      }
-
+      if (closed) return;
       try {
-        const { value, done } = await reader.read();
-        if (done) {
-          controller.close();
-        } else {
-          controller.enqueue(value);
+        owner.check();
+        if (chunkIndex < rawChunks.length) {
+          controller.enqueue(rawChunks[chunkIndex++]);
+          return;
         }
-      } catch (err) {
-        controller.error(err);
+        const { value, done } = upstreamDone ? { done: true } : await owner.read();
+        if (done) {
+          closed = true;
+          owner.done();
+          controller.close();
+        } else controller.enqueue(value);
+      } catch (error) {
+        closed = true;
+        owner.cancel(error);
+        controller.error(error);
       }
     },
-    async cancel(reason) {
-      try {
-        await reader.cancel(reason);
-      } catch {
-        /* ignore */
-      }
-    },
+    cancel(reason) { closed = true; owner.cancel(reason); },
   });
 }
 

@@ -5,6 +5,7 @@ import PropTypes from "prop-types";
 import Modal from "./Modal";
 import ModelPickerList from "./ModelPickerList";
 import { useModelCatalog } from "@/shared/hooks/useModelCatalog";
+import styles from "./ModelPickerList.module.css";
 
 export default function ModelSelectModal({
   isOpen,
@@ -17,18 +18,24 @@ export default function ModelSelectModal({
   modelAliases = {},
   kindFilter = null,
   capFilter = null,
+  catalogContext,
+  includeLegacyCombos = false,
+  excludePlaceholders = false,
   addedModelValues = [],
   closeOnSelect = true,
   className = "p-4!",
   portal = false,
   notice = "Click to add, click again to remove. Changes are saved automatically.",
 }) {
-  const { visibleGroups, filteredCombos, searchQuery, setSearchQuery } = useModelCatalog({
+  const { visibleGroups, filteredAliases, filteredCombos, searchQuery, setSearchQuery, loading, error, reload } = useModelCatalog({
     isOpen,
     activeProviders,
     modelAliases,
     kindFilter,
     capFilter,
+    catalogContext,
+    includeLegacyCombos,
+    excludePlaceholders,
     addedModelValues,
   });
 
@@ -38,7 +45,7 @@ export default function ModelSelectModal({
     const value = model?.value || model?.name || model;
     const isAdded = addedModelValues.includes(value);
     const selection = group
-      ? { ...model, providerId: group.providerId, providerName: group.name, providerColor: group.color, isCombo: group.isCombo === true }
+      ? { ...model, providerId: group.providerId, providerName: group.name, providerColor: group.color, isCombo: group.isCombo === true, isAlias: group.isAlias === true, targetType: group.targetType }
       : { ...model };
 
     if (isAdded && onDeselect) {
@@ -64,8 +71,10 @@ export default function ModelSelectModal({
       onClose={handleClose}
       title={title}
       size="md"
-      className={className}
+      className={`${className} ${styles.dialog}`}
       portal={portal}
+      trapFocus
+      showTrafficLights={false}
       footer={null}
     >
       {/* Info bar */}
@@ -79,6 +88,10 @@ export default function ModelSelectModal({
       <ModelPickerList
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        aliases={filteredAliases}
+        loading={loading}
+        error={error}
+        onRetry={reload}
         combos={filteredCombos}
         groups={visibleGroups}
         selectedModel={selectedModel}
@@ -104,6 +117,9 @@ ModelSelectModal.propTypes = {
   modelAliases: PropTypes.object,
   kindFilter: PropTypes.string,
   capFilter: PropTypes.string,
+  catalogContext: PropTypes.oneOf(["invocation", "members", "key-allow", "key-block", "media"]),
+  includeLegacyCombos: PropTypes.bool,
+  excludePlaceholders: PropTypes.bool,
   addedModelValues: PropTypes.arrayOf(PropTypes.string),
   closeOnSelect: PropTypes.bool,
   className: PropTypes.string,

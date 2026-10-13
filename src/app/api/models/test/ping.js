@@ -4,6 +4,11 @@ import { unwrapClineEnvelope } from "open-sse/shared/clineEnvelope.js";
 import { UPDATER_CONFIG } from "@/shared/constants/config";
 import { getConsistentMachineId } from "@/shared/utils/machineId";
 
+import { canManageApiKeys } from "@/lib/apiKeyPolicy/dashboardAuth.js";
+import { ApiKeyPolicyError } from "@/lib/apiKeyPolicy/rules.js";
+import { resolveModelInfo } from "@/sse/services/model.js";
+import { executeProviderChat } from "@/sse/handlers/providerChat.js";
+
 const CLI_TOKEN_SALT = "9r-cli-auth";
 
 function createSilentWavFile() {
@@ -55,8 +60,9 @@ async function getInternalHeaders() {
   return headers;
 }
 
-export async function pingModelByKind(model, kind, baseUrl = `http://127.0.0.1:${process.env.PORT || UPDATER_CONFIG.appPort}`) {
-  const headers = await getInternalHeaders();
+export async function pingModelByKind(model, kind, baseUrl = `http://127.0.0.1:${process.env.PORT || UPDATER_CONFIG.appPort}`, { request } = {}) {
+  if (!request || !await canManageApiKeys(request)) throw new ApiKeyPolicyError(403, "forbidden", "Dashboard authorization required.");
+  const headers = ["embedding", "image", "stt", "systemone"].includes(kind) ? await getInternalHeaders() : null;
   const start = Date.now();
 
   if (kind === "embedding") {
@@ -165,10 +171,7 @@ export async function pingModelByKind(model, kind, baseUrl = `http://127.0.0.1:$
     return { ok: true, latencyMs, error: null, status: res.status };
   }
 
-  const res = await fetch(`${baseUrl}/api/v1/chat/completions`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
+  const probeBody = {
       model,
       // 1024 tokens: reasoning models (ClinePass/kimi-k3, deepseek-v4-pro, etc.) spend
       // their budget on chain-of-thought before emitting an answer. A tiny probe like
@@ -177,9 +180,14 @@ export async function pingModelByKind(model, kind, baseUrl = `http://127.0.0.1:$
       max_tokens: 1024,
       stream: false,
       messages: [{ role: "user", content: "hi" }],
-    }),
-    signal: AbortSignal.timeout(15000),
+  };
+  const probeRequest = new Request(new URL("/v1/chat/completions", request.url), {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(probeBody),
+    signal: AbortSignal.any([request.signal, AbortSignal.timeout(15000)]),
   });
+  const member = await resolveModelInfo(model);
+  if (!member?.provider || !member.model) throw new ApiKeyPolicyError(400, "invalid_request", "Provider model required for probe.");
+  const { response: res } = await executeProviderChat({ body: probeBody, member, request: probeRequest, signal: probeRequest.signal });
   const latencyMs = Date.now() - start;
 
   const rawText = await res.text().catch(() => "");

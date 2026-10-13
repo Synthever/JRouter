@@ -34,6 +34,7 @@ import {
 import { errorResponse } from "open-sse/utils/error.js";
 import { HTTP_STATUS } from "open-sse/config/runtimeConfig.js";
 import * as log from "../utils/logger.js";
+import { virtualTargetIdentifiers } from "@/lib/apiKeyPolicy/virtualTargets.js";
 
 const lower = (s) => String(s).toLowerCase();
 const canonicalModel = (provider, model) => lower(`${provider}/${model}`);
@@ -108,6 +109,24 @@ async function isModelStringAllowed(ctx, requested) {
   // provider null ⇔ an existing combo with no members (routes nowhere).
   if (!info?.provider) return sets.combos.has(lower(requested));
   return sets.models.has(canonicalModel(info.provider, info.model));
+}
+
+export async function isVirtualTargetAllowed(ctx, target) {
+  if (!ctx) return true;
+  const identifiers = new Set(virtualTargetIdentifiers(target).map(lower));
+  return (ctx.allow || []).some((entry) => identifiers.has(lower(entry)));
+}
+
+export async function resolveKeyAccessModelPermissions(ctx) {
+  if (!ctx) return null;
+  const combos = new Set((await getCombos()).flatMap((combo) => [lower(combo.name), lower(`jrouter/${combo.name}`)]));
+  const models = new Set();
+  for (const entry of ctx.allow || []) {
+    if (typeof entry !== "string" || lower(entry).startsWith("jrouter/") || combos.has(lower(entry))) continue;
+    const info = await resolveModelInfo(entry);
+    if (info?.provider && info.model) models.add(canonicalModel(info.provider, info.model));
+  }
+  return models;
 }
 
 export function keyAccessDeniedResponse(ctx, requested) {

@@ -5,6 +5,10 @@ import { rowToCombo } from "./repos/combosRepo.js";
 import { normalizeComboPromptSettings } from "../comboPromptInjection.js";
 import { keyAccessFromColumns, keyAccessToColumns, validateKeyAccessInput } from "@/shared/utils/keyAccess.js";
 import { KEY_ACCESS_UNRESTRICTED } from "@/shared/constants/keyAccess.js";
+import { rowToModelsAlias, insertModelsAlias } from "./repos/modelsAliasesRepo.js";
+import { getModelsAliasConfigKey, normalizeModelsAliasConfig } from "../modelsAliases/config.js";
+import { getAliasMembersContext, resolveAliasMembersFromContext } from "../modelsAliases/members.js";
+import { AliasComboNameConflict, assertAliasComboNameAvailable } from "./helpers/modelsAliasesNamespace.js";
 
 // Settings
 export {
@@ -41,6 +45,11 @@ export {
   getCombos, getComboById, getComboByName,
   createCombo, updateCombo, deleteCombo,
 } from "./repos/combosRepo.js";
+
+export {
+  getModelsAliases, getModelsAliasById, getModelsAliasByName,
+  createModelsAlias, updateModelsAlias, deleteModelsAlias,
+} from "./repos/modelsAliasesRepo.js";
 
 // Aliases (model + custom + mitm)
 export {
@@ -83,6 +92,7 @@ export async function exportDb() {
     proxyPools: db.all(`SELECT * FROM proxyPools`).map((r) => ({ ...parseJson(r.data, {}), id: r.id, isActive: r.isActive === 1, testStatus: r.testStatus, createdAt: r.createdAt, updatedAt: r.updatedAt })),
     apiKeys: db.all(`SELECT * FROM apiKeys`).map((r) => ({ ...r, policy: parseJson(r.policy, {}), isActive: r.isActive === 1, access: keyAccessFromColumns(r.accessRestricted, r.accessAllow) })),
     combos: db.all(`SELECT * FROM combos`).map(rowToCombo),
+    modelsAliases: db.all("SELECT * FROM modelsAliases ORDER BY createdAt ASC, id ASC").map(rowToModelsAlias),
     modelAliases: {},
     customModels: [],
     mitmAlias: {},
@@ -101,15 +111,39 @@ export async function importDb(payload) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     throw new Error("Invalid database payload");
   }
+  payload = structuredClone(payload);
+  for (const key of ["modelsAliases", "providerNodes", "providerConnections", "customModels", "combos"]) {
+    if (payload[key] !== undefined && !Array.isArray(payload[key])) throw new Error(`Invalid ${key} payload`);
+  }
+  const context = { providerNodes: payload.providerNodes || [], providerConnections: payload.providerConnections || [], customModels: payload.customModels || [] };
+  const names = new Set((payload.combos || []).map((combo) => combo.name));
+  const ids = new Set();
+  const aliases = (payload.modelsAliases || []).map((alias) => {
+    const checked = normalizeModelsAliasConfig(alias);
+    if (typeof alias.id !== "string" || !alias.id || ids.has(alias.id)) throw new Error("Invalid or duplicate Models Alias id");
+    if (names.has(checked.name)) throw new AliasComboNameConflict(checked.name);
+    ids.add(alias.id);
+    names.add(checked.name);
+    resolveAliasMembersFromContext(checked.models, context);
+    const now = new Date().toISOString();
+    return { id: alias.id, ...checked, createdAt: alias.createdAt || now, updatedAt: alias.updatedAt || now };
+  });
   const db = await getAdapter();
+  const incomingKeys = new Map(aliases.map((alias) => [alias.id, getModelsAliasConfigKey(alias)]));
+  let invalidatedIds;
 
   db.transaction(() => {
+    // Capture the actual replaced configuration, after all awaited preparation.
+    invalidatedIds = db.all("SELECT * FROM modelsAliases").map(rowToModelsAlias)
+      .filter((alias) => incomingKeys.get(alias.id) !== getModelsAliasConfigKey(alias))
+      .map((alias) => alias.id);
     // Wipe all tables (keep _meta)
     db.run(`DELETE FROM settings`);
     db.run(`DELETE FROM providerConnections`);
     db.run(`DELETE FROM providerNodes`);
     db.run(`DELETE FROM proxyPools`);
     db.run(`DELETE FROM apiKeys`);
+    db.run("DELETE FROM modelsAliases");
     db.run(`DELETE FROM combos`);
     db.run(`DELETE FROM kv WHERE scope IN ('modelAliases', 'customModels', 'mitmAlias', 'pricing')`);
 
@@ -155,6 +189,7 @@ export async function importDb(payload) {
       );
     }
     for (const c of payload.combos || []) {
+      assertAliasComboNameAvailable(db, c.name);
       const behavior = normalizeComboPromptSettings(c);
       db.run(
         `INSERT OR REPLACE INTO combos(id, name, kind, models, createdAt, updatedAt, promptInjectionEnabled, promptInjectionMode, systemPrompt, displayIdentity) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -168,6 +203,11 @@ export async function importDb(payload) {
       const k = `${m.providerAlias}|${m.id}|${m.type || "llm"}`;
       db.run(`INSERT OR REPLACE INTO kv(scope, key, value) VALUES('customModels', ?, ?)`, [k, stringifyJson(m)]);
     }
+    const importedContext = getAliasMembersContext(db);
+    for (const alias of aliases) {
+      resolveAliasMembersFromContext(alias.models, importedContext);
+      insertModelsAlias(db, alias);
+    }
     for (const [tool, mappings] of Object.entries(payload.mitmAlias || {})) {
       db.run(`INSERT OR REPLACE INTO kv(scope, key, value) VALUES('mitmAlias', ?, ?)`, [tool, stringifyJson(mappings || {})]);
     }
@@ -176,6 +216,12 @@ export async function importDb(payload) {
     }
   });
 
+  if (invalidatedIds.length) {
+    // Import is a per-ID cancellation barrier: requests that start while this lazy
+    // import yields are also canceled. Unchanged IDs never cross this barrier.
+    const { invalidateModelsAliasRuntime } = await import("../../sse/services/modelsAliasRuntime.js");
+    for (const id of invalidatedIds) invalidateModelsAliasRuntime(id);
+  }
   return await exportDb();
 }
 

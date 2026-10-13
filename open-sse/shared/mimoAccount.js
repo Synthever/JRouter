@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
 import { proxyAwareFetch } from "../utils/proxyFetch.js";
+import { joinSharedOperation } from "../utils/sharedOperation.js";
 
 /**
  * Xiaomi MiMo account-session helpers (used for weekly quota).
@@ -53,7 +54,69 @@ const COOKIE_TTL_MS = 30 * 60 * 1000;
 // Per-account session caches (keyed by passToken hash) so multiple Xiaomi
 // accounts / connections can rotate without clobbering each other.
 const _cache = new Map(); // key -> { cookie, at }
-const _inflight = new Map(); // key -> Promise<cookie|null>
+const _inflight = new Map(); // key -> shared operation (with recovery provenance)
+
+function cancelBody(body, reason) {
+  try { Promise.resolve(body?.cancel(reason)).catch(() => {}); } catch { /* Preserve the acquisition outcome. */ }
+}
+
+function guardResponse(response, signal) {
+  if (signal?.aborted) cancelBody(response?.body, signal.reason);
+  signal?.throwIfAborted();
+}
+
+async function readPhaseOne(response, signal) {
+  let reader;
+  let onAbort;
+  let canceled = false;
+  const cancel = reason => {
+    if (canceled) return;
+    canceled = true;
+    cancelBody(reader || response.body, reason);
+  };
+  try {
+    guardResponse(response, signal);
+    reader = response.body?.getReader?.();
+    const aborted = new Promise((resolve, reject) => {
+      onAbort = () => { cancel(signal.reason); reject(signal.reason); };
+      signal?.addEventListener("abort", onAbort, { once: true });
+    });
+    // Observe immediately even when registration is followed by an abort guard.
+    aborted.catch(() => {});
+    if (signal?.aborted) onAbort();
+    signal?.throwIfAborted();
+    if (!reader) {
+      const text = await Promise.race([response.text(), aborted]);
+      signal?.throwIfAborted();
+      return text;
+    }
+    const decoder = new TextDecoder();
+    let text = "";
+    let reads = 0;
+    while (true) {
+      signal?.throwIfAborted();
+      const { done, value } = await Promise.race([reader.read(), aborted]);
+      signal?.throwIfAborted();
+      if (done) break;
+      text += decoder.decode(value, { stream: true });
+      if (++reads % 16 === 0) {
+        let timer;
+        try {
+          await Promise.race([new Promise(resolve => { timer = setTimeout(resolve, 0); }), aborted]);
+        } finally { clearTimeout(timer); }
+        signal?.throwIfAborted();
+      }
+    }
+    return text + decoder.decode();
+  } catch (error) {
+    cancel(signal?.aborted ? signal.reason : error);
+    signal?.throwIfAborted();
+    throw error;
+  } finally {
+    signal?.removeEventListener("abort", onAbort);
+    try { reader?.releaseLock(); } catch { /* A canceled reader may already be released. */ }
+  }
+}
 
 function desktopCookiePath() {
   const home = os.homedir();
@@ -153,17 +216,21 @@ export function resolveMimoServerBase(providerSpecificData = null) {
  * sid is per-cluster (SID_BY_REGION): cn=mimopc, sgp=mimosgp, ams=mimoams, ru=mimoru, in=mimoin.
  * @returns {Promise<string|null>} Cookie header value, or null on failure.
  */
-async function acquireServiceCookie(passJar, proxyOptions, apiBase = DEFAULT_API_BASE, region = "sgp") {
+async function acquireServiceCookie(passJar, proxyOptions, apiBase = DEFAULT_API_BASE, region = "sgp", signal) {
+  signal?.throwIfAborted();
   const r = String(region || "").toLowerCase();
   // Hard constraint: CN is ALWAYS direct (ignores proxy even if set)
   const effectiveProxy = r === "cn" ? null : proxyOptions;
   const sid = sidForRegion(r);
-  const viaDesktop = await acquireViaDesktopPhases(passJar, effectiveProxy, apiBase, sid);
+  const viaDesktop = await acquireViaDesktopPhases(passJar, effectiveProxy, apiBase, sid, signal);
+  signal?.throwIfAborted();
   if (viaDesktop) console.log(`[mimoAccount] desktop 2-phase OK (sid=${sid})`);
+  signal?.throwIfAborted();
   return viaDesktop;
 }
 
-async function acquireViaDesktopPhases(passJar, proxyOptions, apiBase, sid) {
+async function acquireViaDesktopPhases(passJar, proxyOptions, apiBase, sid, signal) {
+  signal?.throwIfAborted();
   const failLog = (reason) => console.log(`[mimoAccount] desktopPhase fail: ${reason}`);
   const jar = { ...passJar };
 
@@ -178,10 +245,12 @@ async function acquireViaDesktopPhases(passJar, proxyOptions, apiBase, sid) {
   const p1Url = `https://${ACCOUNT_HOST}/pass/serviceLogin?_locale=zh_CN&_snsNone=true&sid=${encodeURIComponent(sid)}&_json=true`;
   const p1 = await proxyAwareFetch(
     p1Url,
-    { headers: { Cookie: cookieHeader(p1Jar), "User-Agent": SSO_UA, Accept: "application/json" } },
+    { headers: { Cookie: cookieHeader(p1Jar), "User-Agent": SSO_UA, Accept: "application/json" }, signal },
     proxyOptions,
   );
-  const raw = await p1.text();
+  guardResponse(p1, signal);
+  const raw = await readPhaseOne(p1, signal);
+  signal?.throwIfAborted();
   const clean = raw.replace(/^&&&START&&&/, "");
   // Nonce > 2^53 loses precision in JSON.parse — extract raw literal for signing
   const rawNonce = clean.match(/"nonce"\s*:\s*(\d+)/)?.[1];
@@ -206,13 +275,17 @@ async function acquireViaDesktopPhases(passJar, proxyOptions, apiBase, sid) {
   let current = `${j.location}${sep}clientSign=${signatureClientSign(rawNonce || j.nonce, j.ssecurity)}`;
 
   for (let hop = 0; hop < 8; hop++) {
+    signal?.throwIfAborted();
     const res = await proxyAwareFetch(
       current,
-      { redirect: "manual", headers: { "User-Agent": SSO_UA } },
+      { redirect: "manual", headers: { "User-Agent": SSO_UA }, signal },
       proxyOptions,
     );
+    guardResponse(res, signal);
     absorbSetCookie(jar, res);
     const loc = res.headers.get("location");
+    cancelBody(res.body);
+    signal?.throwIfAborted();
     if (res.status >= 300 && res.status < 400 && loc) {
       current = new URL(loc, current).toString();
       continue;
@@ -241,46 +314,52 @@ async function acquireViaDesktopPhases(passJar, proxyOptions, apiBase, sid) {
  * Get (and cache) the mimo-server account cookie.
  * @param {object|null} providerSpecificData - may carry `mimoPassToken` override
  */
-async function getServiceCookie(providerSpecificData, proxyOptions) {
+async function getServiceCookie(providerSpecificData, proxyOptions, { signal, recoveryBudget, forceRefresh = false } = {}) {
+  signal?.throwIfAborted();
   const apiBase = resolveMimoServerBase(providerSpecificData);
   const passJar = providerSpecificData?.mimoPassToken
     ? { passToken: providerSpecificData.mimoPassToken, userId: providerSpecificData.mimoUserId, cUserId: providerSpecificData.mimoCUserId }
     : await readDesktopAccountCookies();
+  signal?.throwIfAborted();
   if (!passJar) return { cookie: null, reason: "no-pass-token" };
 
-  // One cached session per passToken+cluster — accounts/connections rotate
-  // independently, and the same passToken maps to different sessions per region.
+  // Accounts and clusters retain independent positive-cache provenance.
   const key = crypto.createHash("sha256").update(`${apiBase}|${passJar.passToken}`).digest("hex");
-
   const cached = _cache.get(key);
-  if (cached && Date.now() - cached.at < COOKIE_TTL_MS) {
+  if (!forceRefresh && cached && cached.at > 0 && Date.now() - cached.at < COOKIE_TTL_MS) {
+    signal?.throwIfAborted();
     return { cookie: cached.cookie };
   }
-
-  // De-dupe concurrent handshakes for the same account: a burst of requests must
-  // not each run the full 5-step SSO chain.
-  const inflight = _inflight.get(key);
-  if (inflight) {
-    const cookie = await inflight;
-    return cookie ? { cookie } : { cookie: null, reason: "sso-failed" };
+  const entry = _inflight.get(key);
+  const recovery = forceRefresh || !!cached || !!entry?.recovery;
+  // Each uncached recovery owner pays before joining; phases do not claim again.
+  if (recovery && recoveryBudget && !recoveryBudget.claimRefresh()) {
+    signal?.throwIfAborted();
+    return { cookie: null, reason: "sso-failed" };
   }
+  signal?.throwIfAborted();
+  if (forceRefresh && cached) cached.at = 0;
+  if (recovery && entry) entry.recovery = true;
 
-  const promise = (async () => {
+  const cookie = await joinSharedOperation(_inflight, key, async sharedSignal => {
+    // Only request-independent provenance belongs on the shared entry.
+    const owned = _inflight.get(key);
+    owned.recovery = recovery;
     try {
-      return await acquireServiceCookie(passJar, proxyOptions, apiBase, providerSpecificData?.region);
+      sharedSignal.throwIfAborted();
+      const result = await acquireServiceCookie(passJar, proxyOptions, apiBase, providerSpecificData?.region, sharedSignal);
+      sharedSignal.throwIfAborted();
+      if (result && _inflight.get(key) === owned) _cache.set(key, { cookie: result, at: Date.now() });
+      return result;
     } catch (e) {
+      sharedSignal.throwIfAborted();
       console.log(`[mimoAccount] acquire threw: ${e?.message || e} | ${String(e?.stack || "").split("\n").slice(1, 4).join(" <- ")}`);
-      return null; // network/parse failure — callers degrade, never throw
-    } finally {
-      _inflight.delete(key);
+      sharedSignal.throwIfAborted();
+      return null; // ordinary network/parse failure still degrades
     }
-  })();
-  _inflight.set(key, promise);
-
-  const cookie = await promise;
-  if (!cookie) return { cookie: null, reason: "sso-failed" };
-  _cache.set(key, { cookie, at: Date.now() });
-  return { cookie };
+  }, { signal });
+  signal?.throwIfAborted();
+  return cookie ? { cookie } : { cookie: null, reason: "sso-failed" };
 }
 
 /** Drop cached sessions so the next call re-runs the handshake (e.g. after a 401). */
@@ -296,11 +375,14 @@ export const MIMO_API_UA = API_UA;
  * Resolve the mimo-server account-session cookie, for upstream /api/route/* calls.
  * @returns {Promise<string|null>} Cookie header value, or null when unavailable.
  */
-export async function getMimoAccountCookie(providerSpecificData = null, proxyOptions = null) {
+export async function getMimoAccountCookie(providerSpecificData = null, proxyOptions = null, { signal, recoveryBudget, forceRefresh = false } = {}) {
   try {
-    const { cookie } = await getServiceCookie(providerSpecificData, proxyOptions);
+    signal?.throwIfAborted();
+    const { cookie } = await getServiceCookie(providerSpecificData, proxyOptions, { signal, recoveryBudget, forceRefresh });
+    signal?.throwIfAborted();
     return cookie;
   } catch (e) {
+    signal?.throwIfAborted();
     console.log(`[mimoAccount] getMimoAccountCookie threw: ${e?.message || e} | ${String(e?.stack || "").split("\n").slice(1, 4).join(" <- ")}`);
     return null;
   }

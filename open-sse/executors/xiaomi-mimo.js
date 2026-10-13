@@ -16,6 +16,18 @@ const ACCOUNT_MODELS = new Set([
 // credentials object, same as runtimeTransport.
 const COOKIE_KEY = "__mimoAccountCookie";
 
+function guardExecution(signal, executionOptions) {
+  const attempt = executionOptions?.attempt;
+  if (!attempt?.outputStarted && Number.isFinite(attempt?.deadlineAt) && Date.now() >= attempt.deadlineAt) {
+    attempt.abort?.("initial-output-deadline");
+  }
+  signal?.throwIfAborted();
+}
+
+function cancelBody(response, reason) {
+  try { Promise.resolve(response?.body?.cancel(reason)).catch(() => {}); } catch { /* Keep the original cancellation reason. */ }
+}
+
 // Upstream calls may hand us either the bare id or a `provider/model` ref.
 function bareModel(model) {
   const s = String(model || "");
@@ -65,10 +77,8 @@ export class XiaomiMimoExecutor extends DefaultExecutor {
     return super.buildHeaders(credentials, stream, url, model);
   }
 
-  transformRequest(model, body, stream, credentials) {
-    // super runs stripUnsupportedParams, which flattens content-part
-    // arrays (see the xiaomi-mimo rule in translator/concerns/paramSupport.js).
-    const out = super.transformRequest(model, body, stream, credentials);
+  transformRequest(model, body, stream, credentials, executionOptions = null) {
+    const out = super.transformRequest(model, body, stream, credentials, executionOptions);
 
     // Account route models: bridge reasoning_effort to official output_config.effort
     // (matches MiMo Desktop app.asar behavior).
@@ -88,26 +98,66 @@ export class XiaomiMimoExecutor extends DefaultExecutor {
   }
 
   async execute(args) {
-    const { model, credentials, proxyOptions = null } = args;
-    if (!this.isAccountRoute(model, credentials)) return super.execute(args);
-
-    const cookie = await getMimoAccountCookie(credentials?.providerSpecificData, proxyOptions);
-    if (!cookie) {
-      return super.execute(args);
-    }
-    credentials[COOKIE_KEY] = cookie;
-    const result = await super.execute(args);
-
-    // A cached session can expire early — drop it and retry once with a fresh one.
-    if (!args.healthProbe && result.response.status === 401) {
-      invalidateMimoAccountCookieCache();
-      const fresh = await getMimoAccountCookie(credentials?.providerSpecificData, proxyOptions).catch(() => null);
-      if (fresh) {
-        credentials[COOKIE_KEY] = fresh;
-        return super.execute(args);
+    const { model, proxyOptions = null, executionOptions = null } = args;
+    const attemptSignal = executionOptions?.attempt?.signal;
+    const signal = args.signal && attemptSignal && args.signal !== attemptSignal
+      ? AbortSignal.any([args.signal, attemptSignal]) : args.signal || attemptSignal;
+    guardExecution(signal, executionOptions);
+    const singleAttempt = executionOptions?.alias === true || executionOptions?.retryPolicy === "single-attempt";
+    const credentials = executionOptions?.alias === true ? { ...args.credentials } : args.credentials;
+    const requestArgs = { ...args, signal, credentials };
+    let heldResponse;
+    try {
+      if (!this.isAccountRoute(model, credentials)) {
+        const result = await super.execute(requestArgs);
+        heldResponse = result.response;
+        guardExecution(signal, executionOptions);
+        return result;
       }
+
+      const recoveryBudget = executionOptions?.recoveryBudget;
+      const cookie = await getMimoAccountCookie(credentials?.providerSpecificData, proxyOptions, { signal, recoveryBudget });
+      guardExecution(signal, executionOptions);
+      if (!cookie) {
+        const result = await super.execute(requestArgs);
+        heldResponse = result.response;
+        guardExecution(signal, executionOptions);
+        return result;
+      }
+      credentials[COOKIE_KEY] = cookie;
+      guardExecution(signal, executionOptions);
+      const result = await super.execute(requestArgs);
+      heldResponse = result.response;
+      guardExecution(signal, executionOptions);
+
+      if (!args.healthProbe && result.response.status === 401 && (!singleAttempt || !executionOptions?.attempt?.outputStarted)) {
+        // Ordinary requests keep global invalidation. Alias recovery preserves the
+        // rejected session's per-key provenance until the helper permits renewal.
+        if (!singleAttempt) invalidateMimoAccountCookieCache();
+        guardExecution(signal, executionOptions);
+        const fresh = await getMimoAccountCookie(credentials?.providerSpecificData, proxyOptions, {
+          signal, recoveryBudget, forceRefresh: singleAttempt,
+        });
+        guardExecution(signal, executionOptions);
+        if (fresh && (!singleAttempt || !executionOptions?.attempt?.outputStarted)) {
+          if (singleAttempt && recoveryBudget && !recoveryBudget.claimRedispatch()) return result;
+          guardExecution(signal, executionOptions);
+          credentials[COOKIE_KEY] = fresh;
+          if (singleAttempt) cancelBody(heldResponse);
+          heldResponse = undefined;
+          const retried = await super.execute(requestArgs);
+          heldResponse = retried.response;
+          guardExecution(signal, executionOptions);
+          return retried;
+        }
+      }
+      guardExecution(signal, executionOptions);
+      return result;
+    } catch (error) {
+      if (signal?.aborted) cancelBody(heldResponse, signal.reason);
+      signal?.throwIfAborted();
+      throw error;
     }
-    return result;
   }
 }
 

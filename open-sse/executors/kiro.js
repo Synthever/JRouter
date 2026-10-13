@@ -12,6 +12,7 @@ import { getCapabilitiesForModel } from "../providers/capabilities.js";
 import { STREAM_FIRST_CHUNK_TIMEOUT_MS } from "../config/runtimeConfig.js";
 import { AWS_EVENTSTREAM } from "../config/awsConstants.js";
 import { crc32, parseEventFrame } from "../utils/awsEventStream.js";
+import { isQualifyingModelOutput, readAliasProtocolError } from "../utils/aliasOutput.js";
 
 const KIRO_REPAIR_BUFFER_MAX_BYTES = 8 * 1024 * 1024;
 const KIRO_REPAIR_HEARTBEAT_MS = 10_000;
@@ -70,28 +71,93 @@ function makeAbortError(reason) {
   return error;
 }
 
-async function readWithTimeout(reader, signal, timeoutMs, message) {
-  if (signal?.aborted) throw makeAbortError(signal.reason);
+function throwIfCancelled(signal, preserveAbortReason = false) {
+  if (signal?.aborted) throw preserveAbortReason ? signal.reason : makeAbortError(signal.reason);
+}
+
+function ownReader(reader) {
+  let released = false;
+  const release = () => {
+    if (released) return;
+    released = true;
+    reader.releaseLock();
+  };
+  return {
+    read: () => reader.read(),
+    release,
+    cancel(reason) {
+      if (released) return;
+      try { void reader.cancel(reason).catch(() => {}); }
+      catch { /* Source cleanup must not mask cancellation or block lock release. */ }
+      finally { release(); }
+    }
+  };
+}
+
+async function readWithTimeout(reader, signal, timeoutMs, message, preserveAbortReason = false) {
+  throwIfCancelled(signal, preserveAbortReason);
   let timeout;
   let abortHandler;
   const timeoutPromise = new Promise((_, reject) => {
-    timeout = setTimeout(() => reject(new Error(message)), timeoutMs);
+    if (!Number.isFinite(timeoutMs)) return;
+    timeout = setTimeout(() => {
+      const error = new Error(message);
+      reject(error);
+      reader.cancel(error);
+    }, timeoutMs);
   });
   const abortPromise = new Promise((_, reject) => {
-    abortHandler = () => reject(makeAbortError(signal.reason));
+    abortHandler = () => {
+      reader.cancel(signal.reason);
+      reject(preserveAbortReason ? signal.reason : makeAbortError(signal.reason));
+    };
     signal?.addEventListener("abort", abortHandler, { once: true });
+    if (signal?.aborted) abortHandler();
   });
   try {
-    return await Promise.race([reader.read(), timeoutPromise, abortPromise]);
+    const part = await Promise.race([reader.read(), timeoutPromise, abortPromise]);
+    throwIfCancelled(signal, preserveAbortReason);
+    return part;
   } finally {
     clearTimeout(timeout);
     signal?.removeEventListener?.("abort", abortHandler);
   }
 }
 
+function createReadinessCheckpoint(options) {
+  let boundaries = 0;
+  const check = () => {
+    const attempt = options.attempt;
+    if (attempt && !attempt.outputStarted && Date.now() >= attempt.deadlineAt) attempt.abort("initial-output-deadline");
+    throwIfCancelled(options.signal, options.preserveAbortReason);
+    throwIfCancelled(attempt?.signal, options.preserveAbortReason);
+  };
+  return async () => {
+    check();
+    if (options.attempt && ++boundaries % 64 === 0) {
+      const signal = options.signal || options.attempt.signal;
+      await new Promise((resolve, reject) => {
+        const cleanup = () => {
+          clearTimeout(timer);
+          signal.removeEventListener("abort", onAbort);
+        };
+        const onAbort = () => {
+          cleanup();
+          reject(options.preserveAbortReason ? signal.reason : makeAbortError(signal.reason));
+        };
+        const timer = setTimeout(() => { cleanup(); resolve(); }, 0);
+        signal.addEventListener("abort", onAbort, { once: true });
+        if (signal.aborted) onAbort();
+      });
+      check();
+    }
+  };
+}
+
 async function readResponsePrefix(response, signal, maxBytes, timeoutMs) {
-  const reader = response?.body?.getReader?.();
-  if (!reader) return "";
+  const rawReader = response?.body?.getReader?.();
+  if (!rawReader) return "";
+  const reader = ownReader(rawReader);
   const chunks = [];
   let totalBytes = 0;
   try {
@@ -110,7 +176,7 @@ async function readResponsePrefix(response, signal, maxBytes, timeoutMs) {
       if (value.byteLength > remaining) break;
     }
   } finally {
-    await reader.cancel("bounded Kiro retry error body").catch(() => {});
+    reader.cancel(signal?.aborted ? signal.reason : "bounded Kiro retry error body");
   }
   return decoder.decode(concatChunks(chunks, totalBytes));
 }
@@ -329,7 +395,7 @@ export class KiroExecutor extends BaseExecutor {
       || (hasFallback && KIRO_ENDPOINT_FALLBACK_STATUSES.has(status));
   }
 
-  transformRequest(model, body, stream, credentials) {
+  transformRequest(model, body, stream, credentials, executionOptions = null) {
     return body;
   }
 
@@ -350,21 +416,42 @@ export class KiroExecutor extends BaseExecutor {
    * classify the status, and trigger account fallback/cooldown.
    */
   async execute(args) {
-    const result = await super.execute(args);
-    if (result?.response?.ok) this.attachIntegrityGate(result, args);
+    const abortController = new AbortController();
+    const sources = [args.signal, args.executionOptions?.attempt?.signal, abortController.signal].filter(Boolean);
+    const signal = AbortSignal.any(sources);
+    signal.throwIfAborted();
+    const result = await super.execute({ ...args, signal });
+    if (signal.aborted) {
+      try { void result?.response?.body?.cancel(signal.reason).catch(() => {}); }
+      catch { /* Preserve cancellation even when an unused body cannot be cancelled. */ }
+      signal.throwIfAborted();
+    }
+    if (result?.response?.ok) this.attachIntegrityGate(result, args, abortController);
     return result;
   }
 
-  attachIntegrityGate(result, args) {
-    const abortController = new AbortController();
+  attachIntegrityGate(result, args, abortController = new AbortController()) {
+    const attempt = args.executionOptions?.attempt;
+    const preserveAbortReason = args.executionOptions?.alias === true || !!attempt;
     const maxBytes = envPositiveInt("KIRO_TOOL_CALL_REPAIR_BUFFER_MAX_BYTES", KIRO_REPAIR_BUFFER_MAX_BYTES);
     const legacyTimeout = envPositiveInt("KIRO_TOOL_CALL_REPAIR_TIMEOUT_MS", STREAM_FIRST_CHUNK_TIMEOUT_MS);
     const ttftTimeoutMs = envPositiveInt("KIRO_TOOL_CALL_REPAIR_TTFT_TIMEOUT_MS", legacyTimeout);
     const stallTimeoutMs = envPositiveInt("KIRO_TOOL_CALL_REPAIR_STALL_TIMEOUT_MS", legacyTimeout);
     const repairEnabled = args.credentials?.providerSpecificData?.kiroToolCallRepair !== false &&
       process.env.KIRO_TOOL_CALL_REPAIR !== "false";
-    const forwardAbort = () => abortController.abort(args.signal?.reason);
-    args.signal?.addEventListener("abort", forwardAbort, { once: true });
+    const listeners = [];
+    const cleanup = () => {
+      clearInterval(heartbeatTimer);
+      for (const [signal, listener] of listeners) signal.removeEventListener("abort", listener);
+      listeners.length = 0;
+    };
+    for (const signal of [args.signal, attempt?.signal]) {
+      if (!signal) continue;
+      const forwardAbort = () => abortController.abort(signal.reason);
+      signal.addEventListener("abort", forwardAbort, { once: true });
+      listeners.push([signal, forwardAbort]);
+      if (signal.aborted) forwardAbort();
+    }
     let open = true;
     let heartbeatTimer;
 
@@ -387,31 +474,36 @@ export class KiroExecutor extends BaseExecutor {
             maxBytes,
             ttftTimeoutMs,
             stallTimeoutMs,
-            repairEnabled
+            repairEnabled,
+            attempt,
+            preserveAbortReason
           });
-          if (abortController.signal.aborted) throw makeAbortError(abortController.signal.reason);
-          controller.enqueue(bytes);
-          controller.close();
+          throwIfCancelled(abortController.signal, preserveAbortReason);
+          if (open) {
+            controller.enqueue(bytes);
+            controller.close();
+          }
         } catch (error) {
-          if (open && error.name === "AbortError") {
+          if (open && abortController.signal.aborted) {
+            controller.error(preserveAbortReason ? abortController.signal.reason : makeAbortError(abortController.signal.reason));
+          } else if (open && error?.name === "AbortError") {
             controller.error(error);
-          } else if (open && error.name !== "AbortError") {
+          } else if (open) {
             controller.enqueue(encodeSSEError(
               "kiro_integrity_gate_failed",
-              error.message || "Kiro integrity validation failed"
+              error?.message || "Kiro integrity validation failed"
             ));
             controller.close();
           }
         } finally {
           open = false;
-          clearInterval(heartbeatTimer);
-          args.signal?.removeEventListener?.("abort", forwardAbort);
+          cleanup();
         }
       },
       cancel(reason) {
         open = false;
-        clearInterval(heartbeatTimer);
-        abortController.abort(reason || "client cancelled");
+        cleanup();
+        abortController.abort(reason);
       }
     });
 
@@ -429,8 +521,11 @@ export class KiroExecutor extends BaseExecutor {
       options,
       "initial"
     );
+    throwIfCancelled(options.signal, options.preserveAbortReason);
     if (first.kind === "complete") return first.bytes;
     if (args.healthProbe) return this.integrityFailureSSE(first);
+    if (args.executionOptions?.alias === true || args.executionOptions?.retryPolicy === "single-attempt" ||
+        args.executionOptions?.attempt?.outputStarted) return this.integrityFailureSSE(first, true);
     if (first.kind === "terminal_stop" || first.kind === "upstream_error") {
       return this.integrityFailureSSE(first);
     }
@@ -493,8 +588,15 @@ export class KiroExecutor extends BaseExecutor {
     );
   }
 
-  integrityFailureSSE(attempt) {
+  integrityFailureSSE(attempt, detailedIntegrity = false) {
     const disposition = attempt.diagnostics?.stop_disposition;
+    const integrityCode = detailedIntegrity && {
+      invalid_tool: "invalid_kiro_tool_call",
+      ellipsis: "kiro_ellipsis",
+      short_final: "kiro_short_final",
+      missing_terminal: "kiro_missing_terminal",
+      retryable_stop: "kiro_retryable_protocol_failure"
+    }[attempt.kind];
     const code = attempt.diagnostics?.terminal_provenance === "integrity_buffer_exceeded"
       ? "kiro_integrity_buffer_exceeded"
       : attempt.kind === "upstream_error"
@@ -502,42 +604,54 @@ export class KiroExecutor extends BaseExecutor {
       : disposition === "terminal_refusal"
         ? "kiro_terminal_refusal"
         : disposition === "terminal_incomplete"
-          ? "kiro_terminal_incomplete"
-          : "kiro_unknown_stop_reason";
-    return encodeSSEError(code, attempt.message || "Kiro stream ended with a terminal failure", attempt.diagnostics);
+          ? integrityCode || "kiro_terminal_incomplete"
+          : integrityCode || "kiro_unknown_stop_reason";
+    const message = detailedIntegrity
+      ? `Kiro integrity validation failed: ${attempt.kind}`
+      : "Kiro stream ended with a terminal failure";
+    return encodeSSEError(code, attempt.message || message, attempt.diagnostics);
   }
 
   async readRecoverableIntegrityAttempt(rawResponse, model, options, attempt) {
+    const progress = options.preserveAbortReason ? {} : null;
     try {
-      return await this.readIntegrityAttempt(rawResponse, model, options, attempt);
+      return await this.readIntegrityAttempt(rawResponse, model, options, attempt, progress);
     } catch (error) {
-      if (error.name === "AbortError") throw error;
+      throwIfCancelled(options.signal, options.preserveAbortReason);
+      if (error?.name === "AbortError") throw error;
       return {
         kind: "missing_terminal",
-        message: error.message || "Kiro transport read failed",
+        message: error?.message || "Kiro transport read failed",
         diagnostics: {
           attempt,
           terminal_provenance: "transport_read_error",
           transport_state: "upstream_error",
           stop_reason: null,
           stop_disposition: "terminal_incomplete",
-          response_state: "no_semantic_output",
-          event_counts: {},
-          incomplete_frame_bytes: 0
+          response_state: progress ? progress.response_state ?? null : "no_semantic_output",
+          event_counts: progress ? progress.event_counts ?? null : {},
+          incomplete_frame_bytes: progress ? progress.incomplete_frame_bytes ?? null : 0
         }
       };
     }
   }
 
-  async readIntegrityAttempt(rawResponse, model, options, attempt) {
+  async readIntegrityAttempt(rawResponse, model, options, attempt, progress = null) {
     let diagnostics;
+    if (options.signal?.aborted) {
+      try { void rawResponse?.body?.cancel(options.signal.reason).catch(() => {}); }
+      catch { /* The pre-body cancellation reason remains authoritative. */ }
+      throwIfCancelled(options.signal, options.preserveAbortReason);
+    }
     const transformed = this.transformEventStreamToSSE(rawResponse, model, {
+      ...options,
       maxToolBytes: Math.max(1, Math.floor(options.maxBytes / 2)),
       onTerminalState: (value) => {
         diagnostics = value;
       }
     });
-    const reader = transformed.body.getReader();
+    const reader = ownReader(transformed.body.getReader());
+    const checkpoint = createReadinessCheckpoint(options);
     const chunks = [];
     let totalBytes = 0;
     let sawChunk = false;
@@ -545,19 +659,22 @@ export class KiroExecutor extends BaseExecutor {
 
     try {
       while (true) {
+        await checkpoint();
         const timeoutMs = sawChunk ? options.stallTimeoutMs : options.ttftTimeoutMs;
         const phase = sawChunk ? "stalled" : "timed out before first chunk";
         const { done, value } = await readWithTimeout(
           reader,
           options.signal,
           timeoutMs,
-          `Kiro integrity validation ${phase}`
+          `Kiro integrity validation ${phase}`,
+          options.preserveAbortReason
         );
+        await checkpoint();
         if (done) break;
         sawChunk = true;
         totalBytes += value.byteLength;
         if (totalBytes > options.maxBytes) {
-          await reader.cancel("kiro_integrity_buffer_exceeded").catch(() => {});
+          reader.cancel("kiro_integrity_buffer_exceeded");
           return {
             kind: "terminal_stop",
             message: `Kiro integrity buffer exceeded ${options.maxBytes} bytes`,
@@ -568,8 +685,19 @@ export class KiroExecutor extends BaseExecutor {
         inspectSSEChunk(value, output);
       }
     } catch (error) {
-      await reader.cancel(error.message).catch(() => {});
+      if (progress) {
+        Object.assign(progress, {
+          response_state: diagnostics?.response_state ?? (output.hasToolCalls
+            ? "valid_tool"
+            : output.content.length || output.reasoning.length ? "text_reasoning" : "no_semantic_output"),
+          event_counts: diagnostics?.event_counts ?? null,
+          incomplete_frame_bytes: diagnostics?.incomplete_frame_bytes ?? null
+        });
+      }
+      reader.cancel(options.signal?.aborted ? options.signal.reason : error);
       throw error;
+    } finally {
+      reader.release();
     }
 
     const safeDiagnostics = {
@@ -616,6 +744,7 @@ export class KiroExecutor extends BaseExecutor {
   }
 
   transformEventStreamToSSE(response, model, options = {}) {
+    const checkpoint = createReadinessCheckpoint(options);
     const responseId = `chatcmpl-${Date.now()}`;
     const created = Math.floor(Date.now() / 1000);
     const capabilityModel = resolveKiroModel(model).upstream;
@@ -663,18 +792,25 @@ export class KiroExecutor extends BaseExecutor {
       incomplete_frame_bytes: state.buffer.byteLength,
       ...overrides
     });
-    const sseChunk = (delta, finishReason = null, usage) => encoder.encode(`data: ${JSON.stringify({
+    const sseEvent = (delta, finishReason = null, usage) => ({
       id: responseId,
       object: "chat.completion.chunk",
       created,
       model,
       choices: [{ index: 0, delta, finish_reason: finishReason }],
       ...(usage ? { usage } : {})
-    })}\n\n`);
+    });
+    const sseChunk = (delta, finishReason = null, usage) => encoder.encode(`data: ${JSON.stringify(sseEvent(delta, finishReason, usage))}\n\n`);
     const emitDelta = (controller, delta) => {
       if (state.chunkIndex === 0) delta = { role: "assistant", ...delta };
       state.chunkIndex++;
-      controller.enqueue(sseChunk(delta));
+      const event = sseEvent(delta);
+      if (!readAliasProtocolError(event, "openai") && isQualifyingModelOutput(event, "openai")) {
+        options.attempt?.markOutput(event, "openai");
+      }
+      throwIfCancelled(options.signal, options.preserveAbortReason);
+      throwIfCancelled(options.attempt?.signal, options.preserveAbortReason);
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
     };
     const fail = (controller, provenance, code, message, extra = {}) => {
       state.finished = true;
@@ -911,7 +1047,7 @@ export class KiroExecutor extends BaseExecutor {
       }
       return true;
     };
-    const processBytes = (chunk, controller) => {
+    const processBytes = async (chunk, controller) => {
       const combinedLength = state.buffer.byteLength + chunk.byteLength;
       if (combinedLength > (options.maxRawBytes || EVENTSTREAM_MAX_MESSAGE_BYTES)) {
         fail(
@@ -932,6 +1068,7 @@ export class KiroExecutor extends BaseExecutor {
       }
 
       while (state.buffer.byteLength >= 12) {
+        await checkpoint();
         const view = new DataView(state.buffer.buffer, state.buffer.byteOffset);
         if (view.getUint32(8, false) !== crc32(state.buffer.subarray(0, 8))) {
           fail(controller, "corrupt_eventstream_frame", "kiro_missing_terminal", "Kiro EventStream prelude CRC mismatch");
@@ -959,6 +1096,8 @@ export class KiroExecutor extends BaseExecutor {
         try {
           if (!processEvent(event, controller)) return false;
         } catch (error) {
+          throwIfCancelled(options.signal, options.preserveAbortReason);
+          throwIfCancelled(options.attempt?.signal, options.preserveAbortReason);
           const bufferExceeded = error.code === "KIRO_BUFFER_EXCEEDED";
           if (!bufferExceeded) {
             // Keep whatever is already buffered: the rejected fragment belongs to
@@ -1135,40 +1274,71 @@ export class KiroExecutor extends BaseExecutor {
       ), { status: response.status, headers: { ...SSE_HEADERS } });
     }
 
-    const reader = response.body.getReader();
+    const reader = ownReader(response.body.getReader());
+    let open = true;
+    let onAbort;
+    const cleanup = () => {
+      options.signal?.removeEventListener("abort", onAbort);
+      reader.release();
+    };
     const stream = new ReadableStream({
       start: async (controller) => {
+        onAbort = () => {
+          if (!open) return;
+          open = false;
+          reader.cancel(options.signal.reason);
+          cleanup();
+          controller.error(options.preserveAbortReason ? options.signal.reason : makeAbortError(options.signal.reason));
+        };
+        options.signal?.addEventListener("abort", onAbort, { once: true });
+        if (options.signal?.aborted) onAbort();
         try {
-          while (!state.finished) {
-            const { done, value } = await reader.read();
+          while (open && !state.finished) {
+            await checkpoint();
+            const { done, value } = await readWithTimeout(reader, options.signal, Infinity, "", options.preserveAbortReason);
+            if (!open) return;
+            await checkpoint();
             if (done) break;
             const chunksBefore = state.chunkIndex;
             const framesBefore = state.validatedFrames;
-            if (!processBytes(value, controller)) {
-              await reader.cancel("invalid Kiro EventStream").catch(() => {});
+            if (!await processBytes(value, controller)) {
+              reader.cancel("invalid Kiro EventStream");
               break;
             }
             if (state.validatedFrames > framesBefore && state.chunkIndex === chunksBefore) {
               controller.enqueue(encoder.encode(": kiro-upstream\n\n"));
             }
           }
+          if (!open) return;
+          await checkpoint();
           finish(controller);
           controller.close();
         } catch (error) {
-          if (!state.finished) {
-            fail(
-              controller,
-              "upstream_read_error",
-              "kiro_missing_terminal",
-              error.message || "Kiro EventStream read failed",
-              { transport_state: "upstream_error" }
-            );
+          if (!open) return;
+          reader.cancel(options.signal?.aborted ? options.signal.reason : error);
+          if (options.signal?.aborted || options.attempt?.signal?.aborted || error?.name === "AbortError") {
+            controller.error(options.signal?.aborted && options.preserveAbortReason ? options.signal.reason : error);
+          } else {
+            if (!state.finished) {
+              fail(
+                controller,
+                "upstream_read_error",
+                "kiro_missing_terminal",
+                error?.message || "Kiro EventStream read failed",
+                { transport_state: "upstream_error" }
+              );
+            }
+            controller.close();
           }
-          controller.close();
+        } finally {
+          open = false;
+          cleanup();
         }
       },
       cancel(reason) {
-        return reader.cancel(reason);
+        open = false;
+        reader.cancel(reason);
+        cleanup();
       }
     });
     return new Response(stream, {
@@ -1178,7 +1348,8 @@ export class KiroExecutor extends BaseExecutor {
     });
   }
 
-  async refreshCredentials(credentials, log, proxyOptions = null) {
+  async refreshCredentials(credentials, log, proxyOptions = null, { signal, recoveryBudget } = {}) {
+    signal?.throwIfAborted();
     if (!credentials.refreshToken) return null;
 
     try {
@@ -1187,11 +1358,14 @@ export class KiroExecutor extends BaseExecutor {
         credentials.refreshToken,
         credentials.providerSpecificData,
         log,
-        proxyOptions
+        proxyOptions,
+        { signal, recoveryBudget }
       );
+      signal?.throwIfAborted();
 
       return result;
     } catch (error) {
+      signal?.throwIfAborted();
       log?.error?.("TOKEN", `Kiro refresh error: ${error.message}`);
       return null;
     }

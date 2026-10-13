@@ -12,6 +12,10 @@ export class GeminiCLIExecutor extends BaseExecutor {
     return `${this.config.baseUrl}:${action}`;
   }
 
+  usesStreamBody() {
+    return false;
+  }
+
   buildHeaders(credentials, stream = true) {
     return {
       "Content-Type": "application/json",
@@ -53,11 +57,17 @@ export class GeminiCLIExecutor extends BaseExecutor {
     return base;
   }
 
-  async refreshCredentials(credentials, log) {
+  // proxyOptions is an optional positional placeholder; this refresh uses global fetch.
+  async refreshCredentials(credentials, log, proxyOptions = null, { signal, recoveryBudget } = {}) {
+    signal?.throwIfAborted();
     if (!credentials.refreshToken) return null;
 
     try {
+      signal?.throwIfAborted();
+      if (recoveryBudget && !recoveryBudget.claimRefresh()) return null;
+      signal?.throwIfAborted();
       const response = await fetch(OAUTH_ENDPOINTS.google.token, {
+        signal,
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" },
         body: new URLSearchParams({
@@ -67,10 +77,12 @@ export class GeminiCLIExecutor extends BaseExecutor {
           client_secret: this.config.clientSecret
         })
       });
+      signal?.throwIfAborted();
 
       if (!response.ok) return null;
 
       const tokens = await response.json();
+      signal?.throwIfAborted();
       log?.info?.("TOKEN", "Gemini CLI refreshed");
 
       return {
@@ -80,6 +92,7 @@ export class GeminiCLIExecutor extends BaseExecutor {
         projectId: credentials.projectId
       };
     } catch (error) {
+      signal?.throwIfAborted();
       log?.error?.("TOKEN", `Gemini CLI refresh error: ${error.message}`);
       return null;
     }

@@ -1,7 +1,11 @@
+import { openaiToAntigravityResponse } from "../../translator/response/openai-to-antigravity.js";
+import { initState } from "../../translator/index.js";
+import { createSSEStream } from "../../utils/stream.js";
+import { waitWithSignal, cancelBody, pipeWithDisconnect } from "../../utils/streamHandler.js";
 import { convertResponsesStreamToJson } from "../../transformer/streamToJsonConverter.js";
 import { restoreToolNames } from "../../utils/opencodeFingerprint.js";
 import { createErrorResult } from "../../utils/error.js";
-import { HTTP_STATUS } from "../../config/runtimeConfig.js";
+import { HTTP_STATUS, STREAM_STALL_TIMEOUT_MS } from "../../config/runtimeConfig.js";
 import { FORMATS } from "../../translator/formats.js";
 import { PROVIDERS } from "../../config/providers.js";
 import { buildRequestDetail, extractRequestConfig, saveUsageStats, formatDoneLine } from "./requestDetail.js";
@@ -180,10 +184,16 @@ export function parseSSEToOpenAIResponse(rawSSE, fallbackModel) {
  * Handle case: provider forced streaming but client wants JSON.
  * Supports both Codex/Responses API SSE and standard Chat Completions SSE.
  */
-export async function handleForcedSSEToJson({ providerResponse, sourceFormat, targetFormat, provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, customToolNames, toolNameMap, trackDone, appendLog, reqTag, log, healthProbe = false }) {
+export async function handleForcedSSEToJson({ providerResponse, sourceFormat, targetFormat, provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, customToolNames, toolNameMap, trackDone, appendLog, reqTag, log, healthProbe = false, executionOptions = null, signal, streamController }) {
+  const isAlias = executionOptions?.alias === true;
+  const guard = () => signal?.throwIfAborted();
+  const onEvent = (event, format) => executionOptions.attempt.markOutput(event, format);
+  guard();
   const contentType = providerResponse.headers.get("content-type") || "";
   const isSSE = contentType.includes("text/event-stream") || (contentType === "" && isResponsesProvider(provider));
   if (!isSSE) return null; // not handled here
+  const responseStream = isAlias ? pipeWithDisconnect(providerResponse, new TransformStream(), streamController, null,
+    PROVIDERS[provider]?.stallTimeoutMs || STREAM_STALL_TIMEOUT_MS, { alias: true, signal }) : providerResponse.body;
 
   trackDone();
 
@@ -200,8 +210,9 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
   const isCodexResponsesApi = isResponsesProvider(provider) || targetFormat === FORMATS.OPENAI_RESPONSES;
   if (isCodexResponsesApi) {
     try {
-      const jsonResponse = await convertResponsesStreamToJson(providerResponse.body);
-      if (onRequestSuccess) await onRequestSuccess();
+      const jsonResponse = await convertResponsesStreamToJson(responseStream, isAlias ? { signal, onEvent, strict: true } : {});
+      guard();
+      if (onRequestSuccess) { guard(); await waitWithSignal(onRequestSuccess(), isAlias ? signal : null); guard(); }
 
       const usage = jsonResponse.usage || {};
       appendLog({ tokens: usage, status: "200 OK" });
@@ -214,6 +225,8 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
         + (usage.cache_read_input_tokens || usage.cached_tokens || 0)
         + (usage.cache_creation_input_tokens || 0);
       const { msgItem, textContent } = pickAssistantMessageForChatCompletion(jsonResponse.output);
+      const reasoningContent = isAlias ? (jsonResponse.output || []).filter(item => item.type === RESPONSES_ITEM.REASONING)
+        .flatMap(item => [...(item.summary || []), ...(item.content || [])]).map(part => part.text || "").join("") : "";
       const totalLatency = Date.now() - requestStartTime;
 
       if (!healthProbe) saveRequestDetail(buildRequestDetail({
@@ -270,6 +283,7 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
       } else {
         const message = { role: "assistant", content: textContent || (hasToolCalls ? null : "") };
         if (hasToolCalls) message.tool_calls = toolCalls;
+        if (reasoningContent) message.reasoning_content = reasoningContent;
         const responseDone = jsonResponse.status === "completed" || jsonResponse.status === "done";
         const finishReason = hasToolCalls ? "tool_calls" : (responseDone ? "stop" : (jsonResponse.status || "stop"));
         finalResp = {
@@ -289,6 +303,7 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
       }
       return { success: true, response: new Response(JSON.stringify(restoreToolNames(finalResp, toolNameMap)), { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }) };
     } catch (err) {
+      if (isAlias) throw err;
       console.error("[ChatCore] Responses API SSE→JSON failed:", err);
       return createErrorResult(HTTP_STATUS.BAD_GATEWAY, "Failed to convert streaming response to JSON");
     }
@@ -296,7 +311,30 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
 
   // Standard Chat Completions SSE path
   try {
-    const sseText = await providerResponse.text();
+    let sseText;
+    if (isAlias) {
+      const converted = responseStream.pipeThrough(createSSEStream({
+        targetFormat, sourceFormat: FORMATS.OPENAI, provider, model,
+        strict: true, suppressAccounting: true, onEvent,
+      }), { signal });
+      const reader = converted.getReader();
+      const decoder = new TextDecoder();
+      sseText = "";
+      try {
+        while (true) {
+          guard();
+          const { done, value } = await waitWithSignal(reader.read(), signal, reason => cancelBody({ cancel: r => reader.cancel(r) }, reason));
+          guard();
+          if (done) break;
+          sseText += decoder.decode(value, { stream: true });
+        }
+        sseText += decoder.decode();
+      } catch (error) {
+        cancelBody({ cancel: reason => reader.cancel(reason) }, error);
+        throw error;
+      } finally { reader.releaseLock(); }
+    } else sseText = await providerResponse.text();
+    guard();
     const parsed = parseSSEToOpenAIResponse(sseText, model);
     if (!parsed) return createErrorResult(HTTP_STATUS.BAD_GATEWAY, "Invalid SSE response for non-streaming request");
     if (parsed.error) {
@@ -314,7 +352,7 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
       );
     }
 
-    if (onRequestSuccess) await onRequestSuccess();
+    if (onRequestSuccess) { guard(); await waitWithSignal(onRequestSuccess(), isAlias ? signal : null); guard(); }
 
     const usage = parsed.usage || {};
     appendLog({ tokens: usage, status: "200 OK" });
@@ -347,7 +385,7 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
     // When content is empty (e.g. thinking models that used all tokens for reasoning),
     // reasoning_content is the only useful output and must be preserved.
     // Previously this was unconditional, which broke Qwen3.5, Claude extended thinking, etc.
-    if (parsed?.choices) {
+    if (parsed?.choices && !isAlias) {
       for (const choice of parsed.choices) {
         if (choice?.message?.reasoning_content && choice.message.content) {
           delete choice.message.reasoning_content;
@@ -361,12 +399,22 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
     // lost on the non-streaming return path. Inlined (not imported from
     // nonStreamingHandler.js) to avoid a circular import: nonStreamingHandler
     // already imports parseSSEToOpenAIResponse from this module.
-    const finalBody = sourceFormat === FORMATS.OPENAI_RESPONSES
+    let finalBody = sourceFormat === FORMATS.OPENAI_RESPONSES
       ? chatCompletionToResponses(parsed, customToolNames)
       : parsed;
+    if (isAlias && sourceFormat !== FORMATS.OPENAI && sourceFormat !== FORMATS.OPENAI_RESPONSES) {
+      const { translateNonStreamingResponse } = await import("./nonStreamingHandler.js");
+      guard();
+      if ([FORMATS.GEMINI, FORMATS.GEMINI_CLI, FORMATS.ANTIGRAVITY].includes(sourceFormat)) {
+        const choice = parsed.choices?.[0];
+        const native = openaiToAntigravityResponse({ ...parsed, choices: [{ ...choice, delta: choice?.message }] }, initState(FORMATS.ANTIGRAVITY));
+        finalBody = sourceFormat === FORMATS.GEMINI ? native.response : native;
+      } else finalBody = translateNonStreamingResponse(parsed, FORMATS.OPENAI, sourceFormat);
+    }
 
     return { success: true, response: new Response(JSON.stringify(restoreToolNames(finalBody, toolNameMap)), { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }) };
   } catch (err) {
+    if (isAlias) throw err;
     console.error("[ChatCore] Chat Completions SSE→JSON failed:", err);
     return createErrorResult(HTTP_STATUS.BAD_GATEWAY, "Failed to convert streaming response to JSON");
   }

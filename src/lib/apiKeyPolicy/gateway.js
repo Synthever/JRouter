@@ -11,7 +11,10 @@ import { ApiKeyPolicyError, assertModelAllowed, enforceOutputLimit } from "./rul
 import { apiKeyPolicyContext, getApiKeyPolicyContext, modelIdentifiers } from "./context.js";
 import { reserveKeyUsage, accountKeyUsage, finishKeyUsage } from "./accounting.js";
 import { responseUsageObserver } from "./responseUsage.js";
-import { authenticatePolicyKey } from "./authentication.js";
+import { authenticatePolicyKey, extractPolicyApiKey } from "./authentication.js";
+import { resolvePublicLlmTarget, authorizeVirtualTarget } from "@/sse/services/publicLlmTarget.js";
+import { getKeyAccessContext } from "@/sse/services/keyAccess.js";
+import { getPublicLlmAdmissionContext, runWithPublicLlmAdmission } from "./context.js";
 
 export { extractPolicyApiKey } from "./authentication.js";
 
@@ -24,24 +27,44 @@ async function requestBody(request) {
   return request.clone().json();
 }
 
-export async function withApiKeyPolicy(request, handler, { family = null, model = null, billable = true } = {}) {
-  if (getApiKeyPolicyContext()) return handler(request);
+export async function withApiKeyPolicy(request, handler, { family = null, model = null, billable = true, targetAdmission = null, publicTarget = null } = {}) {
+  if (targetAdmission !== "public-llm" && getApiKeyPolicyContext()) return handler(request);
   let context;
   let db;
   try {
     const settings = await getSettings();
     const key = await authenticatePolicyKey(request);
-    if (!key) {
-      if (settings.requireApiKey) throw new ApiKeyPolicyError(401, "invalid_api_key", "Missing API key.");
-      return handler(request);
-    }
+    if (!key && settings.requireApiKey) throw new ApiKeyPolicyError(401, "invalid_api_key", "Missing API key.");
+    if (!key && targetAdmission !== "public-llm") return handler(request);
     let body;
     try { body = await requestBody(request); } catch { throw new ApiKeyPolicyError(400, "invalid_request", "Invalid request body."); }
     if (!body || typeof body !== "object" || Array.isArray(body)) throw new ApiKeyPolicyError(400, "invalid_request", "Request body must be an object.");
     const pathname = new URL(request.url).pathname;
     const endpoint = family || (body.generationConfig?.responseModalities?.includes("AUDIO") ? "audio" : endpointFamily(pathname));
-    if (key.allowedEndpoints !== null && !key.allowedEndpoints.includes(endpoint)) throw new ApiKeyPolicyError(403, "endpoint_not_allowed", "This endpoint is not allowed for this API key.");
+    if (key && key.allowedEndpoints !== null && !key.allowedEndpoints.includes(endpoint)) throw new ApiKeyPolicyError(403, "endpoint_not_allowed", "This endpoint is not allowed for this API key.");
 
+    let authorized = null;
+    let publicAdmission = null;
+    if (targetAdmission === "public-llm") {
+      const requested = model ?? body.model;
+      const target = await resolvePublicLlmTarget(requested);
+      const inherited = getPublicLlmAdmissionContext();
+      const sameIdentity = inherited && inherited.authorized.target.requestedId === requested
+        && inherited.endpoint === endpoint && inherited.billable === billable
+        && inherited.keySecret === extractPolicyApiKey(request);
+      if (publicTarget && (!sameIdentity || publicTarget !== inherited.authorized)) throw new ApiKeyPolicyError(403, "model_not_allowed", "Public target admission does not match this request.");
+      if (sameIdentity) {
+        const cappedBody = endpoint === "chat" && key ? enforceOutputLimit(body, key.maxOutputTokens) : body;
+        if (cappedBody !== body) {
+          const headers = new Headers(request.headers); headers.delete("content-length");
+          request = new Request(request.url, { method: request.method, headers, body: JSON.stringify(cappedBody), signal: request.signal });
+        }
+        return handler(request);
+      }
+      authorized = await authorizeVirtualTarget(target, { policy: key, keyAccess: await getKeyAccessContext(request) });
+      publicAdmission = { authorized, endpoint, billable, keySecret: extractPolicyApiKey(request) };
+      if (!key || !billable) return apiKeyPolicyContext.run(undefined, () => runWithPublicLlmAdmission(publicAdmission, () => handler(request)));
+    }
     const requestedModel = stripModelContextMarker(model || (endpoint === "web" ? body.provider || body.model : body.model || body.provider) || "").model;
     const resolvePolicyModel = endpoint === "web"
       ? async (provider) => ({ provider: resolveProviderId(provider), model: pathname.endsWith("/fetch") ? "fetch" : "search" })
@@ -49,7 +72,14 @@ export async function withApiKeyPolicy(request, handler, { family = null, model 
     let info = {};
     let pricing = null;
     let isCombo = false;
-    if (requestedModel) {
+    if (authorized) {
+      isCombo = authorized.target.kind === "combo";
+      info = { provider: null, model: authorized.target.publicId };
+      if (key.maxCostUsd !== null && billable) {
+        const prices = await Promise.all(authorized.members.map(member => getPricingForModel(member.provider, member.model)));
+        if (prices.every(price => price && Number.isFinite(price.input) && Number.isFinite(price.output))) pricing = { input: Math.max(...prices.map(p => p.input)), output: Math.max(...prices.map(p => p.output)) };
+      }
+    } else if (requestedModel) {
       const combos = await getComboModels(requestedModel);
       isCombo = Boolean(combos);
       info = combos ? { provider: null, model: requestedModel } : await resolvePolicyModel(requestedModel);
@@ -80,8 +110,8 @@ export async function withApiKeyPolicy(request, handler, { family = null, model 
     const estimatedCost = pricing ? calculateCostFromTokens({ prompt_tokens: inputTokens, completion_tokens: outputTokens }, pricing) : 0;
     db = await getAdapter();
     const admission = reserveKeyUsage(db, key.id, { tokens: inputTokens + Math.max(0, outputTokens), cost: estimatedCost }, Date.now());
-    context = { ...admission, policy: key, requestedModel, isCombo, resolvedModel: info, pending: new Set(), accounted: false };
-    let response = await apiKeyPolicyContext.run(context, () => handler(request));
+    context = { ...admission, policy: key, requestedModel, isCombo, resolvedModel: info, pending: new Set(), accounted: false, ...(authorized ? { authorizedVirtualTarget: authorized } : {}) };
+    let response = await apiKeyPolicyContext.run(context, () => publicAdmission ? runWithPublicLlmAdmission(publicAdmission, () => handler(request)) : handler(request));
     // Combo fallback catches model errors. Restore the policy envelope when no
     // permitted member succeeds instead of returning its generic upstream error.
     if (!response.ok && context.modelPolicyError) response = context.modelPolicyError.response();

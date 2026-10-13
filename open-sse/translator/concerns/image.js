@@ -34,17 +34,70 @@ function isPrivateIp(ip) {
   return false;
 }
 
+function throwIfAborted(signal) {
+  if (signal?.aborted) throw signal.reason;
+}
+
+function awaitWithSignal(promise, signal) {
+  if (!signal) return promise;
+  if (signal.aborted) return Promise.reject(signal.reason);
+  return new Promise((resolve, reject) => {
+    const onAbort = () => reject(signal.reason);
+    signal.addEventListener("abort", onAbort, { once: true });
+    Promise.resolve(promise).then(
+      (value) => { signal.removeEventListener("abort", onAbort); resolve(value); },
+      (error) => { signal.removeEventListener("abort", onAbort); reject(error); },
+    );
+  });
+}
+
 // Resolve host once and return only public IPs (SSRF guard).
 // Rejects if any resolved record is private/reserved (defeats multi-A tricks).
-async function resolvePinnedIps(hostname) {
+// The abortable waiter detaches promptly; Node's underlying lookup may finish later.
+async function resolvePinnedIps(hostname, signal) {
+  throwIfAborted(signal);
   if (!hostname || BLOCKED_HOSTS.has(hostname.toLowerCase())) return null;
   try {
-    const records = await lookup(hostname, { all: true });
+    const records = await awaitWithSignal(lookup(hostname, { all: true }), signal);
+    throwIfAborted(signal);
     if (!records.length || records.some((r) => isPrivateIp(r.address))) return null;
     return records;
-  } catch {
+  } catch (error) {
+    throwIfAborted(signal);
     return null;
   }
+}
+
+function createFetchAbort(signal, timeoutMs) {
+  const controller = new AbortController();
+  const abortFromCaller = () => controller.abort(signal.reason);
+  if (signal?.aborted) abortFromCaller();
+  else signal?.addEventListener("abort", abortFromCaller, { once: true });
+  const timeout = setTimeout(() => controller.abort(new DOMException("The operation timed out", "TimeoutError")), timeoutMs);
+  return {
+    signal: controller.signal,
+    dispose() {
+      clearTimeout(timeout);
+      signal?.removeEventListener("abort", abortFromCaller);
+    },
+  };
+}
+
+function cancelReader(reader) {
+  let cancellation;
+  try { cancellation = Promise.resolve(reader?.cancel()); } catch { cancellation = Promise.resolve(); }
+  try { reader?.releaseLock(); } catch { /* pending native reads may defer lock release */ }
+  cancellation.then(() => {
+    try { reader?.releaseLock(); } catch { /* ignore an already released or errored reader */ }
+  }, () => {});
+}
+
+function closeAgent(dispatcher) {
+  try { Promise.resolve(dispatcher?.close()).catch(() => {}); } catch { /* best effort */ }
+}
+
+function cancelResponse(response) {
+  try { Promise.resolve(response?.body?.cancel()).catch(() => {}); } catch { /* best effort */ }
 }
 
 // Verify buffer magic bytes match a known image signature; return its mime or null.
@@ -67,7 +120,7 @@ function detectImageMime(buf) {
  * Fetch a remote image URL and return it as a base64 data URI.
  * Hardened against SSRF (private/metadata IPs), memory DoS (size cap),
  * and disguised non-image payloads (magic-byte verification).
- * Returns null on any failure or rejection.
+ * Returns null on ordinary failures; caller cancellation rejects with its original reason.
  *
  * @param {string} imageUrl - HTTP(S) URL of the image
  * @param {object} options - { signal, timeoutMs, maxBytes }
@@ -75,38 +128,58 @@ function detectImageMime(buf) {
  */
 export async function fetchImageAsBase64(imageUrl, options = {}) {
   const { signal, timeoutMs = FETCH_TIMEOUT_MS, maxBytes = MAX_IMAGE_BYTES } = options;
+  try { throwIfAborted(signal); } catch (reason) { throw reason; }
   if (!imageUrl || (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://"))) {
     return null;
   }
 
   let url;
   try { url = new URL(imageUrl); } catch { return null; }
-  const pinnedIps = await resolvePinnedIps(url.hostname);
+  let pinnedIps;
+  try {
+    pinnedIps = await resolvePinnedIps(url.hostname, signal);
+  } catch (reason) {
+    if (signal?.aborted) throw reason;
+    return null;
+  }
+  throwIfAborted(signal);
   if (!pinnedIps) return null;
 
-  const controller = new AbortController();
-  const timeout = signal ? null : setTimeout(() => controller.abort(), timeoutMs);
-  const fetchSignal = signal || controller.signal;
-
-  // Pin connect to the validated IP so no second DNS resolution can rebind (TOCTOU fix).
-  const dispatcher = new Agent({
-    connect: { lookup: (_h, _o, cb) => cb(null, [{ address: pinnedIps[0].address, family: pinnedIps[0].family }]) },
-  });
-
+  const timeout = createFetchAbort(signal, timeoutMs);
+  let dispatcher;
+  let response;
+  let reader;
+  let readerDone = false;
+  let completed = false;
   try {
+    throwIfAborted(signal);
+    // Pin connect to the validated IP so no second DNS resolution can rebind (TOCTOU fix).
+    dispatcher = new Agent({
+      connect: { lookup: (_h, _o, cb) => cb(null, [{ address: pinnedIps[0].address, family: pinnedIps[0].family }]) },
+    });
+    throwIfAborted(signal);
     // redirect:"manual" prevents a public URL redirecting to a private one (SSRF bypass).
-    const response = await fetch(imageUrl, { signal: fetchSignal, redirect: "manual", dispatcher });
-    if (!response.ok || !response.body) return null;
+    const pendingResponse = fetch(imageUrl, { signal: timeout.signal, redirect: "manual", dispatcher });
+    Promise.resolve(pendingResponse).then((lateResponse) => {
+      if (timeout.signal.aborted) cancelResponse(lateResponse);
+    }, () => {});
+    response = await awaitWithSignal(pendingResponse, timeout.signal);
+    throwIfAborted(signal);
+    if (!response.ok || !response.body) {
+      cancelResponse(response);
+      return null;
+    }
 
     // Stream-read with a hard byte cap to avoid loading huge payloads into memory.
-    const reader = response.body.getReader();
+    reader = response.body.getReader();
     const chunks = [];
     let total = 0;
     while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+      const { done, value } = await awaitWithSignal(reader.read(), timeout.signal);
+      throwIfAborted(signal);
+      if (done) { readerDone = true; break; }
       total += value.length;
-      if (total > maxBytes) { try { await reader.cancel(); } catch { /* ignore */ } return null; }
+      if (total > maxBytes) return null;
       chunks.push(value);
     }
 
@@ -114,11 +187,17 @@ export async function fetchImageAsBase64(imageUrl, options = {}) {
     const mimeType = detectImageMime(buf);
     if (!mimeType) return null; // not a recognized image — reject disguised payloads
 
+    completed = true;
     return { url: `data:${mimeType};base64,${buf.toString("base64")}`, mimeType };
-  } catch {
+  } catch (error) {
+    if (signal?.aborted) throw signal.reason;
     return null;
   } finally {
-    if (timeout) clearTimeout(timeout);
-    dispatcher.close().catch(() => {});
+    timeout.dispose();
+    if (reader && readerDone) {
+      try { reader.releaseLock(); } catch { /* ignore */ }
+    } else if (!completed && reader) cancelReader(reader);
+    else if (!reader && response?.body) cancelResponse(response);
+    closeAgent(dispatcher);
   }
 }

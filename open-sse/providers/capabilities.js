@@ -723,7 +723,7 @@ function resolveCapabilities(provider, model) {
 
 // A manual pin wins over every table and over the catalog: it exists precisely
 // for the cases where the automatic answer is wrong.
-function applyLimitOverrides(caps, provider, model) {
+export function applyLimitOverrides(caps, provider, model) {
   const pinned = getLimitOverrideSource()?.getLimits(provider, model);
   if (!pinned) return caps;
 

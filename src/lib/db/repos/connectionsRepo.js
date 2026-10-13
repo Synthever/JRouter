@@ -260,8 +260,10 @@ export async function createProviderConnection(data) {
 }
 
 // Critical: OAuth refresh token race — atomic merge inside transaction
-export async function updateProviderConnection(id, data) {
+export async function updateProviderConnection(id, data, { signal } = {}) {
+  signal?.throwIfAborted();
   const db = await getAdapter();
+  signal?.throwIfAborted();
   let result;
   db.transaction(() => {
     const row = db.get(`SELECT * FROM providerConnections WHERE id = ?`, [id]);

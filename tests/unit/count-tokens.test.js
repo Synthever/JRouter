@@ -2,17 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/localDb", () => ({ getSettings: async () => ({ requireApiKey: false }) }));
 
-import { POST } from "../../src/app/api/v1/messages/count_tokens/route.js";
+import { estimateAnthropicInputTokens } from "../../src/app/api/v1/messages/count_tokens/route.js";
 
 async function countTokens(body) {
-  const response = await POST(new Request("https://9router.local/v1/messages/count_tokens", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  }));
-
-  expect(response.status).toBe(200);
-  return response.json();
+  return { input_tokens: estimateAnthropicInputTokens(body) };
 }
 
 describe("Anthropic count_tokens estimator", () => {

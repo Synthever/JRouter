@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { resolveCatalogContext, normalizePublicCatalog, selectContextCatalog, filterCatalogEntries } from "@/shared/utils/modelCatalogContext";
 import {
   OAUTH_PROVIDERS,
   APIKEY_PROVIDERS,
@@ -112,31 +113,57 @@ export function useModelCatalog({
   kindFilter = null,
   capFilter = null,
   addedModelValues = [],
+  catalogContext: requestedContext,
+  includeLegacyCombos = false,
+  excludePlaceholders = false,
 } = {}) {
-  const { getCaps } = useModelCaps();
+  const catalogContext = resolveCatalogContext(requestedContext, kindFilter);
+  const needsProviderCatalog = ["members", "media", "key-block"].includes(catalogContext);
+  const needsPublicCatalog = ["invocation", "key-allow", "key-block"].includes(catalogContext);
+  const { getCaps } = useModelCaps({ enabled: isOpen && needsProviderCatalog });
   const [combos, setCombos] = useState([]);
   const [providerNodes, setProviderNodes] = useState([]);
   const [customModels, setCustomModels] = useState([]);
   const [disabledModels, setDisabledModels] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [revision, setRevision] = useState(0);
+  const [catalogRead, setCatalogRead] = useState({ context: null, revision: -1, virtuals: [], error: "", loading: false });
+  const reload = useCallback(() => setRevision(value => value + 1), []);
 
   useEffect(() => {
     if (!isOpen) return undefined;
     let cancelled = false;
-    Promise.all([
-      fetchJson("/api/combos", {}),
-      fetchJson("/api/provider-nodes", {}),
-      fetchJson("/api/models/custom", {}),
-      fetchJson("/api/models/disabled", {}),
-    ]).then(([comboData, nodeData, customData, disabledData]) => {
+    const controller = new AbortController();
+    Promise.resolve().then(async () => {
       if (cancelled) return;
-      setCombos(Array.isArray(comboData.combos) ? comboData.combos : []);
-      setProviderNodes(Array.isArray(nodeData.nodes) ? nodeData.nodes : []);
-      setCustomModels(Array.isArray(customData.models) ? customData.models : []);
-      setDisabledModels(disabledData.disabled && typeof disabledData.disabled === "object" ? disabledData.disabled : {});
+      setCatalogRead(previous => ({ ...previous, context: catalogContext, revision, error: "", loading: true }));
+      try {
+        const publicRead = needsPublicCatalog ? fetch("/api/models/public", { cache: "no-store", signal: controller.signal })
+          .then(async response => {
+            if (!response.ok) throw new Error("Public catalog unavailable.");
+            return normalizePublicCatalog(await response.json());
+          }) : Promise.resolve([]);
+        const providerRead = needsProviderCatalog ? Promise.all([
+          fetchJson("/api/combos", {}), fetchJson("/api/provider-nodes", {}),
+          fetchJson("/api/models/custom", {}), fetchJson("/api/models/disabled", {}),
+        ]) : Promise.resolve(null);
+        const [virtuals, providerData] = await Promise.all([publicRead, providerRead]);
+        if (cancelled) return;
+        if (providerData) {
+          const [comboData, nodeData, customData, disabledData] = providerData;
+          setCombos(Array.isArray(comboData.combos) ? comboData.combos : []);
+          setProviderNodes(Array.isArray(nodeData.nodes) ? nodeData.nodes : []);
+          setCustomModels(Array.isArray(customData.models) ? customData.models : []);
+          setDisabledModels(disabledData.disabled && typeof disabledData.disabled === "object" ? disabledData.disabled : {});
+        }
+        setCatalogRead({ context: catalogContext, revision, virtuals, loading: false, error: "" });
+      } catch {
+        if (!cancelled) setCatalogRead(previous => ({ ...previous, context: catalogContext, revision, loading: false,
+          error: "Unable to load models. Retry to refresh the catalog." }));
+      }
     });
-    return () => { cancelled = true; };
-  }, [isOpen]);
+    return () => { cancelled = true; controller.abort(); };
+  }, [isOpen, catalogContext, needsPublicCatalog, needsProviderCatalog, revision]);
 
   // Filter activeProviders by serviceKinds when kindFilter is set (e.g. "webSearch", "webFetch")
   const filteredActiveProviders = useMemo(() => {
@@ -158,10 +185,10 @@ export function useModelCatalog({
     return map;
   }, [activeProviders]);
 
-  const cursorModels = useLiveProviderModels(isOpen, liveConnectionIdsByProvider.cursor, "Cursor");
-  const clineModels = useLiveProviderModels(isOpen, liveConnectionIdsByProvider.cline, "Cline");
-  const clinepassModels = useLiveProviderModels(isOpen, liveConnectionIdsByProvider.clinepass, "ClinePass");
-  const zedModels = useLiveProviderModels(isOpen, liveConnectionIdsByProvider.zed, "Zed");
+  const cursorModels = useLiveProviderModels(isOpen && needsProviderCatalog, liveConnectionIdsByProvider.cursor, "Cursor");
+  const clineModels = useLiveProviderModels(isOpen && needsProviderCatalog, liveConnectionIdsByProvider.cline, "Cline");
+  const clinepassModels = useLiveProviderModels(isOpen && needsProviderCatalog, liveConnectionIdsByProvider.clinepass, "ClinePass");
+  const zedModels = useLiveProviderModels(isOpen && needsProviderCatalog, liveConnectionIdsByProvider.zed, "Zed");
 
   const allProviders = useMemo(
     () => ({ ...OAUTH_PROVIDERS, ...FREE_PROVIDERS, ...FREE_TIER_PROVIDERS, ...APIKEY_PROVIDERS }),
@@ -169,8 +196,9 @@ export function useModelCatalog({
   );
 
   // Group models by provider with priority order
-  const groups = useMemo(() => {
+  const providerGroups = useMemo(() => {
     const result = {};
+    if (!needsProviderCatalog) return result;
 
     // No kindFilter means the LLM selector. Custom models stay visible because
     // user-added models may have typed capabilities (for example imageToText)
@@ -203,7 +231,7 @@ export function useModelCatalog({
       return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
     });
 
-    const aliases = Object.entries(modelAliases).filter(([, fullModel]) => isSafeAliasValue(fullModel));
+    const aliases = Object.entries(modelAliases).filter(([, fullModel]) => isSafeAliasValue(fullModel) && !fullModel.startsWith("jrouter/"));
 
     sortedProviderIds.forEach((providerId) => {
       const alias = getProviderAlias(providerId);
@@ -305,6 +333,7 @@ export function useModelCatalog({
             name: m.name || m.id,
             value: `${nodePrefix}/${m.id}`,
             isCustom: true,
+            ...(getModelKind(m) ? { kind: getModelKind(m) } : {}),
           }));
         const seen = new Set(nodeModels.map((m) => m.value));
         const mergedModels = [...nodeModels, ...registeredCustom.filter((m) => !seen.has(m.value))];
@@ -355,7 +384,7 @@ export function useModelCatalog({
         const customAliasIds = new Set(customAliasModels.map((m) => m.id));
         const customRegisteredModels = customModels
           .filter((m) => m.providerAlias === alias && !hardcodedIds.has(m.id) && !customAliasIds.has(m.id))
-          .map((m) => ({ id: m.id, name: m.name || m.id, value: `${alias}/${m.id}`, isCustom: true }));
+          .map((m) => ({ id: m.id, name: m.name || m.id, value: `${alias}/${m.id}`, isCustom: true, ...(getModelKind(m) ? { kind: getModelKind(m) } : {}) }));
 
         const merged = [
           ...hardcodedModels.map((m) => ({ id: m.id, name: m.name, value: `${alias}/${m.id}`, kind: getModelKind(m) })),
@@ -399,8 +428,19 @@ export function useModelCatalog({
       if (group.models.length === 0) delete result[providerId];
     });
 
+    if (excludePlaceholders) {
+      for (const [providerId, group] of Object.entries(result)) {
+        const knownModels = [...getModelsByProviderId(providerId), ...customModels.filter(model =>
+          [providerId, group.alias, getProviderAlias(providerId)].includes(model.providerAlias))];
+        group.models = group.models.filter(model => !model.isPlaceholder &&
+          !knownModels.some(known => known.id === model.id && getModelKind(known) && getModelKind(known) !== "llm"));
+        if (!group.models.length) delete result[providerId];
+      }
+    }
     return result;
   }, [
+    excludePlaceholders,
+    needsProviderCatalog,
     filteredActiveProviders,
     modelAliases,
     allProviders,
@@ -415,13 +455,16 @@ export function useModelCatalog({
     zedModels,
   ]);
 
-  // Filter combos by search query (and hide combos when kindFilter is set — combos are LLM-only by design)
-  const filteredCombos = useMemo(() => {
-    if (kindFilter || capFilter) return [];
-    if (!searchQuery.trim()) return combos;
-    const query = searchQuery.toLowerCase();
-    return combos.filter((c) => c.name.toLowerCase().includes(query));
-  }, [combos, searchQuery, kindFilter, capFilter]);
+  const contextCatalog = useMemo(() => selectContextCatalog({
+    catalogContext, virtuals: catalogRead.context === catalogContext ? catalogRead.virtuals : [],
+    groups: providerGroups, combos, includeLegacyCombos, excludePlaceholders, kindFilter, capFilter,
+  }), [catalogContext, catalogRead, providerGroups, combos, includeLegacyCombos, excludePlaceholders, kindFilter, capFilter]);
+  const groups = contextCatalog.groups;
+  const filteredAliases = useMemo(() => filterCatalogEntries(contextCatalog.aliases, { searchQuery, capFilter, addedModelValues }),
+    [contextCatalog.aliases, searchQuery, capFilter, addedModelValues]);
+  const filteredCombos = useMemo(() => filterCatalogEntries(contextCatalog.combos, {
+    searchQuery, capFilter: needsPublicCatalog ? capFilter : null, addedModelValues,
+  }), [contextCatalog.combos, searchQuery, capFilter, needsPublicCatalog, addedModelValues]);
 
   // Sort models alphabetically, with added models floated to top
   const sortModels = (models, addedValues) => {
@@ -444,7 +487,7 @@ export function useModelCatalog({
       if (query) {
         const providerNameMatches = group.name.toLowerCase().includes(query);
         models = models.filter(
-          (m) => m.name.toLowerCase().includes(query) || m.id.toLowerCase().includes(query)
+          (m) => providerNameMatches || `${m.name} ${m.id} ${m.value}`.toLowerCase().includes(query)
         );
         if (models.length === 0 && !providerNameMatches) return;
       }
@@ -457,6 +500,10 @@ export function useModelCatalog({
     groups,
     visibleGroups,
     filteredCombos,
+    filteredAliases,
+    loading: isOpen && (catalogRead.context !== catalogContext || catalogRead.revision !== revision || catalogRead.loading),
+    error: catalogRead.context === catalogContext && catalogRead.revision === revision ? catalogRead.error : "",
+    reload,
     searchQuery,
     setSearchQuery,
     providerNodes,

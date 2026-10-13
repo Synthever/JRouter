@@ -49,15 +49,19 @@ export function validateOAuthEndpoint(rawUrl, field) {
 /**
  * Discover authorization + token endpoints. Cached process-wide.
  */
-export async function discoverEndpoints() {
+export async function discoverEndpoints({ signal } = {}) {
+  signal?.throwIfAborted();
   if (cachedDiscovery) return cachedDiscovery;
 
   try {
     const res = await fetch(XAI_CONFIG.discoveryUrl, {
+      signal,
       headers: { Accept: "application/json" },
     });
+    signal?.throwIfAborted();
     if (res.ok) {
       const data = await res.json();
+      signal?.throwIfAborted();
       cachedDiscovery = {
         authorizeUrl: validateOAuthEndpoint(data.authorization_endpoint, "authorization_endpoint"),
         tokenUrl: validateOAuthEndpoint(data.token_endpoint, "token_endpoint"),
@@ -65,9 +69,11 @@ export async function discoverEndpoints() {
       return cachedDiscovery;
     }
   } catch {
+    signal?.throwIfAborted();
     // fall through to static fallback
   }
 
+  signal?.throwIfAborted();
   cachedDiscovery = {
     authorizeUrl: XAI_CONFIG.authorizeUrl,
     tokenUrl: XAI_CONFIG.tokenUrl,
@@ -152,8 +158,10 @@ export class XaiService extends OAuthService {
   /**
    * Refresh an access token using a refresh_token.
    */
-  async refreshAccessToken(refreshToken) {
-    const { tokenUrl } = await discoverEndpoints();
+  async refreshAccessToken(refreshToken, { signal } = {}) {
+    signal?.throwIfAborted();
+    const { tokenUrl } = await discoverEndpoints({ signal });
+    signal?.throwIfAborted();
     const res = await fetch(tokenUrl, {
       method: "POST",
       headers: {
@@ -165,12 +173,17 @@ export class XaiService extends OAuthService {
         client_id: XAI_CONFIG.clientId,
         refresh_token: refreshToken,
       }),
+      signal,
     });
+    signal?.throwIfAborted();
     if (!res.ok) {
       const err = await res.text();
+      signal?.throwIfAborted();
       throw new Error(`xAI token refresh failed: ${err}`);
     }
-    return await res.json();
+    const tokens = await res.json();
+    signal?.throwIfAborted();
+    return tokens;
   }
 
   /**

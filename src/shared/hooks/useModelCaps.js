@@ -39,7 +39,7 @@ function loadModelCaps() {
 
 // Resolve caps from a "provider/model" string or a bare model id.
 function resolveCaps(byFull, byId, key) {
-  if (!key) return null;
+  if (!key || key.startsWith("jrouter/")) return null;
   if (byFull[key]) return byFull[key];
   const bare = key.includes("/") ? key.slice(key.indexOf("/") + 1) : key;
   if (byId[bare]) return byId[bare];
@@ -54,11 +54,12 @@ function resolveCaps(byFull, byId, key) {
   };
 }
 
-export function useModelCaps() {
+export function useModelCaps({ enabled = true } = {}) {
   const [byFull, setByFull] = useState(() => cache?.byFull || {});
   const [byId, setById] = useState(() => cache?.byId || {});
 
   useEffect(() => {
+    if (!enabled) return undefined;
     let alive = true;
     const sync = (maps) => {
       if (alive) { setByFull(maps.byFull); setById(maps.byId); }
@@ -81,7 +82,7 @@ export function useModelCaps() {
       window.removeEventListener("customModelChanged", invalidate);
       window.removeEventListener("modelLimitsChanged", invalidate);
     };
-  }, []);
+  }, [enabled]);
 
   const getCaps = useCallback(
     (key) => resolveCaps(byFull, byId, key),

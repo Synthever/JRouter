@@ -2,6 +2,20 @@
    Playground popover. Chips stay flat and token-driven so the list reads the same
    inside a modal, inside a popover, and on the Combo pages. */
 
+.dialog button[aria-label="Close"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  color: var(--text-2);
+}
+
+.dialog button[aria-label="Close"]:focus-visible {
+  outline: 2px solid var(--text-2);
+  outline-offset: 2px;
+}
+
 .search {
   position: relative;
   margin-bottom: 12px;
@@ -11,7 +25,7 @@
   position: absolute;
   top: 50%;
   left: 9px;
-  color: var(--text-3);
+  color: var(--text-2);
   font-size: 15px;
   transform: translateY(-50%);
   pointer-events: none;
@@ -21,7 +35,7 @@
   width: 100%;
   min-height: 34px;
   padding: 7px 10px 7px 32px;
-  border: 1px solid var(--line-2);
+  border: 1px solid var(--text-2);
   border-radius: var(--r1);
   background: var(--surface-2);
   color: var(--text);
@@ -31,16 +45,17 @@
 }
 
 .searchInput::placeholder {
-  color: var(--text-3);
+  color: var(--text-2);
 }
 
 .searchInput:focus-visible {
-  border-color: var(--text-3);
+  border-color: var(--text-2);
   outline: 2px solid var(--text-2);
   outline-offset: 1px;
 }
 
 .scroll {
+  min-width: 0;
   max-height: 400px;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -81,7 +96,7 @@
 }
 
 .groupCount {
-  color: var(--text-3);
+  color: var(--text-2);
   font-family: var(--font-mono);
   font-size: 10px;
   font-variant-numeric: tabular-nums;
@@ -98,9 +113,11 @@
   align-items: center;
   gap: 5px;
   max-width: 100%;
+  min-width: 0;
+  flex-wrap: wrap;
   min-height: 26px;
   padding: 4px 9px;
-  border: 1px solid var(--line-2);
+  border: 1px solid var(--text-2);
   border-radius: var(--r1);
   background: var(--surface-2);
   color: var(--text);
@@ -112,7 +129,7 @@
 }
 
 .chip:hover {
-  border-color: var(--text-3);
+  border-color: var(--text-2);
   background: var(--surface-hover);
 }
 
@@ -132,9 +149,9 @@
 }
 
 .chipLabel {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .chipCheck,
@@ -144,11 +161,20 @@
 }
 
 .chipHint {
-  color: var(--text-3);
+  color: var(--text-2);
+}
+
+.capability {
+  color: var(--text-2);
+  font-size: 10px;
+}
+
+.chip[aria-pressed="true"] .capability {
+  color: inherit;
 }
 
 .chipTag {
-  color: var(--text-3);
+  color: var(--text-2);
   font-size: 9px;
   font-weight: 400;
 }
@@ -159,7 +185,7 @@
   align-items: center;
   gap: 4px;
   padding: 20px 12px;
-  color: var(--text-3);
+  color: var(--text-2);
   font-size: 12px;
   text-align: center;
 }
@@ -168,12 +194,41 @@
   font-size: 20px;
 }
 
+.status {
+  padding: 12px 0;
+  color: var(--text-2);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.retry {
+  margin-top: 8px;
+  min-height: 44px;
+  padding: 7px 14px;
+  border: 1px solid var(--text-2);
+  border-radius: var(--r1);
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.retry:hover {
+  background: var(--surface-hover);
+}
+
+.retry:focus-visible {
+  outline: 2px solid var(--text-2);
+  outline-offset: 2px;
+}
+
 @media (max-width: 639px) {
   .chip {
-    min-height: 34px;
+    min-height: 44px;
+    min-width: 44px;
   }
 
   .searchInput {
+    min-height: 44px;
     font-size: 16px;
   }
 

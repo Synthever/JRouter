@@ -3,22 +3,34 @@ import { FORMATS } from "../formats.js";
 import { adjustMaxTokens } from "../formats/maxTokens.js";
 import { encodeDataUri } from "../concerns/image.js";
 import { collapseTextParts } from "../concerns/message.js";
+import { ApiKeyPolicyError } from "@/lib/apiKeyPolicy/rules.js";
 import { ROLE, GEMINI_ROLE, OPENAI_BLOCK } from "../schema/index.js";
 
 // Convert Gemini request to OpenAI format
-export function geminiToOpenAIRequest(model, body, stream) {
+export function geminiToOpenAIRequest(model, body, stream, { preserveAliasParts = false } = {}) {
   const result = {
     model: model,
     messages: [],
     stream: stream
   };
 
+  if (preserveAliasParts) {
+    const reject = message => { throw new ApiKeyPolicyError(400, "invalid_request", message); };
+    for (const content of [body.systemInstruction, ...(body.contents || [])].filter(Boolean)) {
+      for (const part of content.parts || []) {
+        if (!part || !["text", "inlineData", "functionCall", "functionResponse"].some(key => Object.hasOwn(part, key)) || Object.keys(part).some(key => !["text", "inlineData", "functionCall", "functionResponse", "thought"].includes(key))) reject("Unsupported Gemini alias content part.");
+        if (part.inlineData && !/^(image\/|audio\/|application\/pdf$)/.test(part.inlineData.mimeType || "")) reject("Unsupported Gemini alias inline media.");
+      }
+    }
+    if ((body.tools || []).some(tool => !tool.functionDeclarations || Object.keys(tool).some(key => key !== "functionDeclarations"))) reject("Unsupported Gemini alias tool.");
+  }
+
   // Generation config
   if (body.generationConfig) {
     const config = body.generationConfig;
-    if (config.maxOutputTokens) {
+    if (config.maxOutputTokens || (preserveAliasParts && config.maxOutputTokens !== undefined)) {
       const tempBody = { max_tokens: config.maxOutputTokens, tools: body.tools };
-      result.max_tokens = adjustMaxTokens(tempBody);
+      result.max_tokens = preserveAliasParts ? config.maxOutputTokens : adjustMaxTokens(tempBody);
     }
     if (config.temperature !== undefined) {
       result.temperature = config.temperature;
@@ -27,6 +39,8 @@ export function geminiToOpenAIRequest(model, body, stream) {
       result.top_p = config.topP;
     }
   }
+
+  if (preserveAliasParts && body.max_tokens !== undefined) result.max_tokens = body.max_tokens;
 
   // System instruction
   if (body.systemInstruction) {
@@ -42,9 +56,9 @@ export function geminiToOpenAIRequest(model, body, stream) {
   // Convert contents to messages
   if (body.contents && Array.isArray(body.contents)) {
     for (const content of body.contents) {
-      const converted = convertGeminiContent(content);
+      const converted = convertGeminiContent(content, preserveAliasParts);
       if (converted) {
-        result.messages.push(converted);
+        result.messages.push(...(Array.isArray(converted) ? converted : [converted]));
       }
     }
   }
@@ -72,7 +86,7 @@ export function geminiToOpenAIRequest(model, body, stream) {
 }
 
 // Convert Gemini content to OpenAI message
-function convertGeminiContent(content) {
+function convertGeminiContent(content, preserveAliasParts = false) {
   const role = content.role === GEMINI_ROLE.USER ? ROLE.USER : ROLE.ASSISTANT;
   
   if (!content.parts || !Array.isArray(content.parts)) {
@@ -81,13 +95,18 @@ function convertGeminiContent(content) {
 
   const parts = [];
   const toolCalls = [];
+  const toolResponses = [];
 
   for (const part of content.parts) {
     if (part.text !== undefined) {
       parts.push({ type: OPENAI_BLOCK.TEXT, text: part.text });
     }
 
-    if (part.inlineData) {
+    if (preserveAliasParts && part.inlineData?.mimeType?.startsWith("audio/")) {
+      parts.push({ type: OPENAI_BLOCK.INPUT_AUDIO, input_audio: { data: part.inlineData.data, format: part.inlineData.mimeType.slice(6) } });
+    } else if (preserveAliasParts && part.inlineData?.mimeType === "application/pdf") {
+      parts.push({ type: OPENAI_BLOCK.FILE, file: { filename: "input.pdf", file_data: encodeDataUri(part.inlineData.mimeType, part.inlineData.data) } });
+    } else if (part.inlineData) {
       parts.push({
         type: OPENAI_BLOCK.IMAGE_URL,
         image_url: {
@@ -109,7 +128,9 @@ function convertGeminiContent(content) {
       });
     }
 
-    if (part.functionResponse) {
+    if (preserveAliasParts && part.functionResponse) {
+      toolResponses.push({ role: ROLE.TOOL, tool_call_id: part.functionResponse.id || `call_${part.functionResponse.name}`, content: JSON.stringify(part.functionResponse.response?.result ?? part.functionResponse.response ?? {}) });
+    } else if (part.functionResponse) {
       return {
         role: ROLE.TOOL,
         tool_call_id: part.functionResponse.id || `call_${part.functionResponse.name}`,
@@ -121,12 +142,13 @@ function convertGeminiContent(content) {
   if (toolCalls.length > 0) {
     const result = { role: ROLE.ASSISTANT };
     if (parts.length > 0) {
-      result.content = parts.length === 1 ? parts[0].text : parts;
+      result.content = preserveAliasParts ? collapseTextParts(parts) : parts.length === 1 ? parts[0].text : parts;
     }
     result.tool_calls = toolCalls;
-    return result;
+    return preserveAliasParts ? [result, ...toolResponses] : result;
   }
 
+  if (preserveAliasParts && toolResponses.length) return [...(parts.length ? [{ role, content: collapseTextParts(parts) }] : []), ...toolResponses];
   if (parts.length > 0) {
     return {
       role,

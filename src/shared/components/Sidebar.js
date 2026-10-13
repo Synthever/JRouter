@@ -25,6 +25,7 @@ const navItems = [
   { href: "/dashboard/providers", label: "Providers", icon: "dns" },
   // { href: "/dashboard/basic-chat", label: "Basic Chat", icon: "chat" }, // Hidden
   { href: "/dashboard/combos", label: "Combo & Vision Adapter", icon: "layers" },
+  { href: "/dashboard/models-aliases", label: "Models Aliases", icon: "route" },
   { href: "/dashboard/playground", label: "Playground", icon: "science" },
   { href: "/dashboard/usage", label: "Usage", icon: "bar_chart" },
   { href: "/dashboard/health", label: "Health", icon: "monitoring" },

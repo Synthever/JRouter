@@ -159,6 +159,10 @@ export class AntigravityExecutor extends BaseExecutor {
     return `${baseUrl}/v1internal:${action}`;
   }
 
+  usesStreamBody() {
+    return false;
+  }
+
   // sessionId comes from transformRequest output; base.execute runs transformRequest before
   // buildHeaders, so we read it from instance state cached there (fallback: explicit arg).
   buildHeaders(credentials, stream = true, sessionId = null) {
@@ -346,11 +350,16 @@ export class AntigravityExecutor extends BaseExecutor {
     };
   }
 
-  async refreshCredentials(credentials, log, proxyOptions = null) {
+  async refreshCredentials(credentials, log, proxyOptions = null, { signal, recoveryBudget } = {}) {
+    signal?.throwIfAborted();
     if (!credentials.refreshToken) return null;
 
     try {
+      signal?.throwIfAborted();
+      if (recoveryBudget && !recoveryBudget.claimRefresh()) return null;
+      signal?.throwIfAborted();
       const response = await proxyAwareFetch(OAUTH_ENDPOINTS.google.token, {
+        signal,
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" },
         body: new URLSearchParams({
@@ -360,10 +369,12 @@ export class AntigravityExecutor extends BaseExecutor {
           client_secret: this.config.clientSecret
         })
       }, proxyOptions);
+      signal?.throwIfAborted();
 
       if (!response.ok) return null;
 
       const tokens = await response.json();
+      signal?.throwIfAborted();
       log?.info?.("TOKEN", "Antigravity refreshed");
 
       return {
@@ -373,6 +384,7 @@ export class AntigravityExecutor extends BaseExecutor {
         projectId: credentials.projectId
       };
     } catch (error) {
+      signal?.throwIfAborted();
       log?.error?.("TOKEN", `Antigravity refresh error: ${error.message}`);
       return null;
     }

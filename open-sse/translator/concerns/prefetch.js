@@ -77,16 +77,29 @@ function collectImageRefs(body, sourceFormat) {
  * No-op when target accepts remote URLs (e.g. openai, claude) or body has none.
  * @returns {Promise<number>} count of images converted
  */
+function throwIfAborted(signal) {
+  if (signal?.aborted) throw signal.reason;
+}
+
+/**
+ * Replace remote image URLs with base64 data for targets requiring inline data.
+ * Pass options.signal to cancel DNS, fetch, and body reads; callers must propagate
+ * cancellation at their generation boundary rather than treating it as fail-open.
+ */
 export async function prefetchRemoteImages(body, sourceFormat, targetFormat, options = {}) {
+  const { signal } = options;
+  throwIfAborted(signal);
   if (!body || !TARGETS_NEED_BASE64.has(targetFormat)) return 0;
   const refs = collectImageRefs(body, sourceFormat);
   if (!refs.length) return 0;
 
   let converted = 0;
   for (const ref of refs) {
+    throwIfAborted(signal);
     const url = ref.get();
     if (parseDataUri(url)) continue; // already inline
     const fetched = await fetchImageAsBase64(url, options);
+    throwIfAborted(signal);
     if (!fetched) continue;
     if (ref.set) ref.set(fetched.url);
     else if (ref.part) { delete ref.part.fileData; ref.part.inlineData = { mimeType: fetched.mimeType, data: fetched.url.split(",")[1] }; }

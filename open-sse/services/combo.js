@@ -277,9 +277,10 @@ export function getComboModelsFromData(modelStr, combosData) {
  * @param {number|string} [options.comboStickyLimit=1] - Requests per combo model before switching
  * @returns {Promise<Response>}
  */
-export async function handleComboChat({ body, models, handleSingleModel, log, comboName, comboStrategy, comboStickyLimit = 1, autoSwitch = true }) {
+export async function handleComboChat({ body, models, handleSingleModel, log, comboName, comboStrategy, comboStickyLimit = 1, autoSwitch = true, executionOptions = null }) {
   // Apply rotation strategy if enabled
-  let rotatedModels = getRotatedModels(models, comboName, comboStrategy, comboStickyLimit);
+  let rotatedModels = executionOptions?.getCandidates
+    ? executionOptions.getCandidates("fallback") : getRotatedModels(models, comboName, comboStrategy, comboStickyLimit);
 
   // Auto-switch: float models that satisfy the request's required capabilities to the front.
   if (autoSwitch) {
@@ -296,13 +297,23 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
   let lastError = null;
   let earliestRetryAfter = null;
   let lastStatus = null;
+  let lastResponse = null;
 
   for (let i = 0; i < rotatedModels.length; i++) {
     const modelStr = rotatedModels[i];
     log.info("COMBO", `Trying model ${i + 1}/${rotatedModels.length}: ${modelStr}`);
 
     try {
-      const result = await handleSingleModel(body, modelStr);
+      const context = executionOptions?.resolveAttempt?.(modelStr, "fallback");
+      if (executionOptions && !context) continue;
+      const executed = executionOptions ? await handleSingleModel(body, modelStr, context) : await handleSingleModel(body, modelStr);
+      if (executionOptions) {
+        const settled = await executionOptions.settleResult(executed, context);
+        if (settled.success || !settled.shouldFallback) return settled.response;
+        lastResponse = settled.response;
+        continue;
+      }
+      const result = executed;
       
       // Success (2xx) - return response
       if (result.ok) {
@@ -353,12 +364,15 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
       if (!lastStatus) lastStatus = result.status;
       log.warn("COMBO", `Model ${modelStr} failed, trying next`, { status: result.status });
     } catch (error) {
+      if (executionOptions) throw error;
       // Catch unexpected exceptions to ensure fallback continues
       lastError = error.message || String(error);
       if (!lastStatus) lastStatus = 500;
       log.warn("COMBO", `Model ${modelStr} threw error, trying next`, { error: lastError });
     }
   }
+
+  if (executionOptions) return executionOptions.exhausted(lastResponse);
 
   // All models failed
   // Use 503 (Service Unavailable) rather than 406 (Not Acceptable) — 406 implies
@@ -492,7 +506,7 @@ function withTimeout(promise, ms) {
  * still preferring a full panel when everyone is fast. Bounded by a hard timeout.
  * Returns a sparse array aligned to `calls` (undefined = not yet / dropped).
  */
-function collectPanel(calls, { minPanel, stragglerGraceMs, panelHardTimeoutMs }) {
+function collectPanel(calls, { minPanel, stragglerGraceMs, panelHardTimeoutMs, isUseful = value => value?.ok, cancelPending = null, signal = null }) {
   return new Promise((resolve) => {
     const out = new Array(calls.length);
     let settled = 0;
@@ -504,16 +518,20 @@ function collectPanel(calls, { minPanel, stragglerGraceMs, panelHardTimeoutMs })
       finished = true;
       clearTimeout(hardTimer);
       if (graceTimer) clearTimeout(graceTimer);
+      signal?.removeEventListener("abort", finish);
+      cancelPending?.(out);
       resolve(out);
     };
     const hardTimer = setTimeout(finish, panelHardTimeoutMs);
+    signal?.addEventListener("abort", finish, { once: true });
+    if (signal?.aborted || !calls.length) finish();
     calls.forEach((p, i) => {
       Promise.resolve(p)
         .then((v) => { out[i] = v; })
         .catch((e) => { out[i] = { __error: e }; })
         .finally(() => {
           settled++;
-          if (out[i] && out[i].ok) ok++;
+          if (isUseful(out[i])) ok++;
           if (settled === calls.length) return finish();
           if (ok >= minPanel && !graceTimer) graceTimer = setTimeout(finish, stragglerGraceMs);
         });
@@ -544,9 +562,10 @@ function collectPanel(calls, { minPanel, stragglerGraceMs, panelHardTimeoutMs })
  * @param {Object} [options.tuning] - Override FUSION_DEFAULTS (minPanel, grace, timeout)
  * @returns {Promise<Response>}
  */
-export async function handleFusionChat({ body, models, handleSingleModel, log, comboName, judgeModel, tuning }) {
-  const panel = Array.isArray(models) ? models.filter(Boolean) : [];
+export async function handleFusionChat({ body, models, handleSingleModel, log, comboName, judgeModel, tuning, executionOptions = null }) {
+  const panel = executionOptions?.getCandidates ? executionOptions.getCandidates("panel") : (Array.isArray(models) ? models.filter(Boolean) : []);
   if (panel.length === 0) {
+    if (executionOptions) return executionOptions.exhausted(null);
     return new Response(
       JSON.stringify({ error: { message: "Fusion combo has no models" } }),
       { status: 400, headers: { "Content-Type": "application/json" } }
@@ -554,7 +573,7 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
   }
 
   // A single-model fusion has nothing to fuse — just answer directly.
-  if (panel.length === 1) {
+  if (panel.length === 1 && !executionOptions) {
     return handleSingleModel(body, panel[0]);
   }
 
@@ -568,25 +587,45 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
   // Fusion runs panel models non-streaming; drop stream_options too, or providers
   // like DeepSeek reject it with "stream_options should be set along with stream = true".
   // See issue #3024.
-  const panelBody = { ...rest, stream: false };
+  const panelBody = executionOptions?.preparePanelBody ? executionOptions.preparePanelBody(body) : { ...rest, stream: false };
 
   // Flatten tool turns to prose so panel models keep context without emitting tool_calls.
-  if (Array.isArray(panelBody.messages)) {
+  if (!executionOptions && Array.isArray(panelBody.messages)) {
     panelBody.messages = flattenToolHistory(panelBody.messages);
-  } else if (Array.isArray(panelBody.input)) {
+  } else if (!executionOptions && Array.isArray(panelBody.input)) {
     panelBody.input = flattenToolHistory(panelBody.input);
   }
 
   const t0 = Date.now();
-  const calls = panel.map((m) => withTimeout(handleSingleModel(panelBody, m, true), cfg.panelHardTimeoutMs));
-  const settled = await collectPanel(calls, { ...cfg, minPanel });
+  const contexts = panel.map(m => executionOptions?.resolveAttempt?.(m, "panel"));
+  const calls = panel.map((m, i) => executionOptions
+    ? (contexts[i] ? Promise.resolve(handleSingleModel(panelBody, m, contexts[i])).then(async result => {
+      let json = null, text = "";
+      if (result.response.ok) {
+        try { json = await result.response.clone().json(); text = extractPanelText(json); } catch { /* Not a usable panel answer. */ }
+      }
+      const value = await executionOptions.settleResult(result, contexts[i]);
+      return { ...value, json, text, model: m };
+    }) : Promise.resolve(null))
+    : withTimeout(handleSingleModel(panelBody, m, true), cfg.panelHardTimeoutMs));
+  const settled = await collectPanel(calls, { ...cfg, minPanel,
+    ...(executionOptions ? { signal: executionOptions.signal,
+      isUseful: value => value?.success && !!value.text?.trim(),
+      cancelPending: out => contexts.forEach((context, i) => { if (context && !out[i]) executionOptions.cancelAttempt(context, "collection"); }),
+    } : {}),
+  });
   log.info("FUSION", `fan-out collected in ${Date.now() - t0}ms`);
+  if (executionOptions?.signal?.aborted) return executionOptions.exhausted(null);
 
   // 2. Collect successful answers.
   const answers = [];
   for (let i = 0; i < settled.length; i++) {
     const res = settled[i];
     const model = panel[i];
+    if (executionOptions) {
+      if (res?.success && res.text?.trim()) answers.push(res);
+      continue;
+    }
     if (!res) { log.warn("FUSION", `Panel ${model} dropped (straggler/timeout)`); continue; }
     if (res.__timeout) { log.warn("FUSION", `Panel ${model} timed out`); continue; }
     if (res.__error) { log.warn("FUSION", `Panel ${model} threw`, { error: res.__error?.message || String(res.__error) }); continue; }
@@ -607,6 +646,7 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
 
   // 3. Degrade gracefully when the panel is too thin to fuse.
   if (answers.length === 0) {
+    if (executionOptions) return executionOptions.exhausted(settled.find(value => value?.response && !value.success)?.response);
     log.warn("FUSION", "All panel models failed");
     return new Response(
       JSON.stringify({ error: { message: "All fusion panel models failed" } }),
@@ -615,11 +655,20 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
   }
   if (answers.length === 1) {
     log.info("FUSION", `Only ${answers[0].model} succeeded — answering directly (no fusion)`);
+    if (executionOptions) return executionOptions.serializeStoredAnswer(answers[0]);
     return handleSingleModel(body, answers[0].model);
   }
 
   // 4. Judge analyzes + writes one final answer (streams to client if requested).
   const judgeBody = appendUserTurn(body, buildJudgePrompt(answers));
   log.info("FUSION", `Judging ${answers.length} answers with ${judge}`);
+  if (executionOptions) {
+    return handleComboChat({ body: judgeBody, models, handleSingleModel, log, comboName, autoSwitch: false,
+      executionOptions: { ...executionOptions,
+        getCandidates: () => executionOptions.getCandidates("judge", judge),
+        resolveAttempt: model => executionOptions.resolveAttempt(model, "judge"),
+      },
+    });
+  }
   return handleSingleModel(judgeBody, judge);
 }

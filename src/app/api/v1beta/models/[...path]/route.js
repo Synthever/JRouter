@@ -1,5 +1,8 @@
 import { handleChat } from "@/sse/handlers/chat.js";
 import { withApiKeyPolicy } from "@/lib/apiKeyPolicy/gateway.js";
+import { geminiToOpenAIRequest } from "open-sse/translator/request/gemini-to-openai.js";
+import { openaiToAntigravityResponse } from "open-sse/translator/response/openai-to-antigravity.js";
+import { getPublicLlmTargetContext } from "@/lib/apiKeyPolicy/context.js";
 import { assertCurrentModelAllowed } from "@/lib/apiKeyPolicy/context.js";
 import { ApiKeyPolicyError } from "@/lib/apiKeyPolicy/rules.js";
 import {
@@ -56,45 +59,20 @@ export async function OPTIONS() {
  */
 export async function POST(request, { params }) {
   const { path } = await params;
-  const model = path.join("/").replace(/:(streamGenerateContent|generateContent)$/, "");
+  const joined = path.join("/");
+  const suffix = joined.match(/:(streamGenerateContent|generateContent)$/);
+  const model = suffix ? joined.slice(0, -suffix[0].length) : joined;
+  const action = suffix ? suffix[0] : ":generateContent";
   let body;
   try { body = await request.clone().json(); } catch { /* The policy wrapper returns the malformed-body error. */ }
   const family = isGeminiNativeTtsRequest(model, body) ? "audio" : "chat";
-  return withApiKeyPolicy(request, (req) => handleGeminiRequest(req, { params: Promise.resolve({ path }) }), { model, family });
+  return withApiKeyPolicy(request, req => handleGeminiRequest(req, model, action), { model, family, targetAdmission: family === "chat" ? "public-llm" : null });
 }
 
-async function handleGeminiRequest(request, { params }) {
+async function handleGeminiRequest(request, model, action) {
   await ensureInitialized();
 
   try {
-    const { path } = await params;
-    // path = ["provider", "model:action"] or ["model:action"]
-
-    let model;
-    let action; // ":generateContent" | ":streamGenerateContent"
-
-    if (path.length >= 2) {
-      // Format: /v1beta/models/provider/model:generateContent
-      const provider = path[0];
-      const modelAction = path[1];
-      action = modelAction.includes(":streamGenerateContent")
-        ? ":streamGenerateContent"
-        : ":generateContent";
-      const modelName = modelAction
-        .replace(":streamGenerateContent", "")
-        .replace(":generateContent", "");
-      model = provider + "/" + modelName;
-    } else {
-      // Format: /v1beta/models/model:generateContent
-      const modelAction = path[0];
-      action = modelAction.includes(":streamGenerateContent")
-        ? ":streamGenerateContent"
-        : ":generateContent";
-      model = modelAction
-        .replace(":streamGenerateContent", "")
-        .replace(":generateContent", "");
-    }
-
     const body = await request.json();
 
     if (isGeminiNativeTtsRequest(model, body)) {
@@ -107,28 +85,34 @@ async function handleGeminiRequest(request, { params }) {
     const stream = action === ":streamGenerateContent";
 
     // Convert Gemini request format to OpenAI/internal format
-    const convertedBody = convertGeminiToInternal(body, model, stream);
+    const authorized = getPublicLlmTargetContext();
+    const convertedBody = authorized?.target.kind === "alias"
+      ? geminiToOpenAIRequest(model, body, stream, { preserveAliasParts: true })
+      : convertGeminiToInternal(body, model, stream);
 
     // Create new request with converted body
-    const newRequest = new Request(request.url, {
+    const chatUrl = new URL(request.url); chatUrl.pathname = "/v1/chat/completions";
+    const newRequest = new Request(chatUrl, {
       method: "POST",
       headers: request.headers,
       body: JSON.stringify(convertedBody),
+      signal: request.signal,
     });
 
-    const response = await handleChat(newRequest);
+    const response = await handleChat(newRequest, { endpoint: new URL(request.url).pathname, body, headers: Object.fromEntries(request.headers) }, { publicTarget: authorized });
+    const publicId = authorized.target.publicId;
 
     if (stream) {
       // Transform OpenAI SSE => Gemini SSE on the fly.
       // The @google/genai SDK always uses :streamGenerateContent?alt=sse and
       // expects Gemini SSE chunks (no [DONE] sentinel — stream just closes).
-      return transformOpenAISSEToGeminiSSE(response, model);
+      return transformOpenAISSEToGeminiSSE(response, publicId, { publicVirtual: true });
     } else {
       // Convert OpenAI JSON response => Gemini GenerateContentResponse
-      return await convertOpenAIResponseToGemini(response, model);
+      return await convertOpenAIResponseToGemini(response, publicId);
     }
   } catch (error) {
-    if (error instanceof ApiKeyPolicyError) throw error;
+    if (error instanceof ApiKeyPolicyError) return error.response();
     console.log("Error handling Gemini request:", error);
     return Response.json(
       { error: { message: error.message, code: 500 } },
@@ -444,7 +428,8 @@ const FINISH_REASON_MAP = {
  *   data: {"candidates":[{"content":{"role":"model","parts":[{"text":""}]},"finishReason":"STOP","index":0}],"usageMetadata":{...}}
  *   (stream closes — no [DONE])
  */
-function transformOpenAISSEToGeminiSSE(upstreamResponse, model) {
+function transformOpenAISSEToGeminiSSE(upstreamResponse, model, { publicVirtual = false } = {}) {
+  if (publicVirtual && upstreamResponse.ok && upstreamResponse.body) return transformPublicGeminiStream(upstreamResponse, model);
   if (!upstreamResponse.ok || !upstreamResponse.body) {
     return upstreamResponse;
   }
@@ -540,6 +525,42 @@ function transformOpenAISSEToGeminiSSE(upstreamResponse, model) {
  * Convert an OpenAI chat.completion JSON response into a Gemini
  * GenerateContentResponse so that Gemini CLI can parse it.
  */
+function transformPublicGeminiStream(response, publicId) {
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+  const state = {};
+  let buffer = "";
+  let failed = false;
+  function frame(raw, controller) {
+    if (failed) return;
+    const data = raw.split(/\r?\n/).filter(line => line.startsWith("data:")).map(line => line.slice(5).trimStart()).join("\n");
+    if (!data || data === "[DONE]") return;
+    let parsed;
+    try { parsed = JSON.parse(data); } catch { return; }
+    if (parsed.error || parsed.type === "error") {
+      failed = true;
+      controller.enqueue(encoder.encode(`event: error\ndata: ${JSON.stringify(parsed)}\n\n`));
+      return;
+    }
+    const translated = openaiToAntigravityResponse(parsed, state)?.response;
+    if (!translated) return;
+    translated.modelVersion = publicId;
+    controller.enqueue(encoder.encode(`data: ${JSON.stringify(translated)}\n\n`));
+  }
+  function drain(controller, final = false) {
+    let match;
+    while ((match = /\r?\n\r?\n/.exec(buffer))) {
+      const end = match.index + match[0].length;
+      frame(buffer.slice(0, end), controller); buffer = buffer.slice(end);
+    }
+    if (final && buffer) { frame(buffer, controller); buffer = ""; }
+  }
+  return new Response(response.body.pipeThrough(new TransformStream({
+    transform(chunk, controller) { buffer += decoder.decode(chunk, { stream: true }); drain(controller); },
+    flush(controller) { buffer += decoder.decode(); drain(controller, true); },
+  })), { status: response.status, headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", "Access-Control-Allow-Origin": "*" } });
+}
+
 async function convertOpenAIResponseToGemini(response, model) {
   if (!response.ok) return response;
 
@@ -568,11 +589,13 @@ async function convertOpenAIResponseToGemini(response, model) {
 
   const { message, finish_reason } = choice;
 
-  const parts = [];
-  if (message.reasoning_content) {
+  const delta = { ...message, ...(message.tool_calls ? { tool_calls: message.tool_calls.map((call, index) => ({ ...call, index })) } : {}) };
+  const translated = openaiToAntigravityResponse({ ...body, choices: [{ delta, finish_reason }] }, {});
+  const parts = translated?.response?.candidates?.[0]?.content?.parts || [];
+  if (!translated && message.reasoning_content) {
     parts.push({ text: message.reasoning_content, thought: true });
   }
-  parts.push({ text: message.content || "" });
+  if (!translated) parts.push({ text: message.content || "" });
 
   const finishReason = FINISH_REASON_MAP[finish_reason] || "STOP";
 
@@ -584,7 +607,7 @@ async function convertOpenAIResponseToGemini(response, model) {
         index: 0,
       },
     ],
-    modelVersion: body.model || model,
+    modelVersion: model,
   };
 
   if (body.usage) {

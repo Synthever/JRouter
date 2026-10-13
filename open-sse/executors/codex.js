@@ -13,6 +13,7 @@ import { DEFAULT_RETRY_CONFIG, HTTP_STATUS, resolveRetryEntry } from "../config/
 import { dbg } from "../utils/debugLog.js";
 import { resolveSessionId } from "../utils/sessionManager.js";
 import { stripCodexUnsupportedPatterns } from "../utils/codexToolSchema.js";
+import { isQualifyingModelOutput, readAliasProtocolError } from "../utils/aliasOutput.js";
 
 // SSE error patterns inside 200-OK bodies. Some retry same account first; capacity rotates accounts.
 const CODEX_SSE_RETRY_PATTERNS = ["server_is_overloaded", "service_unavailable_error"];
@@ -245,9 +246,10 @@ export class CodexExecutor extends BaseExecutor {
     return this._isCompact ? `${base}/compact` : base;
   }
 
-  async refreshCredentials(credentials, log) {
+  async refreshCredentials(credentials, log, proxyOptions = null, { signal, recoveryBudget } = {}) {
+    signal?.throwIfAborted();
     if (!credentials?.refreshToken) return null;
-    return refreshProviderCredentials("codex", credentials, log);
+    return refreshProviderCredentials("codex", credentials, log, { signal, recoveryBudget });
   }
 
   needsRefresh(credentials) {
@@ -259,7 +261,8 @@ export class CodexExecutor extends BaseExecutor {
    * Runs before execute() because Codex backend cannot fetch remote images.
    * Mutates body.input in place.
    */
-  async prefetchImages(body) {
+  async prefetchImages(body, { signal } = {}) {
+    signal?.throwIfAborted();
     if (!Array.isArray(body?.input)) return;
     for (const item of body.input) {
       if (!Array.isArray(item.content)) continue;
@@ -269,23 +272,34 @@ export class CodexExecutor extends BaseExecutor {
         const detail = c.image_url?.detail || "auto";
         if (!url) return c;
         if (url.startsWith("data:")) return { type: "input_image", image_url: url, detail };
-        const fetched = await fetchImageAsBase64(url, { timeoutMs: 15000 });
+        signal?.throwIfAborted();
+        const fetched = await fetchImageAsBase64(url, { timeoutMs: 15000, ...(signal ? { signal } : {}) });
+        signal?.throwIfAborted();
         return { type: "input_image", image_url: fetched?.url || url, detail };
       });
-      item.content = await Promise.all(pending);
+      const content = await Promise.all(pending);
+      signal?.throwIfAborted();
+      item.content = content;
     }
   }
 
   async execute(args) {
+    const attemptSignal = args.executionOptions?.attempt?.signal;
+    const signal = args.signal && attemptSignal ? AbortSignal.any([args.signal, attemptSignal]) : args.signal || attemptSignal;
+    const singleAttempt = args.executionOptions?.alias === true || args.executionOptions?.retryPolicy === "single-attempt";
+    signal?.throwIfAborted();
+    if (args.executionOptions?.alias === true) args = { ...args, body: structuredClone(args.body) };
     const imgCount = Array.isArray(args.body?.input) ? args.body.input.reduce((n, it) => n + (Array.isArray(it.content) ? it.content.filter(c => c.type === "image_url").length : 0), 0) : 0;
     const inputLen = Array.isArray(args.body?.input) ? args.body.input.length : 0;
     dbg("CODEX", `execute start | inputItems=${inputLen} | images=${imgCount} | sessionId=${this._currentSessionId || "pending"}`);
     if (imgCount > 0) {
       const t0 = Date.now();
-      await this.prefetchImages(args.body);
+      await this.prefetchImages(args.body, { signal });
+      signal?.throwIfAborted();
       dbg("CODEX", `prefetchImages done | ${Date.now() - t0}ms`);
     } else {
-      await this.prefetchImages(args.body);
+      await this.prefetchImages(args.body, { signal });
+      signal?.throwIfAborted();
     }
 
     // Retry loop for SSE-level overloaded errors (200 OK body contains event: error)
@@ -294,8 +308,12 @@ export class CodexExecutor extends BaseExecutor {
     const { attempts, delayMs } = resolveRetryEntry(retryConfig[503]);
     let attempt = 0;
     while (true) {
+      signal?.throwIfAborted();
       const result = await super.execute(args);
-      const peek = await this._peekSseTransientError(result.response);
+      signal?.throwIfAborted();
+      const peek = await this._peekSseTransientError(result.response, {
+        signal: args.signal, attempt: args.executionOptions?.attempt, alias: args.executionOptions?.alias === true,
+      });
       if (!peek.matched) {
         // Replace body with re-assembled stream (prefix bytes already read + rest)
         if (peek.replacementBody) {
@@ -312,7 +330,7 @@ export class CodexExecutor extends BaseExecutor {
         result.response = codexSseErrorResponse(HTTP_STATUS.SERVICE_UNAVAILABLE, peek.message || CODEX_MODEL_CAPACITY_MESSAGE);
         return result;
       }
-      if (args.healthProbe || attempt >= attempts) {
+      if (args.healthProbe || singleAttempt || attempt >= attempts) {
         args.log?.warn?.("RETRY", `CODEX | SSE overloaded "${peek.matched}" — retries exhausted (${attempt}/${attempts})`);
         result.response = codexSseErrorResponse(HTTP_STATUS.SERVICE_UNAVAILABLE, peek.message || peek.matched);
         return result;
@@ -320,64 +338,169 @@ export class CodexExecutor extends BaseExecutor {
       attempt++;
       args.log?.debug?.("RETRY", `CODEX | SSE "${peek.matched}" retry ${attempt}/${attempts} after ${delayMs / 1000}s`);
       dbg("CODEX", `SSE overloaded "${peek.matched}" → retry ${attempt}/${attempts} in ${delayMs}ms`);
-      await new Promise(r => setTimeout(r, delayMs));
+      signal?.throwIfAborted();
+      await new Promise((resolve, reject) => {
+        const onAbort = () => { clearTimeout(timer); signal.removeEventListener("abort", onAbort); reject(signal.reason); };
+        const timer = setTimeout(() => { signal?.removeEventListener("abort", onAbort); resolve(); }, delayMs);
+        signal?.addEventListener("abort", onAbort, { once: true });
+      });
+      signal?.throwIfAborted();
     }
   }
 
   // Peek first N bytes of SSE body to detect upstream transient errors.
   // Returns { matched: string|null, message: string|null, accountFallback: boolean, replacementBody: ReadableStream|null }.
   // Caller must use replacementBody when no error matched (original body has been read).
-  async _peekSseTransientError(response) {
+  async _peekSseTransientError(response, options = null) {
     if (!response || !response.ok || !response.body) return { matched: null, message: null, accountFallback: false, replacementBody: null };
-    const reader = response.body.getReader();
+    let nativeReader = response.body.getReader();
+    let reader = nativeReader;
+    let released = false;
+    const signals = [...new Set([options?.signal, options?.attempt?.signal].filter(Boolean))];
+    const attempt = options?.attempt;
+    const semantic = options?.alias === true || !!attempt;
+    let terminal = false;
+    let replayController = null;
+    let boundaries = 0;
+    const release = () => {
+      if (released) return;
+      released = true;
+      try { reader.releaseLock(); } catch { /* Preserve the primary error. */ }
+    };
+    const finish = () => {
+      terminal = true;
+      for (const signal of signals) signal.removeEventListener("abort", onAbort);
+    };
+    // Keep transport ownership explicit instead of reacquiring a detached body.
+    nativeReader = reader;
+    const cancel = (reason) => {
+      if (terminal) return;
+      finish();
+      try { void reader.cancel(reason).catch(() => {}); } catch { /* Cleanup is best effort. */ }
+      release();
+    };
+    const onAbort = () => {
+      const signal = signals.find(signal => signal.aborted);
+      cancel(signal.reason);
+      replayController?.error(signal.reason);
+    };
+    const check = () => {
+      if (attempt && !attempt.outputStarted && Date.now() >= attempt.deadlineAt) attempt.abort("initial-output-deadline");
+      for (const signal of signals) signal.throwIfAborted();
+    };
+    const checkpoint = async () => {
+      check();
+      if (attempt && !attempt.outputStarted && ++boundaries % 64 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+        check();
+      }
+    };
+    const read = async () => {
+      check();
+      try { const part = await reader.read(); check(); return part; }
+      catch (error) { check(); throw error; }
+    };
+    for (const signal of signals) signal.addEventListener("abort", onAbort, { once: true });
+    if (signals.some(signal => signal.aborted)) onAbort();
     const decoder = new TextDecoder();
     const chunks = [];
     let text = "";
+    let pending = "";
+    let bytes = 0;
     let matched = null;
+    let message = null;
     let accountFallback = false;
+    let upstreamDone = false;
+    let readFailure = null;
+    let output = attempt?.outputStarted === true;
     try {
-      while (text.length < CODEX_SSE_PEEK_BYTES) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      while (bytes < CODEX_SSE_PEEK_BYTES && !output) {
+        await checkpoint();
+        const { done, value } = await read();
+        if (done) { upstreamDone = true; finish(); release(); break; }
         chunks.push(value);
-        text += decoder.decode(value, { stream: true });
-        const lowerText = text.toLowerCase();
-        const accountHit = CODEX_SSE_ACCOUNT_FALLBACK_PATTERNS.find(p => lowerText.includes(p));
-        if (accountHit) { matched = accountHit; accountFallback = true; break; }
-        const retryHit = CODEX_SSE_RETRY_PATTERNS.find(p => lowerText.includes(p));
-        if (retryHit) { matched = retryHit; break; }
-        if (CODEX_SSE_USER_OUTPUT_PATTERNS.some(p => lowerText.includes(p))) break;
+        const inspectLength = Math.min(value.byteLength, CODEX_SSE_PEEK_BYTES - bytes);
+        bytes += inspectLength;
+        const decoded = decoder.decode(value.subarray(0, inspectLength), { stream: true });
+        text += decoded;
+        if (!semantic) {
+          const lowerText = text.toLowerCase();
+          const accountHit = CODEX_SSE_ACCOUNT_FALLBACK_PATTERNS.find(p => lowerText.includes(p));
+          if (accountHit) { matched = accountHit; accountFallback = true; break; }
+          const retryHit = CODEX_SSE_RETRY_PATTERNS.find(p => lowerText.includes(p));
+          if (retryHit) { matched = retryHit; break; }
+          if (CODEX_SSE_USER_OUTPUT_PATTERNS.some(p => lowerText.includes(p))) break;
+          continue;
+        }
+        pending += decoded;
+        let delimiter;
+        while ((delimiter = /(?:\r\n|(?<!\r)\n|\r(?!\n)){2}/.exec(pending))) {
+          await checkpoint();
+          const frame = pending.slice(0, delimiter.index);
+          pending = pending.slice(delimiter.index + delimiter[0].length);
+          const data = [];
+          let eventName = null;
+          for (const line of frame.split(/\r\n|\r|\n/)) {
+            if (line.startsWith("data:")) data.push(line.slice(5).replace(/^ /, ""));
+            if (line.startsWith("event:")) eventName = line.slice(6).trim();
+          }
+          let event;
+          try { event = JSON.parse(data.join("\n")); } catch {
+            if (eventName !== "error") continue;
+            event = { type: "error", error: data.join("\n") };
+          }
+          if (event && typeof event === "object" && !event.type && eventName) event = { ...event, type: eventName };
+          if (isQualifyingModelOutput(event, "responses")) {
+            attempt?.markOutput(event, "responses");
+            check();
+            output = true;
+            break;
+          }
+          const error = readAliasProtocolError(event, "responses");
+          if (!error) continue;
+          const lower = `${error.code || ""} ${error.message}`.toLowerCase();
+          const accountHit = CODEX_SSE_ACCOUNT_FALLBACK_PATTERNS.find(p => lower.includes(p));
+          matched = accountHit || CODEX_SSE_RETRY_PATTERNS.find(p => lower.includes(p)) || null;
+          accountFallback = !!accountHit;
+          if (matched) { message = findNestedMessage(event) || error.message || matched; break; }
+        }
+        if (matched) break;
       }
-    } catch (e) {
-      dbg("CODEX", `peek read error: ${e.message}`);
+    } catch (error) {
+      check();
+      if (signals.length || semantic) {
+        cancel(error);
+        throw error;
+      }
+      dbg("CODEX", `peek read error: ${error?.message}`);
+      try { reader.releaseLock(); } catch { /* Preserve the signal-less legacy fallback. */ }
+      released = false;
+      reader = response.body.getReader();
     }
 
     if (matched) {
-      try { await reader.cancel(); } catch { /* noop */ }
-      try { reader.releaseLock(); } catch { /* noop */ }
-      return { matched, message: extractSseErrorMessage(text, matched), accountFallback, replacementBody: null };
+      cancel();
+      return { matched, message: message || extractSseErrorMessage(text, matched), accountFallback, replacementBody: null };
     }
 
-    reader.releaseLock();
-
-    // Re-assemble stream: prefix chunks + remaining upstream body
-    const upstream = response.body;
-    let upstreamReader = null;
+    let index = 0;
     const replacementBody = new ReadableStream({
       start(controller) {
-        for (const c of chunks) controller.enqueue(c);
-        upstreamReader = upstream.getReader();
+        replayController = controller;
+        try { check(); } catch (error) { controller.error(error); }
       },
       async pull(controller) {
+        if (terminal && !upstreamDone) return;
         try {
-          const { done, value } = await upstreamReader.read();
-          if (done) { controller.close(); return; }
+          check();
+          if (index < chunks.length) { controller.enqueue(chunks[index++]); return; }
+          if (readFailure) { controller.error(readFailure); return; }
+          const { done, value } = upstreamDone ? { done: true } : await read();
+          if (done) { finish(); release(); controller.close(); return; }
           controller.enqueue(value);
-        } catch (e) { controller.error(e); }
+        } catch (error) { cancel(error); controller.error(error); }
       },
-      cancel(reason) {
-        try { upstreamReader?.cancel(reason); } catch { /* noop */ }
-      },
+      cancel(reason) { cancel(reason); },
     });
     return { matched: null, message: null, accountFallback: false, replacementBody };
   }
@@ -411,7 +534,7 @@ export class CodexExecutor extends BaseExecutor {
    * Transform request before sending - inject default instructions if missing.
    * Image fetching is handled separately in prefetchImages() so this stays sync.
    */
-  transformRequest(model, body, stream, credentials) {
+  transformRequest(model, body, stream, credentials, executionOptions = null) {
     this._isCompact = !!body._compact;
     delete body._compact;
     // Resolve conversation-stable session_id (priority: body → assistant-text → workspace → machine)

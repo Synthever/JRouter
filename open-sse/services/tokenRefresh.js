@@ -1,4 +1,6 @@
 import { PROVIDERS } from "../config/providers.js";
+import { dedupRefresh } from "./tokenRefresh/dedup.js";
+import { waitForOperation } from "../utils/sharedOperation.js";
 import { OAUTH_ENDPOINTS, REFRESH_LEAD_MS } from "../config/appConstants.js";
 import {
   refreshXaiToken,
@@ -78,7 +80,8 @@ export function parseVertexSaJson(apiKey) {
 // Cache Vertex tokens keyed by service account email { token, expiresAt }
 const vertexTokenCache = new Map();
 
-export async function refreshVertexToken(saJson, log) {
+export async function refreshVertexToken(saJson, log, options = {}) {
+  options.signal?.throwIfAborted();
   const cacheKey = saJson.client_email;
   const cached = vertexTokenCache.get(cacheKey);
 
@@ -86,10 +89,16 @@ export async function refreshVertexToken(saJson, log) {
     return { accessToken: cached.token, expiresAt: cached.expiresAt };
   }
 
+  // No established minted session is bootstrap preparation. Once one exists,
+  // all replacement owners use the ordinary concrete acquisition allowance.
+  const acquisitionOptions = cached ? options : { signal: options.signal };
+  return dedupRefresh("vertex", cacheKey, async sharedSignal => {
   try {
     const { SignJWT, importPKCS8 } = await import("jose");
+    sharedSignal.throwIfAborted();
     log?.debug?.("TOKEN_REFRESH", `Vertex minting token for ${saJson.client_email}`);
     const privateKey = await importPKCS8(saJson.private_key.replace(/\\n/g, "\n"), "RS256");
+    sharedSignal.throwIfAborted();
     const now = Math.floor(Date.now() / 1000);
 
     const jwt = await new SignJWT({ scope: "https://www.googleapis.com/auth/cloud-platform" })
@@ -99,8 +108,10 @@ export async function refreshVertexToken(saJson, log) {
       .setIssuedAt(now)
       .setExpirationTime(now + 3600)
       .sign(privateKey);
+    sharedSignal.throwIfAborted();
 
     const res = await fetch(OAUTH_ENDPOINTS.google.token, {
+      signal: sharedSignal,
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
@@ -108,14 +119,17 @@ export async function refreshVertexToken(saJson, log) {
         assertion: jwt,
       }),
     });
+    sharedSignal.throwIfAborted();
 
     if (!res.ok) {
       const err = await res.text();
+      sharedSignal.throwIfAborted();
       log?.error?.("TOKEN_REFRESH", `Vertex token mint failed: ${err}`);
       return null;
     }
 
     const { access_token, expires_in } = await res.json();
+    sharedSignal.throwIfAborted();
     const expiresAt = Date.now() + (expires_in ?? 3600) * 1000;
 
     vertexTokenCache.set(cacheKey, { token: access_token, expiresAt });
@@ -123,72 +137,76 @@ export async function refreshVertexToken(saJson, log) {
 
     return { accessToken: access_token, expiresAt };
   } catch (error) {
+    sharedSignal.throwIfAborted();
     log?.error?.("TOKEN_REFRESH", `Vertex token error: ${error.message}`);
     return null;
   }
+  }, log, acquisitionOptions);
 }
 
-function vertexRefreshHandler(c, log) {
+function vertexRefreshHandler(c, log, options) {
   const saJson = parseVertexSaJson(c.apiKey);
   if (!saJson) return null;
-  return refreshVertexToken(saJson, log);
+  return refreshVertexToken(saJson, log, options);
 }
 
 const REFRESH_HANDLERS = {
-  "gemini-cli": (c, log) => refreshGoogleToken(c.refreshToken, PROVIDERS["gemini-cli"].clientId, PROVIDERS["gemini-cli"].clientSecret, log),
-  antigravity: (c, log) => refreshGoogleToken(c.refreshToken, PROVIDERS.antigravity.clientId, PROVIDERS.antigravity.clientSecret, log),
-  claude: (c, log) => refreshClaudeOAuthToken(c.refreshToken, log),
-  codex: (c, log) => refreshCodexToken(c.refreshToken, log),
-  iflow: (c, log) => refreshIflowToken(c.refreshToken, log),
-  github: (c, log) => refreshGitHubToken(c.refreshToken, log),
-  kiro: (c, log) => refreshKiroToken(c.refreshToken, c.providerSpecificData, log),
-  xai: (c, log) => refreshXaiToken(c.refreshToken, log),
+  "gemini-cli": (c, log, options) => refreshGoogleToken(c.refreshToken, PROVIDERS["gemini-cli"].clientId, PROVIDERS["gemini-cli"].clientSecret, log, options),
+  antigravity: (c, log, options) => refreshGoogleToken(c.refreshToken, PROVIDERS.antigravity.clientId, PROVIDERS.antigravity.clientSecret, log, options),
+  claude: (c, log, options) => refreshClaudeOAuthToken(c.refreshToken, log, options),
+  codex: (c, log, options) => refreshCodexToken(c.refreshToken, log, options),
+  iflow: (c, log, options) => refreshIflowToken(c.refreshToken, log, options),
+  github: (c, log, options) => refreshGitHubToken(c.refreshToken, log, options),
+  kiro: (c, log, options) => refreshKiroToken(c.refreshToken, c.providerSpecificData, log, null, options),
+  xai: (c, log, options) => refreshXaiToken(c.refreshToken, log, options),
   // Grok CLI shares xAI OAuth client + token endpoint (device-code tokens refresh the same way)
-  "grok-cli": (c, log) => refreshXaiToken(c.refreshToken, log),
-  gcli: (c, log) => refreshXaiToken(c.refreshToken, log),
-  "codebuddy-cn": (c, log) => refreshCodebuddyToken(c.refreshToken, log),
-  "codebuddy-intl": (c, log) => refreshCodebuddyIntlToken(c.refreshToken, log),
-  trae: (c, log) => refreshTraeToken(c.refreshToken, c, log),
-  cline: (c, log) => refreshClineToken(c.refreshToken, log),
+  "grok-cli": (c, log, options) => refreshXaiToken(c.refreshToken, log, options),
+  gcli: (c, log, options) => refreshXaiToken(c.refreshToken, log, options),
+  "codebuddy-cn": (c, log, options) => refreshCodebuddyToken(c.refreshToken, log, options),
+  "codebuddy-intl": (c, log, options) => refreshCodebuddyIntlToken(c.refreshToken, log, options),
+  trae: (c, log, options) => refreshTraeToken(c.refreshToken, c, log, options),
+  cline: (c, log, options) => refreshClineToken(c.refreshToken, log, options),
   // ClinePass shares Cline's WorkOS auth endpoints, so the same refresh works.
-  clinepass: (c, log) => refreshClineToken(c.refreshToken, log),
+  clinepass: (c, log, options) => refreshClineToken(c.refreshToken, log, options),
   zed: () => refreshZedToken(),
-  windsurf: (c, log) => refreshWindsurfToken(c, log),
+  windsurf: (c, log, options) => refreshWindsurfToken(c, log, options),
   // Kimi Code OAuth (merged into id `kimi`); legacy id still routes here
-  kimi: (c, log) => refreshKimiToken(c.refreshToken, c, log),
-  "kimi-coding": (c, log) => refreshKimiToken(c.refreshToken, c, log),
+  kimi: (c, log, options) => refreshKimiToken(c.refreshToken, c, log, options),
+  "kimi-coding": (c, log, options) => refreshKimiToken(c.refreshToken, c, log, options),
   // MiniMax Code — single-use refresh tokens; the handler dedupes by token
   // value and classifies invalid_grant (docs/minimax-code-proxy-plan.md §2.3)
-  "minimax-code": (c, log) => refreshMiniMaxCodeToken("minimax-code", c.refreshToken, log),
-  "minimax-code-global": (c, log) => refreshMiniMaxCodeToken("minimax-code-global", c.refreshToken, log),
+  "minimax-code": (c, log, options) => refreshMiniMaxCodeToken("minimax-code", c.refreshToken, log, options),
+  "minimax-code-global": (c, log, options) => refreshMiniMaxCodeToken("minimax-code-global", c.refreshToken, log, options),
   vertex: vertexRefreshHandler,
   "vertex-partner": vertexRefreshHandler
 };
 
-export async function getAccessToken(provider, credentials, log) {
+export async function getAccessToken(provider, credentials, log, options = {}) {
+  options.signal?.throwIfAborted();
   if (!credentials || !credentials.refreshToken || typeof credentials.refreshToken !== "string") {
     log?.warn?.("TOKEN_REFRESH", `No valid refresh token available for provider: ${provider}`);
     return null;
   }
-  return _getAccessTokenInternal(provider, credentials, log);
+  return _getAccessTokenInternal(provider, credentials, log, options);
 }
 
-async function _getAccessTokenInternal(provider, credentials, log) {
+async function _getAccessTokenInternal(provider, credentials, log, options) {
   if (provider === "gemini") {
-    return refreshGoogleToken(credentials.refreshToken, PROVIDERS.gemini.clientId, PROVIDERS.gemini.clientSecret, log);
+    return refreshGoogleToken(credentials.refreshToken, PROVIDERS.gemini.clientId, PROVIDERS.gemini.clientSecret, log, options);
   }
   const handler = REFRESH_HANDLERS[provider];
   if (!handler) {
     log?.warn?.("TOKEN_REFRESH", `Unsupported provider for token refresh: ${provider}`);
     return null;
   }
-  return handler(credentials, log);
+  return handler(credentials, log, options);
 }
 
-export async function refreshTokenByProvider(provider, credentials, log) {
+export async function refreshTokenByProvider(provider, credentials, log, options = {}) {
+  options.signal?.throwIfAborted();
   if (!credentials.refreshToken) return null;
   const handler = REFRESH_HANDLERS[provider];
-  return handler ? handler(credentials, log) : refreshAccessToken(provider, credentials.refreshToken, credentials, log);
+  return handler ? handler(credentials, log, options) : refreshAccessToken(provider, credentials.refreshToken, credentials, log, options);
 }
 
 export function formatProviderCredentials(provider, credentials, log) {
@@ -240,7 +258,8 @@ export function formatProviderCredentials(provider, credentials, log) {
   }
 }
 
-export async function getAllAccessTokens(userInfo, log) {
+export async function getAllAccessTokens(userInfo, log, options = {}) {
+  options.signal?.throwIfAborted();
   const results = {};
 
   if (userInfo.connections && Array.isArray(userInfo.connections)) {
@@ -248,7 +267,8 @@ export async function getAllAccessTokens(userInfo, log) {
       if (connection.isActive && connection.provider) {
         const token = await getAccessToken(connection.provider, {
           refreshToken: connection.refreshToken
-        }, log);
+        }, log, options);
+        options.signal?.throwIfAborted();
 
         if (token) {
           results[connection.provider] = token;
@@ -260,18 +280,22 @@ export async function getAllAccessTokens(userInfo, log) {
   return results;
 }
 
-export async function refreshWithRetry(refreshFn, maxRetries = 3, log = null) {
+export async function refreshWithRetry(refreshFn, maxRetries = 3, log = null, options = {}) {
+  options.signal?.throwIfAborted();
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     if (attempt > 0) {
       const delay = attempt * 1000;
       log?.debug?.("TOKEN_REFRESH", `Retry ${attempt}/${maxRetries} after ${delay}ms`);
-      await new Promise(r => setTimeout(r, delay));
+      await waitForOperation(delay, options.signal);
     }
 
     try {
-      const result = await refreshFn();
+      options.signal?.throwIfAborted();
+      const result = await refreshFn(options);
+      options.signal?.throwIfAborted();
       if (result) return result;
     } catch (error) {
+      options.signal?.throwIfAborted();
       log?.warn?.("TOKEN_REFRESH", `Attempt ${attempt + 1}/${maxRetries} failed: ${error.message}`);
     }
   }

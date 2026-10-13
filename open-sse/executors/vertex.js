@@ -6,6 +6,10 @@ import { proxyAwareFetch } from "../utils/proxyFetch.js";
 // Cache project IDs resolved from raw API keys { apiKey → projectId }
 const projectIdCache = new Map();
 
+function cancelBody(response, reason) {
+  try { Promise.resolve(response?.body?.cancel(reason)).catch(() => {}); } catch { /* Keep the abort reason. */ }
+}
+
 /**
  * Parse Google ADC user credential JSON from apiKey string.
  * This is the format produced by `gcloud auth application-default login`.
@@ -32,18 +36,30 @@ function parseVertexAdcJson(apiKey) {
  * Resolve GCP project ID from a raw Vertex API key.
  * Sends a dummy 404 request and parses "projects/{id}" from the error message.
  */
-async function resolveProjectId(apiKey) {
+async function resolveProjectId(apiKey, signal) {
+  signal?.throwIfAborted();
   if (projectIdCache.has(apiKey)) return projectIdCache.get(apiKey);
 
-  const res = await fetch(
-    `https://aiplatform.googleapis.com/v1/publishers/google/models/__probe__:generateContent?key=${apiKey}`,
-    { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }
-  );
-  const json = await res.json().catch(() => null);
+  const init = { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" };
+  let res, json;
+  try {
+    res = await fetch(
+      `https://aiplatform.googleapis.com/v1/publishers/google/models/__probe__:generateContent?key=${apiKey}`,
+      signal ? { ...init, signal } : init
+    );
+    if (signal?.aborted) cancelBody(res, signal.reason);
+    signal?.throwIfAborted();
+    json = await res.json().catch(() => { signal?.throwIfAborted(); return null; });
+    signal?.throwIfAborted();
+  } catch (error) {
+    signal?.throwIfAborted();
+    throw error;
+  }
   const msg = json?.[0]?.error?.message || json?.error?.message || "";
   const match = msg.match(/projects\/([^/]+)\//);
   const projectId = match?.[1] || null;
 
+  signal?.throwIfAborted();
   if (projectId) projectIdCache.set(apiKey, projectId);
   return projectId;
 }
@@ -118,58 +134,91 @@ export class VertexExecutor extends BaseExecutor {
     return headers;
   }
 
-  async refreshCredentials(credentials, log) {
+  async refreshCredentials(credentials, log, proxyOptions = null, { signal, recoveryBudget } = {}) {
+    signal?.throwIfAborted();
     const saJson = parseVertexSaJson(credentials?.apiKey);
-    if (!saJson) return null;
-
-    const result = await refreshVertexToken(saJson, log);
+    const adcJson = signal || recoveryBudget ? parseVertexAdcJson(credentials?.apiKey) : null;
+    if (!saJson && !adcJson) return null;
+    const options = { signal, recoveryBudget };
+    let result;
+    try {
+      if (saJson) {
+        result = signal || recoveryBudget
+          ? await refreshVertexToken(saJson, log, options)
+          : await refreshVertexToken(saJson, log);
+      } else result = await refreshGoogleToken(adcJson.refresh_token, adcJson.client_id, adcJson.client_secret, log, options);
+      signal?.throwIfAborted();
+    } catch (error) {
+      signal?.throwIfAborted();
+      throw error;
+    }
     if (!result) return null;
-
-    return { accessToken: result.accessToken, expiresAt: result.expiresAt };
+    return saJson ? { accessToken: result.accessToken, expiresAt: result.expiresAt } : result;
   }
 
-  async execute({ model, body, stream, credentials, signal, log, proxyOptions = null }) {
+  async execute({ model, body, stream, credentials, signal, log, proxyOptions = null, executionOptions = null }) {
+    const attemptSignal = executionOptions?.attempt?.signal;
+    const requestSignal = signal && attemptSignal ? AbortSignal.any([signal, attemptSignal]) : signal || attemptSignal;
+    requestSignal?.throwIfAborted();
+    const forceStream = executionOptions?.forceUpstreamStreaming === true;
+    const upstreamStream = forceStream ? true : stream;
+    if (executionOptions?.alias === true || forceStream) {
+      body = structuredClone(body);
+      credentials = structuredClone(credentials);
+    }
+    if (forceStream && this.provider === "vertex-partner") body.stream = true;
     const saJson = parseVertexSaJson(credentials?.apiKey);
     const adcJson = parseVertexAdcJson(credentials?.apiKey);
 
+    const refreshOptions = { signal: requestSignal, recoveryBudget: executionOptions?.recoveryBudget };
+    const hasRefreshPolicy = !!requestSignal || !!refreshOptions.recoveryBudget;
+    const guardError = error => { requestSignal?.throwIfAborted(); throw error; };
+
     // SA JSON flow: mint Bearer token via JWT assertion (cached)
     if (saJson) {
-      const result = await refreshVertexToken(saJson, log);
+      requestSignal?.throwIfAborted();
+      const result = await (hasRefreshPolicy
+        ? refreshVertexToken(saJson, log, refreshOptions)
+        : refreshVertexToken(saJson, log)).catch(guardError);
+      requestSignal?.throwIfAborted();
       if (!result?.accessToken) throw new Error("Vertex: failed to mint access token from Service Account JSON");
       credentials.accessToken = result.accessToken;
     }
 
     // ADC user credential flow: refresh Bearer token via Google OAuth2 token endpoint
     if (adcJson) {
-      const result = await refreshGoogleToken(
-        adcJson.refresh_token,
-        adcJson.client_id,
-        adcJson.client_secret,
-        log
-      );
+      requestSignal?.throwIfAborted();
+      const result = await (hasRefreshPolicy
+        ? refreshGoogleToken(adcJson.refresh_token, adcJson.client_id, adcJson.client_secret, log, refreshOptions)
+        : refreshGoogleToken(adcJson.refresh_token, adcJson.client_id, adcJson.client_secret, log)).catch(guardError);
+      requestSignal?.throwIfAborted();
       if (!result?.accessToken) throw new Error("Vertex: failed to refresh access token from ADC JSON (authorized_user)");
       credentials.accessToken = result.accessToken;
     }
 
     // vertex-partner with raw key: auto-resolve project_id if not provided
     if (this.provider === "vertex-partner" && !saJson && !adcJson && !credentials?.providerSpecificData?.projectId) {
-      const projectId = await resolveProjectId(credentials.apiKey);
+      requestSignal?.throwIfAborted();
+      const projectId = await (requestSignal
+        ? resolveProjectId(credentials.apiKey, requestSignal)
+        : resolveProjectId(credentials.apiKey)).catch(guardError);
+      requestSignal?.throwIfAborted();
       if (!projectId) throw new Error("Vertex: could not resolve project_id from API key. Please add it manually in provider settings.");
       log?.debug?.("VERTEX", `Resolved project_id: ${projectId}`);
       credentials.providerSpecificData = { ...credentials.providerSpecificData, projectId };
     }
 
-    const url = this.buildUrl(model, stream, 0, credentials);
-    const headers = this.buildHeaders(credentials, stream);
-    const transformedBody = this.transformRequest(model, body, stream, credentials);
-
-    const response = await proxyAwareFetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(transformedBody),
-      signal,
-    }, proxyOptions);
-
+    requestSignal?.throwIfAborted();
+    const url = this.buildUrl(model, upstreamStream, 0, credentials);
+    const headers = this.buildHeaders(credentials, upstreamStream);
+    const transformedBody = this.transformRequest(model, body, upstreamStream, credentials, executionOptions);
+    requestSignal?.throwIfAborted();
+    const init = { method: "POST", headers, body: JSON.stringify(transformedBody), signal: requestSignal };
+    const response = await (executionOptions?.alias === true || executionOptions?.allowNetworkReplay === false
+      ? proxyAwareFetch(url, init, proxyOptions, { allowNetworkReplay: false })
+      : proxyAwareFetch(url, init, proxyOptions)).catch(guardError);
+    if (requestSignal?.aborted) cancelBody(response, requestSignal.reason);
+    requestSignal?.throwIfAborted();
     return { response, url, headers, transformedBody };
   }
 }

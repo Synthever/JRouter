@@ -1,6 +1,7 @@
 import { BaseExecutor } from "./base.js";
 import { PROVIDERS } from "../config/providers.js";
 import { proxyAwareFetch } from "../utils/proxyFetch.js";
+import { joinSharedOperation } from "../utils/sharedOperation.js";
 import { createHash } from "crypto";
 import os from "os";
 
@@ -76,32 +77,128 @@ function resetJwtCache() {
   jwtExpiresAt = 0;
 }
 
-async function bootstrapJwt(proxyOptions = null) {
-  if (cachedJwt && Date.now() < jwtExpiresAt - JWT_EXPIRY_BUFFER_MS) {
+const jwtOperations = new Map();
+const JWT_OPERATION_KEY = "jwt";
+const NO_BOOTSTRAP_RESULT = Symbol("MiMo renewal denied");
+
+function cancelBody(body, reason) {
+  try { Promise.resolve(body?.cancel(reason)).catch(() => {}); } catch { /* Keep the original outcome. */ }
+}
+
+function guardResponse(response, signal) {
+  if (signal?.aborted) cancelBody(response?.body, signal.reason);
+  signal?.throwIfAborted();
+}
+
+async function readBootstrapJson(response, signal) {
+  let reader;
+  let onAbort;
+  let canceled = false;
+  const cancel = reason => {
+    if (canceled) return;
+    canceled = true;
+    cancelBody(reader || response.body, reason);
+  };
+  try {
+    guardResponse(response, signal);
+    reader = response.body?.getReader?.();
+    const aborted = new Promise((resolve, reject) => {
+      onAbort = () => { cancel(signal.reason); reject(signal.reason); };
+      signal.addEventListener("abort", onAbort, { once: true });
+    });
+    aborted.catch(() => {});
+    if (signal.aborted) onAbort();
+    signal.throwIfAborted();
+    if (!reader) {
+      const data = await Promise.race([response.json(), aborted]);
+      signal.throwIfAborted();
+      return data;
+    }
+    const decoder = new TextDecoder();
+    let text = "";
+    let reads = 0;
+    while (true) {
+      signal.throwIfAborted();
+      const { done, value } = await Promise.race([reader.read(), aborted]);
+      signal.throwIfAborted();
+      if (done) break;
+      text += decoder.decode(value, { stream: true });
+      if (++reads % 16 === 0) {
+        let timer;
+        try {
+          await Promise.race([new Promise(resolve => { timer = setTimeout(resolve, 0); }), aborted]);
+        } finally { clearTimeout(timer); }
+        signal.throwIfAborted();
+      }
+    }
+    signal.throwIfAborted();
+    return JSON.parse((text + decoder.decode()).replace(/^\uFEFF/, ""));
+  } catch (error) {
+    cancel(signal.aborted ? signal.reason : error);
+    signal.throwIfAborted();
+    throw error;
+  } finally {
+    signal.removeEventListener("abort", onAbort);
+    try { reader?.releaseLock(); } catch { /* A canceled reader may already be released. */ }
+  }
+}
+
+async function bootstrapJwt(proxyOptions = null, { signal, recoveryBudget, forceRefresh = false } = {}) {
+  signal?.throwIfAborted();
+  if (!forceRefresh && cachedJwt && Date.now() < jwtExpiresAt - JWT_EXPIRY_BUFFER_MS) {
     return cachedJwt;
   }
-
-  const response = await proxyAwareFetch(BOOTSTRAP_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
-    },
-    body: JSON.stringify({ client: generateFingerprint() }),
-  }, proxyOptions);
-
-  if (!response.ok) {
-    throw new Error(`MiMo bootstrap failed: ${response.status}`);
+  const entry = jwtOperations.get(JWT_OPERATION_KEY);
+  const recovery = forceRefresh || !!cachedJwt || !!entry?.recovery;
+  // An uncached renewal owner pays before joining someone else's acquisition.
+  if (recovery && recoveryBudget && !recoveryBudget.claimRefresh()) {
+    signal?.throwIfAborted();
+    return NO_BOOTSTRAP_RESULT;
   }
+  signal?.throwIfAborted();
+  if (forceRefresh && cachedJwt) jwtExpiresAt = 0;
+  if (recovery && entry) entry.recovery = true;
 
-  const data = await response.json();
-  if (!data.jwt) {
-    throw new Error("MiMo bootstrap returned no JWT");
+  const jwt = await joinSharedOperation(jwtOperations, JWT_OPERATION_KEY, async sharedSignal => {
+    const owned = jwtOperations.get(JWT_OPERATION_KEY);
+    owned.recovery = recovery;
+    sharedSignal.throwIfAborted();
+    const response = await proxyAwareFetch(BOOTSTRAP_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
+      },
+      body: JSON.stringify({ client: generateFingerprint() }),
+      signal: sharedSignal,
+    }, proxyOptions);
+    guardResponse(response, sharedSignal);
+    if (!response.ok) {
+      cancelBody(response.body);
+      throw new Error(`MiMo bootstrap failed: ${response.status}`);
+    }
+    const data = await readBootstrapJson(response, sharedSignal);
+    sharedSignal.throwIfAborted();
+    if (!data.jwt) throw new Error("MiMo bootstrap returned no JWT");
+    const expiresAt = parseJwtExp(data.jwt);
+    sharedSignal.throwIfAborted();
+    if (jwtOperations.get(JWT_OPERATION_KEY) === owned) {
+      cachedJwt = data.jwt;
+      jwtExpiresAt = expiresAt;
+    }
+    sharedSignal.throwIfAborted();
+    return data.jwt;
+  }, { signal });
+  signal?.throwIfAborted();
+  return jwt;
+}
+
+function guardExecution(signal, executionOptions) {
+  const attempt = executionOptions?.attempt;
+  if (!attempt?.outputStarted && Number.isFinite(attempt?.deadlineAt) && Date.now() >= attempt.deadlineAt) {
+    attempt.abort?.("initial-output-deadline");
   }
-
-  cachedJwt = data.jwt;
-  jwtExpiresAt = parseJwtExp(data.jwt);
-  return cachedJwt;
+  signal?.throwIfAborted();
 }
 
 export class MimoFreeExecutor extends BaseExecutor {
@@ -128,34 +225,87 @@ export class MimoFreeExecutor extends BaseExecutor {
     return injectSystemMarker(body);
   }
 
-  async execute({ model, body, stream, credentials, signal, log, proxyOptions = null, healthProbe = false }) {
-    let jwt;
+  async execute({ model, body, stream, credentials, signal: callerSignal, log, proxyOptions = null, healthProbe = false, executionOptions = null }) {
+    const attemptSignal = executionOptions?.attempt?.signal;
+    const signal = callerSignal && attemptSignal && callerSignal !== attemptSignal
+      ? AbortSignal.any([callerSignal, attemptSignal]) : callerSignal || attemptSignal;
+    const guard = () => guardExecution(signal, executionOptions);
+    guard();
+    const singleAttempt = executionOptions?.alias === true || executionOptions?.retryPolicy === "single-attempt";
+    const noNetworkReplay = singleAttempt || executionOptions?.allowNetworkReplay === false;
+    const recoveryBudget = executionOptions?.recoveryBudget;
+    let heldResponse;
     try {
-      jwt = await bootstrapJwt(proxyOptions);
+      let jwt;
+      try {
+        jwt = await bootstrapJwt(proxyOptions, { signal, recoveryBudget });
+      } catch (error) {
+        guard();
+        log?.error?.("AUTH", `MiMo bootstrap failed: ${error.message}`);
+        throw error;
+      }
+      guard();
+      if (jwt === NO_BOOTSTRAP_RESULT) throw new Error("MiMo recovery budget exhausted before generation");
+
+      const forceStream = executionOptions?.forceUpstreamStreaming === true && this.supportsUpstreamStreaming(credentials);
+      const upstreamStream = forceStream ? true : stream;
+      const attemptBody = executionOptions?.alias === true || forceStream ? structuredClone(body) : body;
+      if (forceStream) attemptBody.stream = true;
+      guard();
+      const url = this.buildUrl();
+      const transformedBody = this.transformRequest(model, attemptBody, upstreamStream, credentials, executionOptions);
+      guard();
+      const headers = { ...this.buildHeaders(credentials, upstreamStream), "Authorization": `Bearer ${jwt}` };
+      const bodyStr = JSON.stringify(transformedBody);
+      guard();
+      log?.debug?.("FETCH", `MIMO-FREE → ${url} | body=${bodyStr.length}B`);
+      const dispatch = () => {
+        guard();
+        const fetchOptions = { method: "POST", headers, body: bodyStr, signal };
+        return noNetworkReplay
+          ? proxyAwareFetch(url, fetchOptions, proxyOptions, { allowNetworkReplay: false })
+          : proxyAwareFetch(url, fetchOptions, proxyOptions);
+      };
+      heldResponse = await dispatch();
+      guard();
+      const result = { response: heldResponse, url, headers, transformedBody };
+
+      if (!healthProbe && (heldResponse.status === 401 || heldResponse.status === 403)
+          && (!singleAttempt || !executionOptions?.attempt?.outputStarted)) {
+        if (!singleAttempt) {
+          log?.debug?.("AUTH", `MiMo auth failed (${heldResponse.status}), re-bootstrapping...`);
+          resetJwtCache();
+        }
+        guard();
+        try {
+          jwt = await bootstrapJwt(proxyOptions, { signal, recoveryBudget, forceRefresh: true });
+        } catch (error) {
+          guard();
+          if (!singleAttempt) throw error;
+          return result;
+        }
+        guard();
+        if (jwt === NO_BOOTSTRAP_RESULT || (singleAttempt && executionOptions?.attempt?.outputStarted)) return result;
+        if (singleAttempt && recoveryBudget && !recoveryBudget.claimRedispatch()) {
+          guard();
+          return result;
+        }
+        guard();
+        headers["Authorization"] = `Bearer ${jwt}`;
+        guard();
+        if (singleAttempt) cancelBody(heldResponse.body);
+        heldResponse = undefined;
+        heldResponse = await dispatch();
+        guard();
+        return { response: heldResponse, url, headers, transformedBody };
+      }
+      guard();
+      return result;
     } catch (error) {
-      log?.error?.("AUTH", `MiMo bootstrap failed: ${error.message}`);
+      if (signal?.aborted) cancelBody(heldResponse?.body, signal.reason);
+      guard();
       throw error;
     }
-
-    const url = this.buildUrl();
-    const transformedBody = this.transformRequest(model, body);
-    const headers = { ...this.buildHeaders(credentials, stream), "Authorization": `Bearer ${jwt}` };
-    const bodyStr = JSON.stringify(transformedBody);
-    log?.debug?.("FETCH", `MIMO-FREE → ${url} | body=${bodyStr.length}B`);
-
-    const response = await proxyAwareFetch(url, { method: "POST", headers, body: bodyStr, signal }, proxyOptions);
-
-    // On auth failure, invalidate cache and retry once with a fresh JWT
-    if (!healthProbe && (response.status === 401 || response.status === 403)) {
-      log?.debug?.("AUTH", `MiMo auth failed (${response.status}), re-bootstrapping...`);
-      resetJwtCache();
-      jwt = await bootstrapJwt(proxyOptions);
-      headers["Authorization"] = `Bearer ${jwt}`;
-      const retryResponse = await proxyAwareFetch(url, { method: "POST", headers, body: bodyStr, signal }, proxyOptions);
-      return { response: retryResponse, url, headers, transformedBody };
-    }
-
-    return { response, url, headers, transformedBody };
   }
 }
 

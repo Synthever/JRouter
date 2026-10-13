@@ -1,5 +1,6 @@
 // Re-export from open-sse with local logger
 import * as log from "../utils/logger.js";
+import { joinSharedOperation } from "open-sse/utils/sharedOperation.js";
 import { getProviderConnectionById, updateProviderConnection } from "../../lib/localDb.js";
 import {
   getProjectIdForConnection,
@@ -28,44 +29,46 @@ import {
 } from "open-sse/services/oauthCredentialManager.js";
 
 export const TOKEN_EXPIRY_BUFFER_MS = BUFFER_MS;
+const persistenceOperations = new Map();
+const persistedResults = new Map();
 
 // ─── Re-exports wrapped with local logger ─────────────────────────────────────
 
-export const refreshAccessToken = (provider, refreshToken, credentials) =>
-  _refreshAccessToken(provider, refreshToken, credentials, log);
+export const refreshAccessToken = (provider, refreshToken, credentials, options) =>
+  _refreshAccessToken(provider, refreshToken, credentials, log, options);
 
-export const refreshClaudeOAuthToken = (refreshToken) =>
-  _refreshClaudeOAuthToken(refreshToken, log);
+export const refreshClaudeOAuthToken = (refreshToken, options) =>
+  _refreshClaudeOAuthToken(refreshToken, log, options);
 
-export const refreshGoogleToken = (refreshToken, clientId, clientSecret) =>
-  _refreshGoogleToken(refreshToken, clientId, clientSecret, log);
+export const refreshGoogleToken = (refreshToken, clientId, clientSecret, options) =>
+  _refreshGoogleToken(refreshToken, clientId, clientSecret, log, options);
 
-export const refreshCodexToken = (refreshToken) =>
-  _refreshCodexToken(refreshToken, log);
+export const refreshCodexToken = (refreshToken, options) =>
+  _refreshCodexToken(refreshToken, log, options);
 
-export const refreshIflowToken = (refreshToken) =>
-  _refreshIflowToken(refreshToken, log);
+export const refreshIflowToken = (refreshToken, options) =>
+  _refreshIflowToken(refreshToken, log, options);
 
-export const refreshGitHubToken = (refreshToken) =>
-  _refreshGitHubToken(refreshToken, log);
+export const refreshGitHubToken = (refreshToken, options) =>
+  _refreshGitHubToken(refreshToken, log, options);
 
-export const refreshCopilotToken = (githubAccessToken) =>
-  _refreshCopilotToken(githubAccessToken, log);
+export const refreshCopilotToken = (githubAccessToken, options) =>
+  _refreshCopilotToken(githubAccessToken, log, options);
 
-export const refreshKiroToken = (refreshToken, providerSpecificData) =>
-  _refreshKiroToken(refreshToken, providerSpecificData, log);
+export const refreshKiroToken = (refreshToken, providerSpecificData, proxyOptions = null, options) =>
+  _refreshKiroToken(refreshToken, providerSpecificData, log, proxyOptions, options);
 
-export const getAccessToken = (provider, credentials) =>
-  _getAccessToken(provider, credentials, log);
+export const getAccessToken = (provider, credentials, options) =>
+  _getAccessToken(provider, credentials, log, options);
 
-export const refreshTokenByProvider = (provider, credentials) =>
-  _refreshTokenByProvider(provider, credentials, log);
+export const refreshTokenByProvider = (provider, credentials, options) =>
+  _refreshTokenByProvider(provider, credentials, log, options);
 
 export const formatProviderCredentials = (provider, credentials) =>
   _formatProviderCredentials(provider, credentials, log);
 
-export const getAllAccessTokens = (userInfo) =>
-  _getAllAccessTokens(userInfo, log);
+export const getAllAccessTokens = (userInfo, options) =>
+  _getAllAccessTokens(userInfo, log, options);
 
 export const shouldRefreshCredentials = (provider, credentials) =>
   _shouldRefreshCredentials(provider, credentials);
@@ -121,7 +124,8 @@ function needsProjectId(provider) {
  * @param {string} connectionId
  * @param {string} accessToken
  */
-function _refreshProjectId(provider, connectionId, accessToken) {
+async function _refreshProjectId(provider, connectionId, accessToken, options = {}) {
+  options.signal?.throwIfAborted();
   if (!needsProjectId(provider) || !connectionId || !accessToken) return;
 
   // Invalidate the stale cached entry so getProjectIdForConnection does a real fetch
@@ -131,22 +135,14 @@ function _refreshProjectId(provider, connectionId, accessToken) {
   // Eagerly fetching projectId across multiple accounts simultaneously triggers Google Cloud anti-abuse / rate limits.
   // Runtime handlers (e.g. chat handler) will lazily call getProjectIdForConnection() on demand.
   if (process.env.EAGER_PROJECT_ID_REFRESH === "true") {
-    getProjectIdForConnection(connectionId, accessToken, provider)
-      .then((projectId) => {
-        if (!projectId) return;
-        updateProviderCredentials(connectionId, { projectId }).catch((err) => {
-          log.debug("TOKEN_REFRESH", "Failed to persist refreshed projectId", {
-            connectionId,
-            error: err?.message ?? err,
-          });
-        });
-      })
-      .catch((err) => {
-        log.debug("TOKEN_REFRESH", "Failed to fetch projectId after token refresh", {
-          connectionId,
-          error: err?.message ?? err,
-        });
-      });
+    try {
+      const projectId = await getProjectIdForConnection(connectionId, accessToken, provider, options);
+      options.signal?.throwIfAborted();
+      if (projectId) await updateProviderCredentials(connectionId, { projectId }, options);
+    } catch (err) {
+      options.signal?.throwIfAborted();
+      log.debug("TOKEN_REFRESH", "Failed to fetch projectId after token refresh", { connectionId, error: err?.message ?? err });
+    }
   }
 }
 
@@ -160,7 +156,8 @@ function _refreshProjectId(provider, connectionId, accessToken) {
  * @param {object} newCredentials
  * @returns {Promise<boolean>}
  */
-export async function updateProviderCredentials(connectionId, newCredentials) {
+export async function updateProviderCredentials(connectionId, newCredentials, { signal } = {}) {
+  signal?.throwIfAborted();
   try {
     const updates = {};
 
@@ -194,19 +191,44 @@ export async function updateProviderCredentials(connectionId, newCredentials) {
     }
     if (newCredentials.projectId)            updates.projectId = newCredentials.projectId;
 
-    const result = await updateProviderConnection(connectionId, updates);
+    signal?.throwIfAborted();
+    const result = await updateProviderConnection(connectionId, updates, { signal });
+    signal?.throwIfAborted();
     log.info("TOKEN_REFRESH", "Credentials updated in localDb", {
       connectionId,
       success: !!result
     });
     return !!result;
   } catch (error) {
+    signal?.throwIfAborted();
     log.error("TOKEN_REFRESH", "Error updating credentials in localDb", {
       connectionId,
       error: error.message,
     });
     return false;
   }
+}
+
+/** Persist one acquired result per connection, owned by all live result adopters. */
+async function persistSharedCredentials(provider, connectionId, credentials, { signal } = {}) {
+  signal?.throwIfAborted();
+  const key = JSON.stringify([
+    provider,
+    connectionId,
+    credentials.accessToken || credentials.token || credentials.copilotToken || credentials.apiKey,
+    credentials.refreshToken ?? null,
+  ]);
+  const now = Date.now();
+  for (const [id, expiresAt] of persistedResults) {
+    if (expiresAt <= now) persistedResults.delete(id);
+  }
+  if (persistedResults.has(key)) return;
+  return joinSharedOperation(persistenceOperations, key, async sharedSignal => {
+    sharedSignal.throwIfAborted();
+    const persisted = await updateProviderCredentials(connectionId, credentials, { signal: sharedSignal });
+    sharedSignal.throwIfAborted();
+    if (persisted) persistedResults.set(key, Date.now() + 10_000);
+  }, { signal });
 }
 
 // ─── Local-specific: proactive token refresh ─────────────────────────────────
@@ -222,6 +244,7 @@ export async function updateProviderCredentials(connectionId, newCredentials) {
  * @returns {Promise<object>} updated credentials object
  */
 export async function checkAndRefreshToken(provider, credentials, options = {}) {
+  options.signal?.throwIfAborted();
   let creds = { ...credentials };
   if (!creds.connectionId && creds.id) {
     creds.connectionId = creds.id;
@@ -231,6 +254,7 @@ export async function checkAndRefreshToken(provider, credentials, options = {}) 
   // refreshing with a stale snapshot (reuse) revokes the whole session → account logout.
   if (creds.connectionId) {
     const latest = await getProviderConnectionById(creds.connectionId).catch(() => null);
+    options.signal?.throwIfAborted();
     const latestRefreshMs = Date.parse(latest?.lastRefreshAt || "");
     const credsRefreshMs = Date.parse(creds.lastRefreshAt || "");
     const dbIsNewer = Number.isFinite(latestRefreshMs)
@@ -261,7 +285,8 @@ export async function checkAndRefreshToken(provider, credentials, options = {}) 
       lastRefreshAt: creds.lastRefreshAt || null,
     });
 
-    const newCreds = await _refreshProviderCredentials(provider, creds, log);
+    const newCreds = await _refreshProviderCredentials(provider, creds, log, options);
+    options.signal?.throwIfAborted();
     if (newCreds?.accessToken || newCreds?.apiKey || newCreds?.copilotToken) {
       const mergedCreds = {
         ...newCreds,
@@ -269,7 +294,8 @@ export async function checkAndRefreshToken(provider, credentials, options = {}) 
       };
 
       // Persist to DB (non-blocking path continues below)
-      await updateProviderCredentials(creds.connectionId, mergedCreds);
+      await persistSharedCredentials(provider, creds.connectionId, mergedCreds, options);
+      options.signal?.throwIfAborted();
 
       creds = {
         ...creds,
@@ -283,7 +309,14 @@ export async function checkAndRefreshToken(provider, credentials, options = {}) 
       };
 
       // Non-blocking: refresh projectId with the new access token
-      _refreshProjectId(provider, creds.connectionId, creds.accessToken);
+      if (options.signal) {
+        await _refreshProjectId(provider, creds.connectionId, creds.accessToken, options);
+      } else {
+        // Ordinary/background refresh keeps the existing non-blocking timing.
+        _refreshProjectId(provider, creds.connectionId, creds.accessToken).catch(err => {
+          log.debug("TOKEN_REFRESH", "Failed to refresh projectId", { connectionId: creds.connectionId, error: err?.message ?? err });
+        });
+      }
     }
   }
 
@@ -302,7 +335,11 @@ export async function checkAndRefreshToken(provider, credentials, options = {}) 
         expiresIn: copilotToken ? Math.round(remaining / 1000) : "missing",
       });
 
-      const copilotTokenResult = await refreshCopilotToken(creds.accessToken);
+      // No Copilot session yet is preparation; replacing an established one
+      // uses the same account allowance as proactive/reactive OAuth refresh.
+      const copilotTokenResult = await refreshCopilotToken(creds.accessToken,
+        copilotToken ? options : { signal: options.signal });
+      options.signal?.throwIfAborted();
       if (copilotTokenResult) {
         const updatedSpecific = {
           ...creds.providerSpecificData,
@@ -310,9 +347,11 @@ export async function checkAndRefreshToken(provider, credentials, options = {}) 
           copilotTokenExpiresAt: copilotTokenResult.expiresAt,
         };
 
-        await updateProviderCredentials(creds.connectionId, {
+        await persistSharedCredentials(provider, creds.connectionId, {
+          token: copilotTokenResult.token,
           providerSpecificData: updatedSpecific,
-        });
+        }, options);
+        options.signal?.throwIfAborted();
 
         creds.providerSpecificData = updatedSpecific;
         creds.copilotToken = copilotTokenResult.token;
@@ -332,11 +371,15 @@ export async function checkAndRefreshToken(provider, credentials, options = {}) 
  * @param {object} credentials  – must contain `refreshToken`
  * @returns {Promise<object|null>} merged credentials or the raw GitHub credentials on Copilot failure
  */
-export async function refreshGitHubAndCopilotTokens(credentials) {
-  const newGitHubCreds = await refreshGitHubToken(credentials.refreshToken);
+export async function refreshGitHubAndCopilotTokens(credentials, options = {}) {
+  options.signal?.throwIfAborted();
+  const newGitHubCreds = await refreshGitHubToken(credentials.refreshToken, options);
+  options.signal?.throwIfAborted();
   if (!newGitHubCreds?.accessToken) return newGitHubCreds;
 
-  const copilotToken = await refreshCopilotToken(newGitHubCreds.accessToken);
+  const copilotToken = await refreshCopilotToken(newGitHubCreds.accessToken,
+    credentials.providerSpecificData?.copilotToken ? options : { signal: options.signal });
+  options.signal?.throwIfAborted();
   if (!copilotToken) return newGitHubCreds;
 
   return {

@@ -2,6 +2,173 @@
 import { STREAM_STALL_TIMEOUT_MS } from "../config/runtimeConfig.js";
 import { dbg, isDebugEnabled } from "./debugLog.js";
 
+/** Cancel the owned read without waiting for transport cleanup. */
+export function waitWithSignal(operation, signal, onAbort = null) {
+  signal?.throwIfAborted();
+  if (!signal) return Promise.resolve(operation);
+  return new Promise((resolve, reject) => {
+    const abort = () => {
+      signal.removeEventListener("abort", abort);
+      try { onAbort?.(signal.reason); } catch { /* Keep the original reason. */ }
+      reject(signal.reason);
+    };
+    signal.addEventListener("abort", abort, { once: true });
+    Promise.resolve(operation).then(value => {
+      signal.removeEventListener("abort", abort);
+      if (signal.aborted) reject(signal.reason); else resolve(value);
+    }, error => {
+      signal.removeEventListener("abort", abort);
+      reject(signal.aborted ? signal.reason : error);
+    });
+  });
+}
+
+export function cancelBody(body, reason) {
+  try { void Promise.resolve(body?.cancel(reason)).catch(() => {}); } catch { /* Best effort cleanup. */ }
+}
+
+function findSseFrameEnd(bytes, state) {
+  for (let i = 0; i < bytes.byteLength; i++) {
+    const byte = bytes[i];
+    if (state.pendingCR) {
+      state.pendingCR = false;
+      if (byte === 10) {
+        const boundary = state.pendingCRBoundary;
+        state.pendingCRBoundary = false;
+        if (boundary) return i + 1;
+        continue;
+      }
+      const boundary = state.pendingCRBoundary;
+      state.pendingCRBoundary = false;
+      if (boundary) return i;
+    }
+    if (byte === 13) {
+      state.pendingCR = true;
+      state.pendingCRBoundary = !state.lineHasBytes;
+      state.lineHasBytes = false;
+      if (state.pendingCRBoundary && i + 1 === bytes.byteLength) return -1;
+    } else if (byte === 10) {
+      const boundary = !state.lineHasBytes;
+      state.lineHasBytes = false;
+      if (boundary) return i + 1;
+    } else state.lineHasBytes = true;
+  }
+  return -1;
+}
+
+function concatSseParts(parts) {
+  if (parts.length === 1) return parts[0];
+  const size = parts.reduce((sum, part) => sum + part.byteLength, 0);
+  const result = new Uint8Array(size);
+  let offset = 0;
+  for (const part of parts) { result.set(part, offset); offset += part.byteLength; }
+  return result;
+}
+
+function recordUpstreamChunk(chunk, stats, armStall) {
+  stats.chunkCount++;
+  const size = chunk?.byteLength || chunk?.length || 0;
+  stats.totalBytes += size;
+  const now = Date.now();
+  const gap = now - stats.lastChunkAt;
+  stats.lastChunkAt = now;
+  if (isDebugEnabled && (stats.chunkCount <= 5 || stats.chunkCount % 20 === 0 || gap > 5000)) {
+    dbg("STREAM", `chunk #${stats.chunkCount} | size=${size}B | gap=${gap}ms | total=${stats.totalBytes}B`);
+  }
+  armStall();
+}
+
+function createAliasSseFrameStream(body, options, stats, armStall, clearStall, startTime) {
+  const reader = body.getReader();
+  const maxFrameBytes = 16 * 1024 * 1024;
+  const delimiterState = { lineHasBytes: false, pendingCR: false, pendingCRBoundary: false };
+  let sourceChunk = null;
+  let sourceOffset = 0;
+  let frameParts = [];
+  let frameBytes = 0;
+  let done = false;
+
+  return new ReadableStream({
+    start() { armStall(); },
+    async pull(controller) {
+      try {
+        while (!done) {
+          if (!sourceChunk || sourceOffset >= sourceChunk.byteLength) {
+            const part = await waitWithSignal(reader.read(), options.signal, reason => cancelBody({ cancel: value => reader.cancel(value) }, reason));
+            if (part.done) {
+              done = true;
+              clearStall();
+              dbg("STREAM", `upstream EOF | chunks=${stats.chunkCount} | bytes=${stats.totalBytes} | dur=${Date.now() - startTime}ms`);
+              reader.releaseLock();
+              break;
+            }
+            sourceChunk = part.value;
+            sourceOffset = 0;
+            recordUpstreamChunk(sourceChunk, stats, armStall);
+            if (!(sourceChunk instanceof Uint8Array)) { controller.enqueue(sourceChunk); sourceChunk = null; return; }
+          }
+
+          const remaining = sourceChunk.subarray(sourceOffset);
+          const end = findSseFrameEnd(remaining, delimiterState);
+          if (end >= 0) {
+            const framePart = remaining.subarray(0, end);
+            frameBytes += framePart.byteLength;
+            if (frameBytes > maxFrameBytes) throw Object.assign(new Error("Provider SSE event exceeded the alias frame limit"), { code: "ALIAS_FRAME_LIMIT" });
+            if (framePart.byteLength) frameParts.push(framePart);
+            sourceOffset += end;
+            if (frameParts.length) {
+              const frame = concatSseParts(frameParts);
+              frameParts = [];
+              frameBytes = 0;
+              controller.enqueue(frame);
+              return;
+            }
+            continue;
+          }
+
+          frameBytes += remaining.byteLength;
+          if (frameBytes > maxFrameBytes) throw Object.assign(new Error("Provider SSE event exceeded the alias frame limit"), { code: "ALIAS_FRAME_LIMIT" });
+          if (remaining.byteLength) frameParts.push(remaining);
+          sourceOffset = sourceChunk.byteLength;
+          sourceChunk = null;
+        }
+
+        if (frameParts.length) {
+          const partialFrame = concatSseParts(frameParts);
+          frameParts = [];
+          frameBytes = 0;
+          controller.enqueue(partialFrame);
+        } else controller.close();
+      } catch (error) {
+        cancelBody({ cancel: reason => reader.cancel(reason) }, error);
+        controller.error(error);
+      }
+    },
+    cancel(reason) {
+      cancelBody({ cancel: value => reader.cancel(value) }, reason);
+      clearStall();
+    }
+  }, { highWaterMark: 0 });
+}
+
+export async function readResponseText(response, signal) {
+  signal?.throwIfAborted();
+  const reader = response.body?.getReader();
+  if (!reader) return "";
+  const decoder = new TextDecoder();
+  let text = "";
+  const cancel = reason => cancelBody({ cancel: r => reader.cancel(r) }, reason);
+  try {
+    while (true) {
+      const { value, done } = await waitWithSignal(reader.read(), signal, cancel);
+      signal?.throwIfAborted();
+      if (done) return text + decoder.decode();
+      text += decoder.decode(value, { stream: true });
+    }
+  } catch (error) { cancel(error); throw error; }
+  finally { reader.releaseLock(); }
+}
+
 // Get HH:MM:SS timestamp
 function getTimeString() {
   return new Date().toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -83,7 +250,7 @@ export function createStreamController({ onDisconnect, onError, log, provider, m
       onError?.(error);
     },
 
-    abort: () => abortController.abort()
+    abort: reason => abortController.abort(reason)
   };
 }
 
@@ -192,13 +359,15 @@ export function createDisconnectAwareStream(transformStream, streamController, o
  * @param {TransformStream} transformStream - Transform stream for SSE
  * @param {object} streamController - Stream controller from createStreamController
  */
-export function pipeWithDisconnect(providerResponse, transformStream, streamController, onAbortTerminal = null, stallTimeoutMs = STREAM_STALL_TIMEOUT_MS) {
+export function pipeWithDisconnect(providerResponse, transformStream, streamController, onAbortTerminal = null, stallTimeoutMs = STREAM_STALL_TIMEOUT_MS, options = {}) {
   let stallTimer = null;
   let chunkCount = 0;
   let totalBytes = 0;
   let lastChunkAt = Date.now();
   let abortMessage = "upstream connection lost";
+  let stallFailure = null;
   const t0 = Date.now();
+  const upstreamStats = { chunkCount, totalBytes, lastChunkAt };
   const tag = "STREAM";
   const clearStall = () => {
     if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; }
@@ -210,7 +379,8 @@ export function pipeWithDisconnect(providerResponse, transformStream, streamCont
       abortMessage = "stream stall timeout";
       dbg(tag, `STALL TIMEOUT ${stallTimeoutMs}ms | chunks=${chunkCount} | bytes=${totalBytes} | sinceLast=${Date.now() - lastChunkAt}ms`);
       streamController.handleError?.(new Error("stream stall timeout"));
-      streamController.abort?.();
+      if (options.alias) stallFailure = Object.assign(new Error(abortMessage), { code: "ALIAS_STREAM_STALL" });
+      streamController.abort?.(stallFailure || undefined);
     }, stallTimeoutMs);
   };
 
@@ -230,26 +400,65 @@ export function pipeWithDisconnect(providerResponse, transformStream, streamCont
   armStall();
   dbg(tag, `pipe start | stallTimeout=${stallTimeoutMs}ms`);
 
+  const frameSse = options.alias === true && providerResponse.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() === "text/event-stream";
   const upstreamTap = new TransformStream({
     transform(chunk, controller) {
-      chunkCount++;
-      const sz = chunk?.byteLength || chunk?.length || 0;
-      totalBytes += sz;
-      const now = Date.now();
-      const gap = now - lastChunkAt;
-      lastChunkAt = now;
-      if (isDebugEnabled && (chunkCount <= 5 || chunkCount % 20 === 0 || gap > 5000)) {
-        dbg(tag, `chunk #${chunkCount} | size=${sz}B | gap=${gap}ms | total=${totalBytes}B`);
-      }
-      armStall();
+      recordUpstreamChunk(chunk, upstreamStats, armStall);
       controller.enqueue(chunk);
     },
-    flush() { dbg(tag, `upstream EOF | chunks=${chunkCount} | bytes=${totalBytes} | dur=${Date.now() - t0}ms`); clearStall(); }
+    flush() {
+      dbg(tag, `upstream EOF | chunks=${upstreamStats.chunkCount} | bytes=${upstreamStats.totalBytes} | dur=${Date.now() - t0}ms`);
+      clearStall();
+    }
   });
 
-  const transformedBody = providerResponse.body
-    .pipeThrough(upstreamTap)
-    .pipeThrough(transformStream);
+  const upstreamSource = frameSse
+    ? createAliasSseFrameStream(providerResponse.body, options, upstreamStats, armStall, clearStall, t0)
+    : providerResponse.body.pipeThrough(upstreamTap, options.alias && options.signal ? { signal: options.signal } : undefined);
+  const transformedBody = upstreamSource.pipeThrough(transformStream, options.alias && options.signal ? { signal: options.signal } : undefined);
+
+  if (options.alias) {
+    const signal = options.signal;
+    const reader = transformedBody.getReader();
+    let terminal = false;
+    let abort;
+    const finish = () => { terminal = true; clearStall(); signal?.removeEventListener("abort", abort); };
+    const cancel = reason => cancelBody({ cancel: r => reader.cancel(r) }, reason);
+    return new ReadableStream({
+      start(controller) {
+        abort = () => {
+          if (terminal) return;
+          finish(); cancel(signal.reason);
+          options.onFailure?.(signal.reason);
+          if (stallFailure && signal.reason === stallFailure && onAbortTerminal) {
+            const bytes = onAbortTerminal(abortMessage, stallFailure);
+            if (bytes) controller.enqueue(bytes);
+            controller.close();
+          } else controller.error(signal.reason);
+        };
+        if (signal?.aborted) abort(); else signal?.addEventListener("abort", abort, { once: true });
+      },
+      async pull(controller) {
+        if (terminal) return;
+        try {
+          const { done, value } = await waitWithSignal(reader.read(), signal, cancel);
+          if (terminal) return;
+          if (done) { finish(); reader.releaseLock(); streamController.handleComplete(); controller.close(); }
+          else controller.enqueue(value);
+        } catch (error) {
+          if (terminal) return;
+          finish(); cancel(error); options.onFailure?.(error);
+          if (signal?.aborted) controller.error(signal.reason);
+          else {
+            streamController.handleError(error);
+            const bytes = onAbortTerminal?.(error?.message || "upstream connection lost", error);
+            if (bytes) { controller.enqueue(bytes); controller.close(); } else controller.error(error);
+          }
+        }
+      },
+      cancel(reason) { if (terminal) return; finish(); cancel(reason); streamController.handleDisconnect(reason); streamController.abort(); },
+    });
+  }
 
   return createDisconnectAwareStream(
     { readable: transformedBody, writable: { getWriter: () => ({ abort: () => Promise.resolve() }) } },

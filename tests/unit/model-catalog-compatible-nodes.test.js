@@ -6,6 +6,7 @@ const state = vi.hoisted(() => ({ values: [], index: 0 }));
 vi.mock("react", () => ({
   useEffect: vi.fn(),
   useMemo: (compute) => compute(),
+  useCallback: (callback) => callback,
   useState: () => [state.values[state.index++], vi.fn()],
 }));
 vi.mock("@/shared/hooks/useModelCaps", () => ({
@@ -17,9 +18,10 @@ function Catalog(options) {
 }
 
 function catalog({ nodes = [], models = [], disabled = {}, ...options } = {}) {
-  state.values = [[], nodes, models, disabled, "", [], [], [], []];
+  // This fixture proves synchronous derivation, not effect/fetch ownership.
+  state.values = [[], nodes, models, disabled, "", 0, { context: "members", revision: 0, virtuals: [], loading: false, error: "" }, [], [], [], []];
   state.index = 0;
-  return Catalog(options);
+  return Catalog({ catalogContext: "members", ...options });
 }
 
 describe("shared model picker compatible nodes", () => {
@@ -58,6 +60,19 @@ describe("shared model picker compatible nodes", () => {
       value: "cp/model-id",
       isPlaceholder: true,
     }]);
+  });
+
+  it("retains exact nested/case values while alias members exclude placeholders and known media", () => {
+    const id = "openai-compatible-chat-existing";
+    const { groups } = catalog({
+      nodes: [{ id, name: "My Provider", prefix: "mine" }],
+      models: [{ providerAlias: id, id: "Nested/Case" }, { providerAlias: id, id: "image", type: "image" }],
+      modelAliases: { MediaLegacy: `${id}/image` },
+      excludePlaceholders: true,
+    });
+    expect(groups[id].models.map(model => model.value)).toEqual(["mine/Nested/Case"]);
+    const empty = catalog({ nodes: [{ id, prefix: "mine" }], activeProviders: [{ provider: id }], excludePlaceholders: true });
+    expect(empty.groups[id]).toBeUndefined();
   });
 
   it("preserves aliases and disabled-model filtering for existing nodes", () => {

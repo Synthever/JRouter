@@ -4,7 +4,7 @@
 
 import { CLIENT_METADATA } from "../../config/appConstants.js";
 import { ANTIGRAVITY_IDE_USER_AGENT, ANTIGRAVITY_IDE_VERSION, ANTIGRAVITY_OAUTH_CLIENT } from "../../providers/shared.js";
-import { U, parseResetTime, normalizeCloudCodeProjectId, fetchWithTimeout } from "./shared.js";
+import { U, parseResetTime, normalizeCloudCodeProjectId, fetchWithTimeout, readUsageJson, discardUsageBody } from "./shared.js";
 import { fetchAntigravityWeeklyQuota } from "./antigravity-weekly.js";
 
 // Antigravity API config (from Quotio) — urls from registry, oauth client + dynamic UA kept here
@@ -19,7 +19,8 @@ const ANTIGRAVITY_CONFIG = {
  * Uses retrieveUserQuota (same endpoint as `gemini /stats`) returning
  * per-model buckets with remainingFraction + resetTime.
  */
-export async function getGeminiUsage(accessToken, providerSpecificData, proxyOptions = null) {
+export async function getGeminiUsage(accessToken, providerSpecificData, proxyOptions = null, { signal } = {}) {
+  signal?.throwIfAborted();
   if (!accessToken) {
     return { plan: "Free", message: "Gemini CLI access token not available." };
   }
@@ -31,7 +32,8 @@ export async function getGeminiUsage(accessToken, providerSpecificData, proxyOpt
     let plan = "Free";
 
     if (!projectId) {
-      const subInfo = await getGeminiSubscriptionInfo(accessToken, proxyOptions);
+      const subInfo = await getGeminiSubscriptionInfo(accessToken, proxyOptions, ...(signal ? [{ signal }] : []));
+      signal?.throwIfAborted();
       projectId = normalizeCloudCodeProjectId(subInfo?.cloudaicompanionProject);
       plan = subInfo?.currentTier?.name || plan;
     }
@@ -47,6 +49,7 @@ export async function getGeminiUsage(accessToken, providerSpecificData, proxyOpt
       U("gemini-cli").quotaUrl,
       {
         method: "POST",
+        ...(signal ? { signal } : {}),
         headers: {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
@@ -57,11 +60,15 @@ export async function getGeminiUsage(accessToken, providerSpecificData, proxyOpt
       proxyOptions
     );
 
+    if (signal?.aborted) discardUsageBody(response, signal.reason);
+    signal?.throwIfAborted();
     if (!response.ok) {
+      discardUsageBody(response);
       return { plan, message: `Gemini CLI quota error (${response.status}).` };
     }
 
-    const data = await response.json();
+    const data = await readUsageJson(response, signal);
+    signal?.throwIfAborted();
     const quotas = {};
 
     if (Array.isArray(data.buckets)) {
@@ -85,6 +92,7 @@ export async function getGeminiUsage(accessToken, providerSpecificData, proxyOpt
 
     return { plan, quotas };
   } catch (error) {
+    signal?.throwIfAborted();
     return { message: `Gemini CLI error: ${error.message}` };
   }
 }
@@ -92,12 +100,14 @@ export async function getGeminiUsage(accessToken, providerSpecificData, proxyOpt
 /**
  * Get Gemini CLI subscription info via loadCodeAssist
  */
-async function getGeminiSubscriptionInfo(accessToken, proxyOptions = null) {
+async function getGeminiSubscriptionInfo(accessToken, proxyOptions = null, { signal } = {}) {
+  signal?.throwIfAborted();
   try {
     const response = await fetchWithTimeout(
       U("gemini-cli").loadCodeAssistUrl,
       {
         method: "POST",
+        ...(signal ? { signal } : {}),
         headers: {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
@@ -107,9 +117,14 @@ async function getGeminiSubscriptionInfo(accessToken, proxyOptions = null) {
       10000,
       proxyOptions
     );
-    if (!response.ok) return null;
-    return await response.json();
+    if (signal?.aborted) discardUsageBody(response, signal.reason);
+    signal?.throwIfAborted();
+    if (!response.ok) { discardUsageBody(response); return null; }
+    const data = await readUsageJson(response, signal);
+    signal?.throwIfAborted();
+    return data;
   } catch {
+    signal?.throwIfAborted();
     return null;
   }
 }
@@ -117,14 +132,17 @@ async function getGeminiSubscriptionInfo(accessToken, proxyOptions = null) {
 /**
  * Antigravity Usage - Fetch quota from Google Cloud Code API
  */
-export async function getAntigravityUsage(accessToken, providerSpecificData, proxyOptions = null) {
+export async function getAntigravityUsage(accessToken, providerSpecificData, proxyOptions = null, { signal } = {}) {
+  signal?.throwIfAborted();
   try {
     // Fetch subscription info once — reuse for both projectId and plan
-    const subscriptionInfo = await getAntigravitySubscriptionInfo(accessToken, proxyOptions);
+    const subscriptionInfo = await getAntigravitySubscriptionInfo(accessToken, proxyOptions, ...(signal ? [{ signal }] : []));
+    signal?.throwIfAborted();
     const projectId = subscriptionInfo?.cloudaicompanionProject || null;
 
     const response = await fetchWithTimeout(ANTIGRAVITY_CONFIG.quotaApiUrl, {
       method: "POST",
+      ...(signal ? { signal } : {}),
       headers: {
         "Authorization": `Bearer ${accessToken}`,
         "User-Agent": ANTIGRAVITY_CONFIG.userAgent,
@@ -137,7 +155,10 @@ export async function getAntigravityUsage(accessToken, providerSpecificData, pro
       }),
     }, 10000, proxyOptions);
 
+    if (signal?.aborted) discardUsageBody(response, signal.reason);
+    signal?.throwIfAborted();
     if (response.status === 403) {
+      discardUsageBody(response);
       return {
         message: "Antigravity quota API access forbidden. Chat may still work.",
         quotas: {}
@@ -145,6 +166,7 @@ export async function getAntigravityUsage(accessToken, providerSpecificData, pro
     }
 
     if (response.status === 401) {
+      discardUsageBody(response);
       return {
         message: "Antigravity quota API authentication expired. Chat may still work.",
         quotas: {}
@@ -152,10 +174,12 @@ export async function getAntigravityUsage(accessToken, providerSpecificData, pro
     }
 
     if (!response.ok) {
+      discardUsageBody(response);
       throw new Error(`Antigravity API error: ${response.status}`);
     }
 
-    const data = await response.json();
+    const data = await readUsageJson(response, signal);
+    signal?.throwIfAborted();
     const quotas = {};
 
     // Detect tier: free-tier accounts only have weekly quotas (no separate 5h window).
@@ -229,11 +253,14 @@ export async function getAntigravityUsage(accessToken, providerSpecificData, pro
 
     // Best-effort weekly quota overlay — never blocks or breaks per-model results
     try {
+      signal?.throwIfAborted();
       const weeklyQuotas = await fetchAntigravityWeeklyQuota(
         accessToken,
         projectId,
-        proxyOptions
+        proxyOptions,
+        ...(signal ? [{ signal }] : [])
       );
+      signal?.throwIfAborted();
 
       // Reconcile short-window session quota if models are exhausted:
       // If every model in a family is locked/exhausted (remainingPercentage === 0)
@@ -272,6 +299,7 @@ export async function getAntigravityUsage(accessToken, providerSpecificData, pro
 
       Object.assign(quotas, weeklyQuotas);
     } catch {
+      signal?.throwIfAborted();
       // Silently ignore — weekly is best-effort
     }
 
@@ -281,6 +309,7 @@ export async function getAntigravityUsage(accessToken, providerSpecificData, pro
       subscriptionInfo,
     };
   } catch (error) {
+    signal?.throwIfAborted();
     console.error("[Antigravity Usage] Error:", error.message, error.cause);
     return { message: `Antigravity error: ${error.message}` };
   }
@@ -289,10 +318,12 @@ export async function getAntigravityUsage(accessToken, providerSpecificData, pro
 /**
  * Get Antigravity subscription info
  */
-async function getAntigravitySubscriptionInfo(accessToken, proxyOptions = null) {
+async function getAntigravitySubscriptionInfo(accessToken, proxyOptions = null, { signal } = {}) {
+  signal?.throwIfAborted();
   try {
     const response = await fetchWithTimeout(ANTIGRAVITY_CONFIG.loadProjectApiUrl, {
       method: "POST",
+      ...(signal ? { signal } : {}),
       headers: {
         "Authorization": `Bearer ${accessToken}`,
         "User-Agent": ANTIGRAVITY_CONFIG.userAgent,
@@ -301,9 +332,14 @@ async function getAntigravitySubscriptionInfo(accessToken, proxyOptions = null) 
       body: JSON.stringify({ metadata: CLIENT_METADATA, mode: 1 }),
     }, 10000, proxyOptions);
 
-    if (!response.ok) return null;
-    return await response.json();
+    if (signal?.aborted) discardUsageBody(response, signal.reason);
+    signal?.throwIfAborted();
+    if (!response.ok) { discardUsageBody(response); return null; }
+    const data = await readUsageJson(response, signal);
+    signal?.throwIfAborted();
+    return data;
   } catch (error) {
+    signal?.throwIfAborted();
     console.error("[Antigravity Subscription] Error:", error.message);
     return null;
   }

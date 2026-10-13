@@ -1,3 +1,4 @@
+import { waitWithSignal } from "../../utils/streamHandler.js";
 import { FORMATS } from "../../translator/formats.js";
 import { needsTranslation } from "../../translator/index.js";
 import { fromOpenAIFinish } from "../../translator/concerns/finishReason.js";
@@ -284,7 +285,10 @@ export function translateNonStreamingResponse(responseBody, targetFormat, source
 /**
  * Handle non-streaming response from provider.
  */
-export async function handleNonStreamingResponse({ providerResponse, provider, model, sourceFormat, targetFormat, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, reqLogger, toolNameMap, customToolNames, trackDone, appendLog, pxpipe, reqTag, log, healthProbe = false }) {
+export async function handleNonStreamingResponse({ providerResponse, provider, model, sourceFormat, targetFormat, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, reqLogger, toolNameMap, customToolNames, trackDone, appendLog, pxpipe, reqTag, log, healthProbe = false, executionOptions = null, signal }) {
+  const isAlias = executionOptions?.alias === true;
+  const guard = () => signal?.throwIfAborted();
+  guard();
   trackDone();
   const contentType = providerResponse.headers.get("content-type") || "";
   let responseBody;
@@ -299,8 +303,10 @@ export async function handleNonStreamingResponse({ providerResponse, provider, m
     responseBody = parsed;
   } else {
     try {
-      responseBody = await providerResponse.json();
+      responseBody = await waitWithSignal(providerResponse.json(), isAlias ? signal : null);
+      guard();
     } catch (err) {
+      if (isAlias) throw err;
       appendLog({ status: `FAILED ${HTTP_STATUS.BAD_GATEWAY}` });
       console.error(`[ChatCore] Failed to parse JSON from ${provider}:`, err.message);
       return createErrorResult(HTTP_STATUS.BAD_GATEWAY, `Invalid JSON response from ${provider}`);
@@ -312,8 +318,10 @@ export async function handleNonStreamingResponse({ providerResponse, provider, m
   // provider opts in via transport.quirks.clineEnvelope.
   responseBody = unwrapClineEnvelope(responseBody, provider);
 
+  guard();
   reqLogger.logProviderResponse(providerResponse.status, providerResponse.statusText, providerResponse.headers, responseBody);
-  if (onRequestSuccess) {
+  if (isAlias && onRequestSuccess) { await waitWithSignal(onRequestSuccess(), signal); guard(); }
+  if (!isAlias && onRequestSuccess) {
     Promise.resolve()
       .then(onRequestSuccess)
       .catch(err => {
@@ -362,7 +370,7 @@ export async function handleNonStreamingResponse({ providerResponse, provider, m
   }
 
   if (translatedResponse?.usage) {
-    translatedResponse.usage = filterUsageForFormat(addBufferToUsage(translatedResponse.usage), sourceFormat);
+    translatedResponse.usage = isAlias ? translatedResponse.usage : filterUsageForFormat(addBufferToUsage(translatedResponse.usage), sourceFormat);
   }
 
   // Strip reasoning_content only when content is non-empty.

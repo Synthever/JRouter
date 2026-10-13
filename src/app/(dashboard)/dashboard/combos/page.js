@@ -766,6 +766,8 @@ function ComboRow({ combo, getCaps, comboByName = {}, activeProviders = [], copi
           onSelect={(m) => { onSetStrategy({ judgeModel: m?.value || "" }); setShowJudgeSelect(false); }}
           activeProviders={activeProviders}
           title="Select Judge Model"
+          catalogContext="members"
+          includeLegacyCombos
           addedModelValues={judge ? [judge] : []}
           closeOnSelect={true}
         />
@@ -947,6 +949,7 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
           onDeselect={handleDeselect}
           activeProviders={activeProviders}
           title={`Add ${cap.label} Model`}
+          catalogContext="members"
           addedModelValues={models}
           capFilter={cap.key}
           closeOnSelect={false}
@@ -1269,6 +1272,8 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, kindF
           activeProviders={activeProviders}
           modelAliases={modelAliases}
           title="Add Model to Combo"
+          catalogContext="members"
+          includeLegacyCombos
           kindFilter={kindFilter}
           addedModelValues={models}
           closeOnSelect={false}

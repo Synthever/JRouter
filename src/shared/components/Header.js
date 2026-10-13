@@ -78,6 +78,8 @@ const getPageInfo = (pathname) => {
       icon: "layers",
       breadcrumbs: [],
     };
+  if (pathname === "/dashboard/models-aliases")
+    return { title: "Models Aliases", icon: "route", breadcrumbs: [] };
   if (pathname.includes("/health"))
     return { title: "Model Health", icon: "monitoring", breadcrumbs: [] };
   if (pathname.includes("/usage"))

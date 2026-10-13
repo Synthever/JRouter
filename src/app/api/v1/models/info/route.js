@@ -2,6 +2,10 @@ import { PROVIDER_MODELS } from "open-sse/config/providerModels.js";
 import { AI_PROVIDERS, ALIAS_TO_ID } from "@/shared/constants/providers";
 import { getModelKind } from "@/shared/constants/models";
 import { withApiKeyCatalogPolicy, filterCatalogModels } from "@/lib/apiKeyPolicy/catalog.js";
+import { getKeyAccessContext, filterModelsListForKey } from "@/sse/services/keyAccess.js";
+import { buildPublicLlmModelsList } from "@/sse/services/publicLlmCatalog.js";
+import { resolvePublicLlmTarget } from "@/sse/services/publicLlmTarget.js";
+import { ApiKeyPolicyError } from "@/lib/apiKeyPolicy/rules.js";
 
 const KIND_ENDPOINT = {
   llm: "/v1/chat/completions",
@@ -12,6 +16,7 @@ const KIND_ENDPOINT = {
   imageToText: "/v1/chat/completions",
   webSearch: "/v1/search",
   webFetch: "/v1/fetch",
+  video: "/v1/videos/generations",
 };
 
 const TTS_VOICES_API = new Set(["elevenlabs", "edge-tts", "deepgram", "inworld", "local-device"]);
@@ -85,7 +90,11 @@ export async function OPTIONS() {
 
 // GET /v1/models/info?id={alias}/{modelId} — metadata for a single model
 export async function GET(request) {
-  return withApiKeyCatalogPolicy(request, (key) => getModelInfo(request, key));
+  try {
+    return await withApiKeyCatalogPolicy(request, (key) => getModelInfo(request, key));
+  } catch {
+    return Response.json({ error: { message: "Unable to load model information.", type: "server_error" } }, { status: 500, headers: { "Access-Control-Allow-Origin": "*" } });
+  }
 }
 
 async function getModelInfo(request, key) {
@@ -98,7 +107,28 @@ async function getModelInfo(request, key) {
       { status: 400, headers: { "Access-Control-Allow-Origin": "*" } },
     );
   }
-  const info = (await filterCatalogModels(key, [lookup(id, kind)].filter(Boolean)))[0];
+  let info = null;
+  let target = null;
+  const rawInfo = lookup(id, kind);
+  const nativeMedia = rawInfo && !["llm", "imageToText"].includes(rawInfo.kind);
+  try {
+    target = await resolvePublicLlmTarget(id);
+  } catch (error) {
+    if (!(error instanceof ApiKeyPolicyError && ((error.status === 403 && error.code === "direct_model_not_allowed") || (error.status === 400 && nativeMedia)))) {
+      if (error instanceof ApiKeyPolicyError && [400, 403, 404].includes(error.status)) {
+        return Response.json({ error: { message: error.status === 400 ? "Invalid public model identifier." : "Public model not found.", type: error.code } }, { status: error.status, headers: { "Access-Control-Allow-Origin": "*" } });
+      }
+      throw error;
+    }
+  }
+  const keyAccess = await getKeyAccessContext(request);
+  if (target) {
+    if (kind && kind !== "llm" && kind !== "imageToText") return Response.json({ error: { message: "Virtual model is not available for this kind.", type: "invalid_request" } }, { status: 400, headers: { "Access-Control-Allow-Origin": "*" } });
+    info = (await buildPublicLlmModelsList({ policy: key, keyAccess })).find((model) => model.id === target.publicId && (kind !== "imageToText" || model.capabilities?.vision)) || null;
+    if (info) info = { ...info, name: target.name, kind: "llm", endpoint: KIND_ENDPOINT.llm };
+  } else if (nativeMedia) {
+    info = (await filterModelsListForKey(keyAccess, await filterCatalogModels(key, [rawInfo])))[0] || null;
+  }
   if (!info) {
     return Response.json(
       { error: { message: `Model not found: ${id}`, type: "not_found" } },

@@ -350,9 +350,11 @@ export class GrokCliExecutor extends BaseExecutor {
     return this.config.baseUrl;
   }
 
-  async refreshCredentials(credentials, log, proxyOptions = null) {
+  async refreshCredentials(credentials, log, proxyOptions = null, { signal, recoveryBudget } = {}) {
+    signal?.throwIfAborted();
     if (!credentials?.refreshToken) return null;
-    return refreshProviderCredentials("grok-cli", credentials, log, proxyOptions);
+    signal?.throwIfAborted();
+    return refreshProviderCredentials("grok-cli", credentials, log, { signal, recoveryBudget });
   }
 
   needsRefresh(credentials) {
@@ -526,10 +528,13 @@ export class GrokCliExecutor extends BaseExecutor {
   }
 
   async execute(args) {
+    const signal = args.executionOptions?.attempt?.signal;
+    signal?.throwIfAborted();
     // Lazy-resolve stable agent id once per process if connection has none
     if (!this._agentId && !args.credentials?.providerSpecificData?.deviceId) {
       try {
         const mid = await getConsistentMachineId("grok-cli-agent");
+        signal?.throwIfAborted();
         // Format as UUID-ish for header aesthetics
         this._agentId = [
           mid.slice(0, 8),
@@ -539,12 +544,15 @@ export class GrokCliExecutor extends BaseExecutor {
           mid.slice(0, 12).padEnd(12, "0"),
         ].join("-");
       } catch {
+        signal?.throwIfAborted();
         this._agentId = crypto.randomUUID();
       }
     } else if (args.credentials?.providerSpecificData?.deviceId) {
+      signal?.throwIfAborted();
       this._agentId = args.credentials.providerSpecificData.deviceId;
     }
 
+    signal?.throwIfAborted();
     return super.execute(args);
   }
 }

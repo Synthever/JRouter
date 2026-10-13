@@ -14,8 +14,8 @@ export class CodeBuddyExecutor extends DefaultExecutor {
     super("codebuddy-cn");
   }
 
-  transformRequest(model, body, stream, credentials) {
-    const transformed = super.transformRequest(model, body, stream, credentials);
+  transformRequest(model, body, stream, credentials, executionOptions = null) {
+    const transformed = super.transformRequest(model, body, stream, credentials, executionOptions);
     transformed.stream = true;
 
     // Tencent's content filter flags CLI agent system prompts ("You are Claude
@@ -33,7 +33,7 @@ export class CodeBuddyExecutor extends DefaultExecutor {
         : Array.isArray(content)
           ? content.map((b) => (b && typeof b.text === "string" ? b.text : "")).join("\n")
           : "";
-    if (Array.isArray(transformed.messages)) {
+    if (executionOptions?.preserveAliasInstructions !== true && Array.isArray(transformed.messages)) {
       transformed.messages = transformed.messages.map((message) => {
         if (!message || message.role !== "system") return message;
         const text = flatten(message.content);
