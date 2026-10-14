@@ -16,14 +16,18 @@ export default function ModelPickerPopover({
   selectedModel,
   activeProviders = [],
   modelAliases = {},
+  catalog: externalCatalog,
   role = "dialog",
 }) {
   const ref = useRef(null);
-  const { visibleGroups, filteredCombos, searchQuery, setSearchQuery } = useModelCatalog({
-    isOpen,
+  const internalCatalog = useModelCatalog({
+    isOpen: isOpen && !externalCatalog,
     activeProviders,
     modelAliases,
+    catalogContext: "invocation",
   });
+  const catalog = externalCatalog || internalCatalog;
+  const { visibleGroups = {}, filteredAliases = [], filteredCombos = [], searchQuery = "", setSearchQuery = () => {}, loading = false, error = "", reload } = catalog;
 
   useLayoutEffect(() => {
     if (!isOpen) return undefined;
@@ -82,12 +86,16 @@ export default function ModelPickerPopover({
       <ModelPickerList
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        aliases={filteredAliases}
         combos={filteredCombos}
         groups={visibleGroups}
         selectedModel={selectedModel}
         onSelect={handleSelect}
         autoFocusSearch
         emptyLabel="No model matches that search"
+        loading={loading}
+        error={error}
+        onRetry={reload}
       />
 
       <p className={styles.footer}>
@@ -106,11 +114,15 @@ ModelPickerPopover.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   onSelect: PropTypes.func.isRequired,
-  selectedModel: PropTypes.shape({
-    value: PropTypes.string,
-    providerId: PropTypes.string,
-  }),
+  selectedModel: PropTypes.oneOfType([
+    PropTypes.string,
+    PropTypes.shape({
+      value: PropTypes.string,
+      providerId: PropTypes.string,
+    }),
+  ]),
   activeProviders: PropTypes.array,
   modelAliases: PropTypes.object,
+  catalog: PropTypes.object,
   role: PropTypes.string,
 };

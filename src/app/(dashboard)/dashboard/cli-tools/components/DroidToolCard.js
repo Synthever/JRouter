@@ -399,6 +399,7 @@ export default function DroidToolCard({
 
       {modalOpen && (
         <ModelSelectModal
+          catalogContext="invocation"
           className={styles.modelPicker}
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}

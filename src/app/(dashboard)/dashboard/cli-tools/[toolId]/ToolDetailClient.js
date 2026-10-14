@@ -27,21 +27,27 @@ export default function ToolDetailClient({ toolId, machineId }) {
   const [tailscaleEnabled, setTailscaleEnabled] = useState(false);
   const [tailscaleUrl, setTailscaleUrl] = useState("");
   const [apiKeys, setApiKeys] = useState([]);
+  const [modelAliases, setModelAliases] = useState({});
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const [provRes, settingsRes, tunnelRes, keysRes] = await Promise.all([
+        const [provRes, settingsRes, tunnelRes, keysRes, aliasRes] = await Promise.all([
           fetch("/api/providers"),
           fetch("/api/settings"),
           fetch("/api/tunnel/status"),
           fetch("/api/keys"),
+          fetch("/api/models/alias"),
         ]);
         if (!mounted) return;
         if (provRes.ok) {
           const data = await provRes.json();
           setConnections(data.connections || []);
+        }
+        if (aliasRes?.ok) {
+          const data = await aliasRes.json();
+          setModelAliases(data.aliases || {});
         }
         if (settingsRes.ok) {
           const data = await settingsRes.json();
@@ -73,6 +79,13 @@ export default function ToolDetailClient({ toolId, machineId }) {
     const activeProviders = getActiveProviders();
     const models = [];
     const seenModels = new Set();
+    Object.keys(modelAliases || {}).forEach((alias) => {
+      const val = alias.startsWith("jrouter/") ? alias : `jrouter/${alias}`;
+      if (!seenModels.has(val)) {
+        seenModels.add(val);
+        models.push({ value: val, label: val, alias: "jrouter", modelId: alias });
+      }
+    });
     activeProviders.forEach(conn => {
       const alias = PROVIDER_ID_TO_ALIAS[conn.provider] || conn.provider;
       const providerModels = getModelsByProviderId(conn.provider);
@@ -137,6 +150,7 @@ export default function ToolDetailClient({ toolId, machineId }) {
       onToggle: () => {},
       baseUrl: getBaseUrl(),
       apiKeys,
+      modelAliases,
       tunnelEnabled,
       tunnelPublicUrl,
       tailscaleEnabled,

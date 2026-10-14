@@ -177,6 +177,13 @@ export default function PlaygroundPageClient() {
   const streamingRef = useRef(false);
   const { copied, copy } = useCopyToClipboard();
 
+  const catalog = useModelCatalog({
+    isOpen: pickerOpen,
+    activeProviders: providers,
+    modelAliases,
+    catalogContext: "invocation",
+  });
+
   // Model picker sources: same connections/aliases data the Combo picker uses.
   useEffect(() => {
     let cancelled = false;
@@ -712,6 +719,7 @@ export default function PlaygroundPageClient() {
             onClose={() => setPickerOpen(false)}
             onSelect={handleSelectModel}
             selectedModel={selectedModel?.value}
+            catalog={catalog}
             activeProviders={providers}
             modelAliases={modelAliases}
           />

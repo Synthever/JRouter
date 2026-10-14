@@ -58,9 +58,17 @@ export function RateLimitSettings({ form, onChange }) {
   );
 }
 
-function ModelRestrictionPicker({ title, values, onChange, activeProviders, modelAliases, hint }) {
+function ModelRestrictionPicker({ title, mode = "allow", values, onChange, activeProviders, modelAliases, hint }) {
   const [open, setOpen] = useState(false);
-  const { visibleGroups, filteredCombos, searchQuery, setSearchQuery } = useModelCatalog({ isOpen: open, activeProviders, modelAliases, addedModelValues: values });
+  const [branch, setBranch] = useState("llm");
+  const catalogContext = branch === "media" ? "media" : (mode === "allow" ? "key-allow" : "key-block");
+  const { visibleGroups, filteredAliases, filteredCombos, searchQuery, setSearchQuery } = useModelCatalog({
+    isOpen: open,
+    activeProviders,
+    modelAliases,
+    catalogContext,
+    addedModelValues: values,
+  });
   function toggle(value) { onChange(values.includes(value) ? values.filter((item) => item !== value) : [...values, value]); }
   return (
     <div className="space-y-2 min-w-0">
@@ -75,7 +83,23 @@ function ModelRestrictionPicker({ title, values, onChange, activeProviders, mode
         </button>)}
       </div>}
       {open && <div className="rounded-[var(--r2)] border border-[var(--line-2)] p-3">
-        <ModelPickerList searchQuery={searchQuery} onSearchChange={setSearchQuery} combos={filteredCombos} groups={visibleGroups} addedModelValues={values} onSelect={(model) => { if (!model.isPlaceholder) toggle(model.value || model.name); }} />
+        <div className="flex gap-2 mb-3">
+          <button
+            type="button"
+            onClick={() => setBranch("llm")}
+            className={`px-3 py-1 text-xs rounded-[var(--r1)] border ${branch === "llm" ? "bg-[var(--text)] text-[var(--bg)] border-[var(--text)]" : "bg-[var(--surface-2)] text-[var(--text-2)] border-[var(--line-2)]"}`}
+          >
+            LLM Models
+          </button>
+          <button
+            type="button"
+            onClick={() => setBranch("media")}
+            className={`px-3 py-1 text-xs rounded-[var(--r1)] border ${branch === "media" ? "bg-[var(--text)] text-[var(--bg)] border-[var(--text)]" : "bg-[var(--surface-2)] text-[var(--text-2)] border-[var(--line-2)]"}`}
+          >
+            Media Models
+          </button>
+        </div>
+        <ModelPickerList searchQuery={searchQuery} onSearchChange={setSearchQuery} aliases={filteredAliases} combos={filteredCombos} groups={visibleGroups} addedModelValues={values} onSelect={(model) => { if (!model.isPlaceholder) toggle(model.value || model.name); }} />
       </div>}
     </div>
   );
@@ -84,8 +108,8 @@ function ModelRestrictionPicker({ title, values, onChange, activeProviders, mode
 export function ModelRestrictions({ form, onChange, activeProviders, modelAliases }) {
   return (
     <SettingsSection title="Model Restrictions" hint="Blocked models override allowed models, including resolved aliases and combo members.">
-      <ModelRestrictionPicker title="Allowed Models" values={form.allowedModels} onChange={(values) => onChange("allowedModels", values)} activeProviders={activeProviders} modelAliases={modelAliases} hint="Leave empty to allow all models." />
-      <ModelRestrictionPicker title="Blocked Models" values={form.blockedModels} onChange={(values) => onChange("blockedModels", values)} activeProviders={activeProviders} modelAliases={modelAliases} hint="Leave empty to block no models." />
+      <ModelRestrictionPicker title="Allowed Models" mode="allow" values={form.allowedModels} onChange={(values) => onChange("allowedModels", values)} activeProviders={activeProviders} modelAliases={modelAliases} hint="Leave empty to allow all models." />
+      <ModelRestrictionPicker title="Blocked Models" mode="block" values={form.blockedModels} onChange={(values) => onChange("blockedModels", values)} activeProviders={activeProviders} modelAliases={modelAliases} hint="Leave empty to block no models." />
     </SettingsSection>
   );
 }

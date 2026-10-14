@@ -369,6 +369,7 @@ id = "${selectedModel || "cc/claude-opus-4-7"}"`;
 
       {modalOpen && (
         <ModelSelectModal
+          catalogContext="invocation"
           className={styles.modelPicker}
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}

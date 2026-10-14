@@ -377,6 +377,7 @@ export default function OpenClawToolCard({
 
       {modalOpen && (
         <ModelSelectModal
+          catalogContext="invocation"
           className={styles.modelPicker}
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}

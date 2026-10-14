@@ -374,6 +374,7 @@ export default function GrokBuildToolCard({
 
       {modelTarget && (
         <ModelSelectModal
+          catalogContext="invocation"
           className={styles.modelPicker}
           isOpen={Boolean(modelTarget)}
           onClose={() => setModelTarget(null)}

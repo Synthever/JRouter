@@ -65,6 +65,7 @@ export default function MitmPageClient() {
   const getActiveProviders = () => connections.filter(c => c.isActive !== false);
 
   const hasActiveProviders = () => {
+    if (Object.keys(modelAliases).length > 0) return true;
     const active = getActiveProviders();
     return active.some(conn =>
       getModelsByProviderId(conn.provider).length > 0 ||

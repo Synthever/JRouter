@@ -298,6 +298,7 @@ export default function CopilotToolCard({ tool, isExpanded, onToggle, baseUrl, a
 
       {modalOpen && (
         <ModelSelectModal
+          catalogContext="invocation"
           isOpen={modalOpen}
           onClose={() => {
             setModalOpen(false);

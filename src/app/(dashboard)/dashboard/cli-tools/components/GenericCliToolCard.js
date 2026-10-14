@@ -19,6 +19,7 @@ export default function GenericCliToolCard({
   baseUrl,
   apiKeys,
   activeProviders = [],
+  modelAliases = {},
   cloudEnabled,
   initialStatus,
   tunnelEnabled,
@@ -204,6 +205,10 @@ export default function GenericCliToolCard({
 
   const handleAddAllActiveModels = () => {
     const allModels = [];
+    Object.keys(modelAliases || {}).forEach((alias) => {
+      const val = alias.startsWith("jrouter/") ? alias : `jrouter/${alias}`;
+      if (!allModels.includes(val)) allModels.push(val);
+    });
     activeProviders.forEach((conn) => {
       const alias = PROVIDER_ID_TO_ALIAS[conn.provider] || conn.provider;
       const providerModels = getModelsByProviderId(conn.provider);
@@ -542,7 +547,7 @@ export default function GenericCliToolCard({
                         type="text"
                         value={selectedModel}
                         onChange={(e) => setSelectedModel(e.target.value)}
-                        placeholder="provider/model-id"
+                        placeholder="jrouter/alias-name"
                         className="w-full min-w-0 pl-2 pr-7 py-2 bg-surface rounded border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 sm:py-1.5"
                       />
                       {selectedModel && (
@@ -557,9 +562,9 @@ export default function GenericCliToolCard({
                     </div>
                     <button
                       onClick={() => setModalOpen(true)}
-                      disabled={!activeProviders?.length}
+                      disabled={!(activeProviders?.length || Object.keys(modelAliases || {}).length)}
                       className={`w-full sm:w-auto rounded border px-2 py-2 text-xs transition-colors sm:py-1.5 whitespace-nowrap sm:shrink-0 ${
-                        activeProviders?.length
+                        (activeProviders?.length || Object.keys(modelAliases || {}).length)
                           ? "bg-surface border-border text-text-main hover:border-[var(--text-2)] cursor-pointer"
                           : "opacity-50 cursor-not-allowed border-border"
                       } ${styles.selectButton}`}
@@ -621,11 +626,13 @@ export default function GenericCliToolCard({
       )}
 
       <ModelSelectModal
+          catalogContext="invocation"
           className={styles.modelPicker}
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onSelect={handleSelectModel}
         activeProviders={activeProviders}
+        modelAliases={modelAliases}
       />
 
       <ManualConfigModal

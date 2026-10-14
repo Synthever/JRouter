@@ -573,6 +573,7 @@ export default function HermesToolCard({
 
       {modalOpen && (
         <ModelSelectModal
+          catalogContext="invocation"
           className={styles.modelPicker}
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}

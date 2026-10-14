@@ -462,6 +462,7 @@ export default function OpenCodeToolCard({ tool, isExpanded, onToggle, baseUrl, 
 
       {modalOpen && (
         <ModelSelectModal
+          catalogContext="invocation"
           className={styles.modelPicker}
           isOpen={modalOpen}
           onClose={() => {
@@ -492,6 +493,7 @@ export default function OpenCodeToolCard({ tool, isExpanded, onToggle, baseUrl, 
 
       {subagentModalOpen && (
         <ModelSelectModal
+          catalogContext="invocation"
           className={styles.modelPicker}
           isOpen={subagentModalOpen}
           onClose={() => setSubagentModalOpen(false)}

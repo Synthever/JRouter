@@ -42,6 +42,7 @@ Nama group `(dashboard)` tidak menjadi segmen URL. Contohnya `src/app/(dashboard
 | `/dashboard` | [dashboard/page.js](<../src/app/(dashboard)/dashboard/page.js>) | Server wrapper yang memasok props ke client overview |
 | `/dashboard/providers` | [providers/page.js](<../src/app/(dashboard)/dashboard/providers/page.js>) | Halaman client dalam shell |
 | `/dashboard/usage` | [usage/page.js](<../src/app/(dashboard)/dashboard/usage/page.js>) | Tab dari query string dan batas `Suspense` |
+| `/dashboard/models-aliases` | [models-aliases/page.js](<../src/app/(dashboard)/dashboard/models-aliases/page.js>) | Pengelolaan Models Aliases kanonis (`jrouter/<name>`), routing adaptif, strategi fallback/round-robin/fusion, injeksi prompt, dan status runtime |
 | `/landing` | [landing/page.js](../src/app/landing/page.js) | Komposisi marketing terpisah, tetap menerima root providers |
 | `/login` | [login/page.js](../src/app/login/page.js) | Wrapper sendiri; tidak otomatis menggunakan `AuthLayout` |
 | `/dashboard/settings/pricing` | [pricing/page.js](../src/app/dashboard/settings/pricing/page.js) | Berada di luar group `(dashboard)`; tidak mewarisi shell dashboard |

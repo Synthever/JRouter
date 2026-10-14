@@ -12,7 +12,9 @@ Requests reserve estimated capacity in SQLite before forwarding, including other
 
 Cost quotas require known model pricing. Missing pricing produces `pricing_unavailable`; configure pricing or remove the cost quota. Requests without a cost quota keep the existing zero-cost fallback. Admission estimates are approximate, so actual usage may exceed an estimate and is always recorded.
 
-Allowed models use the same searchable picker as combo creation. An empty whitelist allows all models, and blocked models take priority. Server settings also accept `*` patterns. Alias resolution, combo members, and capacity adapters are checked before forwarding. Selecting a combo grants access to its members except those explicitly blocked. Model discovery filters supplied key credentials by model access and rejects expired keys.
+Allowed models use the same searchable picker as combo creation. An empty whitelist allows all models, and blocked models take priority. Server settings also accept `*` patterns. In the UI, restrictions offer dedicated **LLM Models** and **Media Models** branches.
+
+In the public LLM namespace, models are published under canonical virtual identifiers (`jrouter/<name>`). Selecting an alias or combo grants access to invoke that virtual target; blocking individual underlying member models takes priority and prevents routing to blocked providers. Direct raw provider LLM models are not callable on public endpoints without an alias or combo. Model discovery filters supplied key credentials by model access and rejects expired keys.
 
 Web requests select a provider with `provider` or `model`, with `provider` taking precedence. Restrictions recognize both that provider and its catalog operation ID, such as `exa/search` or `exa/fetch`.
 

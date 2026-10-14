@@ -467,6 +467,7 @@ export default function AntigravityToolCard({
       {/* Model Select Modal */}
       {modalOpen && (
         <ModelSelectModal
+          catalogContext="invocation"
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
           onSelect={handleModelSelect}

@@ -327,6 +327,7 @@ model = "${selectedModel || "provider/model-id"}"
 
       {modalOpen && (
         <ModelSelectModal
+          catalogContext="invocation"
           className={styles.modelPicker}
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}

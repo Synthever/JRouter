@@ -180,8 +180,9 @@ export default function CoworkToolCard({
         setMessage({ type: "error", text: err.error || "Failed to create combo" });
         return;
       }
-      if (!selectedModels.includes(name)) {
-        setSelectedModels([...selectedModels, name]);
+      const canonicalName = name.startsWith("jrouter/") ? name : `jrouter/${name}`;
+      if (!selectedModels.includes(canonicalName)) {
+        setSelectedModels([...selectedModels, canonicalName]);
       }
       setComboModalOpen(false);
       setMessage({ type: "success", text: `Combo "${name}" created and added.` });
@@ -537,6 +538,7 @@ export default function CoworkToolCard({
 
       {modelSelectOpen && (
         <ModelSelectModal
+          catalogContext="invocation"
           className={styles.modelPicker}
           isOpen={modelSelectOpen}
           onClose={() => setModelSelectOpen(false)}

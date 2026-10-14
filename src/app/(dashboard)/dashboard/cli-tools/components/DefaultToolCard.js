@@ -9,7 +9,7 @@ import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import Image from "next/image";
 import ApiKeySelect from "./ApiKeySelect";
 
-export default function DefaultToolCard({ toolId, tool, isExpanded, onToggle, baseUrl, apiKeys, activeProviders = [], cloudEnabled = false, tunnelEnabled = false }) {
+export default function DefaultToolCard({ toolId, tool, isExpanded, onToggle, baseUrl, apiKeys, activeProviders = [], modelAliases = {}, cloudEnabled = false, tunnelEnabled = false }) {
   const [copiedField, setCopiedField] = useState(null);
   const [showModelModal, setShowModelModal] = useState(false);
   const [modelValue, setModelValue] = useState("");
@@ -33,7 +33,7 @@ export default function DefaultToolCard({ toolId, tool, isExpanded, onToggle, ba
     return text
       .replace(/\{\{baseUrl\}\}/g, baseUrlWithV1)
       .replace(/\{\{apiKey\}\}/g, keyToUse)
-      .replace(/\{\{model\}\}/g, modelValue || "provider/model-id");
+      .replace(/\{\{model\}\}/g, modelValue || "jrouter/alias-name");
   };
 
   const { copy: copyToClipboard } = useCopyToClipboard();
@@ -48,7 +48,7 @@ export default function DefaultToolCard({ toolId, tool, isExpanded, onToggle, ba
     setModelValue(model.value);
   };
 
-  const hasActiveProviders = activeProviders.length > 0;
+  const hasActiveProviders = (activeProviders?.length > 0) || (Object.keys(modelAliases || {}).length > 0);
 
   const renderApiKeySelector = () => (
     <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2">
@@ -63,7 +63,7 @@ export default function DefaultToolCard({ toolId, tool, isExpanded, onToggle, ba
           type="text"
           value={modelValue}
           onChange={(e) => setModelValue(e.target.value)}
-          placeholder="provider/model-id"
+          placeholder="jrouter/alias-name"
           className="w-full min-w-0 sm:w-auto flex-1 px-3 py-2 bg-bg-secondary rounded-lg text-sm border border-border focus:outline-none focus:ring-1 focus:ring-primary/50"
         />
         <button
@@ -275,12 +275,14 @@ export default function DefaultToolCard({ toolId, tool, isExpanded, onToggle, ba
 
       {showModelModal && (
         <ModelSelectModal
+          catalogContext="invocation"
           className={styles.modelPicker}
           isOpen={showModelModal}
           onClose={() => setShowModelModal(false)}
           onSelect={handleSelectModel}
           selectedModel={modelValue}
           activeProviders={activeProviders}
+          modelAliases={modelAliases}
           title="Select Model"
         />
       )}

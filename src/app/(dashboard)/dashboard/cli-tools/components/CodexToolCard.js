@@ -609,6 +609,7 @@ default_subagent_model = "${effectiveSubagentModel}"
 
       {modalOpen && (
         <ModelSelectModal
+          catalogContext="invocation"
           className={styles.modelPicker}
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
@@ -622,6 +623,7 @@ default_subagent_model = "${effectiveSubagentModel}"
 
       {subagentModalOpen && (
         <ModelSelectModal
+          catalogContext="invocation"
           className={styles.modelPicker}
           isOpen={subagentModalOpen}
           onClose={() => setSubagentModalOpen(false)}
@@ -635,6 +637,7 @@ default_subagent_model = "${effectiveSubagentModel}"
 
       {profileModalOpen && (
         <ModelSelectModal
+          catalogContext="invocation"
           className={styles.modelPicker}
           isOpen={profileModalOpen}
           onClose={() => setProfileModalOpen(false)}

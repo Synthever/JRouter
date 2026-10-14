@@ -261,6 +261,7 @@ export default function KiloToolCard({ tool, isExpanded, onToggle, baseUrl, apiK
 
       {modalOpen && (
         <ModelSelectModal
+          catalogContext="invocation"
           className={styles.modelPicker}
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}

@@ -10,6 +10,9 @@ const fx = vi.hoisted(() => ({
   combos: [
     { id: "c1", name: "Main", models: ["openai/model-a", "openai/model-b"] },
   ],
+  aliases: [
+    { id: "a1", name: "AliasB", models: ["openai/model-b"], primaryModel: "openai/model-b", strategy: "fallback" },
+  ],
   keys: {},
   db: null,
 }));
@@ -29,7 +32,24 @@ vi.mock("@/lib/localDb", () => ({
   getCustomModels: async () => [],
 }));
 vi.mock("@/lib/disabledModelsDb", () => ({ getDisabledModels: async () => ({}) }));
-vi.mock("@/lib/db/repos/combosRepo.js", () => ({ getCombos: async () => fx.combos }));
+vi.mock("@/lib/db/repos/combosRepo.js", () => ({
+  getCombos: async () => fx.combos,
+  getComboByName: async (name) => fx.combos.find((c) => c.name === name) || null,
+  getComboById: async (id) => fx.combos.find((c) => c.id === id) || null,
+}));
+vi.mock("@/lib/db/repos/connectionsRepo.js", () => ({
+  getProviderConnections: async () => [{ id: "openai-fixture", provider: "openai", isActive: true }],
+  getProviderConnectionById: async () => null,
+}));
+vi.mock("@/lib/db/repos/aliasRepo.js", () => ({
+  getCustomModels: async () => [{ id: "model-b", providerAlias: "openai" }, { id: "model-a", providerAlias: "openai" }],
+  getModelAliases: async () => ({}),
+}));
+vi.mock("@/lib/db/repos/modelsAliasesRepo.js", () => ({
+  getModelsAliases: async () => fx.aliases || [],
+  getModelsAliasByName: async (name) => (fx.aliases || []).find((a) => a.name === name) || null,
+  getModelsAliasById: async (id) => (fx.aliases || []).find((a) => a.id === id) || null,
+}));
 vi.mock("@/lib/db/repos/apiKeysRepo.js", () => ({
   getApiKeyByKey: async (k) => fx.keys[k] || null,
   getApiKeyBySecret: async (k) => fx.keys[k] ? { ...policyDefaults(), ...fx.keys[k] } : null,
@@ -85,6 +105,9 @@ afterEach(() => fx.db?.close());
 beforeEach(async () => {
   fx.db = await createNodeSqliteAdapter(":memory:");
   for (const [name, table] of Object.entries(TABLES)) fx.db.exec(buildCreateTableSql(name, table));
+  fx.db.run("INSERT INTO providerConnections(id,provider,authType,isActive,data,createdAt,updatedAt) VALUES('openai-fixture','openai','apikey',1,'{}','2026-01-01','2026-01-01')");
+  fx.db.run("INSERT INTO kv(scope,key,value) VALUES('customModels','model-b',?)", [JSON.stringify({ id: "model-b", providerAlias: "openai" })]);
+  fx.db.run("INSERT INTO kv(scope,key,value) VALUES('customModels','model-a',?)", [JSON.stringify({ id: "model-a", providerAlias: "openai" })]);
   vi.clearAllMocks();
   fx.keys = {
     "sk-open": { id: "o", name: "open", isActive: true, access: { restricted: false, allow: [] } },
@@ -120,19 +143,20 @@ describe("chat (/v1/chat/completions, /v1/messages, /v1/responses all use handle
   beforeEach(() => mocks.getProviderCredentials.mockResolvedValue({ connectionId: "conn", connectionName: "mock" }));
 
   it("intersects model policy with access without rejecting unrelated allow-list entries", async () => {
-    fx.keys["sk-b"].allowedModels = ["openai/model-b"];
+    fx.keys["sk-b"].allowedModels = ["jrouter/AliasB"];
     fx.keys["sk-b"].blockedModels = ["openai/model-a"];
-    fx.keys["sk-b"].access.allow = ["openai/model-a", "openai/model-b"];
-    const response = await chat("openai/model-b", "sk-b");
+    fx.keys["sk-b"].access.allow = ["openai/model-a", "jrouter/AliasB"];
+    const response = await chat("jrouter/AliasB", "sk-b");
     expect(response.status).toBe(200);
     await response.text();
     expect((await chat("openai/model-a", "sk-b")).status).toBe(403);
   });
   it("unrestricted key reaches the provider for the combo and models", async () => {
-    for (const m of ["Main", "openai/model-b"]) {
+    for (const m of ["Main", "jrouter/AliasB"]) {
       expect((await chat(m, "sk-open")).status).toBe(200);
     }
-    expect((await chat("openai/model-a", "sk-open")).status).toBe(500); // provider error, not a 403
+    // Direct raw provider model is disallowed on public chat completions:
+    expect((await chat("openai/model-a", "sk-open")).status).toBe(403);
   });
   it("restricted-to-combo key: combo 200, direct member and unlisted model 403 before any credential lookup", async () => {
     expect((await chat("Main", "sk-combo")).status).toBe(200);
@@ -144,8 +168,9 @@ describe("chat (/v1/chat/completions, /v1/messages, /v1/responses all use handle
     expect(mocks.getProviderCredentials).not.toHaveBeenCalled();
     expect(mocks.handleChatCore).not.toHaveBeenCalled();
   });
-  it("restricted-to-model-B key: B 200; the combo containing B and model A are 403", async () => {
-    expect((await chat("openai/model-b", "sk-b")).status).toBe(200);
+  it("restricted-to-model-B key: B 200 via alias; the combo containing B and model A are 403", async () => {
+    fx.keys["sk-b"].access.allow = ["openai/model-b", "jrouter/AliasB"];
+    expect((await chat("jrouter/AliasB", "sk-b")).status).toBe(200);
     vi.clearAllMocks();
     // Bypass check: a per-member check would skip the failing model-a and serve
     // the combo from model-b. The combo itself is not listed, so it is a 403.
@@ -236,12 +261,9 @@ describe("/v1/models routes filter by key", () => {
 
   it("unrestricted sees the full catalog; restricted keys see only their entries", async () => {
     const all = await list("sk-open");
-    expect(all).toContain("Main");
-    const someModel = all.find((id) => id.startsWith("openai/"));
-    expect(someModel).toBeTruthy();
-    fx.keys["sk-mix"] = { id: "x", name: "mix", isActive: true, access: { restricted: true, allow: ["Main", someModel.toUpperCase()] } };
-    expect(await list("sk-mix")).toEqual(["Main", someModel]);
-    expect(await list("sk-combo")).toEqual(["Main"]);
+    expect(all).toContain("jrouter/Main");
+    fx.keys["sk-combo"] = { id: "c", name: "combo", isActive: true, access: { restricted: true, allow: ["Main"] } };
+    expect(await list("sk-combo")).toEqual(["jrouter/Main"]);
     expect(await list("sk-empty")).toEqual([]);
     expect(await list(null)).toEqual(all); // no key: unchanged (middleware governs remote access)
   });
@@ -252,7 +274,7 @@ describe("/v1/models routes filter by key", () => {
   });
   it("publishes an allowed combo but never grants discovery of its direct members", async () => {
     fx.keys["sk-open"].allowedModels = ["Main"];
-    expect(await list("sk-open")).toEqual(["Main"]);
+    expect(await list("sk-open")).toEqual(["jrouter/Main"]);
     fx.keys["sk-open"].blockedModels = ["openai/model-a", "openai/model-b"];
     expect(await list("sk-open")).toEqual([]);
   });
@@ -266,9 +288,8 @@ describe("/v1/models routes filter by key", () => {
     const emb = await (await kind("sk-open", ["embedding"])).json();
     expect(emb.data.length).toBeGreaterThan(0);
     expect((await (await kind("sk-empty", ["embedding"])).json()).data).toEqual([]);
-    const all = (await (await modelsRoute.GET(new Request("http://localhost/v1/models"))).json()).data;
-    const one = all.find((m) => m.owned_by !== "combo").id;
-    expect((await kind("sk-open", one.split("/"))).status).toBe(200);
-    expect((await kind("sk-empty", one.split("/"))).status).toBe(404);
+    const embModel = emb.data[0].id;
+    expect((await kind("sk-open", embModel.split("/"))).status).toBe(200);
+    expect((await kind("sk-empty", embModel.split("/"))).status).toBe(404);
   });
 });

@@ -71,6 +71,7 @@ export default function KeyAccessControls({ apiKey, onChange, onRequestRestrict 
       )}
       {pickerOpen && (
         <ModelSelectModal
+          catalogContext="key-allow"
           isOpen={pickerOpen}
           onClose={() => setPickerOpen(false)}
           onSelect={add}
