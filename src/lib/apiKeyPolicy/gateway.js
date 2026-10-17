@@ -52,7 +52,15 @@ export async function withApiKeyPolicy(request, handler, { family = null, model 
     if (requestedModel) {
       const combos = await getComboModels(requestedModel);
       isCombo = Boolean(combos);
-      info = combos ? { provider: null, model: requestedModel } : await resolvePolicyModel(requestedModel);
+      try {
+        info = combos ? { provider: null, model: requestedModel } : await resolvePolicyModel(requestedModel);
+      } catch (error) {
+        // Typed resolution failures (e.g. the defunct jrouter/* virtual namespace)
+        // describe the requested target, not a gateway fault — surface them with
+        // their HTTP status instead of escaping as an unhandled 500.
+        if (error?.statusCode) throw new ApiKeyPolicyError(error.statusCode, "invalid_model", error.message);
+        throw error;
+      }
       if (combos) {
         // The selected combo can grant access to its members; explicit member
         // blocks are checked again at actual model resolution.
