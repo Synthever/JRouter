@@ -138,9 +138,19 @@ export default function QuotaTable({
           const isCreditBalance = quota.isCreditBalance === true;
           const sourceQuota = quotas[quota.index];
           const hasKnownLimit = quota.total > 0 || sourceQuota.remaining !== undefined || sourceQuota.remainingPercentage !== undefined;
-          const colors = getColorClasses(quota.remaining);
-          const countdown = formatResetTime(quota.resetAt);
-          const resetDisplay = formatResetTimeDisplay(quota.resetAt);
+          const colors = isCreditBalance
+            ? { text: "text-blue-600 dark:text-blue-400", variant: "info" }
+            : getColorClasses(quota.remaining);
+          const countdown = quota.neverExpires ? "-" : formatResetTime(quota.resetAt);
+          // Providers that expose a detail page but no per-bucket reset date
+          // (Qoder add-on grants) get a pointer to it instead of a bare "N/A".
+          const seeDetails = !quota.neverExpires && !quota.resetAt && Boolean(quota.detailUrl);
+          const resetDisplay = quota.neverExpires
+            ? "Never expires"
+            : seeDetails
+              ? "See details"
+              : formatResetTimeDisplay(quota.resetAt);
+          const resetSecondaryText = seeDetails && quota.detailUrl ? quota.detailUrl : resetDisplay;
           const recurring = quota.recurring !== false;
           const countdownLabel = recurring ? `in ${countdown}` : `expires in ${countdown}`;
           const value = isUnlimited
@@ -148,6 +158,25 @@ export default function QuotaTable({
             : isCreditBalance
               ? `Credit: ${quota.total.toFixed(2)} ${quota.currency || ""}`
               : `${quota.used.toLocaleString()} / ${quota.total > 0 ? quota.total.toLocaleString() : "Unknown limit"}`;
+
+          // "See details" rows are a link to the provider's own usage page —
+          // used where the API exposes no per-bucket date (Qoder add-on grants).
+          const renderResetCell = (className) =>
+            seeDetails ? (
+              <a
+                href={quota.detailUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`${className} inline-flex items-center gap-0.5 hover:text-text-primary hover:underline`}
+                title={`Open usage details: ${resetSecondaryText}`}
+                aria-label={`Open usage details for ${quota.name}`}
+              >
+                {resetDisplay}
+                <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+              </a>
+            ) : (
+              resetDisplay
+            );
 
           return (
             <li key={`${quota.name}-${quota.index}`} className={styles.quotaRow}>

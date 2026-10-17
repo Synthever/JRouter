@@ -69,15 +69,19 @@ function RecentRequests({ requests = [] }) {
             </thead>
             <tbody>
               {requests.map((r, i) => {
-                const ok = !r.status || r.status === "ok" || r.status === "success";
+                const status = String(r.status || "ok").toLowerCase();
+                const isError = status.startsWith("error") || status === "failed";
+                const isEstimated = status === "estimated";
+                const ok = !isError;
                 return (
-                  <tr key={i}>
+                  <tr key={i} title={!ok || isEstimated ? r.status : undefined}>
                     <td className="font-mono" title={r.model}>
                       <div className={styles.recentRequestModel}>
                         <StatusBadge variant={ok ? "success" : "error"} className="!px-0 shrink-0">
-                          <span className="sr-only">{ok ? "Success" : "Error"}</span>
+                          <span className="sr-only">{isError ? "Error" : isEstimated ? "Estimated usage" : "Success"}</span>
                         </StatusBadge>
                         <span>{r.model}</span>
+                        {isEstimated && <span className={`${styles.muted} text-[10px] uppercase tracking-wide`}>est</span>}
                       </div>
                     </td>
                     <td className={styles.num}>
@@ -129,7 +133,7 @@ function getGroupKey(item, keyField) {
   switch (keyField) {
     case "rawModel": return item.rawModel || "Unknown Model";
     case "accountName": return item.accountName || `Account ${item.connectionId?.slice(0, 8)}...` || "Unknown Account";
-    case "keyName": return item.keyName || "Unknown Key";
+    case "keyName": return item.apiKeyMasked ? `${item.keyName} (${item.apiKeyMasked})` : item.keyName || "Unknown Key";
     case "endpoint": return item.endpoint || "Unknown Endpoint";
     default: return item[keyField] || "Unknown";
   }
@@ -441,11 +445,11 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
           ),
           renderDetailCells: (item) => (
             <>
-              <td className="font-medium">{item.keyName}</td>
-              <td>{item.rawModel}</td>
-              <td className={PROVIDER_CELL}><StatusBadge dot={false}>{item.provider}</StatusBadge></td>
-              <td className={NUM_CELL}>{fmt(item.requests)}</td>
-              <td className={SUBTLE_CELL}>{fmtTime(item.lastUsed)}</td>
+              <td className="px-6 py-3 font-medium font-mono text-xs">{item.apiKeyMasked || item.keyName}</td>
+              <td className="px-6 py-3">{item.rawModel}</td>
+              <td className="px-6 py-3"><StatusBadge dot={false}>{item.provider}</StatusBadge></td>
+              <td className="px-6 py-3 text-right">{fmt(item.requests)}</td>
+              <td className="px-6 py-3 text-right text-text-muted whitespace-nowrap">{fmtTime(item.lastUsed)}</td>
             </>
           ),
         };
