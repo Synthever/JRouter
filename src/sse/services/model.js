@@ -38,6 +38,24 @@ export async function resolveModelAlias(alias) {
  */
 export async function getModelInfo(modelStr) {
   const info = await resolveModelInfo(modelStr);
+  // The Models Aliases subsystem (which owned the "jrouter/" virtual namespace)
+  // is not part of this codebase anymore. An unresolved "jrouter/<anything>"
+  // therefore cannot be a hidden provider outage — say so instead of letting the
+  // caller report "No active credentials for provider: jrouter", which sends the
+  // client hunting for a connection that does not exist. A user-configured
+  // provider node with prefix "jrouter" resolves to its node id above and skips
+  // this guard; re-adding a real "jrouter" provider to the registry also skips it.
+  if (
+    info.provider === "jrouter" &&
+    info.model !== modelStr &&
+    !RESERVED_PROVIDER_PREFIXES.has("jrouter")
+  ) {
+    const err = new Error(
+      "Unknown jrouter/* target: the Models Aliases virtual namespace is not active on this instance. Use a provider model, provider node or combo."
+    );
+    err.statusCode = 404;
+    throw err;
+  }
   if (info.provider) assertCurrentModelAllowed(modelStr, info);
   return info;
 }

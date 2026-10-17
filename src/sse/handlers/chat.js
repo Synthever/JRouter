@@ -180,7 +180,18 @@ async function handleChatRequest(request, clientRawRequest = null) {
  * Handle single model chat request
  */
 async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, requestedModel = null) {
-  const modelInfo = await getModelInfo(modelStr);
+  let modelInfo;
+  try {
+    modelInfo = await getModelInfo(modelStr);
+  } catch (err) {
+    // Typed resolution errors (e.g. the defunct jrouter/* virtual namespace) map
+    // to their HTTP status; anything else stays an unexpected 500.
+    if (err?.statusCode) {
+      log.warn("CHAT", `Model "${modelStr}" unavailable: ${err.message}`);
+      return errorResponse(err.statusCode, err.message);
+    }
+    throw err;
+  }
 
   // If provider is null, this might be a combo name - check and handle
   if (!modelInfo.provider) {
