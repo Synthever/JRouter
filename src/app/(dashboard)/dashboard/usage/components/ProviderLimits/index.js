@@ -1,6 +1,7 @@
 "use client";
 import Icon from "@/shared/components/Icon";
 import StatusBadge from "@/shared/components/StatusBadge";
+import styles from "../../../quota/quota.module.css";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
