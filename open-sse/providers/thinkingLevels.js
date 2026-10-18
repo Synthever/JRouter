@@ -28,6 +28,7 @@ const FORMAT_LEVELS = {
   kimi: L.levelMax,
   deepseek: L.hiMax,
   commandcode: ["none", "low", "medium", "high", "xhigh", "max"],
+  river: ["none", "low", "medium", "high", "xhigh", "max"],
   minimax: L.onOff,
   hunyuan: L.base,
   step: L.base,

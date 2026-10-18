@@ -103,6 +103,7 @@ import p98 from "./youcom.js";
 import p99 from "./alims-intl.js";
 import p100 from "./codebuddy-intl.js";
 import p101 from "./workbuddy.js";
+import p102 from "./river.js";
 // Temporarily hidden — no tool calling support (trae SOLO agent / windsurf gRPC skip ToolCallChunk).
 // Re-enable by uncommenting both the import and the array entry below.
 // import p102 from "./trae.js";
@@ -244,6 +245,7 @@ export default [
   p99,
   p100,
   p101,
+  p102,
   // p102, // trae — hidden, no tool calling
   p103,
   p105,
