@@ -5,6 +5,7 @@ import { rowToCombo } from "./repos/combosRepo.js";
 import { normalizeComboPromptSettings } from "../comboPromptInjection.js";
 import { keyAccessFromColumns, keyAccessToColumns, validateKeyAccessInput } from "@/shared/utils/keyAccess.js";
 import { KEY_ACCESS_UNRESTRICTED } from "@/shared/constants/keyAccess.js";
+import { pruneOrphanCustomModels } from "./helpers/customModelsPrune.js";
 
 // Settings
 export {
@@ -174,6 +175,10 @@ export async function importDb(payload) {
     for (const [provider, models] of Object.entries(payload.pricing || {})) {
       db.run(`INSERT OR REPLACE INTO kv(scope, key, value) VALUES('pricing', ?, ?)`, [provider, stringifyJson(models || {})]);
     }
+    // A backup can carry customModels rows whose provider node no longer exists
+    // (deleted after the backup was taken). Re-importing them recreates ghost
+    // raw-UUID provider groups in catalogs and pickers, so drop them here.
+    pruneOrphanCustomModels(db);
   });
 
   return await exportDb();

@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { getAdapter } from "../driver.js";
 import { parseJson, stringifyJson } from "../helpers/jsonCol.js";
+import { pruneForNode } from "../helpers/customModelsPrune.js";
 
 function rowToNode(row) {
   if (!row) return null;
@@ -91,6 +92,9 @@ export async function deleteProviderNode(id) {
     removed = rowToNode(row);
     db.run(`DELETE FROM providerNodes WHERE id = ?`, [id]);
     db.run(`DELETE FROM kv WHERE scope = 'customModels' AND key LIKE ?`, [`${id}|%`]);
+    // Node models may also be keyed under the node's friendly prefix; the id-only
+    // delete above leaves those rows behind as ghost picker groups.
+    pruneForNode(db, id, removed?.prefix);
   });
   return removed;
 }

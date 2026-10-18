@@ -6,7 +6,8 @@ import { MIGRATIONS, latestVersion } from "./migrations/index.js";
 import { getMetaSync, setMetaSync } from "./helpers/metaStore.js";
 import { makeBackupDir, backupFile, backupDbLite, pruneOldBackups } from "./backup.js";
 import { getAppVersion } from "./version.js";
-import { stringifyJson } from "./helpers/jsonCol.js";
+import { parseJson, stringifyJson } from "./helpers/jsonCol.js";
+import { pruneOrphanCustomModels } from "./helpers/customModelsPrune.js";
 import { normalizeComboPromptSettings } from "../comboPromptInjection.js";
 
 // Marker file: prevents re-importing legacy JSON when user wipes data.sqlite.
@@ -169,6 +170,9 @@ function importLegacyMain(adapter, data) {
   for (const [provider, models] of Object.entries(data.pricing || {})) {
     adapter.run(`INSERT OR REPLACE INTO kv(scope, key, value) VALUES('pricing', ?, ?)`, [provider, stringifyJson(models || {})]);
   }
+  // Legacy config imports can carry customModels rows for provider nodes that
+  // were deleted since; re-inserting them recreates ghost picker groups.
+  pruneOrphanCustomModels(adapter);
 }
 
 function importLegacyUsage(adapter, data) {
@@ -289,6 +293,16 @@ export async function runMigrationOnce(adapter) {
     pruneOldBackups();
     console.log(`[DB][migrate] JSON → SQLite in ${Date.now() - t0}ms | legacy JSON kept at DATA_DIR | backup: ${backupDir}`);
     return;
+  }
+
+  // One-time sweep: configs imported before the orphan guard could carry
+  // customModels rows for provider nodes deleted since; those render as raw-UUID
+  // ghost groups in catalogs and pickers. Prune once, then stamp a marker so
+  // later boots (where new orphans can only come from live mutations) skip this.
+  if (getMetaSync(adapter, "customModelsOrphanPrune", null) !== "v1") {
+    const pruned = pruneOrphanCustomModels(adapter);
+    setMetaSync(adapter, "customModelsOrphanPrune", "v1");
+    if (pruned > 0) console.log(`[DB][migrate] pruned ${pruned} orphan customModels rows for deleted provider nodes`);
   }
 
   // Track app version for informational purposes only. App version bumps no
