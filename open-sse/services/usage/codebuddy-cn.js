@@ -144,3 +144,8 @@ export async function getCodeBuddyCnUsage(accessToken, apiKey, providerSpecificD
 export async function getCodeBuddyIntlUsage(accessToken, apiKey, providerSpecificData, proxyOptions = null) {
   return getCodeBuddyUsage("codebuddy-intl", accessToken, apiKey, providerSpecificData, proxyOptions);
 }
+
+// WorkBuddy rides the same Tencent billing contract on its own domain.
+export async function getWorkBuddyUsage(accessToken, apiKey, providerSpecificData, proxyOptions = null) {
+  return getCodeBuddyUsage("workbuddy", accessToken, apiKey, providerSpecificData, proxyOptions);
+}
