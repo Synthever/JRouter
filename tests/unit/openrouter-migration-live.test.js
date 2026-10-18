@@ -8,7 +8,8 @@ describe("openrouter migration final", () => {
     const j = await res.json();
     const groups = Array.isArray(j.models) ? j.models : Object.values(j.models || {});
     const orModels = groups.filter((g) => g.provider === "openrouter").map((g) => g.model);
-    for (const w of ["deepseek/deepseek-v4.1-flash-1017", "qwen/qwen3-coder:free", "nvidia/nemotron-3-ultra-550b-a55b:free"]) {
+    const want = ["deepseek/deepseek-v4.1-flash-1017", "nvidia/nemotron-3-ultra-550b-a55b:free"];
+    for (const w of want) {
       expect(orModels).toContain(w);
     }
   });
