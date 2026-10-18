@@ -108,9 +108,9 @@ ok("app bundle built");
 // ── 4. Pack sanity ─────────────────────────────────────────────────────
 step("npm pack + size sanity", () => {
 if (!dryRun) {
-  sh("rm -f /tmp/synthever-jrouter-latest.tgz");
+  sh("rm -f /tmp/synthever-jrouter-*.tgz");
   sh("npm pack --pack-destination /tmp");
-  const tgz = `/tmp/${PKG_NAME.replace("/", "-")}-${newV}.tgz`;
+  const tgz = `/tmp/synthever-jrouter-${newV}.tgz`;
   if (!fs.existsSync(tgz)) die(`pack failed — ${tgz} not found`);
   const stat = fs.statSync(tgz);
   ok(`tarball ${(stat.size / 1024 / 1024).toFixed(1)}MB → ${tgz}`);
