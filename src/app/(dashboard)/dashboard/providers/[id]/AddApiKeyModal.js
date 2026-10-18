@@ -7,6 +7,7 @@ import StatusBadge from "@/shared/components/StatusBadge";
 import styles from "../providers.module.css";
 import { AI_PROVIDERS } from "@/shared/constants/providers";
 import { planBulkAdd } from "@/shared/utils/bulkAdd";
+import { parseExtractedKeys } from "@/shared/utils/extractedKeys";
 
 const BULK_PLACEHOLDER = `name1|sk-key1\nname2|sk-key2\nsk-key-only-auto-named`;
 
@@ -61,9 +62,11 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
       ? `name1|pt-xxxxx\nname2|pt-yyyyy\npt-only-auto-named`
       : BULK_PLACEHOLDER;
 
-  const [mode, setMode] = useState("single"); // "single" | "bulk"
+  const [mode, setMode] = useState("single"); // "single" | "bulk" | "json"
   const [bulkText, setBulkText] = useState("");
   const [bulkResult, setBulkResult] = useState(null); // { success, failed }
+  const [jsonText, setJsonText] = useState("");
+  const [jsonResult, setJsonResult] = useState(null); // { success, failed, skipped } | { error }
 
   const buildProviderSpecificData = () => {
     if (isOllamaLocal && formData.ollamaHostUrl.trim()) {
@@ -216,6 +219,57 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
     if (success > 0 && onBulkDone) onBulkDone();
   };
 
+  const handleJsonSubmit = async () => {
+    const parsed = parseExtractedKeys(jsonText);
+    if (parsed.error) {
+      setJsonResult({ error: parsed.error });
+      return;
+    }
+    if (!parsed.entries.length) return;
+    setSaving(true);
+    setJsonResult(null);
+    // Same collision-free planner as Bulk Add: extract payloads keep their
+    // original names, missing ones become "Key N" against existing connections.
+    const plan = planBulkAdd(parsed.entries.map((e) => (e.name ? `${e.name}|${e.apiKey}` : e.apiKey)), existingNames, { isCloudflareAi });
+    let success = 0;
+    let failed = 0;
+    for (const entry of plan) {
+      try {
+        let isValid = false;
+        try {
+          const vres = await fetch("/api/providers/validate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ provider, apiKey: entry.apiKey }),
+          });
+          const vdata = await vres.json().catch(() => ({}));
+          isValid = !!vdata.valid;
+        } catch {
+          isValid = false;
+        }
+        const res = await fetch("/api/providers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            provider,
+            apiKey: entry.apiKey,
+            name: entry.name,
+            priority: 1,
+            testStatus: isValid ? "active" : "unknown",
+            ...(entry.providerSpecificData ? { providerSpecificData: entry.providerSpecificData } : {}),
+          }),
+        });
+        if (res.ok) success++;
+        else failed++;
+      } catch {
+        failed++;
+      }
+    }
+    setSaving(false);
+    setJsonResult({ success, failed, skipped: parsed.skipped });
+    if (success > 0 && onBulkDone) onBulkDone();
+  };
+
   if (!provider) return null;
 
   return (
@@ -224,8 +278,38 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
         {/* Bulk format cannot carry AWS profile or access key ID. */}
         {!usesAwsCredentialForm && (
           <div className="flex gap-2">
-            <Button size="sm" variant={mode === "single" ? "contrast" : "ghost"} aria-pressed={mode === "single"} onClick={() => { setMode("single"); setBulkResult(null); }}>Single</Button>
-            <Button size="sm" variant={mode === "bulk" ? "contrast" : "ghost"} aria-pressed={mode === "bulk"} onClick={() => { setMode("bulk"); setBulkResult(null); }}>Bulk Add</Button>
+            <Button size="sm" variant={mode === "single" ? "contrast" : "ghost"} aria-pressed={mode === "single"} onClick={() => { setMode("single"); setBulkResult(null); setJsonResult(null); }}>Single</Button>
+            <Button size="sm" variant={mode === "bulk" ? "contrast" : "ghost"} aria-pressed={mode === "bulk"} onClick={() => { setMode("bulk"); setBulkResult(null); setJsonResult(null); }}>Bulk Add</Button>
+            <Button size="sm" variant={mode === "json" ? "contrast" : "ghost"} aria-pressed={mode === "json"} onClick={() => { setMode("json"); setBulkResult(null); setJsonResult(null); }}>Import JSON</Button>
+          </div>
+        )}
+
+        {mode === "json" && (
+          <div className="flex flex-col gap-3">
+            <p className="text-xs text-text-muted">
+              Paste the JSON produced by another provider's <strong>Extract Keys</strong> button
+              ({"{"}"keys": [{"name", "apiKey"}]{"}"}). Inactive and empty entries are skipped; names are kept, missing names are auto-numbered.
+            </p>
+            <textarea
+              className="w-full font-mono resize-y min-h-[160px]"
+              aria-label="Extracted keys JSON"
+              placeholder={'{\n  "provider": "commandcode",\n  "keys": [{ "name": "Key 1", "apiKey": "user_..." }]\n}'}
+              value={jsonText}
+              onChange={(e) => setJsonText(e.target.value)}
+            />
+            {jsonResult && (
+              <div className={`text-xs font-medium ${jsonResult.error ? "text-[var(--warn)]" : jsonResult.failed > 0 ? "text-[var(--warn)]" : styles.success}`} role="status">
+                {jsonResult.error
+                  ? `✗ ${jsonResult.error}`
+                  : `✓ ${jsonResult.success} added${jsonResult.failed > 0 ? `, ✗ ${jsonResult.failed} failed` : ""}${jsonResult.skipped > 0 ? `, ${jsonResult.skipped} skipped` : ""}`}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Button onClick={handleJsonSubmit} variant="contrast" fullWidth disabled={saving || !jsonText.trim()}>
+                {saving ? "Importing..." : "Import Keys"}
+              </Button>
+              <Button onClick={onClose} variant="ghost" fullWidth>Cancel</Button>
+            </div>
           </div>
         )}
 

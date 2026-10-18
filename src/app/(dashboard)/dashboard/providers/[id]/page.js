@@ -1027,6 +1027,30 @@ export default function ProviderDetailPage() {
 
   const isSelected = (connectionId) => selectedConnectionIds.includes(connectionId);
 
+  const [extractingKeys, setExtractingKeys] = useState(false);
+  const handleExtractKeys = async () => {
+    if (extractingKeys) return;
+    setExtractingKeys(true);
+    try {
+      const res = await fetch(`/api/providers/${encodeURIComponent(providerId)}/connections/keys`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to export connection keys");
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `keys-${providerId}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      useNotificationStore.getState().error(error.message);
+    } finally {
+      setExtractingKeys(false);
+    }
+  };
+
   const connectionsList = (
     <div className="flex min-w-0 flex-col divide-y divide-black/[0.03] dark:divide-white/[0.03] max-h-[500px] overflow-y-auto pr-1">
       {connections
@@ -1529,6 +1553,17 @@ export default function ProviderDetailPage() {
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="ui-eyebrow"><Icon className="text-[16px]">vpn_key</Icon>Connections</h2>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+              {connections.some((c) => (c.authType || "apikey") === "apikey") && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  icon="download"
+                  onClick={handleExtractKeys}
+                  disabled={extractingKeys}
+                >
+                  {extractingKeys ? "Extracting..." : "Extract Keys"}
+                </Button>
+              )}
               {connections.length > 0 && proxyPools.length > 0 && (
                 <Button
                   size="sm"
