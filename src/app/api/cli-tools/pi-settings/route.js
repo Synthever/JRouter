@@ -38,7 +38,7 @@ const checkPiInstalled = async () => {
   }
 };
 
-const has9RouterConfig = (settings) => {
+const hasJRouterConfig = (settings) => {
   if (!settings || !settings.providers) return false;
   const p = settings.providers["jrouter"];
   if (p && p.baseUrl) return true;
@@ -91,7 +91,7 @@ export async function GET() {
     return NextResponse.json({
       installed: true,
       config,
-      has9Router: has9RouterConfig(config),
+      hasJRouter: hasJRouterConfig(config),
       configPath,
     });
   } catch (err) {
@@ -157,7 +157,7 @@ export async function POST(request) {
 
     return NextResponse.json({
       success: true,
-      message: "Pi settings applied! Use /model in Pi to select the 9Router model.",
+      message: "Pi settings applied! Use /model in Pi to select the JRouter model.",
       configPath,
     });
   } catch (err) {
@@ -182,7 +182,7 @@ export async function DELETE() {
       await fs.writeFile(configPath, JSON.stringify(existing, null, 2), "utf-8");
     }
 
-    return NextResponse.json({ success: true, message: "9Router removed from Pi" });
+    return NextResponse.json({ success: true, message: "JRouter removed from Pi" });
   } catch (err) {
     return NextResponse.json({ error: { message: err.message } }, { status: 500 });
   }

@@ -57,7 +57,7 @@ const readSettings = async () => {
 };
 
 // Check if settings has 9Router config
-const has9RouterConfig = (settings) => {
+const hasJRouterConfig = (settings) => {
   if (!settings || !settings.models || !settings.models.providers) return false;
   return !!settings.models.providers["jrouter"];
 };
@@ -105,7 +105,7 @@ export async function GET() {
       installed: true,
       settings,
       agents: enrichedAgents,
-      has9Router: has9RouterConfig(settings),
+      hasJRouter: hasJRouterConfig(settings),
       settingsPath: getOpenClawSettingsPath(),
     });
   } catch (error) {
@@ -177,12 +177,12 @@ export async function POST(request) {
     const allModelIds = new Set([model]);
     Object.values(agentModels).forEach((m) => { if (m) allModelIds.add(m); });
 
-    // Add fresh 9router models to allowlist
+    // Add fresh jrouter models to allowlist
     allModelIds.forEach((m) => {
       settings.agents.defaults.models[`jrouter/${m}`] = {};
     });
 
-    // Remove old 9router model from each agent in agents.list. The
+    // Remove old jrouter model from each agent in agents.list. The
     // model field may be a plain string or `{ primary, fallbacks }`.
     if (settings.agents.list) {
       settings.agents.list = settings.agents.list.map((agent) => {
@@ -234,7 +234,7 @@ export async function POST(request) {
   }
 }
 
-// DELETE - Remove 9Router settings only (keep other settings)
+// DELETE - Remove JRouter settings only (keep other settings)
 export async function DELETE() {
   try {
     const settingsPath = getOpenClawSettingsPath();
@@ -264,7 +264,7 @@ export async function DELETE() {
       }
     }
 
-    // Remove 9router models from agents.defaults.models allowlist
+    // Remove jrouter models from agents.defaults.models allowlist
     if (settings.agents?.defaults?.models) {
       const keysToRemove = Object.keys(settings.agents.defaults.models).filter((k) => k.startsWith("jrouter/"));
       for (const key of keysToRemove) {
@@ -285,7 +285,7 @@ export async function DELETE() {
 
     return NextResponse.json({
       success: true,
-      message: "9Router settings removed successfully",
+      message: "JRouter settings removed successfully",
     });
   } catch (error) {
     console.log("Error resetting openclaw settings:", error);

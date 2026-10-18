@@ -15,7 +15,7 @@ const getConfigPath = () => path.join(getJcodeConfigDir(), "config.toml");
 
 const getProviderEnvPath = () => {
   const configDir = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config");
-  return path.join(configDir, "jcode", "provider-9router.env");
+  return path.join(configDir, "jcode", "provider-jrouter.env");
 };
 
 const checkJcodeInstalled = async () => {
@@ -44,7 +44,7 @@ const readConfig = async () => {
   }
 };
 
-const has9RouterConfig = (config) => {
+const hasJRouterConfig = (config) => {
   if (!config || !config.providers) return false;
 
   const providers = config.providers;
@@ -118,12 +118,12 @@ export async function GET() {
   }
 
   const config = await readConfig();
-  const has9Router = has9RouterConfig(config);
+  const hasJRouter = hasJRouterConfig(config);
 
   return NextResponse.json({
     installed: true,
     config,
-    has9Router,
+    hasJRouter,
     configPath: getConfigPath(),
   });
 }
@@ -154,7 +154,7 @@ export async function POST(request) {
       base_url: normalizedBaseUrl,
       auth: "bearer",
       api_key_env: "JCODE_9ROUTER_API_KEY",
-      env_file: "provider-9router.env",
+      env_file: "provider-jrouter.env",
       default_model: models && models.length > 0 ? models[0] : "cc/claude-opus-4-7",
       requires_api_key: true,
     };
@@ -174,7 +174,7 @@ export async function POST(request) {
 
     return NextResponse.json({
       success: true,
-      message: "jcode configured successfully. Use: jcode --provider-profile 9router",
+      message: "jcode configured successfully. Use: jcode --provider-profile jrouter",
       configPath: getConfigPath(),
     });
   } catch (error) {
@@ -204,7 +204,7 @@ export async function DELETE() {
 
     return NextResponse.json({
       success: true,
-      message: "9router configuration removed from jcode",
+      message: "jrouter configuration removed from jcode",
     });
   } catch (error) {
     console.error("Error removing jcode configuration:", error);

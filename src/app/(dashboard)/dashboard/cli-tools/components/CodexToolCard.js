@@ -265,12 +265,12 @@ export default function CodexToolCard({ tool, isExpanded, onToggle, baseUrl, api
 
     const effectiveSubagentModel = subagentModel || selectedModel;
 
-    const configContent = `# 9Router Configuration for Codex CLI
+    const configContent = `# JRouter Configuration for Codex CLI
 model = "${selectedModel}"
 model_provider = "jrouter"
 
 [model_providers.jrouter]
-name = "9Router"
+name = "JRouter"
 base_url = "${getEffectiveBaseUrl()}"
 wire_api = "responses"
 
@@ -325,7 +325,7 @@ default_subagent_model = "${effectiveSubagentModel}"
                   <Icon className="text-[var(--warn)]">warning</Icon>
                   <div className="flex-1">
                     <p className="font-medium text-[var(--warn)]">Codex CLI not detected locally</p>
-                    <p className="text-sm text-text-muted">Manual configuration is still available if 9router is deployed on a remote server.</p>
+                    <p className="text-sm text-text-muted">Manual configuration is still available if JRouter is deployed on a remote server.</p>
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 sm:pl-9">

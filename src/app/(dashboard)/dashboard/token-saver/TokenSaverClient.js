@@ -942,7 +942,7 @@ export default function TokenSaverClient() {
               </Button>
               <p className={styles.description}>
                 Installs the npm package <code className={styles.hintCode}>pxpipe-proxy</code> into
-                the 9Router data directory. May take a few minutes.
+                the JRouter data directory. May take a few minutes.
               </p>
             </div>
           ) : (

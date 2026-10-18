@@ -43,7 +43,7 @@ export default function JcodeToolCard({
 
   const getConfigStatus = () => {
     if (!jcodeStatus?.installed) return null;
-    if (!jcodeStatus?.has9Router) return "not_configured";
+    if (!jcodeStatus?.hasJRouter) return "not_configured";
     const currentProvider = jcodeStatus.config?.providers?.["jrouter"];
     if (!currentProvider) return "not_configured";
     return matchKnownEndpoint(currentProvider.base_url, { tunnelPublicUrl, tailscaleUrl }) ? "configured" : "other";
@@ -196,7 +196,7 @@ type = "openai-compatible"
 base_url = "${getEffectiveBaseUrl()}"
 auth = "bearer"
 api_key_env = "JCODE_9ROUTER_API_KEY"
-env_file = "provider-9router.env"
+env_file = "provider-jrouter.env"
 default_model = "${selectedModel || "cc/claude-opus-4-7"}"
 requires_api_key = true
 
@@ -211,7 +211,7 @@ id = "${selectedModel || "cc/claude-opus-4-7"}"`;
         content: configToml,
       },
       {
-        filename: "~/.config/jcode/provider-9router.env",
+        filename: "~/.config/jcode/provider-jrouter.env",
         content: envContent,
       },
     ];
@@ -257,7 +257,7 @@ id = "${selectedModel || "cc/claude-opus-4-7"}"`;
                     <code className="block mt-2 p-2 bg-black/20 rounded text-xs font-mono">
                       curl -fsSL https://raw.githubusercontent.com/1jehuang/jcode/master/scripts/install.sh | bash
                     </code>
-                    <p className="text-sm text-text-muted mt-2">Manual configuration is still available if 9router is deployed on a remote server.</p>
+                    <p className="text-sm text-text-muted mt-2">Manual configuration is still available if JRouter is deployed on a remote server.</p>
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 sm:pl-9">
@@ -339,8 +339,8 @@ id = "${selectedModel || "cc/claude-opus-4-7"}"`;
                 {/* Usage hint */}
                 <div className={`flex flex-col gap-1 p-3 border ${styles.notice} ${styles.neutral}`}>
                   <p className="text-xs font-medium text-text-muted">Usage:</p>
-                  <code className="text-xs font-mono text-text-muted">jcode --provider-profile 9router</code>
-                  <code className="text-xs font-mono text-text-muted">jcode --provider-profile 9router --model {selectedModel || "cc/claude-opus-4-7"}</code>
+                  <code className="text-xs font-mono text-text-muted">jcode --provider-profile jrouter</code>
+                  <code className="text-xs font-mono text-text-muted">jcode --provider-profile jrouter --model {selectedModel || "cc/claude-opus-4-7"}</code>
                 </div>
               </div>
 
@@ -355,7 +355,7 @@ id = "${selectedModel || "cc/claude-opus-4-7"}"`;
                 <Button variant="primary" size="sm" onClick={handleApplySettings} disabled={!selectedModel} loading={applying}>
                   <Icon className="text-[14px] mr-1">save</Icon>Apply
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleResetSettings} disabled={!jcodeStatus?.has9Router} loading={restoring}>
+                <Button variant="outline" size="sm" onClick={handleResetSettings} disabled={!jcodeStatus?.hasJRouter} loading={restoring}>
                   <Icon className="text-[14px] mr-1">restore</Icon>Reset
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => setShowManualConfigModal(true)}>

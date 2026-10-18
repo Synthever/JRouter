@@ -124,7 +124,7 @@ export default function GenericCliToolCard({
 
   const getConfigStatus = () => {
     if (!status?.installed) return null;
-    if (!status.has9Router) return "not_configured";
+    if (!status.hasJRouter) return "not_configured";
     if (currentBaseUrl && matchKnownEndpoint(currentBaseUrl, { tunnelPublicUrl, tailscaleUrl })) {
       return "configured";
     }
@@ -277,7 +277,7 @@ export default function GenericCliToolCard({
         return [
           {
             filename: "~/.omp/agent/models.yml",
-            content: `providers:\n  9router:\n    baseUrl: ${effectiveUrl}\n    apiKey: ${key}\n    api: openai-completions\n    authHeader: true\n    disableStrictTools: true\n    discovery:\n      type: proxy`,
+            content: `providers:\n  jrouter:\n    baseUrl: ${effectiveUrl}\n    apiKey: ${key}\n    api: openai-completions\n    authHeader: true\n    disableStrictTools: true\n    discovery:\n      type: proxy`,
           },
         ];
       case "crush":
@@ -304,7 +304,7 @@ export default function GenericCliToolCard({
         return [
           {
             filename: "~/.forge/config.toml",
-            content: `# Forge config — managed by 9Router\n\n[openai]\napi_key = "${key}"\nbase_url = "${effectiveUrl}"\nmodel = "${mod}"`,
+            content: `# Forge config — managed by JRouter\n\n[openai]\napi_key = "${key}"\nbase_url = "${effectiveUrl}"\nmodel = "${mod}"`,
           },
         ];
       case "smelt":
@@ -318,7 +318,7 @@ export default function GenericCliToolCard({
         return [
           {
             filename: "~/.codewhale/config.toml",
-            content: `# CodeWhale config — managed by 9Router\n\n[openai]\nbase_url = "${effectiveUrl}"\napi_key = "${key}"\nmodel = "${mod}"`,
+            content: `# CodeWhale config — managed by JRouter\n\n[openai]\nbase_url = "${effectiveUrl}"\napi_key = "${key}"\nmodel = "${mod}"`,
           },
         ];
       default:
@@ -395,7 +395,7 @@ export default function GenericCliToolCard({
                   <Icon className="text-[var(--warn)]">warning</Icon>
                   <div className="flex-1">
                     <p className="font-medium text-[var(--warn)]">{tool.name} not detected locally</p>
-                    <p className="text-sm text-text-muted">Manual configuration is still available if 9router is deployed on a remote server.</p>
+                    <p className="text-sm text-text-muted">Manual configuration is still available if JRouter is deployed on a remote server.</p>
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 sm:pl-9">
@@ -594,7 +594,7 @@ export default function GenericCliToolCard({
                   >
                     {applying ? "Applying..." : "Apply Settings"}
                   </Button>
-                  {status?.has9Router && (
+                  {status?.hasJRouter && (
                     <Button
                       variant="outline"
                       size="sm"

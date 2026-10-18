@@ -57,7 +57,7 @@ export default function DashboardLayout({ children }) {
   // Restore collapsed preference from localStorage
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("9router_sidebar_collapsed");
+      const saved = localStorage.getItem("jrouter_sidebar_collapsed");
       if (saved === "true") {
         setDesktopSidebarCollapsed(true);
       }
@@ -71,7 +71,7 @@ export default function DashboardLayout({ children }) {
       setDesktopSidebarCollapsed((prev) => {
         const next = !prev;
         try {
-          localStorage.setItem("9router_sidebar_collapsed", String(next));
+          localStorage.setItem("jrouter_sidebar_collapsed", String(next));
         } catch {}
         return next;
       });

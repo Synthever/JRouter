@@ -52,7 +52,7 @@ export default function KiloToolCard({ tool, isExpanded, onToggle, baseUrl, apiK
 
   const getConfigStatus = () => {
     if (!status?.installed) return null;
-    return status.has9Router ? "configured" : "not_configured";
+    return status.hasJRouter ? "configured" : "not_configured";
   };
 
   const configStatus = getConfigStatus();
@@ -179,7 +179,7 @@ export default function KiloToolCard({ tool, isExpanded, onToggle, baseUrl, apiK
                   <Icon className="text-[var(--warn)]">warning</Icon>
                   <div className="flex-1">
                     <p className="font-medium text-[var(--warn)]">Kilo Code not detected locally</p>
-                    <p className="text-sm text-text-muted">Manual configuration is still available if 9router is deployed on a remote server.</p>
+                    <p className="text-sm text-text-muted">Manual configuration is still available if JRouter is deployed on a remote server.</p>
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 sm:pl-9">

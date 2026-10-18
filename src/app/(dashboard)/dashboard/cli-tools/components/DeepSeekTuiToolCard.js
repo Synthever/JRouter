@@ -227,7 +227,7 @@ model = "${selectedModel || "provider/model-id"}"
                     <p className="font-medium text-[var(--warn)]">DeepSeek TUI not detected locally</p>
                     <p className="text-sm text-text-muted mt-1">Install via npm:</p>
                     <code className="block mt-2 p-2 bg-black/20 rounded text-xs font-mono">npm install -g deepseek-tui</code>
-                    <p className="text-sm text-text-muted mt-2">Manual configuration is still available if 9router is deployed on a remote server.</p>
+                    <p className="text-sm text-text-muted mt-2">Manual configuration is still available if JRouter is deployed on a remote server.</p>
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 sm:pl-9">
@@ -313,7 +313,7 @@ model = "${selectedModel || "provider/model-id"}"
                 <Button variant="primary" size="sm" onClick={handleApply} disabled={!selectedModel} loading={applying}>
                   <Icon className="text-[14px] mr-1">save</Icon>Apply
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleReset} disabled={!deepseekStatus?.has9Router} loading={restoring}>
+                <Button variant="outline" size="sm" onClick={handleReset} disabled={!deepseekStatus?.hasJRouter} loading={restoring}>
                   <Icon className="text-[14px] mr-1">restore</Icon>Reset
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => setShowManualConfigModal(true)}>

@@ -49,7 +49,7 @@ const readConfig = async () => {
   }
 };
 
-const has9RouterConfig = (config) => {
+const hasJRouterConfig = (config) => {
   if (!config?.provider) return false;
   return !!config.provider["jrouter"];
 };
@@ -74,11 +74,11 @@ export async function GET() {
     return NextResponse.json({
       installed: true,
       config,
-      has9Router: has9RouterConfig(config),
+      hasJRouter: hasJRouterConfig(config),
       configPath: getConfigPath(),
         opencode: {
           models: Object.keys(modelMap),
-          activeModel: config?.model?.startsWith("jrouter/") ? config.model.replace(/^9router\//, "") : null,
+          activeModel: config?.model?.startsWith("jrouter/") ? config.model.replace(/^jrouter\//, "") : null,
           baseURL: providerConfig?.options?.baseURL || null,
         },
     });
@@ -257,7 +257,7 @@ export async function DELETE(request) {
 
     return NextResponse.json({
       success: true,
-      message: modelToRemove ? `Model "${modelToRemove}" removed` : "9Router settings removed from OpenCode",
+      message: modelToRemove ? `Model "${modelToRemove}" removed` : "JRouter settings removed from OpenCode",
     });
   } catch (error) {
     console.log("Error resetting opencode settings:", error);

@@ -131,7 +131,7 @@ const codex = {
     cfg.model_providers = cfg.model_providers || {};
     // Custom providers ignore auth.json — key must travel as a static header.
     cfg.model_providers["jrouter"] = {
-      name: "9Router",
+      name: "JRouter",
       base_url: v1(baseUrl),
       wire_api: "responses",
       http_headers: { Authorization: `Bearer ${apiKey}` },
@@ -238,7 +238,7 @@ const opencode = {
 
 // ── Factory Droid ───────────────────────────────────────────────────────────
 const droidPath = () => path.join(home(), ".factory", "settings.json");
-const isDroid9r = (m) => m.id?.startsWith("custom:9Router");
+const isDroidJr = (m) => m.id?.startsWith("custom:JRouter") || m.id?.startsWith("custom:9Router");
 
 const droid = {
   id: "droid",
@@ -246,17 +246,17 @@ const droid = {
   paths: () => [droidPath()],
   route: "droid-settings",
   serverModel(data) {
-    const m = (data?.settings?.customModels || []).find(isDroid9r)?.model;
+    const m = (data?.settings?.customModels || []).find(isDroidJr)?.model;
     return isStr(m) ? m : null;
   },
   async apply({ baseUrl, apiKey, model }) {
     const file = droidPath();
     const cfg = readJson(file) || {};
-    const others = (cfg.customModels || []).filter((m) => !isDroid9r(m));
+    const others = (cfg.customModels || []).filter((m) => !isDroidJr(m));
     cfg.customModels = [
       {
         model,
-        id: "custom:9Router-0",
+        id: "custom:JRouter-0",
         index: 0,
         baseUrl: v1(baseUrl),
         apiKey,
@@ -272,7 +272,7 @@ const droid = {
     return [file];
   },
   async show() {
-    const ours = (readJson(droidPath())?.customModels || []).filter(isDroid9r);
+    const ours = (readJson(droidPath())?.customModels || []).filter(isDroidJr);
     return {
       baseUrl: ours[0]?.baseUrl,
       apiKey: ours[0]?.apiKey,
@@ -284,7 +284,7 @@ const droid = {
     const cfg = readJson(file);
     if (!cfg) return [];
     if (cfg.customModels) {
-      cfg.customModels = cfg.customModels.filter((m) => !isDroid9r(m));
+      cfg.customModels = cfg.customModels.filter((m) => !isDroidJr(m));
       if (cfg.customModels.length === 0) delete cfg.customModels;
     }
     rewriteFile(file, JSON.stringify(cfg, null, 2));

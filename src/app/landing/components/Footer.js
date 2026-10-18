@@ -91,7 +91,7 @@ export default function Footer() {
             <h4 className="text-xs font-mono font-medium text-neutral-300 uppercase tracking-wider">Resources</h4>
             <a className="text-neutral-400 hover:text-white text-xs transition-colors" href="https://github.com/Synthever/JRouter#readme" target="_blank" rel="noopener noreferrer">Documentation</a>
             <a className="text-neutral-400 hover:text-white text-xs transition-colors" href="https://github.com/Synthever/JRouter" target="_blank" rel="noopener noreferrer">GitHub</a>
-            <a className="text-neutral-400 hover:text-white text-xs transition-colors" href="https://www.npmjs.com/package/9router" target="_blank" rel="noopener noreferrer">CLI Launcher</a>
+            <a className="text-neutral-400 hover:text-white text-xs transition-colors" href="https://www.npmjs.com/package/@synthever/jrouter" target="_blank" rel="noopener noreferrer">CLI Launcher</a>
           </div>
           
           {/* Legal */}
@@ -124,7 +124,7 @@ export default function Footer() {
           </p>
           <div className="flex items-center gap-5">
             <a className="text-neutral-400 hover:text-white text-xs font-mono transition-colors" href="https://github.com/Synthever/JRouter" target="_blank" rel="noopener noreferrer">GitHub</a>
-            <a className="text-neutral-400 hover:text-white text-xs font-mono transition-colors" href="https://www.npmjs.com/package/9router" target="_blank" rel="noopener noreferrer">NPM</a>
+            <a className="text-neutral-400 hover:text-white text-xs font-mono transition-colors" href="https://www.npmjs.com/package/@synthever/jrouter" target="_blank" rel="noopener noreferrer">NPM</a>
           </div>
         </div>
       </div>

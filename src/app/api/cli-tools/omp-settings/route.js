@@ -44,7 +44,7 @@ const readModelsYml = async () => {
   }
 };
 
-const has9RouterInYml = (content) => {
+const hasJRouterInYml = (content) => {
   if (!content) return false;
   return content.includes("9router:") || content.includes("localhost:20128");
 };
@@ -75,11 +75,11 @@ export async function GET() {
     }
 
     const ymlContent = await readModelsYml();
-    const has9Router = has9RouterInYml(ymlContent);
+    const hasJRouter = hasJRouterInYml(ymlContent);
 
     return NextResponse.json({
       installed: true,
-      has9Router,
+      hasJRouter,
       configPath: getOmpModelsYmlPath(),
     });
   } catch (err) {
@@ -152,7 +152,7 @@ export async function POST(request) {
 
     return NextResponse.json({
       success: true,
-      message: "Oh My Pi settings applied! Run 'omp' and all 9Router models appear under 9router in /model.",
+      message: "Oh My Pi settings applied! Run 'omp' and all JRouter models appear under jrouter in /model.",
       configPath: getOmpModelsYmlPath(),
     });
   } catch (err) {
@@ -174,7 +174,7 @@ export async function DELETE() {
 
     return NextResponse.json({
       success: true,
-      message: "9Router removed from Oh My Pi",
+      message: "JRouter removed from Oh My Pi",
     });
   } catch (err) {
     return NextResponse.json({ error: { message: err.message } }, { status: 500 });

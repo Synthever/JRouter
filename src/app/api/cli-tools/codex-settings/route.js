@@ -74,7 +74,7 @@ const readConfig = async () => {
 };
 
 // Check if config has 9Router settings
-const has9RouterConfig = (config) => {
+const hasJRouterConfig = (config) => {
   if (!config) return false;
   return config.includes("model_provider = \"jrouter\"") || config.includes("[model_providers.jrouter]");
 };
@@ -97,7 +97,7 @@ export async function GET() {
     return NextResponse.json({
       installed: true,
       config,
-      has9Router: has9RouterConfig(config),
+      hasJRouter: hasJRouterConfig(config),
       configPath: getCodexConfigPath(),
     });
   } catch (error) {
@@ -137,7 +137,7 @@ export async function POST(request) {
     const normalizedBaseUrl = baseUrl.endsWith("/v1") ? baseUrl : `${baseUrl}/v1`;
     // Custom providers ignore auth.json - the key must travel as a static header
     setNestedSection(parsed, "model_providers.jrouter", {
-      name: "9Router",
+      name: "JRouter",
       base_url: normalizedBaseUrl,
       wire_api: "responses",
       http_headers: { Authorization: `Bearer ${apiKey}` },
@@ -162,7 +162,7 @@ export async function POST(request) {
   }
 }
 
-// DELETE - Remove 9Router settings only (keep other settings)
+// DELETE - Remove JRouter settings only (keep other settings)
 export async function DELETE() {
   try {
     const configPath = getCodexConfigPath();
@@ -217,7 +217,7 @@ export async function DELETE() {
 
     return NextResponse.json({
       success: true,
-      message: "9Router settings removed successfully",
+      message: "JRouter settings removed successfully",
     });
   } catch (error) {
     console.log("Error resetting codex settings:", error);

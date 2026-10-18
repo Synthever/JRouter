@@ -13,7 +13,7 @@ const { runElevatedPowerShell, isAdmin } = require("../winElevated.js");
  */
 function atomicWriteHostsWin(target, originalContent, newContent) {
   const tmpNew = `${target}.jrouter.new`;
-  const tmpBak = `${target}.9router.bak`;
+  const tmpBak = `${target}.jrouter.bak`;
   try {
     fs.writeFileSync(tmpNew, newContent, "utf8");
     try { fs.unlinkSync(tmpBak); } catch { /* none */ }

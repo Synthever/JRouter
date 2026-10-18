@@ -11,7 +11,7 @@ function getStatus(status, tool) {
   if (tool?.configType === "guide") return { label: "Guide", variant: "default" };
   if (!status) return { label: "Unknown", variant: "default" };
   if (!status.installed) return { label: "Not installed", variant: "default" };
-  if (status.has9Router) return { label: "Connected", variant: "success" };
+  if (status.hasJRouter) return { label: "Connected", variant: "success" };
   return { label: "Not configured", variant: "warning" };
 }
 
