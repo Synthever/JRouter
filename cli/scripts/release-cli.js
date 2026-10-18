@@ -80,7 +80,10 @@ console.log(`\n${changelogNotes || "- (no repo changes in scope)"}\n`);
 
 // ── 2. Version bump ────────────────────────────────────────────────────
 step(`npm version ${bump}`, () => {
-  sh(`npm version ${bump} --no-git-tag-version`, { cwd: CLI_DIR });
+  // npm version from cli/ walks up and bumps the ROOT package.json too
+  // (upstream 0.5.104 must stay untouched) — restore it right after.
+  sh(`npm version ${bump} --no-git-tag-version --prefix .`, { cwd: CLI_DIR });
+  try { sh("git checkout -- package.json", { cwd: ROOT_DIR, quiet: true }); } catch {}
 });
 const newV = dryRun ? "(dry)" : JSON.parse(fs.readFileSync(path.join(CLI_DIR, "package.json"), "utf8")).version;
 ok(`${PKG_NAME} ${oldV} → ${newV}`);
