@@ -41,11 +41,11 @@ export default function OpenClawToolCard({
   const [customBaseUrl, setCustomBaseUrl] = useState("");
   const hasInitializedModel = useRef(false);
 
-  const currentBaseUrl = openclawStatus?.settings?.models?.providers?.["9router"]?.baseUrl || "";
+  const currentBaseUrl = openclawStatus?.settings?.models?.providers?.["jrouter"]?.baseUrl || "";
 
   const getConfigStatus = () => {
     if (!openclawStatus?.installed) return null;
-    const currentProvider = openclawStatus.settings?.models?.providers?.["9router"];
+    const currentProvider = openclawStatus.settings?.models?.providers?.["jrouter"];
     if (!currentProvider) return "not_configured";
     return matchKnownEndpoint(currentProvider.baseUrl, { tunnelPublicUrl, tailscaleUrl }) ? "configured" : "other";
   };
@@ -82,10 +82,10 @@ export default function OpenClawToolCard({
   useEffect(() => {
     if (openclawStatus?.installed && !hasInitializedModel.current) {
       hasInitializedModel.current = true;
-      const provider = openclawStatus.settings?.models?.providers?.["9router"];
+      const provider = openclawStatus.settings?.models?.providers?.["jrouter"];
       if (provider) {
         const primaryModel = openclawStatus.settings?.agents?.defaults?.model?.primary;
-        if (primaryModel) setSelectedModel(primaryModel.replace("9router/", ""));
+        if (primaryModel) setSelectedModel(primaryModel.replace("jrouter/", ""));
         if (provider.apiKey && apiKeys?.some(k => k.key === provider.apiKey)) {
           setSelectedApiKey(provider.apiKey);
         }
@@ -138,7 +138,7 @@ export default function OpenClawToolCard({
     try {
       const keyToUse = selectedApiKey?.trim()
         || (apiKeys?.length > 0 ? apiKeys[0].key : null)
-        || (!cloudEnabled ? "sk_9router" : null);
+        || (!cloudEnabled ? "sk_jrouter" : null);
 
       const res = await fetch("/api/cli-tools/openclaw-settings", {
         method: "POST",
@@ -200,19 +200,19 @@ export default function OpenClawToolCard({
   const getManualConfigs = () => {
     const keyToUse = (selectedApiKey && selectedApiKey.trim())
       ? selectedApiKey
-      : (!cloudEnabled ? "sk_9router" : "<API_KEY_FROM_DASHBOARD>");
+      : (!cloudEnabled ? "sk_jrouter" : "<API_KEY_FROM_DASHBOARD>");
 
     const settingsContent = {
       agents: {
         defaults: {
           model: {
-            primary: `9router/${selectedModel || "provider/model-id"}`,
+            primary: `jrouter/${selectedModel || "provider/model-id"}`,
           },
         },
       },
       models: {
         providers: {
-          "9router": {
+          "jrouter": {
             baseUrl: getEffectiveBaseUrl(),
             apiKey: keyToUse,
             api: "openai-completions",
@@ -304,12 +304,12 @@ export default function OpenClawToolCard({
                 </div>
 
                 {/* Current configured */}
-                {openclawStatus?.settings?.models?.providers?.["9router"]?.baseUrl && (
+                {openclawStatus?.settings?.models?.providers?.["jrouter"]?.baseUrl && (
                   <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr_auto] sm:items-center sm:gap-2">
                     <span className={`sm:text-right ${styles.fieldLabel}`}>Current</span>
                     <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
                     <span className="min-w-0 truncate rounded bg-surface/40 px-2 py-2 text-xs text-text-muted sm:py-1.5">
-                      {openclawStatus.settings.models.providers["9router"].baseUrl}
+                      {openclawStatus.settings.models.providers["jrouter"].baseUrl}
                     </span>
                   </div>
                 )}

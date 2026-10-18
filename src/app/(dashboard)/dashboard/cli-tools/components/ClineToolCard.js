@@ -91,7 +91,7 @@ export default function ClineToolCard({ tool, isExpanded, onToggle, baseUrl, api
     try {
       const keyToUse = (selectedApiKey && selectedApiKey.trim())
         ? selectedApiKey
-        : (!cloudEnabled ? "sk_9router" : selectedApiKey);
+        : (!cloudEnabled ? "sk_jrouter" : selectedApiKey);
 
       const res = await fetch("/api/cli-tools/cline-settings", {
         method: "POST",
@@ -137,7 +137,7 @@ export default function ClineToolCard({ tool, isExpanded, onToggle, baseUrl, api
   const getManualConfigs = () => {
     const keyToUse = (selectedApiKey && selectedApiKey.trim())
       ? selectedApiKey
-      : (!cloudEnabled ? "sk_9router" : "<API_KEY_FROM_DASHBOARD>");
+      : (!cloudEnabled ? "sk_jrouter" : "<API_KEY_FROM_DASHBOARD>");
     const effectiveUrl = getEffectiveBaseUrl();
     const baseWithoutV1 = effectiveUrl.endsWith("/v1") ? effectiveUrl.slice(0, -3) : effectiveUrl;
 

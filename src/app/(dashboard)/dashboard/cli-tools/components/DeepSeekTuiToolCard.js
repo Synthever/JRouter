@@ -121,7 +121,7 @@ export default function DeepSeekTuiToolCard({
     try {
       const keyToUse = selectedApiKey?.trim()
         || (apiKeys?.length > 0 ? apiKeys[0].key : null)
-        || (!cloudEnabled ? "sk_9router" : null);
+        || (!cloudEnabled ? "sk_jrouter" : null);
 
       const res = await fetch(ENDPOINT, {
         method: "POST",
@@ -176,7 +176,7 @@ export default function DeepSeekTuiToolCard({
   const getManualConfigs = () => {
     const keyToUse = (selectedApiKey && selectedApiKey.trim())
       ? selectedApiKey
-      : (!cloudEnabled ? "sk_9router" : "<API_KEY_FROM_DASHBOARD>");
+      : (!cloudEnabled ? "sk_jrouter" : "<API_KEY_FROM_DASHBOARD>");
 
     const tomlContent = `[providers.openai]
 base_url = "${getEffectiveBaseUrl()}"

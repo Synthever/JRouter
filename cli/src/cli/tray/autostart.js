@@ -4,7 +4,7 @@ const os = require("os");
 const { execSync } = require("child_process");
 
 const APP_NAME = "9router";
-const APP_LABEL = "com.9router.autostart";
+const APP_LABEL = "com.jrouter.autostart";
 
 /**
  * Resolve the absolute path to this package's cli.js.

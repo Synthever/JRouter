@@ -13,8 +13,8 @@ const DEFAULT_CONFIG = {
   protocol: "http:",
 };
 
-const CLI_TOKEN_HEADER = "x-9r-cli-token";
-const CLI_TOKEN_SALT = "9r-cli-auth";
+const CLI_TOKEN_HEADER = "x-jr-cli-token";
+const CLI_TOKEN_SALT = "jr-cli-auth";
 const APP_NAME = "9router";
 
 function getDataDir() {

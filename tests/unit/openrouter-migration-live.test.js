@@ -3,8 +3,8 @@ import { getConsistentMachineId } from "@/shared/utils/machineId.js";
 
 describe("openrouter migration final", () => {
   it("surfaces moved models via dashboard /api/models", async () => {
-    const cliToken = await getConsistentMachineId("9r-cli-auth");
-    const res = await fetch("http://127.0.0.1:20128/api/models", { headers: { "x-9r-cli-token": cliToken } });
+    const cliToken = await getConsistentMachineId("jr-cli-auth");
+    const res = await fetch("http://127.0.0.1:20128/api/models", { headers: { "x-jr-cli-token": cliToken } });
     const j = await res.json();
     const groups = Array.isArray(j.models) ? j.models : Object.values(j.models || {});
     const orModels = groups.filter((g) => g.provider === "openrouter").map((g) => g.model);

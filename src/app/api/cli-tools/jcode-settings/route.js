@@ -49,7 +49,7 @@ const has9RouterConfig = (config) => {
 
   const providers = config.providers;
 
-  if (providers["9router"]) return true;
+  if (providers["jrouter"]) return true;
 
   for (const [name, provider] of Object.entries(providers)) {
     if (provider.base_url && provider.base_url.includes("localhost:20128")) {
@@ -149,7 +149,7 @@ export async function POST(request) {
       config.providers = {};
     }
 
-    config.providers["9router"] = {
+    config.providers["jrouter"] = {
       type: "openai-compatible",
       base_url: normalizedBaseUrl,
       auth: "bearer",
@@ -194,7 +194,7 @@ export async function DELETE() {
       return NextResponse.json({ success: true, message: "No configuration to remove" });
     }
 
-    delete config.providers["9router"];
+    delete config.providers["jrouter"];
 
     await writeConfig(config);
 

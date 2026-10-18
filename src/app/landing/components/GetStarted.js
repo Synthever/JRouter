@@ -161,7 +161,7 @@ export default function GetStarted() {
                 </div>
                 
                 <div className="text-[11px] text-[var(--text-3)] pt-3 border-t border-[var(--line)]">
-                  <div>Local SQLite DB: ~/.9router/db/data.sqlite</div>
+                  <div>Local SQLite DB: ~/.jrouter/db/data.sqlite</div>
                 </div>
               </div>
             </div>

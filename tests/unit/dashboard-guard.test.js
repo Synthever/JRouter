@@ -56,7 +56,7 @@ function localRequest(pathname, headers = {}) {
 describe("dashboard guard public LLM API access", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.NINEROUTER_PEER_TOKEN = PEER_TOKEN;
+    process.env.JROUTER_PEER_TOKEN = PEER_TOKEN;
     mocks.getSettings.mockResolvedValue({ requireLogin: true });
     mocks.validateApiKey.mockResolvedValue(false);
     mocks.getConsistentMachineId.mockResolvedValue("cli-token");
@@ -219,7 +219,7 @@ describe("dashboard guard public LLM API access", () => {
 describe("dashboard guard local-only access", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.NINEROUTER_PEER_TOKEN = PEER_TOKEN;
+    process.env.JROUTER_PEER_TOKEN = PEER_TOKEN;
     mocks.getSettings.mockResolvedValue({ requireLogin: true });
     mocks.validateApiKey.mockResolvedValue(false);
     mocks.getConsistentMachineId.mockResolvedValue("cli-token");
@@ -280,7 +280,7 @@ describe("dashboard guard local-only access", () => {
   it("allows local-only route with valid CLI token", async () => {
     const response = await proxy(request("/api/mcp/filesystem/sse", {
       host: "router.example.com",
-      "x-9r-cli-token": "cli-token",
+      "x-jr-cli-token": "cli-token",
     }));
 
     expect(response).toBe(mocks.nextResponse);

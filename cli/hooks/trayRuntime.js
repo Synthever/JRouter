@@ -44,7 +44,7 @@ function hasSystray() {
 // On Windows it was an AV false-positive risk; on macOS/Linux its bundled
 // binary is broken on modern OS versions.
 function cleanupLegacySystray({ silent = false } = {}) {
-  // 1) Runtime dir: ~/.9router/runtime/node_modules/systray (or %APPDATA% on Win)
+  // 1) Runtime dir: ~/.jrouter/runtime/node_modules/systray (or %APPDATA% on Win)
   // 2) npm global nested: <npm_prefix>/node_modules/9router/node_modules/systray
   //    __dirname here = <pkg root>/hooks → up 1 = pkg root
   const targets = [
@@ -84,7 +84,7 @@ function ensureRuntimeDir() {
   const pkgPath = path.join(dir, "package.json");
   if (!fs.existsSync(pkgPath)) {
     fs.writeFileSync(pkgPath, JSON.stringify({
-      name: "9router-runtime",
+      name: "jrouter-runtime",
       version: "1.0.0",
       private: true
     }, null, 2));
@@ -144,7 +144,7 @@ function markArm64Attempt() {
 // Cleared on success so the cooldown only ever throttles *failures*. Without
 // this, anything that restores systray2's x86_64 binary later — notably a
 // globally installed 9router older than this change, which shares the same
-// ~/.9router/runtime — would leave the user waiting out the cooldown.
+// ~/.jrouter/runtime — would leave the user waiting out the cooldown.
 function clearArm64Attempt() {
   try { fs.rmSync(arm64AttemptMarker(), { force: true }); } catch {}
 }

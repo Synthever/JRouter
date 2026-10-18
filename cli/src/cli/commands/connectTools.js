@@ -39,10 +39,10 @@ function rewriteFile(file, content) {
   fs.writeFileSync(file, content, { mode: SECRET_MODE });
 }
 
-// One-time backup of the user's pre-9router file, then write.
+// One-time backup of the user's pre-jrouter file, then write.
 function writeFile(file, content) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  const backup = `${file}.bak-9router`;
+  const backup = `${file}.bak-jrouter`;
   if (fs.existsSync(file) && !fs.existsSync(backup)) {
     fs.copyFileSync(file, backup);
     fs.chmodSync(backup, SECRET_MODE);
@@ -114,7 +114,7 @@ const codex = {
   name: "OpenAI Codex CLI",
   paths: () => [codexPath()],
   route: "codex-settings",
-  // GET returns raw TOML text; only trust `model` when the provider is 9router.
+  // GET returns raw TOML text; only trust `model` when the provider is jrouter.
   async serverModel(data) {
     if (!isStr(data?.config)) return null;
     const { parseTOML } = await toml();
@@ -160,7 +160,7 @@ const codex = {
         ...(isStr(cfg.model) ? { main: cfg.model } : {}),
         ...(isStr(cfg.agents?.default_subagent_model) ? { subagent: cfg.agents.default_subagent_model } : {}),
       },
-      // Codex only routes through 9router when this provider is the active one.
+      // Codex only routes through jrouter when this provider is the active one.
       active: cfg.model_provider === "jrouter",
     };
   },
@@ -170,7 +170,7 @@ const codex = {
     let cfg;
     try { cfg = parseTOML(fs.readFileSync(file, "utf8")) || {}; } catch (err) { if (err.code === "ENOENT") return []; throw err; }
     if (cfg.model_provider === "9router" || cfg.model_provider === "jrouter") { delete cfg.model; delete cfg.model_provider; }
-    if (cfg.model_providers) { delete cfg.model_providers["9router"]; delete cfg.model_providers["jrouter"]; }
+    if (cfg.model_providers) { delete cfg.model_providers["jrouter"]; delete cfg.model_providers["jrouter"]; }
     if (cfg.agents) { delete cfg.agents.default_subagent_model; delete cfg.agents.subagent; }
     for (const k of ["model_providers", "agents"]) {
       if (cfg[k] && Object.keys(cfg[k]).length === 0) delete cfg[k];

@@ -32,7 +32,7 @@ const checkSmeltInstalled = async () => {
 const has9RouterConfig = (settings) => {
   if (!settings) return false;
   return (
-    settings._managedBy === "9router" ||
+    settings._managedBy === "jrouter" ||
     (typeof settings.baseUrl === "string" && settings.baseUrl.length > 0 && settings.baseUrl.includes("20128"))
   );
 };
@@ -99,7 +99,7 @@ export async function POST(request) {
       baseUrl: normalizedBaseUrl,
       apiKey: await resolveCliApiKey(apiKey),
       model: model || existing.model || "provider/model-id",
-      _managedBy: "9router",
+      _managedBy: "jrouter",
     };
 
     await fs.writeFile(configPath, JSON.stringify(updated, null, 2), "utf-8");

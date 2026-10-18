@@ -258,7 +258,7 @@ async function run(argv) {
     }
 
     const requestId = create.body.request_id;
-    const connectionId = create.headers["x-9router-connection-id"] || null;
+    const connectionId = create.headers["x-jrouter-connection-id"] || null;
     console.log(`📋 Job accepted: ${requestId}`);
 
     let lastLine = "";

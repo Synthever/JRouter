@@ -39,12 +39,12 @@ export default function JcodeToolCard({
   const [customBaseUrl, setCustomBaseUrl] = useState("");
   const hasInitializedModel = useRef(false);
 
-  const currentBaseUrl = jcodeStatus?.config?.providers?.["9router"]?.base_url || "";
+  const currentBaseUrl = jcodeStatus?.config?.providers?.["jrouter"]?.base_url || "";
 
   const getConfigStatus = () => {
     if (!jcodeStatus?.installed) return null;
     if (!jcodeStatus?.has9Router) return "not_configured";
-    const currentProvider = jcodeStatus.config?.providers?.["9router"];
+    const currentProvider = jcodeStatus.config?.providers?.["jrouter"];
     if (!currentProvider) return "not_configured";
     return matchKnownEndpoint(currentProvider.base_url, { tunnelPublicUrl, tailscaleUrl }) ? "configured" : "other";
   };
@@ -81,7 +81,7 @@ export default function JcodeToolCard({
   useEffect(() => {
     if (jcodeStatus?.installed && !hasInitializedModel.current) {
       hasInitializedModel.current = true;
-      const provider = jcodeStatus.config?.providers?.["9router"];
+      const provider = jcodeStatus.config?.providers?.["jrouter"];
       if (provider) {
         if (provider.default_model) {
           setSelectedModel(provider.default_model);
@@ -133,7 +133,7 @@ export default function JcodeToolCard({
     try {
       const keyToUse = selectedApiKey?.trim()
         || (apiKeys?.length > 0 ? apiKeys[0].key : null)
-        || (!cloudEnabled ? "sk_9router" : null);
+        || (!cloudEnabled ? "sk_jrouter" : null);
 
       const res = await fetch("/api/cli-tools/jcode-settings", {
         method: "POST",
@@ -189,9 +189,9 @@ export default function JcodeToolCard({
   const getManualConfigs = () => {
     const keyToUse = (selectedApiKey && selectedApiKey.trim())
       ? selectedApiKey
-      : (!cloudEnabled ? "sk_9router" : "<API_KEY_FROM_DASHBOARD>");
+      : (!cloudEnabled ? "sk_jrouter" : "<API_KEY_FROM_DASHBOARD>");
 
-    const configToml = `[providers.9router]
+    const configToml = `[providers.jrouter]
 type = "openai-compatible"
 base_url = "${getEffectiveBaseUrl()}"
 auth = "bearer"
@@ -200,7 +200,7 @@ env_file = "provider-9router.env"
 default_model = "${selectedModel || "cc/claude-opus-4-7"}"
 requires_api_key = true
 
-[[providers.9router.models]]
+[[providers.jrouter.models]]
 id = "${selectedModel || "cc/claude-opus-4-7"}"`;
 
     const envContent = `JCODE_9ROUTER_API_KEY="${keyToUse}"`;
@@ -308,12 +308,12 @@ id = "${selectedModel || "cc/claude-opus-4-7"}"`;
                 </div>
 
                 {/* Current configured */}
-                {jcodeStatus?.config?.providers?.["9router"]?.base_url && (
+                {jcodeStatus?.config?.providers?.["jrouter"]?.base_url && (
                   <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr_auto] sm:items-center sm:gap-2">
                     <span className={`sm:text-right ${styles.fieldLabel}`}>Current</span>
                     <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
                     <span className="min-w-0 truncate rounded bg-surface/40 px-2 py-2 text-xs text-text-muted sm:py-1.5">
-                      {jcodeStatus.config.providers["9router"].base_url}
+                      {jcodeStatus.config.providers["jrouter"].base_url}
                     </span>
                   </div>
                 )}

@@ -32,7 +32,7 @@ async function get(headers = {}) {
 
 describe("custom-server peer header sanitizing", () => {
   it("generates a peer trust token at boot", () => {
-    expect(process.env.NINEROUTER_PEER_TOKEN).toMatch(/^[0-9a-f]{48}$/);
+    expect(process.env.JROUTER_PEER_TOKEN).toMatch(/^[0-9a-f]{48}$/);
   });
 
   it("replaces a client-supplied x-9r-real-ip with the socket address", async () => {
@@ -44,13 +44,13 @@ describe("custom-server peer header sanitizing", () => {
   it("stamps the trust token so downstream can tell the wrapper ran", async () => {
     const headers = await get();
 
-    expect(headers["x-9r-peer-token"]).toBe(process.env.NINEROUTER_PEER_TOKEN);
+    expect(headers["x-9r-peer-token"]).toBe(process.env.JROUTER_PEER_TOKEN);
   });
 
   it("drops a client-supplied peer trust token", async () => {
     const headers = await get({ "x-9r-peer-token": "forged-token" });
 
-    expect(headers["x-9r-peer-token"]).toBe(process.env.NINEROUTER_PEER_TOKEN);
+    expect(headers["x-9r-peer-token"]).toBe(process.env.JROUTER_PEER_TOKEN);
     expect(headers["x-9r-peer-token"]).not.toBe("forged-token");
   });
 
@@ -73,13 +73,13 @@ describe("custom-server peer header sanitizing", () => {
   it("keeps the peer token out of persisted request details", () => {
     const sanitized = requestDetails.sanitizeHeaders({
       "x-9r-peer-token": "secret",
-      "x-9r-cli-token": "secret",
+      "x-jr-cli-token": "secret",
       "authorization": "Bearer sk-x",
       "x-9r-real-ip": "127.0.0.1",
     });
 
     expect(sanitized["x-9r-peer-token"]).toBeUndefined();
-    expect(sanitized["x-9r-cli-token"]).toBeUndefined();
+    expect(sanitized["x-jr-cli-token"]).toBeUndefined();
     expect(sanitized["authorization"]).toBeUndefined();
     expect(sanitized["x-9r-real-ip"]).toBe("127.0.0.1");
   });

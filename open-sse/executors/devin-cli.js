@@ -789,7 +789,7 @@ export class DevinCliExecutor extends BaseExecutor {
         // ── Send initialize ───────────────────────────────────────────────
         sendRpc("initialize", {
           protocolVersion: "0.3",
-          clientInfo: { name: "9router", version: "1.0" },
+          clientInfo: { name: "jrouter", version: "1.0" },
           capabilities: {},
         });
       },

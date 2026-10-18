@@ -35,11 +35,11 @@ export default function GenericCliToolCard({
   const [selectedApiKey, setSelectedApiKey] = useState(() => apiKeys?.[0]?.key || "");
   const [selectedModel, setSelectedModel] = useState(() => {
     const cfg = initialStatus?.config;
-    return cfg?.model || cfg?.openai?.model || cfg?.providers?.["9router"]?.models?.[0]?.id || "";
+    return cfg?.model || cfg?.openai?.model || cfg?.providers?.["jrouter"]?.models?.[0]?.id || "";
   });
   const [selectedModels, setSelectedModels] = useState(() => {
     const cfg = initialStatus?.config;
-    const list = cfg?.providers?.["9router"]?.models;
+    const list = cfg?.providers?.["jrouter"]?.models;
     if (Array.isArray(list) && list.length > 0) {
       return list.map((m) => (typeof m === "string" ? m : m.id));
     }
@@ -61,13 +61,13 @@ export default function GenericCliToolCard({
             setStatus(data);
             const cfg = data?.config;
             if (tool.id === "pi") {
-              const list = cfg?.providers?.["9router"]?.models;
+              const list = cfg?.providers?.["jrouter"]?.models;
               if (Array.isArray(list) && list.length > 0) {
                 const ids = list.map((m) => (typeof m === "string" ? m : m.id));
                 setSelectedModels(ids);
               }
             } else {
-              const mod = cfg?.model || cfg?.openai?.model || cfg?.providers?.["9router"]?.models?.[0]?.id;
+              const mod = cfg?.model || cfg?.openai?.model || cfg?.providers?.["jrouter"]?.models?.[0]?.id;
               if (mod) setSelectedModel((prev) => prev || mod);
             }
           }
@@ -89,13 +89,13 @@ export default function GenericCliToolCard({
       setStatus(data);
       const cfg = data?.config;
       if (tool.id === "pi") {
-        const list = cfg?.providers?.["9router"]?.models;
+        const list = cfg?.providers?.["jrouter"]?.models;
         if (Array.isArray(list) && list.length > 0) {
           const ids = list.map((m) => (typeof m === "string" ? m : m.id));
           setSelectedModels(ids);
         }
       } else {
-        const mod = cfg?.model || cfg?.openai?.model || cfg?.providers?.["9router"]?.models?.[0]?.id;
+        const mod = cfg?.model || cfg?.openai?.model || cfg?.providers?.["jrouter"]?.models?.[0]?.id;
         if (mod && !selectedModel) setSelectedModel(mod);
       }
     } catch (error) {
@@ -115,8 +115,8 @@ export default function GenericCliToolCard({
     const cfg = status.config;
     if (typeof cfg.baseUrl === "string") return cfg.baseUrl;
     if (typeof cfg.openai?.base_url === "string") return cfg.openai.base_url;
-    if (typeof cfg.providers?.["9router"]?.base_url === "string") return cfg.providers["9router"].base_url;
-    if (typeof cfg.providers?.["9router"]?.baseUrl === "string") return cfg.providers["9router"].baseUrl;
+    if (typeof cfg.providers?.["jrouter"]?.base_url === "string") return cfg.providers["jrouter"].base_url;
+    if (typeof cfg.providers?.["jrouter"]?.baseUrl === "string") return cfg.providers["jrouter"].baseUrl;
     return "";
   };
 
@@ -139,7 +139,7 @@ export default function GenericCliToolCard({
     try {
       const keyToUse = (selectedApiKey && selectedApiKey.trim())
         ? selectedApiKey
-        : (!cloudEnabled ? "sk_9router" : selectedApiKey);
+        : (!cloudEnabled ? "sk_jrouter" : selectedApiKey);
 
       const payload = {
         baseUrl: getEffectiveBaseUrl(),
@@ -242,7 +242,7 @@ export default function GenericCliToolCard({
 
   const getManualConfigContent = () => {
     const effectiveUrl = getEffectiveBaseUrl();
-    const key = selectedApiKey || "sk_9router";
+    const key = selectedApiKey || "sk_jrouter";
     const mod = selectedModel || "provider/model-id";
 
     switch (tool.id) {
@@ -254,7 +254,7 @@ export default function GenericCliToolCard({
             content: JSON.stringify(
               {
                 providers: {
-                  "9router": {
+                  "jrouter": {
                     baseUrl: effectiveUrl,
                     apiKey: key,
                     api: "openai-completions",
@@ -287,7 +287,7 @@ export default function GenericCliToolCard({
             content: JSON.stringify(
               {
                 providers: {
-                  "9router": {
+                  "jrouter": {
                     type: "openai-compat",
                     base_url: effectiveUrl,
                     api_key: key,
@@ -311,7 +311,7 @@ export default function GenericCliToolCard({
         return [
           {
             filename: "~/.smelt/config.json",
-            content: JSON.stringify({ baseUrl: effectiveUrl, apiKey: key, model: mod, _managedBy: "9router" }, null, 2),
+            content: JSON.stringify({ baseUrl: effectiveUrl, apiKey: key, model: mod, _managedBy: "jrouter" }, null, 2),
           },
         ];
       case "codewhale":

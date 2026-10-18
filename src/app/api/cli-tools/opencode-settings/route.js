@@ -51,7 +51,7 @@ const readConfig = async () => {
 
 const has9RouterConfig = (config) => {
   if (!config?.provider) return false;
-  return !!config.provider["9router"];
+  return !!config.provider["jrouter"];
 };
 
 // GET - Check opencode CLI and read current settings
@@ -68,7 +68,7 @@ export async function GET() {
     }
 
     const config = await readConfig();
-    const providerConfig = config?.provider?.["9router"];
+    const providerConfig = config?.provider?.["jrouter"];
     const modelMap = providerConfig?.models || {};
 
     return NextResponse.json({
@@ -78,7 +78,7 @@ export async function GET() {
       configPath: getConfigPath(),
         opencode: {
           models: Object.keys(modelMap),
-          activeModel: config?.model?.startsWith("9router/") ? config.model.replace(/^9router\//, "") : null,
+          activeModel: config?.model?.startsWith("jrouter/") ? config.model.replace(/^9router\//, "") : null,
           baseURL: providerConfig?.options?.baseURL || null,
         },
     });
@@ -120,7 +120,7 @@ export async function POST(request) {
     if (!config.provider) config.provider = {};
 
     // Preserve any existing 9router provider entry and its models
-    const existingProvider = config.provider["9router"] || { npm: "@ai-sdk/openai-compatible", options: {}, models: {} };
+    const existingProvider = config.provider["jrouter"] || { npm: "@ai-sdk/openai-compatible", options: {}, models: {} };
 
     // Merge options (overwrite baseURL/apiKey)
     existingProvider.options = {
@@ -139,7 +139,7 @@ export async function POST(request) {
     }
 
     // Save merged provider back
-    config.provider["9router"] = existingProvider;
+    config.provider["jrouter"] = existingProvider;
 
     // Set the active model: prefer explicit activeModel, else first of modelsArray
     // If activeModel is explicitly empty string, clear the model
@@ -148,7 +148,7 @@ export async function POST(request) {
     } else {
       const finalActive = activeModel || modelsArray[0];
       if (finalActive) {
-        config.model = `9router/${finalActive}`;
+        config.model = `jrouter/${finalActive}`;
       }
     }
 
@@ -157,7 +157,7 @@ export async function POST(request) {
     config.agent.explorer = {
       description: "Fast explorer subagent for codebase exploration",
       mode: "subagent",
-      model: `9router/${effectiveSubagentModel}`,
+      model: `jrouter/${effectiveSubagentModel}`,
     };
 
     await fs.writeFile(configPath, JSON.stringify(config, null, 2));
@@ -192,7 +192,7 @@ export async function PATCH(request) {
 
     if (clearActiveModel === true) {
       // Clear active model but keep models in the list
-      if (config.model?.startsWith("9router/")) {
+      if (config.model?.startsWith("jrouter/")) {
         config.model = "";
       }
     }
@@ -228,26 +228,26 @@ export async function DELETE(request) {
     }
 
     // If specific model provided, remove just that model
-    if (modelToRemove && config.provider?.["9router"]?.models) {
-      delete config.provider["9router"].models[modelToRemove];
+    if (modelToRemove && config.provider?.["jrouter"]?.models) {
+      delete config.provider["jrouter"].models[modelToRemove];
       
       // If no models left, remove the provider
-      if (Object.keys(config.provider["9router"].models).length === 0) {
-        delete config.provider["9router"];
-        if (config.model?.startsWith("9router/")) delete config.model;
-      } else if (config.model === `9router/${modelToRemove}`) {
+      if (Object.keys(config.provider["jrouter"].models).length === 0) {
+        delete config.provider["jrouter"];
+        if (config.model?.startsWith("jrouter/")) delete config.model;
+      } else if (config.model === `jrouter/${modelToRemove}`) {
         // If removed model was active, switch to first remaining model
-        const remainingModels = Object.keys(config.provider["9router"].models);
-        config.model = `9router/${remainingModels[0]}`;
+        const remainingModels = Object.keys(config.provider["jrouter"].models);
+        config.model = `jrouter/${remainingModels[0]}`;
       }
     } else {
       // No specific model - remove entire 9router provider
-      if (config.provider) delete config.provider["9router"];
-      if (config.model?.startsWith("9router/")) delete config.model;
+      if (config.provider) delete config.provider["jrouter"];
+      if (config.model?.startsWith("jrouter/")) delete config.model;
     }
 
     // Remove subagent configuration
-    if (config.agent?.explorer?.model?.startsWith("9router/")) {
+    if (config.agent?.explorer?.model?.startsWith("jrouter/")) {
       delete config.agent.explorer;
       // Clean up empty agent object
       if (Object.keys(config.agent).length === 0) delete config.agent;

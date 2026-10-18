@@ -84,7 +84,7 @@ export default function SkillsPage() {
         </div>
         <p className={styles.hint}>Paste this to your AI:</p>
         <div className={styles.command}>
-          <code>Read this skill and use it: {getSkillRawUrl("9router")}</code>
+          <code>Read this skill and use it: {getSkillRawUrl("jrouter")}</code>
         </div>
       </section>
 

@@ -68,7 +68,7 @@ describe("9router show", () => {
   it("flags codex when 9router is present but not the active provider", async () => {
     const f = path.join(home, ".codex", "config.toml");
     fs.mkdirSync(path.dirname(f), { recursive: true });
-    fs.writeFileSync(f, 'model = "gpt-6"\nmodel_provider = "openai"\n[model_providers.9router]\nbase_url = "http://gw.test/v1"\n');
+    fs.writeFileSync(f, 'model = "gpt-6"\nmodel_provider = "openai"\n[model_providers.jrouter]\nbase_url = "http://gw.test/v1"\n');
     await show.run(["codex"]);
     expect(out.join("\n")).toContain("not the active provider");
   });

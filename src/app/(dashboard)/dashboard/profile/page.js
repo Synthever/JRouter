@@ -99,7 +99,7 @@ export default function ProfilePage() {
   const [ssoTypeTab, setSsoTypeTab] = useState("saml");
   const [samlForm, setSamlForm] = useState({
     samlEntryPoint: "",
-    samlIssuer: "urn:9router:sp",
+    samlIssuer: "urn:jrouter:sp",
     samlCert: "",
     samlLoginLabel: "Sign in with SAML SSO",
     samlAttributeEmail: "email",
@@ -868,7 +868,7 @@ export default function ProfilePage() {
           <div className={styles.settingRow}>
             <div className="min-w-0">
               <p className={styles.settingTitle}>Database Location</p>
-              <code className={styles.settingDescription}>~/.9router/db/data.sqlite</code>
+              <code className={styles.settingDescription}>~/.jrouter/db/data.sqlite</code>
             </div>
             <div className={styles.actions}>
               <Button

@@ -10,7 +10,7 @@ import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
-const PROVIDER_ID = "9router";
+const PROVIDER_ID = "jrouter";
 const getOmpDir = () => path.join(os.homedir(), ".omp", "agent");
 const getOmpDbPath = () => path.join(getOmpDir(), "agent.db");
 const getOmpModelsYmlPath = () => path.join(getOmpDir(), "models.yml");

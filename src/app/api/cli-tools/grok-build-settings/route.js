@@ -120,7 +120,7 @@ export async function POST(request) {
       success: true,
       message: "Grok Build settings applied successfully!",
       configPath: getGrokConfigPath(),
-      modelSlot: "9router",
+      modelSlot: "jrouter",
     });
   } catch (error) {
     console.log("Error updating grok-build settings:", error);

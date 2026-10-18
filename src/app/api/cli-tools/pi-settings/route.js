@@ -40,7 +40,7 @@ const checkPiInstalled = async () => {
 
 const has9RouterConfig = (settings) => {
   if (!settings || !settings.providers) return false;
-  const p = settings.providers["9router"];
+  const p = settings.providers["jrouter"];
   if (p && p.baseUrl) return true;
   for (const prov of Object.values(settings.providers)) {
     if (prov.baseUrl && prov.baseUrl.includes("20128")) return true;
@@ -145,7 +145,7 @@ export async function POST(request) {
       modelList = [{ id: modelId, name: modelId, contextWindow: 128000, maxTokens: 16384 }];
     }
 
-    existing.providers["9router"] = {
+    existing.providers["jrouter"] = {
       ...existingProvider,
       baseUrl: normalizedBaseUrl,
       apiKey: apiKey || existingProvider.apiKey || await resolveCliApiKey(null),
@@ -176,8 +176,8 @@ export async function DELETE() {
       return NextResponse.json({ success: true, message: "No config file to reset" });
     }
 
-    if (existing.providers && existing.providers["9router"]) {
-      delete existing.providers["9router"];
+    if (existing.providers && existing.providers["jrouter"]) {
+      delete existing.providers["jrouter"];
       if (Object.keys(existing.providers).length === 0) delete existing.providers;
       await fs.writeFile(configPath, JSON.stringify(existing, null, 2), "utf-8");
     }
