@@ -19,6 +19,10 @@
     "build:tray-arm64": "node scripts/buildTrayArm64.js",
     "pack:cli": "npm run build && npm pack --pack-destination ..",
     "publish:cli": "npm run build && npm publish",
+    "release": "node scripts/release-cli.js patch",
+    "release:minor": "node scripts/release-cli.js minor",
+    "release:major": "node scripts/release-cli.js major",
+    "release:dry": "node scripts/release-cli.js patch --dry-run",
     "postinstall": "node hooks/postinstall.js",
     "prepublishOnly": "npm run build"
   },
