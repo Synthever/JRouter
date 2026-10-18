@@ -75,7 +75,7 @@ try {
 const changelogPath = path.join(CLI_DIR, "CHANGELOG.md");
 const stamp = new Date().toISOString().slice(0, 10);
 const prevChangelog = fs.existsSync(changelogPath) ? fs.readFileSync(changelogPath, "utf8") : "# Changelog\n";
-step(`Changelog entry prepared for v${oldV} → next ${bump}`);
+step(`Changelog entry prepared for v${oldV} → next ${bump}`, () => {});
 console.log(`\n${changelogNotes || "- (no repo changes in scope)"}\n`);
 
 // ── 2. Version bump ────────────────────────────────────────────────────
@@ -109,7 +109,7 @@ if (!dryRun) {
 ok("app bundle built");
 
 // ── 4. Pack sanity ─────────────────────────────────────────────────────
-step("npm pack →Sanity check");
+step("npm pack + size sanity", () => {
 if (!dryRun) {
   sh("rm -f /tmp/synthever-jrouter-latest.tgz");
   sh("npm pack --pack-destination /tmp");
@@ -118,29 +118,25 @@ if (!dryRun) {
   const stat = fs.statSync(tgz);
   ok(`tarball ${(stat.size / 1024 / 1024).toFixed(1)}MB → ${tgz}`);
   if (stat.size > 60 * 1024 * 1024) die("tarball > 60MB — check the app bundle for bloat");
-}
-
+} });
 // ── 5. Publish (interactive OTP) ───────────────────────────────────────
 if (!noPublish) {
-  step(`npm publish ${PKG_NAME}@${newV} (OTP/web-auth may prompt)`);
-  if (!dryRun) {
-    const { spawnSync } = require("node:child_process");
+  step(`npm publish ${PKG_NAME}@${newV} (OTP/web-auth may prompt)`, () => {
     const r = spawnSync("npm", ["publish"], { stdio: "inherit", cwd: CLI_DIR });
     if (r.status !== 0) die(`npm publish exited ${r.status}`);
-  }
+  });
   ok("published");
 } else {
   say("publish skipped (--no-publish)");
 }
 
 // ── 6. Commit, tag, push, verify ───────────────────────────────────────
-step("Commit cli package.json + changelog, tag & push");
-if (!dryRun) {
+step("Commit cli package.json + changelog, tag & push", () => {
   sh(`git add cli/package.json package-lock.json cli/CHANGELOG.md cli/app 2>/dev/null || git add cli/package.json cli/CHANGELOG.md cli/app`, { cwd: ROOT_DIR, quiet: true });
   sh(`git commit -m "chore(cli): release ${newV}" || true`, { cwd: ROOT_DIR, quiet: true });
   sh(`git tag "cli-v${newV}"`, { cwd: ROOT_DIR });
   sh("git push origin master --follow-tags", { cwd: ROOT_DIR });
-}
+});
 ok("pushed with tag");
 
 if (!noPublish && !dryRun) {
