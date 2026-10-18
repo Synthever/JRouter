@@ -15,6 +15,20 @@ describe("workbuddy provider wiring", () => {
     expect(PROVIDER_OAUTH.workbuddy.refreshUrl).toContain("www.workbuddy.ai");
   });
 
+  it("carries the live-verified 2026-10-18 catalog on both partner gateways", async () => {
+    // Relationship contract: same catalog on both gateways, 15 live ids.
+    const intl = (await import("open-sse/providers/registry/codebuddy-intl.js")).default;
+    const wbIds = registryWorkbuddy.models.map((m) => m.id);
+    const intlIds = intl.models.map((m) => m.id);
+    expect(wbIds).toEqual(intlIds);
+    for (const must of ["glm-5.3", "glm-5.3-flash", "kimi-k3", "kimi-k2.8-preview", "hy4-preview", "hy3"]) {
+      expect(wbIds).toContain(must);
+    }
+    for (const dead of ["glm-4.7", "minimax-m2.7", "hy3-preview", "deepseek-v4-pro", "deepseek-v3-2-volc"]) {
+      expect(wbIds).not.toContain(dead);
+    }
+  });
+
   it("resolves a dedicated executor mirroring the codebuddy-intl transform", () => {
     const exec = getExecutor("workbuddy");
     expect(exec?.constructor?.name).toBe("WorkBuddyExecutor");
