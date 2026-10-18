@@ -79,10 +79,9 @@ step(`Changelog entry prepared for v${oldV} → next ${bump}`, () => {});
 console.log(`\n${changelogNotes || "- (no repo changes in scope)"}\n`);
 
 // ── 2. Version bump ────────────────────────────────────────────────────
-step(`npm version ${bump}`);
-if (!dryRun) {
+step(`npm version ${bump}`, () => {
   sh(`npm version ${bump} --no-git-tag-version`, { cwd: CLI_DIR });
-}
+});
 const newV = dryRun ? "(dry)" : JSON.parse(fs.readFileSync(path.join(CLI_DIR, "package.json"), "utf8")).version;
 ok(`${PKG_NAME} ${oldV} → ${newV}`);
 if (!dryRun) {
@@ -90,10 +89,8 @@ if (!dryRun) {
   const entry = `## cli-v${newV} (${stamp})\n\n${changelogNotes || "- (no repo changes in scope)"}\n\n`;
   fs.writeFileSync(changelogPath, header + entry + prevChangelog.replace(/^# Changelog\n\n(All notable[^\n]*\n\n)?/, ""));
 }
-
 // ── 3. Build the app bundle into cli/app ───────────────────────────────
-step("Build Next standalone → cli/app (root npm install + build)");
-if (!dryRun) {
+step("Build Next standalone → cli/app (root npm install + build)", () => {
   const hasAws = fs.existsSync(path.join(ROOT_DIR, "node_modules/@aws-sdk/credential-providers"));
   if (!hasAws) {
     say("  root deps missing (@aws-sdk) → npm install…");
@@ -105,7 +102,7 @@ if (!dryRun) {
     sh("npm install --no-audit --no-fund", { cwd: CLI_DIR });
   }
   sh("npm run --prefix . build", { cwd: CLI_DIR });
-}
+});
 ok("app bundle built");
 
 // ── 4. Pack sanity ─────────────────────────────────────────────────────
