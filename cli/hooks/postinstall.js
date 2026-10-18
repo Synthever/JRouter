@@ -20,7 +20,7 @@ try {
 try {
   ensureTrayRuntime({ silent: false });
 } catch (e) {
-  console.warn(`[9router] tray runtime skipped: ${e.message}`);
+  console.warn(`[JRouter] tray runtime skipped: ${e.message}`);
 }
 
 process.exit(0);

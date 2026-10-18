@@ -1,11 +1,11 @@
-# 9Router - FREE AI Router & Token Saver
+# JRouter - AI Router & Token Saver
 
 **Never stop coding. Save 20-40% tokens with RTK + auto-fallback to FREE & cheap AI models.**
 
 **Connect All AI Code Tools (Claude Code, Cursor, Antigravity, Copilot, Codex, Gemini, OpenCode, Cline, OpenClaw...) to 40+ AI Providers & 100+ Models.**
 
-[![npm](https://img.shields.io/npm/v/9router.svg)](https://www.npmjs.com/package/9router)
-[![Downloads](https://img.shields.io/npm/dm/9router.svg)](https://www.npmjs.com/package/9router)
+[![npm](https://img.shields.io/npm/v/@synthever/jrouter.svg)](https://www.npmjs.com/package/@synthever/jrouter)
+[![Downloads](https://img.shields.io/npm/dm/@synthever/jrouter.svg)](https://www.npmjs.com/package/@synthever/jrouter)
 [![Docker Pulls](https://img.shields.io/docker/pulls/decolua/9router.svg?logo=docker&label=Docker%20pulls)](https://hub.docker.com/r/decolua/9router)
 [![GHCR](https://img.shields.io/badge/GHCR-decolua%2F9router-blue?logo=github)](https://github.com/decolua/9router/pkgs/container/9router)
 [![License](https://img.shields.io/npm/l/9router.svg)](https://github.com/decolua/9router/blob/main/LICENSE)
@@ -44,7 +44,7 @@ npm install -g 9router
 9router
 
 # Or run directly with npx
-npx 9router
+npx @synthever/jrouter
 ```
 
 **Option 2 — Docker (server/VPS):**
@@ -95,9 +95,9 @@ That's it! Start coding with FREE AI models.
 Already running 9Router on another machine (e.g. a team server on your LAN)? Point this machine's CLI tools at it — no local server is started:
 
 ```bash
-npx 9router connect http://<server-host>:20128                       # pick tools interactively
-npx 9router connect http://<server-host>:20128 --tools claude,codex  # or choose up front
-npx 9router connect --reset --tools claude,codex                     # undo
+npx @synthever/jrouter connect http://<server-host>:20128                       # pick tools interactively
+npx @synthever/jrouter connect http://<server-host>:20128 --tools claude,codex  # or choose up front
+npx @synthever/jrouter connect --reset --tools claude,codex                     # undo
 ```
 
 It logs in with the dashboard password (hidden prompt), reuses or creates an API key named `cli-<hostname>`, and writes each tool's config (backing up the original once as `*.bak-9router`).
@@ -119,22 +119,22 @@ Models come from the **server's own CLI-tools configuration**, so a client gets 
 
 ```bash
 # One Claude tier; the other tiers still come from the server
-npx 9router connect http://<server-host>:20128 --tools claude --sonnet cc/claude-sonnet-5-5
+npx @synthever/jrouter connect http://<server-host>:20128 --tools claude --sonnet cc/claude-sonnet-5-5
 
 # Every Claude tier
-npx 9router connect http://<server-host>:20128 --tools claude \
+npx @synthever/jrouter connect http://<server-host>:20128 --tools claude \
   --fable cc/claude-fable-5-1 --opus cc/claude-opus-5-5 \
   --sonnet cc/claude-sonnet-5-5 --haiku cc/claude-haiku-4-5-20251001
 
 # All non-Claude tools at once
-npx 9router connect http://<server-host>:20128 --tools codex,opencode,kilo --model ocg/deepseek-flash
+npx @synthever/jrouter connect http://<server-host>:20128 --tools codex,opencode,kilo --model ocg/deepseek-flash
 
 # Claude and other tools in one run
-npx 9router connect http://<server-host>:20128 --tools claude,codex --opus cc/claude-opus-5-5 --model gpt-6
+npx @synthever/jrouter connect http://<server-host>:20128 --tools claude,codex --opus cc/claude-opus-5-5 --model gpt-6
 
 # A different model per tool: --model covers every non-Claude tool in a run, so run once per tool
-npx 9router connect http://<server-host>:20128 --tools codex --model gpt-6
-npx 9router connect http://<server-host>:20128 --tools opencode --model ocg/glm-5.3
+npx @synthever/jrouter connect http://<server-host>:20128 --tools codex --model gpt-6
+npx @synthever/jrouter connect http://<server-host>:20128 --tools opencode --model ocg/glm-5.3
 ```
 
 A model the server doesn't list is still written, with a `not listed by server` warning. To see the ids it serves: `curl http://<server-host>:20128/v1/models -H "Authorization: Bearer <your key>"`.
@@ -144,10 +144,10 @@ A model the server doesn't list is still written, with a `not listed by server` 
 `9router show` prints what each CLI tool on this machine is currently set to — base URL, masked API key and models. It only reads local files and never contacts a server.
 
 ```bash
-npx 9router show                 # every supported tool
-npx 9router show claude          # one tool
-npx 9router show claude codex    # several
-npx 9router show claude --json   # machine-readable (key still masked)
+npx @synthever/jrouter show                 # every supported tool
+npx @synthever/jrouter show claude          # one tool
+npx @synthever/jrouter show claude codex    # several
+npx @synthever/jrouter show claude --json   # machine-readable (key still masked)
 ```
 
 ```
@@ -174,7 +174,7 @@ Tools not pointed at 9router are listed as `not configured`. For Codex, OpenCode
 | `--print-env` | Also print `OPENAI_BASE_URL` / `OPENAI_API_KEY` for other CLIs |
 | `--reset` | Remove the 9router settings from the selected tools |
 
-See `9router connect --help` for the full list.
+See `jrouter connect --help` for the full list.
 
 > ⚠️ Over plain `http://` the password and API key are sent unencrypted — use a trusted LAN/VPN or put HTTPS in front. The API key is stored in each tool's config file.
 

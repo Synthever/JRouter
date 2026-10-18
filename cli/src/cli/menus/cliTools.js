@@ -361,9 +361,9 @@ async function buildOpenClawHeader() {
   }
 
   // Extract 9Router provider config
-  const provider = settings?.models?.providers?.["9router"];
+  const provider = settings?.models?.providers?.["jrouter"];
   const primary = settings?.agents?.defaults?.model?.primary || "";
-  const model = primary.startsWith("9router/") ? primary.replace("9router/", "") : (provider?.models?.[0]?.id || "");
+  const model = primary.startsWith("9router/") ? primary.replace("jrouter/", "") : (provider?.models?.[0]?.id || "");
   const lines = [`Status:   ${COLORS.green}✓ Configured${COLORS.reset}`];
   if (provider?.baseUrl) lines.push(`Endpoint: ${COLORS.cyan}${provider.baseUrl}${COLORS.reset}`);
   if (model)             lines.push(`Model:    ${COLORS.dim}${model}${COLORS.reset}`);
@@ -528,7 +528,7 @@ async function fetchHermesProfiles() {
 const hermesProfileLine = (p) => {
   const name = p.displayName && !p.isDefault ? `${p.name} (${p.displayName})` : p.name;
   const state = p.has9Router
-    ? `${COLORS.green}✓ 9router${COLORS.reset}`
+    ? `${COLORS.green}✓ JRouter${COLORS.reset}`
     : p.baseUrl
       ? `${COLORS.red}other: ${p.baseUrl}${COLORS.reset}`
       : `${COLORS.red}✗ not configured${COLORS.reset}`;
