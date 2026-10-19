@@ -19,16 +19,13 @@ export function pruneOrphanCustomModels(db) {
   const rows = db.all(`SELECT key, value FROM kv WHERE scope = 'customModels'`);
   const deadAliases = [...new Set(
     rows
-      .map((r) => {
-        try { return (parseJson(r.value, {}) || {}).providerAlias || r.key.split("|")[0]; }
-        catch { return r.key.split("|")[0]; }
-      })
+      .map((r) => (parseJson(r.value, {}) || {}).providerAlias || r.key.split("|")[0])
       .filter((alias) => NODE_ALIAS_RE.test(alias) && !live.has(alias))
   )];
   let removed = 0;
   for (const alias of deadAliases) {
-    removed += rows.filter((r) => r.key.startsWith(`${alias}|`)).length;
-    db.run(`DELETE FROM kv WHERE scope = 'customModels' AND key LIKE ?`, [`${alias}|%`]);
+    const res = db.run(`DELETE FROM kv WHERE scope = 'customModels' AND key LIKE ?`, [`${alias}|%`]);
+    removed += res?.changes ?? 0;
   }
   return removed;
 }

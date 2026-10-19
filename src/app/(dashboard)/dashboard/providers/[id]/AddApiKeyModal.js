@@ -233,36 +233,45 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
     const plan = planBulkAdd(parsed.entries.map((e) => (e.name ? `${e.name}|${e.apiKey}` : e.apiKey)), existingNames, { isCloudflareAi });
     let success = 0;
     let failed = 0;
-    for (const entry of plan) {
+    const validateKey = async (apiKey) => {
       try {
-        let isValid = false;
-        try {
-          const vres = await fetch("/api/providers/validate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ provider, apiKey: entry.apiKey }),
-          });
-          const vdata = await vres.json().catch(() => ({}));
-          isValid = !!vdata.valid;
-        } catch {
-          isValid = false;
-        }
-        const res = await fetch("/api/providers", {
+        const vres = await fetch("/api/providers/validate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            provider,
-            apiKey: entry.apiKey,
-            name: entry.name,
-            priority: 1,
-            testStatus: isValid ? "active" : "unknown",
-            ...(entry.providerSpecificData ? { providerSpecificData: entry.providerSpecificData } : {}),
-          }),
+          body: JSON.stringify({ provider, apiKey }),
         });
-        if (res.ok) success++;
-        else failed++;
+        const vdata = await vres.json().catch(() => ({}));
+        return !!vdata.valid;
       } catch {
-        failed++;
+        return false;
+      }
+    };
+    // Validate with bounded concurrency (each check is a live upstream probe;
+    // sequential is slow at 10+ keys). Saves stay sequential to keep ordering.
+    const CHUNK = 4;
+    for (let i = 0; i < plan.length; i += CHUNK) {
+      const chunk = plan.slice(i, i + CHUNK);
+      const valid = await Promise.all(chunk.map((entry) => validateKey(entry.apiKey)));
+      for (let j = 0; j < chunk.length; j++) {
+        const entry = chunk[j];
+        try {
+          const res = await fetch("/api/providers", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              provider,
+              apiKey: entry.apiKey,
+              name: entry.name,
+              priority: 1,
+              testStatus: valid[j] ? "active" : "unknown",
+              ...(entry.providerSpecificData ? { providerSpecificData: entry.providerSpecificData } : {}),
+            }),
+          });
+          if (res.ok) success++;
+          else failed++;
+        } catch {
+          failed++;
+        }
       }
     }
     setSaving(false);

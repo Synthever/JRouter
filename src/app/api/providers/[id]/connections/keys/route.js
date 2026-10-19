@@ -23,15 +23,19 @@ export async function GET(request, { params }) {
         ...(c.priority ? { priority: c.priority } : {}),
       }));
 
-    return NextResponse.json({
-      provider: providerId,
-      providerName,
-      exportedAt: new Date().toISOString(),
-      count: keys.length,
-      keys,
-    });
+    return NextResponse.json(
+      {
+        provider: providerId,
+        providerName,
+        exportedAt: new Date().toISOString(),
+        count: keys.length,
+        keys,
+      },
+      // Plaintext credentials must never land in a proxy/browser cache.
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (error) {
-    console.log("Error exporting connection keys:", error);
+    console.error("[keys-export] failed:", error);
     return NextResponse.json({ error: "Failed to export connection keys" }, { status: 500 });
   }
 }
