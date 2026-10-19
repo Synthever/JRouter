@@ -36,6 +36,15 @@ export const FILTERS = {
       .filter((m) => m.id?.startsWith("mimo") || m.name?.toLowerCase().includes("mimo"))
       .map((m) => ({ id: m.id, name: m.name || m.id })),
 
+  // BeatAPI text catalogue (GET /v1/text/models, public): a free text model has
+  // family "free" AND an id ending in "-free". The family check drops look-alike
+  // ids in other families; jev-*-free is a Decisions API model and never lists
+  // in this text catalogue, so it is excluded by construction.
+  "beatapi-free": (models) =>
+    (Array.isArray(models) ? models : [])
+      .filter((m) => typeof m?.id === "string" && m.id.endsWith("-free") && m.family === "free")
+      .map((m) => ({ id: m.id, name: m.id })),
+
   // MiniMax Code (mcode) live catalog: {providers:[{providerId:"minimax",
   // config:{models:{<id>:{name, limit, modalities, thinking_config}}}}]} —
   // arrives wrapped in a single-element array (see route normalization).
