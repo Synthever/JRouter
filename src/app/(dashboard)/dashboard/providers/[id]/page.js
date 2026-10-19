@@ -1589,15 +1589,16 @@ export default function ProviderDetailPage() {
             <h2 className="ui-eyebrow"><Icon className="text-[16px]">vpn_key</Icon>Connections</h2>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
               {connections.some((c) => (c.authType || "apikey") === "apikey") && (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  icon="download"
+                <button
+                  type="button"
                   onClick={handleExtractKeys}
                   disabled={extractingKeys}
+                  title={extractingKeys ? "Extracting keys…" : "Extract keys"}
+                  aria-label={extractingKeys ? "Extracting keys" : "Extract keys"}
+                  className="inline-flex size-7 items-center justify-center rounded-[var(--r1)] text-[var(--text-3)] transition-colors hover:text-[var(--text)] focus-visible:text-[var(--text)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                 >
-                  {extractingKeys ? "Extracting..." : "Extract Keys"}
-                </Button>
+                  <Icon className="text-[16px]">{extractingKeys ? "hourglass_top" : "download"}</Icon>
+                </button>
               )}
               {connections.length > 0 && proxyPools.length > 0 && (
                 <Button
@@ -1621,25 +1622,27 @@ export default function ProviderDetailPage() {
                       Delete Selected ({selectedConnectionIds.length})
                     </Button>
                   )}
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    icon="sync"
+                  <button
+                    type="button"
                     onClick={handleRunOneByOneTest}
                     disabled={oneByOneRunning}
+                    title={oneByOneRunning ? "Testing connections one-by-one…" : "Test connections one-by-one"}
+                    aria-label={oneByOneRunning ? "Testing connections one by one" : "Test connections one by one"}
+                    className="inline-flex size-7 items-center justify-center rounded-[var(--r1)] text-[var(--text-3)] transition-colors hover:text-[var(--text)] focus-visible:text-[var(--text)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                   >
-                    {oneByOneRunning ? "Testing Connection One-by-One..." : "Test Connection One-by-One"}
-                  </Button>
+                    <Icon className="text-[16px]">{oneByOneRunning ? "hourglass_top" : "sync"}</Icon>
+                  </button>
                   {oneByOneRunning && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      icon="stop"
+                    <button
+                      type="button"
                       onClick={handleStopOneByOneTest}
                       disabled={oneByOneStopping}
+                      title={oneByOneStopping ? "Stopping…" : "Stop testing"}
+                      aria-label={oneByOneStopping ? "Stopping" : "Stop testing"}
+                      className="inline-flex size-7 items-center justify-center rounded-[var(--r1)] text-[var(--text-3)] transition-colors hover:text-[var(--text)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                     >
-                      {oneByOneStopping ? "Stopping..." : "Stop"}
-                    </Button>
+                      <Icon className="text-[16px]">stop</Icon>
+                    </button>
                   )}
                 </>
               )}
