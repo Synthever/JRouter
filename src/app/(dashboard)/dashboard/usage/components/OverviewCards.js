@@ -16,7 +16,10 @@ function observedSeconds(stats) {
   const start = stats.periodStart ? new Date(stats.periodStart).getTime() : NaN;
   const end = stats.periodEnd ? new Date(stats.periodEnd).getTime() : NaN;
   if (Number.isFinite(start) && Number.isFinite(end) && end > start) {
-    return Math.max(1, (end - start) / 1000);
+    // Daily dateKeys are local midnights — include the partial day up to now.
+    const now = Date.now();
+    const windowEnd = end < now && now - end < 86400 * 1000 ? now : end;
+    return Math.max(1, (windowEnd - start) / 1000);
   }
   return PERIOD_SECONDS[stats.period] || 86400;
 }
@@ -26,7 +29,7 @@ const avgTokensSec = (s) => {
   return total > 0 ? total / observedSeconds(s) : 0;
 };
 const avgLatencyMs = (s) => (s.latencySamples > 0 ? s.totalLatencyMs / s.latencySamples : 0);
-const fmtRate = (n) => (n >= 10 ? String(Math.round(n)) : n > 0 ? n.toFixed(1) : "0");
+const fmtRate = (n) => (n >= 10 ? String(Math.round(n)) : n >= 1 ? n.toFixed(1) : n > 0 ? n.toFixed(2) : "0");
 const fmtLatency = (ms) => {
   if (!ms || ms <= 0) return "—";
   if (ms < 1000) return `${Math.round(ms)}ms`;
