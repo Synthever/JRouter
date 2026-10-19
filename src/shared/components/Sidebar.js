@@ -19,19 +19,37 @@ const VISIBLE_MEDIA_KINDS = ["embedding", "image", "video", "tts", "stt", "syste
 // Combined entry: webSearch + webFetch share one page at /dashboard/media-providers/web
 const COMBINED_WEB_ITEM = { id: "web", label: "Web Fetch & Search", icon: "travel_explore", href: "/dashboard/media-providers/web" };
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: "layout-dashboard" },
-  { href: "/dashboard/endpoint", label: "Endpoint & Key", icon: "api" },
-  { href: "/dashboard/providers", label: "Providers", icon: "dns" },
-  // { href: "/dashboard/basic-chat", label: "Basic Chat", icon: "chat" }, // Hidden
-  { href: "/dashboard/combos", label: "Combo & Vision Adapter", icon: "layers" },
-  { href: "/dashboard/playground", label: "Playground", icon: "science" },
-  { href: "/dashboard/usage", label: "Usage", icon: "bar_chart" },
-  { href: "/dashboard/health", label: "Health", icon: "monitoring" },
-  { href: "/dashboard/quota", label: "Quota Tracker", icon: "data_usage" },
-  { href: "/dashboard/token-saver", label: "Token Saver", icon: "savings" },
-  // { href: "/dashboard/pxpipe", label: "PXPIPE", icon: "image" },
-  { href: "/dashboard/cli-tools", label: "CLI Tools", icon: "terminal" },
+const navGroups = [
+  {
+    title: null,
+    items: [
+      { href: "/dashboard", label: "Dashboard", icon: "layout-dashboard" },
+      { href: "/dashboard/endpoint", label: "Endpoint & Key", icon: "api" },
+      { href: "/dashboard/providers", label: "Providers", icon: "dns" },
+    ],
+  },
+  {
+    title: "AI",
+    items: [
+      { href: "/dashboard/combos", label: "Combo & Vision Adapter", icon: "layers" },
+      { href: "/dashboard/playground", label: "Playground", icon: "science" },
+    ],
+  },
+  {
+    title: "Monitor",
+    items: [
+      { href: "/dashboard/usage", label: "Usage", icon: "bar_chart" },
+      { href: "/dashboard/health", label: "Health", icon: "monitoring" },
+      { href: "/dashboard/quota", label: "Quota Tracker", icon: "data_usage" },
+    ],
+  },
+  {
+    title: "Tools",
+    items: [
+      { href: "/dashboard/token-saver", label: "Token Saver", icon: "savings" },
+      { href: "/dashboard/cli-tools", label: "CLI Tools", icon: "terminal" },
+    ],
+  },
 ];
 
 const debugItems = [
@@ -161,23 +179,33 @@ export default function Sidebar({ onClose, onToggleCollapse }) {
 
         {/* Navigation */}
         <nav aria-label="Main navigation" className="dashboard-sidebar__nav flex-1 min-h-0 overflow-y-auto no-scrollbar">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onClose}
-              aria-current={isActive(item.href) ? "page" : undefined}
-              className={navItemClass(isActive(item.href))}
+          {navGroups.map((group) => (
+            <div
+              key={group.title || "main"}
+              className={group.title ? "dashboard-sidebar__section" : undefined}
             >
-              <Icon
-                name={item.icon}
-                className={cn(
-                  "text-[16px]",
-                  isActive(item.href) ? "text-[var(--text)]" : "text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
-                )}
-              />
-              <span className="text-[12.5px] font-medium">{item.label}</span>
-            </Link>
+              {group.title && (
+                <p className="dashboard-sidebar__section-title">{group.title}</p>
+              )}
+              {group.items.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onClose}
+                  aria-current={isActive(item.href) ? "page" : undefined}
+                  className={navItemClass(isActive(item.href))}
+                >
+                  <Icon
+                    name={item.icon}
+                    className={cn(
+                      "text-[16px]",
+                      isActive(item.href) ? "text-[var(--text)]" : "text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
+                    )}
+                  />
+                  <span className="text-[12.5px] font-medium">{item.label}</span>
+                </Link>
+              ))}
+            </div>
           ))}
 
           {/* System section */}
