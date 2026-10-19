@@ -1,6 +1,10 @@
-# Changelog
+## cli-v1.0.4 (2026-10-19)
 
-All notable changes to the `@synthever/jrouter` CLI package.
+- feat(ui): group sidebar navigation with separators
+- feat(ui): rename AI group to Chat and move Combo under Providers
+- feat(ui): demoted badge + live refresh on connection lists
+- ui(providers): icon-only actions for extract keys and one-by-one test
+- fix(usage): readable labels for deleted custom compatible nodes
 
 ## cli-v1.0.3 (2026-10-19)
 
