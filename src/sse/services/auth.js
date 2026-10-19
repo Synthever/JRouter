@@ -1,4 +1,4 @@
-import { getProviderConnections, validateApiKey, updateProviderConnection, getSettings, getProxyPools } from "@/lib/localDb";
+import { getProviderConnections, validateApiKey, updateProviderConnection, getSettings, updateSettings, getProxyPools } from "@/lib/localDb";
 import { resolveConnectionProxyConfig, pickProxyPoolId } from "@/lib/network/connectionProxy";
 import { formatRetryAfter, checkFallbackError, isModelLockActive, buildModelLockUpdate, getEarliestModelLockUntil } from "open-sse/services/accountFallback.js";
 import { applyDemotionOverlay, shouldDemoteStatus } from "./demotion.js";
@@ -172,44 +172,40 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
     if (connection) {
       // skip strategy
     } else if (strategy === "round-robin") {
-      const stickyLimit = providerOverride.stickyRoundRobinLimit || settings.stickyRoundRobinLimit || 3;
+      // Sequential pool rotation (v2): serve requests strictly in the effective
+      // (demotion-aware) order — req1→key1, req2→key2, … — over a window of
+      // poolSize keys (the "Pool:" input, formerly labeled "Sticky"). The
+      // move-on-error overlay keeps failing keys at the back, so the window
+      // naturally holds the freshest keys: a demoted key sinks out of the
+      // window and a recovered key re-enters at its curated spot. The cursor
+      // persists per under a provider-scoped settings key; identity-based so a
+      // membership change re-anchors from the window head instead of skipping.
+      const poolSize = Math.max(1, Math.min(
+        Number(providerOverride.stickyRoundRobinLimit) || Number(settings.stickyRoundRobinLimit) || 3,
+        availableConnections.length
+      ));
+      const window = availableConnections.slice(0, poolSize);
+      const rrState = ((settings.providerStrategies || {})[`__rrState_${providerId}`]) || {};
+      const windowIds = window.map((c) => c.id);
+      const lastServedId = rrState.lastServedId && windowIds.includes(rrState.lastServedId)
+        ? rrState.lastServedId
+        : null;
+      const next = lastServedId
+        ? window[(windowIds.indexOf(lastServedId) + 1) % window.length]
+        : window[0];
 
-      // Sort by lastUsed (most recent first) to find current candidate
-      const byRecency = [...availableConnections].sort((a, b) => {
-        if (!a.lastUsedAt && !b.lastUsedAt) return (a.priority || 999) - (b.priority || 999);
-        if (!a.lastUsedAt) return 1;
-        if (!b.lastUsedAt) return -1;
-        return new Date(b.lastUsedAt) - new Date(a.lastUsedAt);
+      await updateProviderConnection(next.id, {
+        lastUsedAt: new Date().toISOString(),
+        consecutiveUseCount: 1
       });
 
-      const current = byRecency[0];
-      const currentCount = current?.consecutiveUseCount || 0;
+      // Persist the cursor next to the strategies (merged by settingsRepo);
+      // per-provider key = one writer per provider, no cross-provider races.
+      const rrStrategies = { ...(settings.providerStrategies || {}) };
+      rrStrategies[`__rrState_${providerId}`] = { lastServedId: next.id };
+      await updateSettings({ providerStrategies: rrStrategies });
 
-      if (current && current.lastUsedAt && currentCount < stickyLimit) {
-        // Stay with current account
-        connection = current;
-        // Update lastUsedAt and increment count (await to ensure persistence)
-        await updateProviderConnection(connection.id, {
-          lastUsedAt: new Date().toISOString(),
-          consecutiveUseCount: (connection.consecutiveUseCount || 0) + 1
-        });
-      } else {
-        // Pick the least recently used (excluding current if possible)
-        const sortedByOldest = [...availableConnections].sort((a, b) => {
-          if (!a.lastUsedAt && !b.lastUsedAt) return (a.priority || 999) - (b.priority || 999);
-          if (!a.lastUsedAt) return -1;
-          if (!b.lastUsedAt) return 1;
-          return new Date(a.lastUsedAt) - new Date(b.lastUsedAt);
-        });
-
-        connection = sortedByOldest[0];
-
-        // Update lastUsedAt and reset count to 1 (await to ensure persistence)
-        await updateProviderConnection(connection.id, {
-          lastUsedAt: new Date().toISOString(),
-          consecutiveUseCount: 1
-        });
-      }
+      connection = next;
     } else {
       // Default: fill-first (already sorted by priority in getProviderConnections)
       connection = availableConnections[0];

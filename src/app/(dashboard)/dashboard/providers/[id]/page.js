@@ -1646,7 +1646,7 @@ export default function ProviderDetailPage() {
                 />
                 {providerStrategy === "round-robin" && (
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-text-muted">Sticky:</span>
+                    <span className="text-xs text-text-muted">Pool:</span>
                     <input
                       type="number"
                       min={1}
