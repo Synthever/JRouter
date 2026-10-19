@@ -950,18 +950,27 @@ body:has(.landing-page)::-webkit-scrollbar,
     height: 44px;
   }
 
-  .dashboard-header:has(.dashboard-header__search) {
-    flex-wrap: wrap;
+  /* Mobile: keep search inline with the title instead of dropping to a
+     second row. Title shrinks (min-w-0 + truncate already in markup),
+     search takes the remaining width. */
+  .dashboard-header {
+    flex-wrap: nowrap;
   }
 
-  .dashboard-header:has(.dashboard-header__search) .dashboard-header__actions {
-    flex: 1 1 100%;
+  .dashboard-header__title {
+    flex: 1 1 0;
+  }
+
+  .dashboard-header__actions {
+    flex: 0 1 auto;
+    min-width: 0;
   }
 
   .dashboard-header__search {
-    flex: 0 1 160px;
-    width: 160px;
-    min-width: 0;
+    flex: 1 1 96px;
+    width: auto;
+    max-width: 160px;
+    min-width: 96px;
   }
 
   .dashboard-header__search input {
