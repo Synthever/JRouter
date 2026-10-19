@@ -455,24 +455,33 @@ body:has(.landing-page)::-webkit-scrollbar,
   background-color: var(--text);
 }
 
-/* 5-column dashboard stats grid */
+/* dashboard stats grid */
 .grid-stats {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
 }
+/* usage overview: 8 metric cards → rows of 4 */
+.grid-stats-usage {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
 @media (max-width: 1050px) {
-  .grid-stats {
+  .grid-stats,
+  .grid-stats-usage {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 @media (max-width: 720px) {
-  .grid-stats {
+  .grid-stats,
+  .grid-stats-usage {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (max-width: 420px) {
-  .grid-stats {
+  .grid-stats,
+  .grid-stats-usage {
     grid-template-columns: repeat(1, minmax(0, 1fr));
   }
 }

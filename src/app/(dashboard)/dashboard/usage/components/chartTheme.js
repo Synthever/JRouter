@@ -35,13 +35,14 @@ export const formatTokenCount = (n) => {
   return String(value);
 };
 
-// Stat-card token label: truncated, no decimals — 172,954,215 reads as "172M".
+// Stat-card token label: one decimal — 3,840,000,000 reads as "3.8B".
+// (An integer "3B" hid the difference between 3.0B and 3.84B in the usage cards.)
 export const formatCompactTokens = (n) => {
-  const value = Math.floor(Number(n) || 0);
-  if (value >= 1e9) return `${Math.floor(value / 1e9)}B`;
-  if (value >= 1e6) return `${Math.floor(value / 1e6)}M`;
-  if (value >= 1e3) return `${Math.floor(value / 1e3)}K`;
-  return String(value);
+  const value = Number(n) || 0;
+  if (value >= 1e9) return `${(value / 1e9).toFixed(1).replace(/\.0$/, "")}B`;
+  if (value >= 1e6) return `${(value / 1e6).toFixed(1).replace(/\.0$/, "")}M`;
+  if (value >= 1e3) return `${(value / 1e3).toFixed(1).replace(/\.0$/, "")}K`;
+  return String(Math.floor(value));
 };
 
 export const formatCost = (n) => `$${(Number(n) || 0).toFixed(4)}`;

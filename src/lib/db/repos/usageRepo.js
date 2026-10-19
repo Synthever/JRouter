@@ -424,6 +424,8 @@ const info = { name: k.name, id: k.id, createdAt: k.createdAt };
   const stats = {
     totalRequests: 0,
     totalPromptTokens: 0, totalCompletionTokens: 0, totalCachedTokens: 0, totalCost: 0,
+    totalLatencyMs: 0, latencySamples: 0,
+    periodStart: null, periodEnd: null,
     byProvider: {}, byModel: {}, byAccount: {}, byApiKey: {}, byEndpoint: {},
     last10Minutes: [],
     pending: pendingRequests,
@@ -486,6 +488,12 @@ const info = { name: k.name, id: k.id, createdAt: k.createdAt };
       stats.totalCompletionTokens += day.completionTokens || 0;
       stats.totalCachedTokens += day.cachedTokens || 0;
       stats.totalCost += day.cost || 0;
+      if (day.totalLatencyMs && day.requestsWithLatency) {
+        stats.totalLatencyMs += day.totalLatencyMs;
+        stats.latencySamples += day.requestsWithLatency;
+      }
+      if (dr.dateKey && (!stats.periodStart || dr.dateKey < stats.periodStart)) stats.periodStart = dr.dateKey;
+      if (dr.dateKey && (!stats.periodEnd || dr.dateKey > stats.periodEnd)) stats.periodEnd = dr.dateKey;
 
       for (const [prov, p] of Object.entries(day.byProvider || {})) {
         if (!stats.byProvider[prov]) stats.byProvider[prov] = { requests: 0, promptTokens: 0, completionTokens: 0, cachedTokens: 0, cost: 0 };
@@ -610,7 +618,7 @@ const info = { name: k.name, id: k.id, createdAt: k.createdAt };
       cutoff = new Date(Date.now() - PERIOD_MS["24h"]).toISOString();
     }
     const filtered = db.all(
-      `SELECT timestamp, provider, model, connectionId, apiKey, endpoint, promptTokens, completionTokens, cost, tokens FROM usageHistory WHERE timestamp >= ?`,
+      `SELECT timestamp, provider, model, connectionId, apiKey, endpoint, promptTokens, completionTokens, cost, tokens, meta FROM usageHistory WHERE timestamp >= ?`,
       [cutoff]
     );
 
@@ -626,6 +634,14 @@ const info = { name: k.name, id: k.id, createdAt: k.createdAt };
       stats.totalCompletionTokens += completionTokens;
       stats.totalCachedTokens += cachedTokens;
       stats.totalCost += entryCost;
+
+      const entryLatency = parseJson(r.meta, {})?.latency;
+      if (Number.isFinite(entryLatency?.total) && entryLatency.total >= 0) {
+        stats.totalLatencyMs += entryLatency.total;
+        stats.latencySamples += 1;
+      }
+      if (r.timestamp && (!stats.periodStart || r.timestamp < stats.periodStart)) stats.periodStart = r.timestamp;
+      if (r.timestamp && (!stats.periodEnd || r.timestamp > stats.periodEnd)) stats.periodEnd = r.timestamp;
 
       if (!stats.byProvider[r.provider]) stats.byProvider[r.provider] = { requests: 0, promptTokens: 0, completionTokens: 0, cachedTokens: 0, cost: 0 };
       stats.byProvider[r.provider].requests++;

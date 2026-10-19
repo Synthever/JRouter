@@ -8,7 +8,33 @@ import { formatCompactTokens } from "./chartTheme";
 const fmt = (n) => new Intl.NumberFormat().format(n || 0);
 const fmtCost = (n) => `$${(n || 0).toFixed(2)}`;
 
-export default function OverviewCards({ stats }) {
+// Observed window in seconds, derived from the oldest→newest request in the
+// selected period (floored to 1s). Falls back to the period length when the
+// window is unreliable (e.g. a single old request).
+const PERIOD_SECONDS = { today: 86400, "24h": 86400, "7d": 604800, "30d": 2592000, "60d": 5184000 };
+function observedSeconds(stats) {
+  const start = stats.periodStart ? new Date(stats.periodStart).getTime() : NaN;
+  const end = stats.periodEnd ? new Date(stats.periodEnd).getTime() : NaN;
+  if (Number.isFinite(start) && Number.isFinite(end) && end > start) {
+    return Math.max(1, (end - start) / 1000);
+  }
+  return PERIOD_SECONDS[stats.period] || 86400;
+}
+const avgReqSec = (s) => (s.totalRequests > 0 ? s.totalRequests / observedSeconds(s) : 0);
+const avgTokensSec = (s) => {
+  const total = (s.totalPromptTokens || 0) + (s.totalCompletionTokens || 0);
+  return total > 0 ? total / observedSeconds(s) : 0;
+};
+const avgLatencyMs = (s) => (s.latencySamples > 0 ? s.totalLatencyMs / s.latencySamples : 0);
+const fmtRate = (n) => (n >= 10 ? String(Math.round(n)) : n > 0 ? n.toFixed(1) : "0");
+const fmtLatency = (ms) => {
+  if (!ms || ms <= 0) return "—";
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  return `${(ms / 1000).toFixed(ms < 10000 ? 2 : 1)}s`;
+};
+
+export default function OverviewCards({ stats, period = "7d" }) {
+  const withPeriod = { ...stats, period };
   const cards = [
     {
       label: "TOTAL REQUESTS",
@@ -43,10 +69,29 @@ export default function OverviewCards({ stats }) {
       value: `~${fmtCost(stats.totalCost)}`,
       subtitle: "estimated billing",
     },
+    {
+      label: "AVG REQ/SEC",
+      icon: "speed",
+      value: fmtRate(avgReqSec(withPeriod)),
+      subtitle: "request throughput",
+    },
+    {
+      label: "AVG TOKENS/SEC",
+      icon: "bolt",
+      value: formatCompactTokens(avgTokensSec(withPeriod)),
+      full: `${fmt(avgTokensSec(withPeriod))} tokens/sec`,
+      subtitle: "token throughput",
+    },
+    {
+      label: "AVG LATENCY",
+      icon: "timer",
+      value: fmtLatency(avgLatencyMs(withPeriod)),
+      subtitle: "avg response time",
+    },
   ];
 
   return (
-    <div className="grid-stats min-w-0">
+    <div className="grid-stats-usage min-w-0">
       {cards.map((card) => (
         <div key={card.label} className={`ui-card ${styles.metric}`}>
           <div className={styles.metricHead}>
@@ -64,11 +109,16 @@ export default function OverviewCards({ stats }) {
 }
 
 OverviewCards.propTypes = {
+  period: PropTypes.string,
   stats: PropTypes.shape({
     totalRequests: PropTypes.number,
     totalPromptTokens: PropTypes.number,
     totalCachedTokens: PropTypes.number,
     totalCompletionTokens: PropTypes.number,
     totalCost: PropTypes.number,
+    totalLatencyMs: PropTypes.number,
+    latencySamples: PropTypes.number,
+    periodStart: PropTypes.string,
+    periodEnd: PropTypes.string,
   }).isRequired,
 };

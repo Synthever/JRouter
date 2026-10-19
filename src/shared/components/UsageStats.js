@@ -536,7 +536,7 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
       ) : (
         <section aria-labelledby="usage-overview-heading">
           <h2 id="usage-overview-heading" className="sr-only">Overview metrics</h2>
-          <OverviewCards stats={stats} />
+          <OverviewCards stats={stats} period={period} />
         </section>
       )}
 
