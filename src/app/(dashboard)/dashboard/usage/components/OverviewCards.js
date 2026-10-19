@@ -29,7 +29,8 @@ const avgTokensSec = (s) => {
   return total > 0 ? total / observedSeconds(s) : 0;
 };
 const avgLatencyMs = (s) => (s.latencySamples > 0 ? s.totalLatencyMs / s.latencySamples : 0);
-const fmtRate = (n) => (n >= 10 ? String(Math.round(n)) : n >= 1 ? n.toFixed(1) : n > 0 ? n.toFixed(2) : "0");
+const perMin = (perSec) => perSec * 60;
+const fmtRate = (n) => (n >= 100 ? String(Math.round(n)) : n >= 1 ? n.toFixed(1) : n > 0 ? n.toFixed(2) : "0");
 const fmtLatency = (ms) => {
   if (!ms || ms <= 0) return "—";
   if (ms < 1000) return `${Math.round(ms)}ms`;
@@ -73,16 +74,16 @@ export default function OverviewCards({ stats, period = "7d" }) {
       subtitle: "estimated billing",
     },
     {
-      label: "AVG REQ/SEC",
+      label: "AVG REQ/MIN",
       icon: "speed",
-      value: fmtRate(avgReqSec(withPeriod)),
+      value: fmtRate(perMin(avgReqSec(withPeriod))),
       subtitle: "request throughput",
     },
     {
-      label: "AVG TOKENS/SEC",
+      label: "AVG TOKENS/MIN",
       icon: "bolt",
-      value: formatCompactTokens(avgTokensSec(withPeriod)),
-      full: `${fmt(avgTokensSec(withPeriod))} tokens/sec`,
+      value: formatCompactTokens(perMin(avgTokensSec(withPeriod))),
+      full: `${fmt(perMin(avgTokensSec(withPeriod)))} tokens/min`,
       subtitle: "token throughput",
     },
     {
