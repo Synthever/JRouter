@@ -26,12 +26,12 @@ const navGroups = [
       { href: "/dashboard", label: "Dashboard", icon: "layout-dashboard" },
       { href: "/dashboard/endpoint", label: "Endpoint & Key", icon: "api" },
       { href: "/dashboard/providers", label: "Providers", icon: "dns" },
+      { href: "/dashboard/combos", label: "Combo & Vision Adapter", icon: "layers" },
     ],
   },
   {
-    title: "AI",
+    title: "Chat",
     items: [
-      { href: "/dashboard/combos", label: "Combo & Vision Adapter", icon: "layers" },
       { href: "/dashboard/playground", label: "Playground", icon: "science" },
     ],
   },
