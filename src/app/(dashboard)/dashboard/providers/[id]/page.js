@@ -508,6 +508,12 @@ export default function ProviderDetailPage() {
     fetchDisabledModels();
   }, [fetchConnections, fetchAliases, fetchCustomModels, fetchDisabledModels]);
 
+  // Keep runtime badges (demoted / cooldown / lastError) live while the page is open.
+  useEffect(() => {
+    const t = setInterval(() => { fetchConnections(); }, 5000);
+    return () => clearInterval(t);
+  }, [fetchConnections]);
+
   // Live per-connection catalogs (cursor, zed): the static registry carries
   // no usable list, so resolve from the active connection. Fires only when
   // the provider id or connection list changes — no polling, no loop.

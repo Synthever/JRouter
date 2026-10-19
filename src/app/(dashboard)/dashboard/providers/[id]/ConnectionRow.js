@@ -218,6 +218,14 @@ export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst
             <StatusBadge variant={getStatusVariant()} className={getStatusVariant() === "error" ? styles.errorBadge : undefined}>
               {connection.isActive === false ? "disabled" : (effectiveStatus || "Unknown")}
             </StatusBadge>
+            {connection.demotedAt && connection.isActive !== false && (
+              <span
+                title={`Failed recently — serving at the back of the rotation until its next success (since ${new Date(connection.demotedAt).toLocaleTimeString()})`}
+                className="px-1.5 py-0.5 rounded-[var(--r1)] bg-transparent border border-[var(--line)] text-[10px] font-mono text-[var(--text-2)]"
+              >
+                ⬇ demoted
+              </span>
+            )}
             <StatusBadge dot={false}>
               {authLabel}
             </StatusBadge>

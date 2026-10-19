@@ -118,6 +118,14 @@ function ConnectionRow({ connection, proxyPools, isOAuth, isFirst, isLast, onMov
             <Badge variant={getStatusVariant()} size="sm" dot>
               {connection.isActive === false ? "disabled" : (effectiveStatus || "Unknown")}
             </Badge>
+            {connection.demotedAt && connection.isActive !== false && (
+              <span
+                title={`Failed recently — serving at the back of the rotation until its next success (since ${new Date(connection.demotedAt).toLocaleTimeString()})`}
+                className="px-1.5 py-0.5 rounded-[var(--r1)] bg-transparent border border-[var(--line)] text-[10px] font-mono text-[var(--text-2)]"
+              >
+                ⬇ demoted
+              </span>
+            )}
             {hasAnyProxy && <Badge variant={proxyBadgeVariant} size="sm">Proxy</Badge>}
             {isCooldown && connection.isActive !== false && <CooldownTimer until={modelLockUntil} />}
             {connection.lastError && connection.isActive !== false && (
@@ -331,6 +339,12 @@ export default function ConnectionsCard({ providerId, isOAuth }) {
   }, [providerId]);
 
   useEffect(() => { fetch_(); }, [fetch_]);
+
+  // Keep demotion/cooldown badges fresh while the user stares at the list.
+  useEffect(() => {
+    const t = setInterval(() => { fetch_(); }, 5000);
+    return () => clearInterval(t);
+  }, [fetch_]);
 
   const saveStrategy = async (strategy, stickyLimit) => {
     try {
