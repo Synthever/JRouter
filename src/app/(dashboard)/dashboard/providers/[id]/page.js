@@ -72,6 +72,8 @@ export default function ProviderDetailPage() {
   const [bulkUpdatingProxy, setBulkUpdatingProxy] = useState(false);
   const [providerStrategy, setProviderStrategy] = useState(null);
   const [providerStickyLimit, setProviderStickyLimit] = useState("");
+  // null = default ON (no explicit setting persisted); false = user opted out
+  const [providerDemoteOnError, setProviderDemoteOnError] = useState(null);
   const [thinkingMode, setThinkingMode] = useState("auto");
   const [autoPing, setAutoPing] = useState({ enabled: false, connections: {}, schedules: {} });
   const [scheduleConnection, setScheduleConnection] = useState(null);
@@ -330,6 +332,8 @@ export default function ProviderDetailPage() {
       const override = (settingsData.providerStrategies || {})[providerId] || {};
       setProviderStrategy(override.fallbackStrategy || null);
       setProviderStickyLimit(override.stickyRoundRobinLimit != null ? String(override.stickyRoundRobinLimit) : "1");
+      // Move-on-error toggle: absent = ON (default); only false = explicitly off
+      setProviderDemoteOnError(override.demoteOnError === false ? false : null);
       // Load per-provider thinking config
       const thinkingCfg = (settingsData.providerThinking || {})[providerId] || {};
       setThinkingMode(thinkingCfg.mode || "auto");
@@ -420,6 +424,31 @@ export default function ProviderDetailPage() {
   const handleStickyLimitChange = (value) => {
     setProviderStickyLimit(value);
     saveProviderStrategy("round-robin", value);
+  };
+
+  // Move-on-error per-provider toggle. Default is ON with nothing persisted;
+  // persist demoteOnError:false only when the user opts out, and drop the key
+  // again when they re-enable (absent = ON for every provider).
+  const handleDemoteOnErrorToggle = async (enabled) => {
+    setProviderDemoteOnError(enabled ? null : false);
+    try {
+      const settingsRes = await fetch("/api/settings", { cache: "no-store" });
+      const settingsData = settingsRes.ok ? await settingsRes.json() : {};
+      const current = settingsData.providerStrategies || {};
+      const existing = { ...(current[providerId] || {}) };
+      if (enabled) delete existing.demoteOnError;
+      else existing.demoteOnError = false;
+      const updated = { ...current };
+      if (Object.keys(existing).length === 0) delete updated[providerId];
+      else updated[providerId] = existing;
+      await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ providerStrategies: updated }),
+      });
+    } catch (error) {
+      console.log("Error saving demoteOnError toggle:", error);
+    }
   };
 
   const saveThinkingConfig = async (mode) => {
@@ -1628,6 +1657,14 @@ export default function ProviderDetailPage() {
                     />
                   </div>
                 )}
+              </div>
+              {/* Move-on-error toggle (demote failing keys to the back until they succeed) */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-text-muted font-medium">Auto-demote on error</span>
+                <Toggle
+                  checked={providerDemoteOnError === null ? true : providerDemoteOnError}
+                  onChange={handleDemoteOnErrorToggle}
+                />
               </div>
             </div>
           </div>

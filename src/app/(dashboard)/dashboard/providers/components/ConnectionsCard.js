@@ -305,6 +305,8 @@ export default function ConnectionsCard({ providerId, isOAuth }) {
   const [selectedConnection, setSelectedConnection] = useState(null);
   const [providerStrategy, setProviderStrategy] = useState(null);
   const [providerStickyLimit, setProviderStickyLimit] = useState("1");
+  // null = default ON (nothing persisted); false = user opted out
+  const [demoteOnError, setDemoteOnError] = useState(null);
   const [confirmState, setConfirmState] = useState(null);
 
   const fetch_ = useCallback(async () => {
@@ -322,6 +324,8 @@ export default function ConnectionsCard({ providerId, isOAuth }) {
       const override = (settingsData.providerStrategies || {})[providerId] || {};
       setProviderStrategy(override.fallbackStrategy || null);
       setProviderStickyLimit(override.stickyRoundRobinLimit != null ? String(override.stickyRoundRobinLimit) : "1");
+      // Move-on-error toggle: absent = ON (default); only false = explicitly off
+      setDemoteOnError(override.demoteOnError === false ? false : null);
     } catch (e) { console.log("ConnectionsCard fetch error:", e); }
     finally { setLoading(false); }
   }, [providerId]);
@@ -341,6 +345,22 @@ export default function ConnectionsCard({ providerId, isOAuth }) {
       else updated[providerId] = override;
       await fetch("/api/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ providerStrategies: updated }) });
     } catch (e) { console.log("saveStrategy error:", e); }
+  };
+
+  // Move-on-error per-provider toggle (same absence-is-ON contract as page.js)
+  const saveDemoteOnError = async (enabled) => {
+    try {
+      const res = await fetch("/api/settings", { cache: "no-store" });
+      const data = res.ok ? await res.json() : {};
+      const current = data.providerStrategies || {};
+      const existing = { ...(current[providerId] || {}) };
+      if (enabled) delete existing.demoteOnError;
+      else existing.demoteOnError = false;
+      const updated = { ...current };
+      if (Object.keys(existing).length === 0) delete updated[providerId];
+      else updated[providerId] = existing;
+      await fetch("/api/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ providerStrategies: updated }) });
+    } catch (e) { console.log("saveDemoteOnError error:", e); }
   };
 
   const handleSwapPriority = async (i1, i2) => {
@@ -425,6 +445,14 @@ export default function ConnectionsCard({ providerId, isOAuth }) {
                 />
               </div>
             )}
+            <span className="text-xs text-text-muted font-medium">Auto-demote on error</span>
+            <Toggle
+              checked={demoteOnError === null ? true : demoteOnError}
+              onChange={(enabled) => {
+                setDemoteOnError(enabled ? null : false);
+                saveDemoteOnError(enabled);
+              }}
+            />
           </div>
         </div>
 

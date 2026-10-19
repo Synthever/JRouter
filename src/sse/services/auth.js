@@ -1,6 +1,7 @@
 import { getProviderConnections, validateApiKey, updateProviderConnection, getSettings, getProxyPools } from "@/lib/localDb";
 import { resolveConnectionProxyConfig, pickProxyPoolId } from "@/lib/network/connectionProxy";
 import { formatRetryAfter, checkFallbackError, isModelLockActive, buildModelLockUpdate, getEarliestModelLockUntil } from "open-sse/services/accountFallback.js";
+import { applyDemotionOverlay, shouldDemoteStatus } from "./demotion.js";
 import { MAX_RATE_LIMIT_COOLDOWN_MS } from "open-sse/config/errorConfig.js";
 import { resolveProviderId, FREE_PROVIDERS } from "@/shared/constants/providers.js";
 import { getAntigravityQuotaCache, getAntigravityModelQuota } from "./antigravityQuota.js";
@@ -151,6 +152,15 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
     const providerOverride = (settings.providerStrategies || {})[providerId] || {};
     const strategy = providerOverride.fallbackStrategy || settings.fallbackStrategy || "fill-first";
 
+    // Move-on-error (demotion): default ON for every provider; the per-provider
+    // UI toggle persists demoteOnError:false in providerStrategies to opt out.
+    // Errored keys sort after healthy keys (curated priority preserved inside
+    // each group); the flag is stored on the connection row, never the priority.
+    const demoteEnabled = providerOverride.demoteOnError !== false;
+    if (demoteEnabled && availableConnections.some((c) => c.demotedAt)) {
+      availableConnections = applyDemotionOverlay(availableConnections);
+    }
+
     let connection;
     // Pin to preferred connection if specified and available
     if (preferredConnectionId) {
@@ -280,13 +290,18 @@ export async function markAccountUnavailable(connectionId, status, errorText, pr
   const reason = typeof errorText === "string" ? errorText.slice(0, 200) : "Provider error";
   const lockUpdate = buildModelLockUpdate(githubResetAtMs ? null : model, cooldownMs);
 
+  // Move-on-error: flag the connection so it sorts after every healthy key
+  // until a successful request clears it (clearAccountError). Runs for every
+  // fallback path (401/402/403/429/5xx/transient); payload-caused 4xx that
+  // never reach fallback (shouldFallback:false above) never demote.
   await updateProviderConnection(connectionId, {
     ...lockUpdate,
     testStatus: "unavailable",
     lastError: reason,
     errorCode: status,
     lastErrorAt: new Date().toISOString(),
-    backoffLevel: newBackoffLevel ?? backoffLevel
+    backoffLevel: newBackoffLevel ?? backoffLevel,
+    demotedAt: shouldDemoteStatus(status) ? new Date().toISOString() : null
   });
 
   const lockKey = Object.keys(lockUpdate)[0];
@@ -315,7 +330,7 @@ export async function clearAccountError(connectionId, currentConnection, model =
   const now = Date.now();
   const allLockKeys = Object.keys(conn).filter(k => k.startsWith("modelLock_"));
 
-  if (!conn.testStatus && !conn.lastError && allLockKeys.length === 0) return;
+  if (!conn.testStatus && !conn.lastError && allLockKeys.length === 0 && !conn.demotedAt) return;
 
   // Keys to clear: current model's lock + all expired locks
   const keysToClear = allLockKeys.filter(k => {
@@ -325,7 +340,7 @@ export async function clearAccountError(connectionId, currentConnection, model =
     return expiry && new Date(expiry).getTime() <= now;   // expired
   });
 
-  if (keysToClear.length === 0 && conn.testStatus !== "unavailable" && !conn.lastError) return;
+  if (keysToClear.length === 0 && conn.testStatus !== "unavailable" && !conn.lastError && !conn.demotedAt) return;
 
   // Check if any active locks remain after clearing
   const remainingActiveLocks = allLockKeys.filter(k => {
@@ -343,7 +358,10 @@ export async function clearAccountError(connectionId, currentConnection, model =
       lastError: null,
       errorCode: null,
       lastErrorAt: null,
-      backoffLevel: 0
+      backoffLevel: 0,
+      // Success proves the key works again — lift the move-on-error demotion
+      // so the connection returns to its operator-curated priority position.
+      demotedAt: null
     });
   }
 
