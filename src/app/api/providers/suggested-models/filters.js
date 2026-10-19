@@ -37,13 +37,19 @@ export const FILTERS = {
       .map((m) => ({ id: m.id, name: m.name || m.id })),
 
   // BeatAPI text catalogue (GET /v1/text/models, public): a free text model has
-  // family "free" AND an id ending in "-free". The family check drops look-alike
-  // ids in other families; jev-*-free is a Decisions API model and never lists
-  // in this text catalogue, so it is excluded by construction.
-  "beatapi-free": (models) =>
-    (Array.isArray(models) ? models : [])
+  // family "free" AND an id ending in "-free". The catalogue nests the list at
+  // data.data, so the route's single unwrap leaves [{data:[…]}] — unwrap the
+  // envelope here (direct array, wrapped envelope, or bare envelope). The
+  // family check drops look-alike ids in other families; jev-*-free is a
+  // Decisions API model and never lists in this text catalogue, so it is
+  // excluded by construction.
+  "beatapi-free": (raw) => {
+    const envelope = Array.isArray(raw) ? raw[0] : raw;
+    const models = Array.isArray(envelope) ? envelope : envelope?.data;
+    return (Array.isArray(models) ? models : [])
       .filter((m) => typeof m?.id === "string" && m.id.endsWith("-free") && m.family === "free")
-      .map((m) => ({ id: m.id, name: m.id })),
+      .map((m) => ({ id: m.id, name: m.id }));
+  },
 
   // MiniMax Code (mcode) live catalog: {providers:[{providerId:"minimax",
   // config:{models:{<id>:{name, limit, modalities, thinking_config}}}}]} —
