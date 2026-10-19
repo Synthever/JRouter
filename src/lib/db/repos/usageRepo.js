@@ -406,29 +406,6 @@ const info = { name: k.name, id: k.id, createdAt: k.createdAt };
 
   // recentRequests from live history (last 100 entries enough for 20 deduped)
   const recentRows = db.all(`SELECT timestamp, provider, model, tokens, status FROM usageHistory ORDER BY id DESC LIMIT 100`);
-
-  // Latency fallback: daily summaries only persist latency from the moment this
-  // lands (older days have none). Sample recent usageHistory.meta rows inside
-  // the period window and merge into the daily aggregates so AVG LATENCY works
-  // retroactively for the tail the history table still covers.
-  if (period === "today" || period === "24h" || period === "7d") {
-    const hours = period === "today" ? 24 : period === "24h" ? 24 : 168;
-    const cutoff = new Date(Date.now() - hours * 3600 * 1000).toISOString();
-    const latRows = db.all(
-      `SELECT timestamp, meta FROM usageHistory WHERE timestamp >= ? AND meta LIKE '%"latency"%' ORDER BY id DESC LIMIT 4000`,
-      [cutoff]
-    );
-    for (const r of latRows) {
-      const lt = parseJson(r.meta, {})?.latency;
-      if (Number.isFinite(lt?.total) && lt.total >= 0) {
-        stats.totalLatencyMs += lt.total;
-        stats.latencySamples += 1;
-      }
-      if (r.timestamp && (!stats.periodStart || r.timestamp < stats.periodStart)) stats.periodStart = r.timestamp;
-      if (r.timestamp && (!stats.periodEnd || r.timestamp > stats.periodEnd)) stats.periodEnd = r.timestamp;
-    }
-  }
-
   const seen = new Set();
   const recentRequests = recentRows
     .map((r) => {
@@ -736,6 +713,27 @@ const info = { name: k.name, id: k.id, createdAt: k.createdAt };
       const epe = stats.byEndpoint[epKey];
       epe.requests++; epe.promptTokens += promptTokens; epe.completionTokens += completionTokens; epe.cachedTokens += cachedTokens; epe.cost += entryCost;
       if (new Date(r.timestamp) > new Date(epe.lastUsed)) epe.lastUsed = r.timestamp;
+    }
+  }
+
+  // Latency fallback for the daily-summary path (today/24h/7d): daily rows only
+  // persist latency from the moment aggregation landed; sample usageHistory.meta
+  // inside the window so AVG LATENCY covers the tail history still holds.
+  if ((period === "today" || period === "24h" || period === "7d") && stats.latencySamples === 0) {
+    const hours = period === "7d" ? 168 : 24;
+    const cutoff = new Date(Date.now() - hours * 3600 * 1000).toISOString();
+    const latRows = db.all(
+      `SELECT timestamp, meta FROM usageHistory WHERE timestamp >= ? AND meta LIKE '%"latency"%' ORDER BY id DESC LIMIT 4000`,
+      [cutoff]
+    );
+    for (const r of latRows) {
+      const lt = parseJson(r.meta, {})?.latency;
+      if (Number.isFinite(lt?.total) && lt.total >= 0) {
+        stats.totalLatencyMs += lt.total;
+        stats.latencySamples += 1;
+      }
+      if (r.timestamp && (!stats.periodStart || r.timestamp < stats.periodStart)) stats.periodStart = r.timestamp;
+      if (r.timestamp && (!stats.periodEnd || r.timestamp > stats.periodEnd)) stats.periodEnd = r.timestamp;
     }
   }
 
