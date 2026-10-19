@@ -1,5 +1,6 @@
 import { EventEmitter } from "events";
 import { getAdapter } from "../driver.js";
+import { providerDisplayLabel } from "../helpers/providerLabel.js";
 import { parseJson, stringifyJson } from "../helpers/jsonCol.js";
 import { getMeta, setMeta } from "../helpers/metaStore.js";
 import { getApiKeyPolicyContext } from "@/lib/apiKeyPolicy/context.js";
@@ -515,7 +516,7 @@ const info = { name: k.name, id: k.id, createdAt: k.createdAt };
         const rawModel = m.rawModel || mk.split("|")[0];
         const provider = m.provider || mk.split("|")[1] || "";
         const statsKey = provider ? `${rawModel} (${provider})` : rawModel;
-        const providerDisplayName = providerNodeNameMap[provider] || provider;
+        const providerDisplayName = providerDisplayLabel(provider, providerNodeNameMap);
         if (!stats.byModel[statsKey]) {
           stats.byModel[statsKey] = { requests: 0, promptTokens: 0, completionTokens: 0, cachedTokens: 0, cost: 0, rawModel, provider: providerDisplayName, lastUsed: dateKey };
         }
@@ -531,7 +532,7 @@ const info = { name: k.name, id: k.id, createdAt: k.createdAt };
         const accountName = connectionMap[connId] || `Account ${connId.slice(0, 8)}...`;
         const rawModel = a.rawModel || "";
         const provider = a.provider || "";
-        const providerDisplayName = providerNodeNameMap[provider] || provider;
+        const providerDisplayName = providerDisplayLabel(provider, providerNodeNameMap);
         const accountKey = `${rawModel} (${provider} - ${accountName})`;
         if (!stats.byAccount[accountKey]) {
           stats.byAccount[accountKey] = { requests: 0, promptTokens: 0, completionTokens: 0, cachedTokens: 0, cost: 0, rawModel, provider: providerDisplayName, connectionId: connId, accountName, lastUsed: dateKey };
@@ -547,7 +548,7 @@ const info = { name: k.name, id: k.id, createdAt: k.createdAt };
       for (const [akKey, ak] of Object.entries(day.byApiKey || {})) {
         const rawModel = ak.rawModel || "";
         const provider = ak.provider || "";
-        const providerDisplayName = providerNodeNameMap[provider] || provider;
+        const providerDisplayName = providerDisplayLabel(provider, providerNodeNameMap);
         const apiKeyVal = ak.apiKey ? ak.apiKey.trim() : null;
         const keyInfo = apiKeyVal ? apiKeyMap[apiKeyVal] : null;
         const apiKeyMasked = maskApiKey(apiKeyVal);
@@ -568,7 +569,7 @@ const info = { name: k.name, id: k.id, createdAt: k.createdAt };
         const endpoint = ep.endpoint || epKey.split("|")[0] || "Unknown";
         const rawModel = ep.rawModel || "";
         const provider = ep.provider || "";
-        const providerDisplayName = providerNodeNameMap[provider] || provider;
+        const providerDisplayName = providerDisplayLabel(provider, providerNodeNameMap);
         if (!stats.byEndpoint[epKey]) {
           stats.byEndpoint[epKey] = { requests: 0, promptTokens: 0, completionTokens: 0, cachedTokens: 0, cost: 0, endpoint, rawModel, provider: providerDisplayName, lastUsed: dateKey };
         }
@@ -635,7 +636,7 @@ const info = { name: k.name, id: k.id, createdAt: k.createdAt };
       const completionTokens = tokens.completion_tokens || tokens.output_tokens || r.completionTokens || 0;
       const cachedTokens = tokens.cached_tokens || tokens.cache_read_input_tokens || 0;
       const entryCost = r.cost || 0;
-      const providerDisplayName = providerNodeNameMap[r.provider] || r.provider;
+      const providerDisplayName = providerDisplayLabel(r.provider, providerNodeNameMap);
 
       stats.totalPromptTokens += promptTokens;
       stats.totalCompletionTokens += completionTokens;
