@@ -226,8 +226,10 @@ export async function buildModelsList(kindFilter, options = {}) {
   // Combos first (filtered by kind). Web combos expose `kind` so AI knows search vs fetch.
   for (const combo of combos) {
     if (!comboMatchesKinds(combo, kindFilter)) continue;
+    // A published combo lists the id a client actually calls: its public name,
+    // or the combo's own name when none is set. The role gate decides who sees it.
     const entry = {
-      id: combo.name,
+      id: combo.publicName || combo.name,
       object: "model",
       owned_by: "combo",
     };
