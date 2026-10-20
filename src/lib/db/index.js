@@ -152,16 +152,26 @@ export async function importDb(payload) {
         access = checked.value;
       }
       const cols = keyAccessToColumns(access);
+      // `apiKeys.role` is declared NOT NULL DEFAULT 'owner', so leaving it out of
+      // this INSERT would silently promote every user key in the backup to owner
+      // — a privilege escalation on restore. A backup that predates the column
+      // has no role field at all and was entirely owner keys; a value outside the
+      // known roles is treated as non-owner so a corrupt backup cannot escalate.
+      const role = k.role == null ? "owner" : (k.role === "owner" ? "owner" : "user");
       db.run(
-        `INSERT OR REPLACE INTO apiKeys(id, key, name, machineId, isActive, createdAt, policy, quotaPeriodStartedAt, quotaTokens, quotaCost, lastUsedAt, updatedAt, accessRestricted, accessAllow) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [k.id, k.key, k.name || null, k.machineId || null, k.isActive === false ? 0 : 1, k.createdAt || new Date().toISOString(), stringifyJson(k.policy || {}), k.quotaPeriodStartedAt || null, k.quotaTokens || 0, k.quotaCost || 0, k.lastUsedAt || null, k.updatedAt || null, cols.accessRestricted, cols.accessAllow]
+        `INSERT OR REPLACE INTO apiKeys(id, key, name, machineId, isActive, createdAt, policy, quotaPeriodStartedAt, quotaTokens, quotaCost, lastUsedAt, updatedAt, accessRestricted, accessAllow, role) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [k.id, k.key, k.name || null, k.machineId || null, k.isActive === false ? 0 : 1, k.createdAt || new Date().toISOString(), stringifyJson(k.policy || {}), k.quotaPeriodStartedAt || null, k.quotaTokens || 0, k.quotaCost || 0, k.lastUsedAt || null, k.updatedAt || null, cols.accessRestricted, cols.accessAllow, role]
       );
     }
     for (const c of payload.combos || []) {
       const behavior = normalizeComboPromptSettings(c);
+      // Publication must survive a restore too; a backup without these fields
+      // restores private with no publicName (never accidentally published).
+      const visibility = c.visibility === "public" ? "public" : "private";
+      const publicName = typeof c.publicName === "string" ? c.publicName : null;
       db.run(
-        `INSERT OR REPLACE INTO combos(id, name, kind, models, createdAt, updatedAt, promptInjectionEnabled, promptInjectionMode, systemPrompt, displayIdentity) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [c.id, c.name, c.kind || null, stringifyJson(c.models || []), c.createdAt || new Date().toISOString(), c.updatedAt || new Date().toISOString(), behavior.promptInjectionEnabled ? 1 : 0, behavior.promptInjectionMode, behavior.systemPrompt, behavior.displayIdentity]
+        `INSERT OR REPLACE INTO combos(id, name, kind, models, createdAt, updatedAt, promptInjectionEnabled, promptInjectionMode, systemPrompt, displayIdentity, visibility, publicName) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [c.id, c.name, c.kind || null, stringifyJson(c.models || []), c.createdAt || new Date().toISOString(), c.updatedAt || new Date().toISOString(), behavior.promptInjectionEnabled ? 1 : 0, behavior.promptInjectionMode, behavior.systemPrompt, behavior.displayIdentity, visibility, publicName]
       );
     }
     for (const [a, m] of Object.entries(payload.modelAliases || {})) {
