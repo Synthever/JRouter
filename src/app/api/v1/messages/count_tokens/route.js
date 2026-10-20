@@ -1,4 +1,5 @@
 import { withApiKeyPolicy } from "@/lib/apiKeyPolicy/gateway.js";
+import { getKeyAccessContext, enforceKeyAccess } from "@/sse/services/keyAccess.js";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -90,6 +91,14 @@ async function countTokens(request) {
   }
 
   const inputTokens = estimateAnthropicInputTokens(body);
+
+  // The endpoint never contacts an upstream, but it should not accept model
+  // names the key could not actually call either: a user key gets the same
+  // typed 403 the chat path returns, and the route never becomes an oracle
+  // for which a model exists. `enforceKeyAccess(null, …)` is null, so
+  // anonymous and owner traffic is unchanged.
+  const keyAccessDenied = await enforceKeyAccess(await getKeyAccessContext(request), body?.model);
+  if (keyAccessDenied) return keyAccessDenied;
 
   return new Response(JSON.stringify({
     input_tokens: inputTokens
