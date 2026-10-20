@@ -2,10 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({ combo: null, nested: null, settings: {}, calls: [], failFirst: false }));
 vi.mock("open-sse/index.js", () => ({}));
 vi.mock("@/lib/apiKeyPolicy/gateway.js", () => ({ withApiKeyPolicy: (request, handler) => handler(request) }));
-vi.mock("@/lib/localDb", () => ({ getSettings: async () => state.settings, getComboByName: async (name) => name === state.combo?.name ? state.combo : name === state.nested?.name ? state.nested : null }));
+vi.mock("@/lib/localDb", () => ({ getSettings: async () => state.settings, getComboByName: async (name) => name === state.combo?.name ? state.combo : name === state.nested?.name ? state.nested : null, getComboByPublicName: async (publicName) => [state.combo, state.nested].find((c) => c && (c.publicName || c.name) === publicName) || null }));
 vi.mock("@/sse/services/model.js", () => ({
   getComboModels: async (name) => name === state.combo?.name ? state.combo.models : name === state.nested?.name ? state.nested.models : null,
   getModelInfo: async (name) => name.includes("/") ? { provider: name.split("/")[0], model: name.split("/")[1] } : { provider: null, model: name },
+  resolvePublicCombo: async (publicName) => [state.combo, state.nested].find((c) => c && (c.publicName || c.name) === publicName) || null,
 }));
 vi.mock("@/sse/services/auth.js", () => ({ getProviderCredentials: async () => ({ connectionId: "test" }), markAccountUnavailable: async () => false, clearAccountError: async () => {}, extractApiKey: () => null, isValidApiKey: async () => true }));
 vi.mock("@/sse/services/tokenRefresh.js", () => ({ updateProviderCredentials: async () => {}, checkAndRefreshToken: async (provider, credentials) => credentials }));

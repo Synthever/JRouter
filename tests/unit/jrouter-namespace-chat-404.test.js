@@ -5,7 +5,7 @@ const NAMESPACE_404_MESSAGE =
 
 vi.mock("open-sse/index.js", () => ({}));
 vi.mock("@/lib/apiKeyPolicy/gateway.js", () => ({ withApiKeyPolicy: (request, handler) => handler(request) }));
-vi.mock("@/lib/localDb", () => ({ getSettings: async () => ({}), getComboByName: async () => null }));
+vi.mock("@/lib/localDb", () => ({ getSettings: async () => ({}), getComboByName: async () => null, getComboByPublicName: async () => null }));
 vi.mock("@/sse/services/model.js", () => ({
   getModelInfo: async () => {
     const err = new Error(NAMESPACE_404_MESSAGE);
@@ -13,6 +13,7 @@ vi.mock("@/sse/services/model.js", () => ({
     throw err;
   },
   getComboModels: async () => null,
+  resolvePublicCombo: async () => null,
 }));
 vi.mock("@/sse/services/auth.js", () => ({
   getProviderCredentials: async () => ({ connectionId: "test" }),

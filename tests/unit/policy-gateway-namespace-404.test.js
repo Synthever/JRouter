@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({ handlerCalled: false }));
 
 vi.mock("@/lib/db/driver.js", () => ({ getAdapter: async () => ({ transaction: (fn) => fn() }) }));
-vi.mock("@/lib/localDb", () => ({ getSettings: async () => ({}) }));
+vi.mock("@/lib/localDb", () => ({ getSettings: async () => ({}), getComboByPublicName: async () => null }));
 vi.mock("@/lib/apiKeyPolicy/authentication.js", () => ({
   authenticatePolicyKey: async () => ({ id: "k1", allowedEndpoints: null, allowedModels: [], maxCostUsd: null, maxOutputTokens: null }),
 }));

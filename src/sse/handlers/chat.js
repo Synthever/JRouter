@@ -11,7 +11,7 @@ import {
 import { handleAntigravityQuotaError, clearAntigravityStrikes } from "../services/antigravityQuota.js";
 import { getSettings, getComboByName } from "@/lib/localDb";
 import { applyComboPromptInjection } from "@/lib/comboPromptInjection.js";
-import { getModelInfo, getComboModels } from "../services/model.js";
+import { getModelInfo, getComboModels, resolvePublicCombo } from "../services/model.js";
 import { handleChatCore } from "open-sse/handlers/chatCore.js";
 import { DEFAULT_HEADROOM_URL } from "@/lib/headroom/detect";
 import { getTransform as getPxpipeTransform } from "@/lib/pxpipe/loader.js";
@@ -111,9 +111,13 @@ async function handleChatRequest(request, clientRawRequest = null) {
   const comboModels = await getComboModels(modelStr);
   if (comboModels) {
     body = await applyComboBehavior(body, modelStr, request, clientRawRequest);
+    // A published Custom Model-ID inherits the combo's configured strategy and
+    // judge/tuning; the client keeps addressing the combo by its public name.
+    const publishedTarget = await resolvePublicCombo(modelStr);
+    const comboKey = publishedTarget?.name || modelStr;
     // Check for combo-specific strategy first, fallback to global
     const comboStrategies = settings.comboStrategies || {};
-    const comboSpecificStrategy = comboStrategies[modelStr]?.fallbackStrategy;
+    const comboSpecificStrategy = comboStrategies[comboKey]?.fallbackStrategy;
     const comboStrategy = comboSpecificStrategy || settings.comboStrategy || "fallback";
     const augmentedModels = await filterAdapterModels(keyAccess, augmentModelsWithCapacityAdapter(comboModels, requiredCapabilities, settings), comboModels);
     const adapterAdded = augmentedModels.filter((m) => !comboModels.includes(m));
@@ -133,8 +137,8 @@ async function handleChatRequest(request, clientRawRequest = null) {
         },
         log,
         comboName: modelStr,
-        judgeModel: comboStrategies[modelStr]?.judgeModel,
-        tuning: comboStrategies[modelStr]?.fusionTuning,
+        judgeModel: comboStrategies[comboKey]?.judgeModel,
+        tuning: comboStrategies[comboKey]?.fusionTuning,
       });
     }
 
@@ -199,9 +203,13 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
     if (comboModels) {
       body = await applyComboBehavior(body, modelStr, request, clientRawRequest);
       const chatSettings = await getSettings();
+      // A published Custom Model-ID inherits the combo's configured strategy and
+      // judge/tuning; the client keeps addressing the combo by its public name.
+      const publishedTarget = await resolvePublicCombo(modelStr);
+      const comboKey = publishedTarget?.name || modelStr;
       // Check for combo-specific strategy first, fallback to global
       const comboStrategies = chatSettings.comboStrategies || {};
-      const comboSpecificStrategy = comboStrategies[modelStr]?.fallbackStrategy;
+      const comboSpecificStrategy = comboStrategies[comboKey]?.fallbackStrategy;
       const comboStrategy = comboSpecificStrategy || chatSettings.comboStrategy || "fallback";
       const requiredCapabilities = detectRequiredCapabilities(body);
       // Nested combo (a combo member that is itself a combo): the access decision
@@ -225,8 +233,8 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
           },
           log,
           comboName: modelStr,
-          judgeModel: comboStrategies[modelStr]?.judgeModel,
-          tuning: comboStrategies[modelStr]?.fusionTuning,
+          judgeModel: comboStrategies[comboKey]?.judgeModel,
+          tuning: comboStrategies[comboKey]?.fusionTuning,
         });
       }
 
@@ -374,7 +382,12 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
 }
 
 async function applyComboBehavior(body, comboName, request, clientRawRequest) {
-  const combo = await getComboByName(comboName);
+  // Settings come from the internal combo; a published Custom Model-ID is looked
+  // up second so a combo's own name keeps winning, exactly as today.
+  const combo = (await getComboByName(comboName)) || (await resolvePublicCombo(comboName));
+  if (!combo) return body;
+  // The client's own string is what gets rendered into the prompt: a request for
+  // a public name must not leak the internal combo name.
   const requestedModel = clientRawRequest?.body?.model || body.model || comboName;
   const sourceFormat = request?.url ? detectFormatByEndpoint(new URL(request.url).pathname, body) : null;
   const transformed = applyComboPromptInjection(body, combo, { requestedModel, sourceFormat });

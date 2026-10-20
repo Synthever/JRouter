@@ -16,6 +16,8 @@ const fx = vi.hoisted(() => ({
 vi.mock("@/lib/localDb", () => ({
   getModelAliases: async () => fx.aliases,
   getComboByName: async (name) => fx.combos.find((c) => c.name === name) || null,
+  getComboByPublicName: async (publicName) =>
+    fx.combos.find((c) => (c.publicName || c.name) === publicName) || null,
   getProviderNodes: async (filter = {}) => fx.nodes.filter((n) => !filter.type || n.type === filter.type),
 }));
 vi.mock("@/lib/db/repos/combosRepo.js", () => ({ getCombos: async () => fx.combos }));

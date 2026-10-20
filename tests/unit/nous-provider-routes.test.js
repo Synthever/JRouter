@@ -33,6 +33,7 @@ vi.mock("@/models", () => ({
 vi.mock("@/lib/localDb", () => ({
   getProviderConnectionById: mocks.getProviderConnectionById,
   updateProviderConnection: mocks.updateProviderConnection,
+  getComboByPublicName: async () => null,
 }));
 
 vi.mock("@/lib/network/connectionProxy", () => ({
