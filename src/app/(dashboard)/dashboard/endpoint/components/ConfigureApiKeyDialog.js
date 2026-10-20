@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button, Input, Modal } from "@/shared/components";
 import { useNotificationStore } from "@/store/notificationStore";
 import { DEFAULT_KEY_POLICY, API_KEY_ENDPOINTS } from "@/shared/constants/apiKeyPolicy.js";
-import { SettingsSection, QuotaSettings, RequestSettings, RateLimitSettings, ModelRestrictions, EndpointPermissions } from "./ApiKeySettingsSections";
+import { SettingsSection, QuotaSettings, RequestSettings, RateLimitSettings, ModelRestrictions, EndpointPermissions, KeyRoleSection } from "./ApiKeySettingsSections";
 
 const numericFields = ["maxTokensQuota", "maxCostUsd", "tokenMultiplier", "maxOutputTokens", "rateLimitRpm", "rateLimitTpm"];
 function localDateTime(value) {
@@ -13,7 +13,7 @@ function localDateTime(value) {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 }
 function toForm(key) {
-  const form = { ...DEFAULT_KEY_POLICY, ...key, name: key.name || "", expiresAt: localDateTime(key.expiresAt), allowedEndpoints: key.allowedEndpoints ?? API_KEY_ENDPOINTS.map((item) => item.value) };
+  const form = { ...DEFAULT_KEY_POLICY, ...key, name: key.name || "", role: key.role === "user" ? "user" : "owner", expiresAt: localDateTime(key.expiresAt), allowedEndpoints: key.allowedEndpoints ?? API_KEY_ENDPOINTS.map((item) => item.value) };
   for (const field of numericFields) form[field] = String(form[field] ?? "");
   return form;
 }
@@ -53,6 +53,7 @@ export default function ConfigureApiKeyDialog({ keyId, onClose, onSaved }) {
     setSaving(true); setError("");
     try {
       const settings = Object.fromEntries([...Object.keys(DEFAULT_KEY_POLICY), "name"].map((field) => [field, form[field]]));
+      settings.role = form.role;
       for (const field of numericFields) settings[field] = form[field].trim() === "" ? null : Number(form[field]);
       settings.expiresAt = form.expiresAt ? new Date(form.expiresAt).toISOString() : null;
       // Null includes endpoint families added in future releases. Preserve that
@@ -85,6 +86,7 @@ export default function ConfigureApiKeyDialog({ keyId, onClose, onSaved }) {
           <QuotaSettings form={form} onChange={change} />
           <RequestSettings form={form} onChange={change} />
           <RateLimitSettings form={form} onChange={change} />
+          <KeyRoleSection value={form.role} onChange={(value) => change("role", value)} />
           <ModelRestrictions form={form} onChange={change} activeProviders={activeProviders} modelAliases={modelAliases} />
           <EndpointPermissions values={form.allowedEndpoints} onChange={(values) => change("allowedEndpoints", values)} />
         </fieldset>
