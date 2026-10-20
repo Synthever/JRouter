@@ -7,7 +7,7 @@ export default function manifest() {
     display: 'standalone',
     background_color: '#0a0a0a',
     theme_color: '#0a0a0a',
-    orientation: 'portrait-primary',
+    orientation: 'any',
     icons: [
       {
         src: '/brand/jrouter.svg',
