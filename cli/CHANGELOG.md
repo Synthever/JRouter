@@ -1,3 +1,12 @@
+# Changelog
+
+All notable changes to the `@synthever/jrouter` CLI package.
+
+## cli-v1.0.5 (2026-10-20)
+
+- docs(cli): rewrite README around JRouter's own features — routing/token/operations capabilities instead of an upstream-oriented list
+- fix(pwa): unlock manifest orientation so the installed app can rotate
+
 ## cli-v1.0.4 (2026-10-19)
 
 - feat(ui): group sidebar navigation with separators
