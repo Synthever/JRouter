@@ -54,6 +54,7 @@ docs/*
 !docs/DESIGN.md
 !docs/FRONTEND.md
 !docs/api-key-configuration.md
+!docs/cli-npm-release.md
 !docs/superpowers/
 !docs/superpowers/**
 test/*
