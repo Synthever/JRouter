@@ -24,12 +24,13 @@
 // touches a provider account.
 import { getApiKeyByKey } from "@/lib/db/repos/apiKeysRepo.js";
 import { getCombos } from "@/lib/db/repos/combosRepo.js";
-import { resolveModelInfo, getComboModels } from "./model.js";
+import { resolveModelInfo, getComboModels, resolvePublicCombo } from "./model.js";
 import { resolveProviderId } from "@/shared/constants/providers.js";
 import {
   KEY_ACCESS_COMBO_OWNER,
   KEY_ACCESS_PROVIDER_AS_MODEL_KINDS,
   keyAccessDeniedMessage,
+  keyRoleDeniedMessage,
 } from "@/shared/constants/keyAccess.js";
 import { errorResponse } from "open-sse/utils/error.js";
 import { HTTP_STATUS } from "open-sse/config/runtimeConfig.js";
@@ -37,6 +38,14 @@ import * as log from "../utils/logger.js";
 
 const lower = (s) => String(s).toLowerCase();
 const canonicalModel = (provider, model) => lower(`${provider}/${model}`);
+
+const ROLE_OWNER = "owner";
+const ROLE_USER = "user";
+
+/** owner unless the row explicitly says user — a missing column means legacy. */
+function roleOf(record) {
+  return record?.role === ROLE_USER ? ROLE_USER : ROLE_OWNER;
+}
 
 /**
  * The client key, read from the same places and in the same order as the
@@ -71,11 +80,20 @@ export async function getKeyAccessContext(request) {
   const apiKey = extractClientApiKey(request);
   if (!apiKey) return null;
   const record = await getApiKeyByKey(apiKey);
-  if (!record?.access?.restricted) return null;
+  if (!record) return null;
+  const role = roleOf(record);
+  const restricted = Boolean(record.access?.restricted);
+  // Fully unrestricted owner is today's passthrough: no context, no gate at all.
+  if (role === ROLE_OWNER && !restricted) return null;
   return {
     keyId: record.id,
     keyName: record.name || record.id,
-    allow: record.access.allow || [],
+    role,
+    restricted,
+    allow: record.access?.allow || [],
+    // A user key's allow list is not a model allowlist; policy model checks must
+    // skip it, or an empty allowedModels would veto a valid published call.
+    coveredByPolicy: role === ROLE_OWNER,
     _sets: null,
   };
 }
@@ -90,6 +108,14 @@ async function getAllowSets(ctx) {
   const providers = new Set();
   for (const entry of ctx.allow) {
     const key = lower(entry);
+    // A published custom model-id is a legitimate allow entry; resolve it before
+    // the internal-combo lookup, or the entry silently grants nothing.
+    const published = await resolvePublicCombo(entry);
+    if (published) {
+      combos.add(key);
+      combos.add(lower(published.name));
+      continue;
+    }
     if (comboNames.has(key)) {
       combos.add(key);
       continue;
@@ -103,6 +129,8 @@ async function getAllowSets(ctx) {
 }
 
 async function isModelStringAllowed(ctx, requested) {
+  // A published custom model-id resolves like a combo target, not a model id.
+  if (await resolvePublicCombo(requested)) return true;
   const sets = await getAllowSets(ctx);
   const info = await resolveModelInfo(requested);
   // provider null ⇔ an existing combo with no members (routes nowhere).
@@ -116,6 +144,37 @@ export function keyAccessDeniedResponse(ctx, requested) {
 }
 
 /**
+ * Role denial for a `user` key. Built locally rather than through
+ * errorResponse(): the shared helper carries no error code, and clients need a
+ * stable `role_not_allowed` to branch on.
+ */
+export function keyRoleDeniedResponse(ctx, requested) {
+  log.warn("AUTH", `key-role: key "${ctx.keyName}" (${ctx.role}) denied "${requested}"`);
+  const body = {
+    error: {
+      message: keyRoleDeniedMessage(requested),
+      type: "invalid_request_error",
+      code: "role_not_allowed",
+    },
+  };
+  return new Response(JSON.stringify(body), {
+    status: HTTP_STATUS.FORBIDDEN,
+    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+  });
+}
+
+// A user key is allowed exactly one shape: a published bare name, optionally
+// narrowed by its own allow list.
+async function isUserTargetAllowed(ctx, requested) {
+  if (typeof requested !== "string" || !requested || requested.includes("/")) return false;
+  const published = await resolvePublicCombo(requested);
+  if (!published) return false;
+  if (!ctx.restricted) return true;
+  const name = lower(published.publicName || published.name);
+  return ctx.allow.some((entry) => lower(entry) === name);
+}
+
+/**
  * Gate for endpoints whose `model` may be a combo or a model (chat, image, tts).
  * Call with the requested string BEFORE combo expansion.
  * @returns {Promise<Response|null>} a 403 Response, or null when allowed.
@@ -123,6 +182,9 @@ export function keyAccessDeniedResponse(ctx, requested) {
 export async function enforceKeyAccess(ctx, requested) {
   if (!ctx) return null;
   if (typeof requested !== "string" || !requested) return keyAccessDeniedResponse(ctx, String(requested ?? ""));
+  if (ctx.role === ROLE_USER) {
+    return (await isUserTargetAllowed(ctx, requested)) ? null : keyRoleDeniedResponse(ctx, requested);
+  }
   const sets = await getAllowSets(ctx);
   const comboModels = await getComboModels(requested);
   const allowed = comboModels
@@ -140,6 +202,7 @@ export async function enforceKeyAccess(ctx, requested) {
 export async function enforceKeyAccessResolved(ctx, requested, provider, model) {
   if (!ctx) return null;
   const label = requested || (provider ? `${provider}/${model ?? ""}` : "");
+  if (ctx.role === ROLE_USER) return keyRoleDeniedResponse(ctx, label);
   if (!provider || !model) return keyAccessDeniedResponse(ctx, label);
   const sets = await getAllowSets(ctx);
   return sets.models.has(canonicalModel(provider, model)) ? null : keyAccessDeniedResponse(ctx, label);
@@ -152,6 +215,7 @@ export async function enforceKeyAccessResolved(ctx, requested, provider, model) 
 export async function enforceKeyAccessProvider(ctx, requested, comboModels) {
   if (!ctx) return null;
   if (typeof requested !== "string" || !requested) return keyAccessDeniedResponse(ctx, String(requested ?? ""));
+  if (ctx.role === ROLE_USER) return keyRoleDeniedResponse(ctx, requested);
   const sets = await getAllowSets(ctx);
   const allowed = comboModels
     ? sets.combos.has(lower(requested))
@@ -167,6 +231,10 @@ export async function enforceKeyAccessProvider(ctx, requested, comboModels) {
  */
 export async function filterAdapterModels(ctx, augmented, original) {
   if (!ctx || !Array.isArray(augmented)) return augmented;
+  // Adapter models are server-injected for an already-authorized target; they are
+  // not client-chosen, so the role gate must not turn a healthy published combo
+  // into a failure. Nested-combo members follow the same principle.
+  if (ctx.role === ROLE_USER) return augmented;
   const keep = new Set(original || []);
   const out = [];
   for (const m of augmented) {
@@ -179,6 +247,14 @@ export async function filterAdapterModels(ctx, augmented, original) {
 /** /v1/models: a restricted key sees only the combos and models it may call. */
 export async function filterModelsListForKey(ctx, list) {
   if (!ctx || !Array.isArray(list)) return list;
+  if (ctx.role === ROLE_USER) {
+    const out = [];
+    for (const entry of list) {
+      if (!entry?.id || !(await resolvePublicCombo(entry.id))) continue;
+      out.push(entry);
+    }
+    return out;
+  }
   const sets = await getAllowSets(ctx);
   const out = [];
   for (const entry of list) {

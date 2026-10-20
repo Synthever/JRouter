@@ -16,6 +16,10 @@ export function modelIdentifiers(requested, info = {}) {
 export function assertCurrentModelAllowed(requested, info = {}) {
   const context = getApiKeyPolicyContext();
   if (!context) return;
+  // Role-gated user keys are authorized by their published-name gate; their
+  // allow list is not a model allowlist, so the owner-oriented policy check
+  // must not run. Owner keys keep the existing behaviour.
+  if (context.keyRole === "user") { context.resolvedModel = info; return; }
   try {
     assertModelAllowed(context.policy, [...modelIdentifiers(requested, info), ...(context.isCombo ? [context.requestedModel] : [])]);
     context.modelPolicyError = null;

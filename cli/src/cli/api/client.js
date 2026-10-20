@@ -305,8 +305,8 @@ async function getApiKeys() {
  * @param {string} name - Key name
  * @returns {Promise<Object>} { success, data: { key, name, id, machineId } }
  */
-async function createApiKey(name) {
-  return makeRequest("POST", "/api/keys", { name });
+async function createApiKey(name, role) {
+  return makeRequest("POST", "/api/keys", role ? { name, role } : { name });
 }
 
 /**
@@ -316,6 +316,16 @@ async function createApiKey(name) {
  */
 async function deleteApiKey(id) {
   return makeRequest("DELETE", `/api/keys/${id}`);
+}
+
+/**
+ * Update an existing API key's settings, including its role.
+ * @param {string} id
+ * @param {Object} data - e.g. { role: "user" }
+ * @returns {Promise<Object>} { success, data: { key } }
+ */
+async function updateApiKey(id, data) {
+  return makeRequest("PATCH", `/api/keys/${id}`, data);
 }
 
 // ============================================================================
@@ -565,6 +575,7 @@ module.exports = {
   // API Keys
   getApiKeys,
   createApiKey,
+  updateApiKey,
   deleteApiKey,
   
   // Combos

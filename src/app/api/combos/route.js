@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { getCombos, createCombo, getComboByName } from "@/lib/localDb";
+import { getCombos, createCombo, getComboByName, getProviderNodes } from "@/lib/localDb";
 import { validateComboPromptSettings } from "@/lib/comboPromptInjection";
+import { validatePublication } from "@/shared/utils/publicModelId";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +46,18 @@ export async function POST(request) {
       return NextResponse.json({ error: "Combo name already exists" }, { status: 400 });
     }
 
-    const combo = await createCombo({ name, models: models || [], kind: kind || null, ...promptSettings });
+    // Publication is validated against every namespace a request could resolve
+    // through, so a published id can never shadow a provider or another combo.
+    const combos = await getCombos();
+    const nodes = await getProviderNodes();
+    let publication;
+    try {
+      publication = validatePublication({ ...body, name }, { combos, nodes });
+    } catch (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    const combo = await createCombo({ name, models: models || [], kind: kind || null, ...promptSettings, ...publication });
 
     return NextResponse.json(combo, { status: 201 });
   } catch (error) {

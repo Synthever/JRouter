@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { getComboById, updateCombo, deleteCombo, getComboByName } from "@/lib/localDb";
+import { getComboById, updateCombo, deleteCombo, getComboByName, getCombos, getProviderNodes } from "@/lib/localDb";
 import { resetComboRotation } from "open-sse/services/combo.js";
 import { validateComboPromptSettings } from "@/lib/comboPromptInjection";
+import { validatePublication } from "@/shared/utils/publicModelId";
 
 // Validate combo name: only a-z, A-Z, 0-9, -, _
 const VALID_NAME_REGEX = /^[a-zA-Z0-9_.\-]+$/;
@@ -49,7 +50,26 @@ export async function PUT(request, { params }) {
     
     // Capture previous name to invalidate rotation state on rename
     const prev = await getComboById(id);
-    const combo = await updateCombo(id, body);
+    if (!prev) {
+      return NextResponse.json({ error: "Combo not found" }, { status: 404 });
+    }
+
+    // Publication is validated against the combo's effective state, so a partial
+    // body (visibility only) still checks the stored name and members.
+    let publication = {};
+    if (body.visibility !== undefined || body.publicName !== undefined) {
+      const [combos, nodes] = await Promise.all([getCombos(), getProviderNodes()]);
+      try {
+        publication = validatePublication(
+          { ...body, name: body.name ?? prev.name, models: body.models ?? prev.models },
+          { combos, nodes, selfId: id }
+        );
+      } catch (error) {
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+    }
+
+    const combo = await updateCombo(id, { ...body, ...publication });
     
     if (!combo) {
       return NextResponse.json({ error: "Combo not found" }, { status: 404 });

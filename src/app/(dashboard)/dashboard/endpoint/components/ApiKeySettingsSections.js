@@ -19,6 +19,39 @@ export function SettingsSection({ title, hint, children }) {
   );
 }
 
+const KEY_ROLE_OPTIONS = [
+  { value: "owner", label: "Owner", hint: "Everything: combos, provider models and custom model-ids." },
+  { value: "user", label: "User", hint: "Only published Custom Model-IDs. Provider models and private combos are refused." },
+];
+
+export function KeyRoleSection({ value, onChange }) {
+  return (
+    <SettingsSection title="Key Role" hint="Owner keys keep full access. User keys can call published Custom Model-IDs only.">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {KEY_ROLE_OPTIONS.map((option) => (
+          <label
+            key={option.value}
+            className={`flex items-start gap-3 cursor-pointer rounded-[var(--r2)] border p-3 transition-colors ${value === option.value ? "border-[var(--accent-line)] bg-[var(--surface-2)]" : "border-[var(--line)] hover:bg-[var(--surface-2)]"}`}
+          >
+            <input
+              type="radio"
+              name="key-role"
+              value={option.value}
+              checked={value === option.value}
+              onChange={() => onChange(option.value)}
+              className="mt-0.5 size-4 accent-[var(--text)] shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--text)]"
+            />
+            <span>
+              <span className="block text-sm font-medium">{option.label}</span>
+              <span className="block mt-1 text-xs text-[var(--text-2)]">{option.hint}</span>
+            </span>
+          </label>
+        ))}
+      </div>
+    </SettingsSection>
+  );
+}
+
 export function NumericSetting({ field, label, form, onChange, hint, placeholder = "Unlimited", decimal = false, min = 1 }) {
   return <Input label={label} type="number" min={min} step={decimal ? "any" : "1"} value={form[field]} onChange={(event) => onChange(field, event.target.value)} placeholder={placeholder} hint={hint} hintClassName="!text-[var(--text-2)]" required={field === "tokenMultiplier"} />;
 }

@@ -567,3 +567,96 @@
     transform: none;
   }
 }
+
+/* ── Custom Model-ID table ──────────────────────────────────────────────── */
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.toolbarSearch {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.modelTableWrap {
+  overflow-x: auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.modelTable {
+  width: 100%;
+  border-collapse: collapse;
+  /* auto: the Members chips must size their column, fixed clipping hides them */
+  table-layout: auto;
+  text-align: left;
+  font-size: 12px;
+}
+
+.modelTable th {
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  white-space: nowrap;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line-2);
+}
+
+.modelTable td {
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.modelTable tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.publicName {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text);
+}
+
+.internalName {
+  margin-top: 2px;
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+.actionsCell {
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .modelTable thead {
+    display: none;
+  }
+  .modelTable,
+  .modelTable tbody,
+  .modelTable tr,
+  .modelTable td {
+    display: block;
+    width: 100%;
+  }
+  .modelTable tr {
+    border-bottom: 1px solid var(--line);
+    padding: 12px 0;
+  }
+  .modelTable td {
+    border-bottom: 0;
+    padding: 4px 0;
+  }
+  .actionsCell {
+    text-align: left;
+  }
+}

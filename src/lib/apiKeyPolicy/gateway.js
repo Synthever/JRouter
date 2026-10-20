@@ -91,7 +91,7 @@ export async function withApiKeyPolicy(request, handler, { family = null, model 
     const estimatedCost = pricing ? calculateCostFromTokens({ prompt_tokens: inputTokens, completion_tokens: outputTokens }, pricing) : 0;
     db = await getAdapter();
     const admission = reserveKeyUsage(db, key.id, { tokens: inputTokens + Math.max(0, outputTokens), cost: estimatedCost }, Date.now());
-    context = { ...admission, policy: key, requestedModel, isCombo, resolvedModel: info, pending: new Set(), accounted: false };
+    context = { ...admission, policy: key, keyRole: key.role === "user" ? "user" : "owner", requestedModel, isCombo, resolvedModel: info, pending: new Set(), accounted: false };
     let response = await apiKeyPolicyContext.run(context, () => handler(request));
     // Combo fallback catches model errors. Restore the policy envelope when no
     // permitted member succeeds instead of returning its generic upstream error.

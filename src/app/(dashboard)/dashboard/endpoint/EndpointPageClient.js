@@ -54,6 +54,9 @@ export default function APIPageClient({ machineId }) {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newKeyName, setNewKeyName] = useState("");
+  // The create dialog defaults to user: handing out an owner key by accident is
+  // the one mistake this UI must make hard.
+  const [newKeyRole, setNewKeyRole] = useState("user");
   const [createdKey, setCreatedKey] = useState(null);
   const [confirmState, setConfirmState] = useState(null);
   const [configureKeyId, setConfigureKeyId] = useState(null);
@@ -650,7 +653,7 @@ export default function APIPageClient({ machineId }) {
       const res = await fetch("/api/keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newKeyName }),
+        body: JSON.stringify({ name: newKeyName, role: newKeyRole }),
       });
       const data = await res.json();
 
@@ -658,6 +661,7 @@ export default function APIPageClient({ machineId }) {
         setCreatedKey(data.key);
         await fetchData();
         setNewKeyName("");
+        setNewKeyRole("user");
         setShowAddModal(false);
       }
     } catch (error) {
@@ -1146,6 +1150,7 @@ export default function APIPageClient({ machineId }) {
         onClose={() => {
           setShowAddModal(false);
           setNewKeyName("");
+          setNewKeyRole("user");
         }}
       >
         <div className="flex flex-col gap-4">
@@ -1156,6 +1161,27 @@ export default function APIPageClient({ machineId }) {
             onChange={(e) => setNewKeyName(e.target.value)}
             placeholder="Production Key"
           />
+          <div className="flex flex-col gap-2" role="radiogroup" aria-label="Key role">
+            {[
+              { value: "user", label: "User", hint: "Published Custom Model-IDs only" },
+              { value: "owner", label: "Owner", hint: "Full access to every model and combo" },
+            ].map((option) => (
+              <label key={option.value} className="flex items-start gap-3 cursor-pointer rounded-[var(--r2)] border border-[var(--line)] p-3 hover:bg-[var(--surface-2)]">
+                <input
+                  type="radio"
+                  name="new-key-role"
+                  value={option.value}
+                  checked={newKeyRole === option.value}
+                  onChange={() => setNewKeyRole(option.value)}
+                  className="mt-0.5 size-4 accent-[var(--text)] shrink-0"
+                />
+                <span>
+                  <span className="block text-sm font-medium">{option.label}</span>
+                  <span className="block mt-1 text-xs text-[var(--text-2)]">{option.hint}</span>
+                </span>
+              </label>
+            ))}
+          </div>
           <div className="flex gap-2">
             <Button variant="contrast" onClick={handleCreateKey} fullWidth disabled={!newKeyName.trim()}>
               Create
@@ -1164,6 +1190,7 @@ export default function APIPageClient({ machineId }) {
               onClick={() => {
                 setShowAddModal(false);
                 setNewKeyName("");
+                setNewKeyRole("user");
               }}
               variant="ghost"
               fullWidth

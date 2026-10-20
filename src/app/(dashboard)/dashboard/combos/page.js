@@ -6,7 +6,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
-import { Card, Button, Modal, Input, Skeleton, ModelSelectModal, ConfirmModal, CapacityBadges, Select, Toggle } from "@/shared/components";
+import { Card, Button, Modal, Input, Skeleton, ModelSelectModal, ConfirmModal, CapacityBadges, Select, Toggle, SegmentedControl } from "@/shared/components";
 import StatusBadge from "@/shared/components/StatusBadge";
 import ComboSettingsModal from "@/shared/components/ComboSettingsModal";
 import ComboLimitsModal from "@/shared/components/ComboLimitsModal";
@@ -73,6 +73,9 @@ export default function CombosPage() {
   const [presetLoading, setPresetLoading] = useState(null); // "cursor" | "claude" | null
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [activeTab, setActiveTab] = useState("models");
+  const [search, setSearch] = useState("");
+  const [visibilityFilter, setVisibilityFilter] = useState("");
   const { copied, copy } = useCopyToClipboard();
 
   useEffect(() => {
@@ -88,6 +91,18 @@ export default function CombosPage() {
   const selectedCombos = combos.filter((c) => selectedIds.includes(c.id));
   const allSelected = combos.length > 0 && selectedIds.length === combos.length;
   const someSelected = selectedIds.length > 0;
+
+  const publicIdOf = (combo) => combo.publicName || combo.name;
+  const visibleCombos = combos.filter((combo) => {
+    if (visibilityFilter && combo.visibility !== visibilityFilter) return false;
+    if (!search) return true;
+    const needle = search.toLowerCase();
+    return (
+      publicIdOf(combo).toLowerCase().includes(needle) ||
+      combo.name.toLowerCase().includes(needle) ||
+      combo.models.some((model) => model.toLowerCase().includes(needle))
+    );
+  });
 
   const toggleSelect = (id) => {
     setSelectedIds((prev) => (
@@ -257,6 +272,27 @@ export default function CombosPage() {
     setComboStrategies(updated);
   };
 
+  // Publication flip: a PUT with only `visibility` keeps every other field,
+  // since the API validates against the combo's stored state for partial bodies.
+  const handleToggleVisibility = async (combo) => {
+    const nextVisibility = combo.visibility === "public" ? "private" : "public";
+    try {
+      const res = await fetch(`/api/combos/${combo.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visibility: nextVisibility }),
+      });
+      const updated = await res.json();
+      if (!res.ok) {
+        alert(updated.error || "Failed to update visibility");
+        return;
+      }
+      setCombos((previous) => previous.map((c) => (c.id === updated.id ? updated : c)));
+    } catch (error) {
+      console.log("Error updating visibility:", error);
+    }
+  };
+
   const handleDelete = async (id) => {
     const combo = combos.find((c) => c.id === id);
     setConfirmState({
@@ -411,6 +447,36 @@ export default function CombosPage() {
         </div>
       </header>
 
+      <SegmentedControl
+        options={[
+          { value: "models", label: "Models" },
+          { value: "adapter", label: "Vision Adapter" },
+        ]}
+        value={activeTab}
+        onChange={setActiveTab}
+        aria-label="Combos view"
+      />
+
+      {activeTab === "adapter" ? (
+        <section className={`ui-card ${styles.panel}`} aria-labelledby="capacity-adapter-heading">
+          <div className={styles.sectionHeader}>
+            <div>
+              <h2 id="capacity-adapter-heading" className="ui-eyebrow flex items-center gap-2">
+                <Icon className="text-[16px]">visibility</Icon> Vision Adapter
+              </h2>
+              <p className={styles.sectionDescription}>
+                Your model doesn&apos;t read image/audio? It switches to a model in the pool below.
+              </p>
+            </div>
+          </div>
+          <CapacityAdapterSection
+            capacityAdapter={capacityAdapter}
+            onChange={handleSetCapacityAdapter}
+            activeProviders={activeProviders}
+            getCaps={getCaps}
+          />
+        </section>
+      ) : (
       <section className={`ui-card ${styles.panel}`} aria-labelledby="combo-list-heading">
         <div className={styles.sectionHeader}>
           <div>
@@ -418,12 +484,45 @@ export default function CombosPage() {
               <Icon className="text-[16px]">layers</Icon> Combos
             </h2>
           </div>
+          <Button variant="contrast" size="sm" icon="add" onClick={() => setShowCreateModal(true)}>
+            Create
+          </Button>
         </div>
-        {combos.length === 0 ? (
+
+        <div className={styles.toolbar}>
+          <Input
+            aria-label="Search combos"
+            placeholder="Search model id, combo name or member…"
+            icon="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            className={styles.toolbarSearch}
+          />
+          <Select
+            aria-label="Visibility"
+            value={visibilityFilter}
+            options={[
+              { value: "", label: "All visibility" },
+              { value: "public", label: "Public" },
+              { value: "private", label: "Private" },
+            ]}
+            onChange={(event) => setVisibilityFilter(event.target.value)}
+          />
+          {someSelected && (
+            <Button size="sm" variant="danger" icon="delete" loading={bulkBusy} onClick={handleBulkDelete}>
+              Delete ({selectedIds.length})
+            </Button>
+          )}
+        </div>
+
+        {visibleCombos.length === 0 ? (
           <div className={styles.empty}>
-            <p className={styles.emptyTitle}>No combos yet</p>
-            <p>Create a combo to route requests through your selected models.</p>
-            <Button variant="contrast" icon="add" onClick={() => setShowCreateModal(true)} className="mt-4">Create Combo</Button>
+            <p className={styles.emptyTitle}>{combos.length ? "No matching combos" : "No combos yet"}</p>
+            <p>
+              {combos.length
+                ? "Try another search or filter."
+                : "Create a combo to route requests through your selected models."}
+            </p>
           </div>
         ) : (
         <div>
@@ -487,50 +586,57 @@ export default function CombosPage() {
             </div>
           </div>
 
-          <ul className={styles.rows}>
-            {(() => {
-              const comboByName = Object.fromEntries(combos.map((c) => [c.name, c.models]));
-              return combos.map((combo) => (
-                <ComboRow
-                  key={combo.id}
-                  combo={combo}
-                  getCaps={getCaps}
-                  comboByName={comboByName}
-                  activeProviders={activeProviders}
-                  copied={copied}
-                  onCopy={copy}
-                  onEdit={() => setEditingCombo(combo)}
-                  onSettings={() => setSettingsCombo(combo)}
-                  onEditLimits={() => setLimitsCombo(combo)}
-                  onDelete={() => handleDelete(combo.id)}
-                  strategy={comboStrategies[combo.name] || {}}
-                  onSetStrategy={(patch) => handleSetComboStrategy(combo.name, patch)}
-                  selected={selectedIds.includes(combo.id)}
-                  onToggleSelect={() => toggleSelect(combo.id)}
-                />
-              ));
-            })()}
-          </ul>
+          <div className={styles.modelTableWrap}>
+            <table className={styles.modelTable} aria-label="Combos">
+              <thead>
+                <tr>
+                  <th scope="col">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                      onChange={toggleSelectAll}
+                      aria-label="Select all combos"
+                    />
+                  </th>
+                  <th scope="col">Model</th>
+                  <th scope="col">Members</th>
+                  <th scope="col">Strategy</th>
+                  <th scope="col">Visibility</th>
+                  <th scope="col">Updated</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const comboByName = Object.fromEntries(combos.map((c) => [c.name, c.models]));
+                  return visibleCombos.map((combo) => (
+                    <ComboTableRow
+                      key={combo.id}
+                      combo={combo}
+                      getCaps={getCaps}
+                      comboByName={comboByName}
+                      copied={copied}
+                      onCopy={copy}
+                      onEdit={() => setEditingCombo(combo)}
+                      onSettings={() => setSettingsCombo(combo)}
+                      onEditLimits={() => setLimitsCombo(combo)}
+                      onDelete={() => handleDelete(combo.id)}
+                      strategy={comboStrategies[combo.name] || {}}
+                      onSetStrategy={(patch) => handleSetComboStrategy(combo.name, patch)}
+                      selected={selectedIds.includes(combo.id)}
+                      onToggleSelect={() => toggleSelect(combo.id)}
+                      onToggleVisibility={handleToggleVisibility}
+                    />
+                  ));
+                })()}
+              </tbody>
+            </table>
+          </div>
         </div>
         )}
       </section>
-
-      <section className={`ui-card ${styles.panel}`} aria-labelledby="capacity-adapter-heading">
-        <div className={styles.sectionHeader}>
-          <div>
-            <h2 id="capacity-adapter-heading" className="ui-eyebrow flex items-center gap-2">
-              <Icon className="text-[16px]">visibility</Icon> Vision Adapter
-            </h2>
-            <p className={styles.sectionDescription}>Your model can&apos;t read image/audio? Auto-switches to a model in the pool below.</p>
-          </div>
-        </div>
-        <CapacityAdapterSection
-          capacityAdapter={capacityAdapter}
-          onChange={handleSetCapacityAdapter}
-          activeProviders={activeProviders}
-          getCaps={getCaps}
-        />
-      </section>
+      )}
 
       {/* Create Modal - Use key to force remount and reset state */}
       {showCreateModal && (
@@ -771,6 +877,151 @@ function ComboRow({ combo, getCaps, comboByName = {}, activeProviders = [], copi
         />
       )}
     </li>
+  );
+}
+
+// One row of the Custom Model-ID table. Renders table cells (not a div tree) so
+// the mobile stacked-card CSS keeps a valid table underneath.
+function ComboTableRow({
+  combo, getCaps, comboByName = {}, copied, onCopy, onEdit, onSettings,
+  onEditLimits, onDelete, strategy = {}, onSetStrategy, selected = false,
+  onToggleSelect, onToggleVisibility,
+}) {
+  const [showJudgeSelect, setShowJudgeSelect] = useState(false);
+  const current = strategy.fallbackStrategy || "fallback";
+  const judge = strategy.judgeModel || "";
+  const isFusion = current === "fusion";
+  const comboCaps = aggregateComboCapabilities(combo.models, comboByName, getCaps);
+  const publicId = combo.publicName || combo.name;
+  const copyKey = `combo-${combo.id}`;
+
+  return (
+    <tr className={selected ? styles.selected : undefined}>
+      <td>
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onToggleSelect}
+          aria-label={`Select ${publicId}`}
+        />
+      </td>
+      <td>
+        <code className={styles.publicName}>{publicId}</code>
+        {combo.publicName && combo.publicName !== combo.name ? (
+          <div className={styles.internalName}>{combo.name}</div>
+        ) : null}
+        {comboCaps && <CapacityBadges caps={comboCaps} colorOverride="text-text-muted" size={14} />}
+      </td>
+      <td>
+        <div className={styles.modelList}>
+          {combo.models.slice(0, 3).map((model, index) => (
+            <code key={`${model}-${index}`} className={styles.modelChip} title={model}>
+              {index > 0 && <span className={styles.chainSeparator} aria-hidden="true">{isFusion ? "+" : "→"}</span>}
+              <span>{model}</span>
+            </code>
+          ))}
+          {combo.models.length > 3 && (
+            <span className="text-[11px] text-text-muted">+{combo.models.length - 3} more</span>
+          )}
+        </div>
+      </td>
+      <td>
+        <div className={styles.strategySelect}>
+          <Select
+            options={STRATEGY_OPTIONS}
+            value={current}
+            aria-label={`Routing strategy for ${publicId}`}
+            onChange={(event) => onSetStrategy({ fallbackStrategy: event.target.value })}
+            selectClassName="py-1.5 text-xs"
+          />
+        </div>
+        {isFusion && (
+          <button
+            type="button"
+            onClick={() => setShowJudgeSelect(true)}
+            className={styles.judgeButton}
+            title="Pick the model that fuses panel answers"
+          >
+            <Icon className="shrink-0 text-[14px]">gavel</Icon>
+            <span>{judge || `Auto - ${combo.models[0] || "first model"}`}</span>
+          </button>
+        )}
+      </td>
+      <td>
+        <Toggle
+          checked={combo.visibility === "public"}
+          onChange={() => onToggleVisibility(combo)}
+          aria-label={`Visibility for ${publicId}`}
+        />
+        <div className={styles.internalName}>{combo.visibility === "public" ? "Public" : "Private"}</div>
+      </td>
+      <td className="u-tnum">{combo.updatedAt ? new Date(combo.updatedAt).toLocaleDateString() : "—"}</td>
+      <td className={styles.actionsCell}>
+        <button
+          type="button"
+          onClick={onSettings}
+          className={styles.iconAction}
+          title="Combo Settings"
+          aria-label={`Settings ${publicId}`}
+        >
+          <Icon className="text-[16px]">settings</Icon>
+        </button>
+        <button
+          type="button"
+          onClick={() => onCopy(publicId, copyKey)}
+          className={styles.iconAction}
+          title="Copy model id"
+          aria-label={`Copy ${publicId}`}
+        >
+          <Icon className={`text-[16px] ${copied === copyKey ? styles.success : ""}`}>
+            {copied === copyKey ? "check" : "content_copy"}
+          </Icon>
+        </button>
+        <button
+          type="button"
+          onClick={() => onEditLimits?.()}
+          className={styles.iconAction}
+          title="Context and output limits"
+          aria-label={`Limits ${publicId}`}
+        >
+          <Icon className="text-[16px]">data_usage</Icon>
+        </button>
+        <button
+          type="button"
+          onClick={onEdit}
+          className={styles.iconAction}
+          title="Edit"
+          aria-label={`Edit ${publicId}`}
+        >
+          <Icon className="text-[16px]">edit</Icon>
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          className={`${styles.iconAction} ${styles.dangerAction}`}
+          title="Delete"
+          aria-label={`Delete ${publicId}`}
+        >
+          <Icon className="text-[16px]">delete</Icon>
+        </button>
+      </td>
+      {/* A <tr> may only contain <td>: the judge modal rides in a hidden cell. */}
+      {isFusion && showJudgeSelect && (
+        <td hidden>
+          <ModelSelectModal
+            className={controls.modelPicker}
+            portal
+            isOpen={showJudgeSelect}
+            onClose={() => setShowJudgeSelect(false)}
+            onSelect={(m) => { onSetStrategy({ judgeModel: m?.value || "" }); setShowJudgeSelect(false); }}
+            activeProviders={[]}
+            title="Select Judge Model"
+            addedModelValues={judge ? [judge] : []}
+            closeOnSelect={true}
+          />
+        </td>
+      )}
+    </tr>
   );
 }
 
