@@ -4,6 +4,13 @@ const { clearScreen, showStatus, showHeader } = require("../utils/display");
 const { formatDate, getRelativeTime } = require("../utils/format");
 const { showMenuWithBack } = require("../utils/menuHelper");
 const { copyToClipboard } = require("../utils/clipboard");
+const {
+  connectionStatus,
+  connectionLabel,
+  sortConnections,
+  planPriorityMove,
+  summariseBatch,
+} = require("../utils/providerView");
 
 // ANSI colors for styling
 const COLORS = {
@@ -191,7 +198,7 @@ function countConnectionsByProvider(connections) {
 async function showProvidersMenu(breadcrumb = []) {
   // Build provider items list
   const providerItems = [];
-  
+
   Object.values(OAUTH_PROVIDERS).forEach(provider => {
     providerItems.push({
       provider,
@@ -311,16 +318,13 @@ async function showProviderDetail(providerId, authType, allConnections, breadcru
         allConnections.length = 0;
         allConnections.push(...(response.data.connections || []));
       }
-      const providerConns = allConnections.filter(conn => 
+      const providerConns = allConnections.filter(conn =>
         (conn.provider || conn.providerId) === providerId
       );
-      return { items: providerConns };
+      // Mirror the router's own ordering: enabled first, by priority, demoted last.
+      return { items: sortConnections(providerConns) };
     },
-    formatItem: (conn) => {
-      const status = conn.testStatus === "active" ? "✓" : conn.testStatus === "error" ? "✗" : "?";
-      const name = conn.name || conn.email || conn.displayName || "Unnamed";
-      return `${name} (${status})`;
-    },
+    formatItem: (conn, index, total) => connectionLabel(conn, index + 1, total),
     onSelect: async (conn) => {
       await showConnectionActions(conn, providerId, breadcrumb);
     },
@@ -329,8 +333,49 @@ async function showProviderDetail(providerId, authType, allConnections, breadcru
       action: async () => {
         await handleAddConnection(providerId, authType);
       }
-    }
+    },
+    extraActions: [
+      {
+        label: "Test all connections (batch)",
+        action: async () => {
+          await handleBatchTest(providerId);
+        }
+      }
+    ]
   });
+}
+
+/**
+ * Probe every active connection of a provider in one request and report failures.
+ * @param {string} providerId
+ */
+async function handleBatchTest(providerId) {
+  showStatus("Testing all active connections...", "info");
+  const result = await api.testProviderBatch(providerId);
+
+  if (!result.success) {
+    showStatus(`Batch test failed: ${result.error}`, "error");
+    await pause();
+    return;
+  }
+
+  const summary = summariseBatch(result.data);
+  if (summary.total === 0) {
+    showStatus("No active connections to test", "info");
+    await pause();
+    return;
+  }
+
+  if (summary.failed === 0) {
+    showStatus(`${summary.passed}/${summary.total} connections healthy`, "success");
+  } else {
+    showStatus(`${summary.passed}/${summary.total} healthy, ${summary.failed} failed`, "warning");
+    for (const failure of summary.failures) {
+      const code = failure.statusCode ? ` [${failure.statusCode}]` : "";
+      console.log(`  ${COLORS.dim}✗${COLORS.reset} ${failure.name}${code}: ${failure.error}`);
+    }
+  }
+  await pause();
 }
 
 /**
@@ -341,14 +386,47 @@ async function showProviderDetail(providerId, authType, allConnections, breadcru
  */
 async function showConnectionActions(connection, providerId, breadcrumb = []) {
   const name = connection.name || connection.email || connection.displayName || "Unnamed";
-  const status = connection.testStatus === "active" ? "✓ Active" : 
-                 connection.testStatus === "error" ? "✗ Error" : "? Unknown";
-  
+  const status = connectionStatus(connection);
+  const enabled = connection.isActive !== false;
+
+  const statusLine = status.demoted
+    ? "⇣ Demoted (sorted behind healthy keys until its next success)"
+    : `${status.mark} ${status.label}`;
+
   await showMenuWithBack({
     title: `🔌 ${name}`,
     breadcrumb: [...breadcrumb, name],
-    headerContent: `Connection: ${name}\nStatus: ${status}`,
+    headerContent: `Connection: ${name}\nStatus: ${statusLine}\nEnabled: ${enabled ? "yes" : "no"}${connection.priority !== undefined ? `\nPriority: ${connection.priority}` : ""}`,
     items: [
+      {
+        label: enabled ? "Disable Connection" : "Enable Connection",
+        action: async () => {
+          showStatus(`${enabled ? "Disabling" : "Enabling"} connection...`, "info");
+          const result = await api.updateConnection(connection.id, { isActive: !enabled });
+          if (result.success) {
+            showStatus(`Connection ${enabled ? "disabled" : "enabled"}`, "success");
+            connection.isActive = !enabled;
+          } else {
+            showStatus(`Failed: ${result.error}`, "error");
+          }
+          await pause();
+          return true;
+        }
+      },
+      {
+        label: "Move Up (higher priority)",
+        action: async () => {
+          await moveConnection(connection, providerId, -1);
+          return true;
+        }
+      },
+      {
+        label: "Move Down (lower priority)",
+        action: async () => {
+          await moveConnection(connection, providerId, 1);
+          return true;
+        }
+      },
       {
         label: "Rename Connection",
         action: async () => {
@@ -400,6 +478,51 @@ async function showConnectionActions(connection, providerId, breadcrumb = []) {
       }
     ]
   });
+}
+
+/**
+ * Reorder a connection by rewriting priorities for the provider's whole list.
+ * The API updates one row at a time and duplicate priorities would make the
+ * order unstable, so every changed row is sent before the next render.
+ * @param {Object} connection
+ * @param {string} providerId
+ * @param {number} direction - -1 up, +1 down
+ */
+async function moveConnection(connection, providerId, direction) {
+  const response = await api.getProviders();
+  if (!response.success) {
+    showStatus(`Failed to read connections: ${response.error}`, "error");
+    await pause();
+    return;
+  }
+
+  const providerConns = (response.data.connections || [])
+    .filter((conn) => (conn.provider || conn.providerId) === providerId);
+  const ordered = sortConnections(providerConns);
+  const changes = planPriorityMove(ordered, connection.id, direction);
+
+  if (changes.length === 0) {
+    showStatus(direction < 0 ? "Already at the top" : "Already at the bottom", "info");
+    await pause();
+    return;
+  }
+
+  showStatus("Reordering...", "info");
+  let failed = null;
+  for (const change of changes) {
+    const result = await api.updateConnection(change.id, { priority: change.priority });
+    if (!result.success) {
+      failed = `${change.id}: ${result.error}`;
+      break;
+    }
+  }
+
+  if (failed) {
+    showStatus(`Reorder stopped: ${failed}`, "error");
+  } else {
+    showStatus(`Moved ${direction < 0 ? "up" : "down"} (${changes.length} priorities updated)`, "success");
+  }
+  await pause();
 }
 
 /**
