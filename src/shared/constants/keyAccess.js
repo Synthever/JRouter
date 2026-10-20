@@ -22,3 +22,8 @@ export const KEY_ACCESS_COMBO_OWNER = "combo";
 export function keyAccessDeniedMessage(requested) {
   return `This API key is not allowed to use model "${requested}"`;
 }
+
+// Role denials name only the target the client itself sent.
+export function keyRoleDeniedMessage(requested) {
+  return `This API key may only call published model ids; "${requested}" is not one of them.`;
+}
