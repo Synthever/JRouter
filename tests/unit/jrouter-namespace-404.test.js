@@ -5,6 +5,7 @@ const state = vi.hoisted(() => ({ nodes: [] }));
 vi.mock("@/lib/localDb", () => ({
   getModelAliases: async () => ({}),
   getComboByName: async () => null,
+  getComboByPublicName: async () => null,
   getProviderNodes: async (filter) => state.nodes.filter((n) => !filter?.type || n.type === filter.type),
   getSettings: async () => ({}),
 }));

@@ -21,6 +21,7 @@ export function rowToKey(row) {
     quotaTokens: row.quotaTokens || 0,
     quotaCost: row.quotaCost || 0,
     access: keyAccessFromColumns(row.accessRestricted, row.accessAllow),
+    role: row.role === "user" ? "user" : "owner",
   };
 }
 
@@ -44,7 +45,7 @@ export async function getApiKeyByKey(key) {
   return rowToKey(row);
 }
 
-export async function createApiKey(name, machineId) {
+export async function createApiKey(name, machineId, role = "owner") {
   if (!machineId) throw new Error("machineId is required");
   const db = await getAdapter();
   const { generateApiKeyWithMachine } = await import("@/shared/utils/apiKey");
@@ -56,12 +57,13 @@ export async function createApiKey(name, machineId) {
     machineId,
     isActive: true,
     createdAt: new Date().toISOString(),
+    role,
     access: { restricted: false, allow: [] },
   };
   const cols = keyAccessToColumns(KEY_ACCESS_UNRESTRICTED);
   db.run(
-    `INSERT INTO apiKeys(id, key, name, machineId, isActive, createdAt, accessRestricted, accessAllow) VALUES(?, ?, ?, ?, ?, ?, ?, ?)`,
-    [apiKey.id, apiKey.key, apiKey.name, apiKey.machineId, 1, apiKey.createdAt, cols.accessRestricted, cols.accessAllow]
+    `INSERT INTO apiKeys(id, key, name, machineId, isActive, createdAt, accessRestricted, accessAllow, role) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [apiKey.id, apiKey.key, apiKey.name, apiKey.machineId, 1, apiKey.createdAt, cols.accessRestricted, cols.accessAllow, apiKey.role]
   );
   return apiKey;
 }
@@ -81,13 +83,13 @@ export async function updateApiKey(id, data) {
   db.transaction(() => {
     const row = db.get(`SELECT * FROM apiKeys WHERE id = ?`, [id]);
     if (!row) return;
-    const { name, isActive, ...policyChanges } = validated;
+    const { name, isActive, role, ...policyChanges } = validated;
     const policy = { ...parseJson(row.policy, {}), ...policyChanges };
     const updatedAt = new Date().toISOString();
     const cols = keyAccessToColumns(validatedAccess ?? rowToKey(row).access);
     db.run(
-      `UPDATE apiKeys SET name = ?, isActive = ?, policy = ?, updatedAt = ?, accessRestricted = ?, accessAllow = ? WHERE id = ?`,
-      [name ?? row.name, isActive === undefined ? row.isActive : (isActive ? 1 : 0), stringifyJson(policy), updatedAt, cols.accessRestricted, cols.accessAllow, id]
+      `UPDATE apiKeys SET name = ?, isActive = ?, policy = ?, updatedAt = ?, accessRestricted = ?, accessAllow = ?, role = ? WHERE id = ?`,
+      [name ?? row.name, isActive === undefined ? row.isActive : (isActive ? 1 : 0), stringifyJson(policy), updatedAt, cols.accessRestricted, cols.accessAllow, role ?? (row.role === "user" ? "user" : "owner"), id]
     );
     result = rowToKey(db.get(`SELECT * FROM apiKeys WHERE id = ?`, [id]));
   });

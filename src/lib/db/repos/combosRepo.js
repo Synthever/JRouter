@@ -11,6 +11,8 @@ export function rowToCombo(row) {
     kind: row.kind,
     models: parseJson(row.models, []),
     ...normalizeComboPromptSettings(row),
+    visibility: row.visibility === "public" ? "public" : "private",
+    publicName: row.publicName || null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -34,6 +36,18 @@ export async function getComboByName(name) {
   return rowToCombo(row);
 }
 
+// A public name is the combo's publicName when set, otherwise its name.
+// Case-sensitive, exact match: the same comparison the model router uses.
+export async function getComboByPublicName(publicName) {
+  if (!publicName) return null;
+  const db = await getAdapter();
+  const row = db.get(
+    `SELECT * FROM combos WHERE COALESCE(NULLIF(publicName, ''), name) = ?`,
+    [publicName]
+  );
+  return rowToCombo(row);
+}
+
 export async function createCombo(data) {
   const db = await getAdapter();
   const now = new Date().toISOString();
@@ -43,12 +57,14 @@ export async function createCombo(data) {
     kind: data.kind || null,
     models: data.models || [],
     ...normalizeComboPromptSettings(validateComboPromptSettings(data)),
+    visibility: data.visibility === "public" ? "public" : "private",
+    publicName: typeof data.publicName === "string" ? data.publicName : null,
     createdAt: now,
     updatedAt: now,
   };
   db.run(
-    `INSERT INTO combos(id, name, kind, models, createdAt, updatedAt, promptInjectionEnabled, promptInjectionMode, systemPrompt, displayIdentity) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [combo.id, combo.name, combo.kind, stringifyJson(combo.models), combo.createdAt, combo.updatedAt, combo.promptInjectionEnabled ? 1 : 0, combo.promptInjectionMode, combo.systemPrompt, combo.displayIdentity]
+    `INSERT INTO combos(id, name, kind, models, createdAt, updatedAt, promptInjectionEnabled, promptInjectionMode, systemPrompt, displayIdentity, visibility, publicName) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [combo.id, combo.name, combo.kind, stringifyJson(combo.models), combo.createdAt, combo.updatedAt, combo.promptInjectionEnabled ? 1 : 0, combo.promptInjectionMode, combo.systemPrompt, combo.displayIdentity, combo.visibility, combo.publicName]
   );
   return combo;
 }
@@ -62,8 +78,8 @@ export async function updateCombo(id, data) {
     if (!row) return;
     const merged = { ...rowToCombo(row), ...data, ...promptSettings, updatedAt: new Date().toISOString() };
     db.run(
-      `UPDATE combos SET name = ?, kind = ?, models = ?, updatedAt = ?, promptInjectionEnabled = ?, promptInjectionMode = ?, systemPrompt = ?, displayIdentity = ? WHERE id = ?`,
-      [merged.name, merged.kind, stringifyJson(merged.models || []), merged.updatedAt, merged.promptInjectionEnabled ? 1 : 0, merged.promptInjectionMode, merged.systemPrompt, merged.displayIdentity, id]
+      `UPDATE combos SET name = ?, kind = ?, models = ?, updatedAt = ?, promptInjectionEnabled = ?, promptInjectionMode = ?, systemPrompt = ?, displayIdentity = ?, visibility = ?, publicName = ? WHERE id = ?`,
+      [merged.name, merged.kind, stringifyJson(merged.models || []), merged.updatedAt, merged.promptInjectionEnabled ? 1 : 0, merged.promptInjectionMode, merged.systemPrompt, merged.displayIdentity, merged.visibility === "public" ? "public" : "private", merged.publicName ?? null, id]
     );
     result = merged;
   });

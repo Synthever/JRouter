@@ -23,6 +23,7 @@ vi.mock("../../src/sse/services/keyAccess.js", () => ({ getKeyAccessContext: asy
 
 vi.mock("@/lib/localDb", () => ({
   getSettings: async () => ({ requireApiKey: false }),
+  getComboByPublicName: async () => null,
 }));
 
 vi.mock("../../src/sse/services/model.js", () => ({

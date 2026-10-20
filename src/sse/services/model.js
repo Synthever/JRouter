@@ -1,5 +1,5 @@
 // Re-export from open-sse with localDb integration
-import { getModelAliases, getComboByName, getProviderNodes } from "@/lib/localDb";
+import { getModelAliases, getComboByName, getComboByPublicName, getProviderNodes } from "@/lib/localDb";
 import { parseModel as parseModelCore, resolveModelAliasFromMap, getModelInfoCore } from "open-sse/services/model.js";
 import REGISTRY from "open-sse/providers/registry/index.js";
 import { assertCurrentModelAllowed } from "@/lib/apiKeyPolicy/context.js";
@@ -34,10 +34,26 @@ export async function resolveModelAlias(alias) {
 }
 
 /**
+ * Resolve a published Custom Model-ID (a bare name) to its combo.
+ * Returns null for anything that is not a bare name, is not published, or does
+ * not exist — callers then continue with the ordinary internal lookups.
+ */
+export async function resolvePublicCombo(modelStr) {
+  if (!modelStr || modelStr.includes("/")) return null;
+  const combo = await getComboByPublicName(modelStr);
+  return combo?.visibility === "public" ? combo : null;
+}
+
+/**
  * Get full model info (parse or resolve)
  */
 export async function getModelInfo(modelStr) {
-  const info = await resolveModelInfo(modelStr);
+  // A published Custom Model-ID is not a provider model: map it onto its
+  // internal combo name so every caller takes the combo path.
+  const published = await resolvePublicCombo(modelStr);
+  const info = published
+    ? { provider: null, model: published.name }
+    : await resolveModelInfo(modelStr);
   // The Models Aliases subsystem (which owned the "jrouter/" virtual namespace)
   // is not part of this codebase anymore. An unresolved "jrouter/<anything>"
   // therefore cannot be a hidden provider outage — say so instead of letting the
@@ -111,7 +127,8 @@ export async function getComboModels(modelStr) {
   // Only check if it's not in provider/model format
   if (modelStr.includes("/")) return null;
 
-  const combo = await getComboByName(modelStr);
+  const published = await resolvePublicCombo(modelStr);
+  const combo = published || (await getComboByName(modelStr));
   if (combo && combo.models && combo.models.length > 0) {
     return combo.models;
   }

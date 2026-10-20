@@ -19,6 +19,7 @@ export {
   getCombos,
   getComboById,
   getComboByName,
+  getComboByPublicName,
   createCombo,
   updateCombo,
   deleteCombo,
