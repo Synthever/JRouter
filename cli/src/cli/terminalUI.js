@@ -3,6 +3,7 @@ const { showMenuWithBack } = require("./utils/menuHelper");
 const { showProvidersMenu } = require("./menus/providers");
 const { showApiKeysMenu } = require("./menus/apiKeys");
 const { showCombosMenu } = require("./menus/combos");
+const { showBackupMenu } = require("./menus/backup");
 const { showSettingsMenu } = require("./menus/settings");
 const { showCliToolsMenu } = require("./menus/cliTools");
 
@@ -110,6 +111,13 @@ async function startTerminalUI(port) {
         label: "Settings",
         action: async () => {
           await showSettingsMenu([...basePath, "Settings"]);
+          return true;
+        }
+      },
+      {
+        label: "Backup & Restore",
+        action: async () => {
+          await showBackupMenu([...basePath, "Backup & Restore"]);
           return true;
         }
       }

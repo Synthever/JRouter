@@ -431,6 +431,29 @@ async function resetPassword() {
 }
 
 // ============================================================================
+// DATABASE BACKUP API
+// ============================================================================
+
+/**
+ * Export the whole database as a JSON backup payload.
+ * Route requires dashboard auth or the local CLI token; makeRequest sends it.
+ * @returns {Promise<Object>} { success, data: { settings, providerConnections, … } }
+ */
+async function exportDatabase() {
+  return makeRequest("GET", "/api/settings/database");
+}
+
+/**
+ * Import a backup payload. DESTRUCTIVE: the server deletes every table it owns
+ * and rewrites it from the payload — this is a replace, never a merge.
+ * @param {Object} payload - Parsed backup JSON (without `password`)
+ * @returns {Promise<Object>} { success, data: { success: true } }
+ */
+async function importDatabase(payload) {
+  return makeRequest("POST", "/api/settings/database", payload);
+}
+
+// ============================================================================
 // MODELS API
 // ============================================================================
 
@@ -550,6 +573,10 @@ module.exports = {
   getSettings,
   updateSettings,
   resetPassword,
+
+  // Database backup
+  exportDatabase,
+  importDatabase,
   
   // Tunnel
   getTunnelStatus,
