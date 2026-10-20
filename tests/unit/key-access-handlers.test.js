@@ -22,6 +22,8 @@ vi.mock("@/lib/localDb", () => ({
   getSettings: async () => ({ requireApiKey: false, comboStrategy: "fallback" }),
   getModelAliases: async () => ({}),
   getComboByName: async (name) => fx.combos.find((c) => c.name === name) || null,
+  getComboByPublicName: async (publicName) =>
+    fx.combos.find((c) => (c.publicName || c.name) === publicName) || null,
   getProviderNodes: async () => [],
   getCombos: async () => fx.combos,
   getProviderConnections: async () => [{ id: "openai-fixture", provider: "openai", isActive: true }],
