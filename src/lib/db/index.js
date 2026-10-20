@@ -39,7 +39,7 @@ export {
 
 // Combos
 export {
-  getCombos, getComboById, getComboByName,
+  getCombos, getComboById, getComboByName, getComboByPublicName,
   createCombo, updateCombo, deleteCombo,
 } from "./repos/combosRepo.js";
 

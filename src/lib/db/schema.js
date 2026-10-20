@@ -3,7 +3,7 @@
 // pre-change safety backup in migrate.js: when the stored version is lower,
 // one lightweight DB backup is taken before applying schema changes. Forgetting
 // to bump only skips that backup — it does NOT break the additive auto-sync.
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 export const PRAGMA_SQL = `
 PRAGMA journal_mode = WAL;
@@ -120,6 +120,9 @@ export const TABLES = {
       // Existing rows stay unrestricted when additive schema sync adds these columns.
       accessRestricted: "INTEGER DEFAULT 0",
       accessAllow: "TEXT",
+      // owner = full access (today's behaviour for every existing key);
+      // user = may call published Custom Model-IDs only.
+      role: "TEXT NOT NULL DEFAULT 'owner'",
     },
     indexes: ["CREATE INDEX IF NOT EXISTS idx_ak_key ON apiKeys(key)"],
   },
@@ -152,6 +155,11 @@ export const TABLES = {
       displayIdentity: "TEXT",
       createdAt: "TEXT NOT NULL",
       updatedAt: "TEXT NOT NULL",
+      // Publication for Custom Model-IDs. Private by default so a deploy never
+      // exposes a combo the owner did not publish. publicName NULL ⇒ the
+      // combo's own `name` is its public model id.
+      visibility: "TEXT NOT NULL DEFAULT 'private'",
+      publicName: "TEXT",
     },
     indexes: ["CREATE INDEX IF NOT EXISTS idx_combo_name ON combos(name)"],
   },
