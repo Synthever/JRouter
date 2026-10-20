@@ -178,7 +178,11 @@ export async function pingModelByKind(model, kind, baseUrl = `http://127.0.0.1:$
       stream: false,
       messages: [{ role: "user", content: "hi" }],
     }),
-    signal: AbortSignal.timeout(15000),
+    // 60s: HIGH-effort reasoning models (e.g. antigravity/gemini-3.8-flash-high)
+    // routinely need >15s before the first answer token, so a 15s deadline aborted
+    // healthy connections with "The operation was aborted due to timeout".
+    // Image/embedding/STT/System One probes keep their 15s budget.
+    signal: AbortSignal.timeout(60000),
   });
   const latencyMs = Date.now() - start;
 
