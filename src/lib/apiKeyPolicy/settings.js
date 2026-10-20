@@ -12,9 +12,11 @@ export function policyDefaults(policy = {}) {
   return { ...DEFAULT_KEY_POLICY, ...policy };
 }
 
+export const KEY_ROLES = Object.freeze(["owner", "user"]);
+
 export function validateKeySettings(input) {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("Settings must be an object.");
-  const allowedFields = new Set([...Object.keys(DEFAULT_KEY_POLICY), "name", "isActive"]);
+  const allowedFields = new Set([...Object.keys(DEFAULT_KEY_POLICY), "name", "isActive", "role"]);
   const result = {};
   for (const [field, value] of Object.entries(input)) {
     if (!allowedFields.has(field)) throw new Error(`Unknown setting: ${field}`);
@@ -23,6 +25,9 @@ export function validateKeySettings(input) {
       result[field] = value.trim();
     } else if (field === "isActive") {
       if (typeof value !== "boolean") throw new Error("isActive must be a boolean.");
+      result[field] = value;
+    } else if (field === "role") {
+      if (!KEY_ROLES.includes(value)) throw new Error("Role must be owner or user.");
       result[field] = value;
     } else if (field === "quotaResetCycle") {
       if (!QUOTA_CYCLES.includes(value)) throw new Error("Invalid quota reset cycle.");

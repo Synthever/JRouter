@@ -26,23 +26,26 @@ export async function POST(request) {
   if (!(await canManageApiKeys(request))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const body = await request.json();
-    const { name } = body;
+    const { name, role } = body;
 
     if (!name) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
-    try { validateKeySettings({ name }); }
+    try { validateKeySettings(role === undefined ? { name } : { name, role }); }
     catch (error) { return NextResponse.json({ error: error.message }, { status: 400 }); }
 
     // Always get machineId from server
     const machineId = await getConsistentMachineId();
-    const apiKey = await createApiKey(name, machineId);
+    // The API default stays `owner` for backward compatibility; the dashboard
+    // create dialog defaults its control to `user`.
+    const apiKey = await createApiKey(name, machineId, role || "owner");
 
     return NextResponse.json({
       key: apiKey.key,
       name: apiKey.name,
       id: apiKey.id,
       machineId: apiKey.machineId,
+      role: apiKey.role,
     }, { status: 201 });
   } catch (error) {
     console.log("Error creating key:", error);
