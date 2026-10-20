@@ -85,6 +85,7 @@ async function showMenuWithBack(config) {
  * @param {Function} config.formatItem - Function to format each item to {label, data}
  * @param {Function} config.onSelect - Action when item is selected
  * @param {Object} config.createAction - Optional create action {label, action}
+ * @param {Array<{label: string, action: Function}>} config.extraActions - Optional actions listed before the items
  * @param {string} config.backLabel - Back button label
  * @param {Array<string>} config.breadcrumb - Optional breadcrumb path
  * @returns {Promise<void>}
@@ -97,6 +98,7 @@ async function showListMenu(config) {
     formatItem,
     onSelect,
     createAction = null,
+    extraActions = [],
     backLabel = "← Back",
     breadcrumb = []
   } = config;
@@ -113,13 +115,18 @@ async function showListMenu(config) {
 
     // Build menu items
     const menuItems = [{ label: backLabel, icon: "☆" }];
-    
+
     if (createAction) {
       menuItems.push({ label: createAction.label, icon: "☆" });
     }
 
-    items.forEach(item => {
-      const formatted = formatItem(item);
+    extraActions.forEach(action => {
+      const label = typeof action.label === "function" ? action.label(metadata) : action.label;
+      menuItems.push({ label, icon: "☆" });
+    });
+
+    items.forEach((item, index) => {
+      const formatted = formatItem(item, index, items.length);
       menuItems.push({ label: formatted, icon: "☆" });
     });
 
@@ -140,8 +147,16 @@ async function showListMenu(config) {
       continue;
     }
 
+    // Extra actions sit between the create action and the list.
+    const extraOffset = (createAction ? 1 : 0) + 1;
+    const extraIndex = selected - extraOffset;
+    if (extraIndex >= 0 && extraIndex < extraActions.length) {
+      await extraActions[extraIndex].action();
+      continue;
+    }
+
     // Select item
-    const offset = createAction ? 2 : 1;
+    const offset = (createAction ? 2 : 1) + extraActions.length;
     const itemIndex = selected - offset;
     
     if (itemIndex >= 0 && itemIndex < items.length) {

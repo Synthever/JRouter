@@ -196,6 +196,16 @@ async function testProvider(id) {
 }
 
 /**
+ * Test every active connection of one provider in a single request.
+ * The server filters by isActive, so disabled connections are not probed.
+ * @param {string} providerId
+ * @returns {Promise<Object>} { success, data: { results, summary } }
+ */
+async function testProviderBatch(providerId) {
+  return makeRequest("POST", "/api/providers/test-batch", { mode: "provider", providerId });
+}
+
+/**
  * Delete provider
  * @param {string} id - Provider ID
  * @returns {Promise<Object>} { success, data: { message } }
@@ -541,6 +551,7 @@ module.exports = {
   
   // Connection aliases
   testConnection: testProvider,
+  testProviderBatch,
   deleteConnection: deleteProvider,
   updateConnection,
   
