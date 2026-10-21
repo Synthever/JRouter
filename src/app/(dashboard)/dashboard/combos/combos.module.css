@@ -856,48 +856,39 @@
 .dotPrivate { color: var(--text-3); }
 
 @media (max-width: 640px) {
-  .modelTable thead {
-    display: none;
+  /* Match the Health table: stay a real table and scroll horizontally instead
+     of collapsing each row into a card, so columns stay comparable on a phone. */
+  .modelTableWrap {
+    margin-inline: -16px;
+    padding-inline: 16px;
   }
-  .modelTable,
-  .modelTable tbody,
-  .modelTable tr,
-  .modelTable td {
-    display: block;
-    width: 100%;
+  .modelTable {
+    min-width: 640px;
   }
-  .modelTable tr {
-    border-bottom: 1px solid var(--line);
-    padding: 12px 0;
-  }
-  .modelTable td {
-    border-bottom: 0;
-    padding: 4px 0;
-    /* the fixed row height is a desktop scan aid; stacked rows size to content */
-    height: auto;
-  }
+  /* The desktop min/max widths make the two big columns eat the phone width;
+     tighten them so more of the row is visible before scrolling. */
+  .modelTable th:nth-child(2),
   .modelTable td:nth-child(2) {
-    min-width: 0;
+    min-width: 150px;
   }
+  .modelTable th:nth-child(3),
   .modelTable td:nth-child(3) {
-    max-width: none;
+    max-width: 200px;
+  }
+  .modelTable th,
+  .modelTable td {
+    white-space: nowrap;
+    padding: 10px 8px;
   }
   .publicName,
-  .internalName,
-  .modelChipText {
-    max-width: 100%;
+  .internalName {
+    max-width: 150px;
   }
-  .actionsCell {
-    text-align: left;
-    width: auto;
-    padding-top: 10px;
+  .modelChipText {
+    max-width: 150px;
   }
   .rowActions {
-    justify-content: flex-start;
-  }
-  .actionMenuRight {
-    left: 0;
-    right: auto;
+    gap: 4px;
   }
   .summaryStrip {
     gap: 6px;
