@@ -23,7 +23,7 @@ import {
   Languages, Compass, FileUp, BadgeCheck, ShieldCheck, Box,
   Eye, EyeOff, HeartHandshake, AlertTriangle, Wifi, WifiOff,
   Radio, LayoutDashboard, ArrowUpDown, TrendingUp, PieChart,
-  Inbox, PanelLeftClose, PanelLeftOpen, PanelLeft
+  Inbox, PanelLeftClose, PanelLeftOpen, PanelLeft, EllipsisVertical
 } from "lucide-react";
 import { cn } from "@/shared/utils/cn";
 
@@ -74,6 +74,8 @@ const ICON_MAP = {
   "chevron_right": ChevronRight,
   "expand_more": ChevronDown,
   "expand_less": ChevronUp,
+  "more_vert": EllipsisVertical,
+  "kebab": EllipsisVertical,
   "keyboard_arrow_down": ChevronDown,
   "keyboard_arrow_up": ChevronUp,
   "swap_calls": ArrowUpDown,
