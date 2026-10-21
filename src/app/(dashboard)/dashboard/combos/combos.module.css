@@ -176,6 +176,16 @@
   margin-top: 8px;
 }
 
+/* Table cells keep members on one line so every row is the same height. */
+.memberLine {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
 .modelChip {
   display: inline-flex;
   align-items: center;
@@ -598,6 +608,27 @@
   font-size: 12px;
 }
 
+/* Keep the identifier column the widest and every row the same height, so the
+   table scans like the Health table instead of growing with member count. */
+.modelTable th:nth-child(2),
+.modelTable td:nth-child(2) {
+  min-width: 200px;
+}
+
+.modelTable th:nth-child(3),
+.modelTable td:nth-child(3) {
+  max-width: 340px;
+}
+
+.modelTable th:nth-child(6),
+.modelTable td:nth-child(6) {
+  white-space: nowrap;
+}
+
+.modelTable td {
+  height: 52px;
+}
+
 .modelTable th {
   color: var(--text-2);
   font-family: var(--font-mono);
@@ -621,21 +652,208 @@
 }
 
 .publicName {
+  display: block;
   font-family: var(--font-mono);
   font-size: 12px;
+  font-weight: 600;
   color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 260px;
+}
+
+.modelName {
+  display: block;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  max-width: 100%;
+}
+
+.modelName:hover .publicName {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .internalName {
+  display: block;
   margin-top: 2px;
   color: var(--text-3);
   font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 260px;
+}
+
+.modelChipText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 240px;
+}
+
+.memberMore {
+  flex-shrink: 0;
+  color: var(--text-3);
+  font-size: 11px;
+  cursor: default;
+}
+
+.updatedCell {
+  color: var(--text-2);
 }
 
 .actionsCell {
   text-align: right;
   white-space: nowrap;
+  width: 1%;
 }
+
+.rowActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.kebabWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.strategyCell {
+  position: relative;
+  display: inline-flex;
+}
+
+.strategyBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r1);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.strategyBadge:hover {
+  border-color: var(--text-3);
+}
+
+.actionMenu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 60;
+  min-width: 168px;
+  padding: 4px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r1);
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+}
+
+.actionMenuRight {
+  left: auto;
+  right: 0;
+}
+
+.actionMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.actionMenuItem:hover {
+  background: var(--surface-2);
+}
+
+.actionMenuItem span {
+  flex: 1;
+}
+
+.actionMenuItemDanger {
+  color: var(--danger);
+}
+
+.visibilityCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.visibilityPublic {
+  color: var(--pos);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.visibilityPrivate {
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+.summaryStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.summaryItem {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r1);
+  background: var(--surface-2);
+}
+
+.summaryLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-2);
+  font-size: 11px;
+}
+
+.summaryValue {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.dotPublic { color: var(--pos); }
+.dotPrivate { color: var(--text-3); }
 
 @media (max-width: 640px) {
   .modelTable thead {
@@ -655,8 +873,36 @@
   .modelTable td {
     border-bottom: 0;
     padding: 4px 0;
+    /* the fixed row height is a desktop scan aid; stacked rows size to content */
+    height: auto;
+  }
+  .modelTable td:nth-child(2) {
+    min-width: 0;
+  }
+  .modelTable td:nth-child(3) {
+    max-width: none;
+  }
+  .publicName,
+  .internalName,
+  .modelChipText {
+    max-width: 100%;
   }
   .actionsCell {
     text-align: left;
+    width: auto;
+    padding-top: 10px;
+  }
+  .rowActions {
+    justify-content: flex-start;
+  }
+  .actionMenuRight {
+    left: 0;
+    right: auto;
+  }
+  .summaryStrip {
+    gap: 6px;
+  }
+  .summaryItem {
+    padding: 6px 10px;
   }
 }

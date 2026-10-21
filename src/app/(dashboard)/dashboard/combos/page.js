@@ -1,7 +1,8 @@
 "use client";
 import Icon from "@/shared/components/Icon";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -93,6 +94,8 @@ export default function CombosPage() {
   const someSelected = selectedIds.length > 0;
 
   const publicIdOf = (combo) => combo.publicName || combo.name;
+  const publicCount = combos.filter((combo) => combo.visibility === "public").length;
+  const routedModelCount = new Set(combos.flatMap((combo) => combo.models)).size;
   const visibleCombos = combos.filter((combo) => {
     if (visibilityFilter && combo.visibility !== visibilityFilter) return false;
     if (!search) return true;
@@ -489,6 +492,25 @@ export default function CombosPage() {
           </Button>
         </div>
 
+        <div className={styles.summaryStrip}>
+          <div className={styles.summaryItem}>
+            <span className={styles.summaryLabel}>Combos</span>
+            <span className={`${styles.summaryValue} u-tnum`}>{combos.length}</span>
+          </div>
+          <div className={styles.summaryItem}>
+            <span className={styles.summaryLabel}><span className={`${styles.dot} ${styles.dotPublic}`} aria-hidden="true" />Public</span>
+            <span className={`${styles.summaryValue} u-tnum`}>{publicCount}</span>
+          </div>
+          <div className={styles.summaryItem}>
+            <span className={styles.summaryLabel}><span className={`${styles.dot} ${styles.dotPrivate}`} aria-hidden="true" />Private</span>
+            <span className={`${styles.summaryValue} u-tnum`}>{combos.length - publicCount}</span>
+          </div>
+          <div className={styles.summaryItem}>
+            <span className={styles.summaryLabel}>Models routed</span>
+            <span className={`${styles.summaryValue} u-tnum`}>{routedModelCount}</span>
+          </div>
+        </div>
+
         <div className={styles.toolbar}>
           <Input
             aria-label="Search combos"
@@ -599,7 +621,7 @@ export default function CombosPage() {
                       aria-label="Select all combos"
                     />
                   </th>
-                  <th scope="col">Model</th>
+                  <th scope="col">Model ID</th>
                   <th scope="col">Members</th>
                   <th scope="col">Strategy</th>
                   <th scope="col">Visibility</th>
@@ -882,18 +904,80 @@ function ComboRow({ combo, getCaps, comboByName = {}, activeProviders = [], copi
 
 // One row of the Custom Model-ID table. Renders table cells (not a div tree) so
 // the mobile stacked-card CSS keeps a valid table underneath.
+// One row of the Custom Model-ID table. Renders table cells (not a div tree) so
+// the whole row stays scannable like the Health table: friendly identifier first,
+// technical id beneath, one badge per concept, and a single actions menu.
+const STRATEGY_LABEL = {
+  fallback: "Fallback",
+  "round-robin": "Round Robin",
+  fusion: "Fusion",
+};
+
+const MEMBER_PREVIEW_COUNT = 2;
+
 function ComboTableRow({
   combo, getCaps, comboByName = {}, copied, onCopy, onEdit, onSettings,
   onEditLimits, onDelete, strategy = {}, onSetStrategy, selected = false,
   onToggleSelect, onToggleVisibility,
 }) {
   const [showJudgeSelect, setShowJudgeSelect] = useState(false);
+  const [openMenu, setOpenMenu] = useState(null); // "strategy" | "actions" | null
+  const [menuPos, setMenuPos] = useState(null);
+  const strategyRef = useRef(null);
+  const actionsRef = useRef(null);
+  const menuRef = useRef(null);
   const current = strategy.fallbackStrategy || "fallback";
   const judge = strategy.judgeModel || "";
   const isFusion = current === "fusion";
   const comboCaps = aggregateComboCapabilities(combo.models, comboByName, getCaps);
   const publicId = combo.publicName || combo.name;
   const copyKey = `combo-${combo.id}`;
+  const isPublic = combo.visibility === "public";
+  const previewMembers = combo.models.slice(0, MEMBER_PREVIEW_COUNT);
+  const hiddenMembers = Math.max(0, combo.models.length - MEMBER_PREVIEW_COUNT);
+
+  useEffect(() => {
+    if (!openMenu) return;
+    const close = (event) => {
+      const inside = [strategyRef.current, actionsRef.current, menuRef.current].some((node) => node?.contains(event.target));
+      if (!inside) setOpenMenu(null);
+    };
+    const escape = (event) => { if (event.key === "Escape") setOpenMenu(null); };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [openMenu]);
+
+  // The table wrapper scrolls horizontally, which would clip an absolutely
+  // positioned menu. Render the menu in a portal anchored to the trigger; the
+  // real height is measured after mount so the last rows flip above instead of
+  // opening off-screen.
+  const openAnchoredMenu = (kind) => {
+    if (openMenu === kind) { setOpenMenu(null); return; }
+    const anchor = (kind === "strategy" ? strategyRef.current : actionsRef.current)?.getBoundingClientRect();
+    if (!anchor) return;
+    const width = kind === "strategy" ? 180 : 176;
+    const viewportW = typeof window !== "undefined" ? window.innerWidth : 0;
+    const left = Math.max(8, Math.min(
+      kind === "strategy" ? anchor.left : anchor.right - width,
+      viewportW - width - 8
+    ));
+    setMenuPos({ top: anchor.bottom + 4, left, width, anchorTop: anchor.top, anchorBottom: anchor.bottom });
+    setOpenMenu(kind);
+  };
+
+  // Runs after the portal is in the DOM but before paint, so the measured
+  // height can flip the menu above the trigger without a visible jump.
+  useLayoutEffect(() => {
+    if (!openMenu || !menuPos || !menuRef.current) return;
+    const height = menuRef.current.getBoundingClientRect().height;
+    const fitsBelow = menuPos.anchorBottom + 4 + height <= window.innerHeight - 8;
+    const top = fitsBelow ? menuPos.anchorBottom + 4 : Math.max(8, menuPos.anchorTop - 4 - height);
+    if (top !== menuPos.top) setMenuPos((previous) => (previous ? { ...previous, top } : previous));
+  }, [openMenu, menuPos]);
 
   return (
     <tr className={selected ? styles.selected : undefined}>
@@ -906,104 +990,138 @@ function ComboTableRow({
         />
       </td>
       <td>
-        <code className={styles.publicName}>{publicId}</code>
-        {combo.publicName && combo.publicName !== combo.name ? (
-          <div className={styles.internalName}>{combo.name}</div>
-        ) : null}
-        {comboCaps && <CapacityBadges caps={comboCaps} colorOverride="text-text-muted" size={14} />}
+        <button
+          type="button"
+          className={styles.modelName}
+          onClick={() => onCopy(publicId, copyKey)}
+          title={`Copy ${publicId}`}
+        >
+          <span className={styles.publicName}>{publicId}</span>
+          {combo.publicName && combo.publicName !== combo.name ? (
+            <span className={styles.internalName}>{combo.name}</span>
+          ) : null}
+        </button>
+        {comboCaps && <CapacityBadges caps={comboCaps} colorOverride="text-text-muted" size={13} />}
       </td>
       <td>
-        <div className={styles.modelList}>
-          {combo.models.slice(0, 3).map((model, index) => (
+        <div className={styles.memberLine}>
+          {previewMembers.map((model, index) => (
             <code key={`${model}-${index}`} className={styles.modelChip} title={model}>
               {index > 0 && <span className={styles.chainSeparator} aria-hidden="true">{isFusion ? "+" : "→"}</span>}
-              <span>{model}</span>
+              <span className={styles.modelChipText}>{model}</span>
             </code>
           ))}
-          {combo.models.length > 3 && (
-            <span className="text-[11px] text-text-muted">+{combo.models.length - 3} more</span>
+          {hiddenMembers > 0 && (
+            <span className={styles.memberMore} title={combo.models.slice(MEMBER_PREVIEW_COUNT).join("\n")}>
+              +{hiddenMembers} more
+            </span>
           )}
         </div>
       </td>
       <td>
-        <div className={styles.strategySelect}>
-          <Select
-            options={STRATEGY_OPTIONS}
-            value={current}
-            aria-label={`Routing strategy for ${publicId}`}
-            onChange={(event) => onSetStrategy({ fallbackStrategy: event.target.value })}
-            selectClassName="py-1.5 text-xs"
-          />
-        </div>
-        {isFusion && (
+        <div className={styles.strategyCell} ref={strategyRef}>
           <button
             type="button"
-            onClick={() => setShowJudgeSelect(true)}
-            className={styles.judgeButton}
-            title="Pick the model that fuses panel answers"
+            className={styles.strategyBadge}
+            aria-label={`Routing strategy for ${publicId}: ${STRATEGY_LABEL[current] || current}`}
+            aria-expanded={openMenu === "strategy"}
+            onClick={() => openAnchoredMenu("strategy")}
           >
-            <Icon className="shrink-0 text-[14px]">gavel</Icon>
-            <span>{judge || `Auto - ${combo.models[0] || "first model"}`}</span>
+            <span>{STRATEGY_LABEL[current] || current}</span>
+            <Icon className="text-[14px]">expand_more</Icon>
           </button>
-        )}
+          {openMenu === "strategy" && menuPos && createPortal(
+            <div
+              ref={menuRef}
+              className={styles.actionMenu}
+              style={{ position: "fixed", top: menuPos.top, left: menuPos.left, width: menuPos.width }}
+              role="menu"
+            >
+              {STRATEGY_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={current === option.value}
+                  className={styles.actionMenuItem}
+                  onClick={() => { onSetStrategy({ fallbackStrategy: option.value }); setOpenMenu(null); }}
+                >
+                  <span>{STRATEGY_LABEL[option.value]}</span>
+                  {current === option.value && <Icon className="text-[14px]">check</Icon>}
+                </button>
+              ))}
+              {isFusion && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={styles.actionMenuItem}
+                  onClick={() => { setOpenMenu(null); setShowJudgeSelect(true); }}
+                >
+                  <span>Judge: {judge || "Auto"}</span>
+                  <Icon className="text-[14px]">gavel</Icon>
+                </button>
+              )}
+            </div>,
+            document.body
+          )}
+        </div>
       </td>
       <td>
-        <Toggle
-          checked={combo.visibility === "public"}
-          onChange={() => onToggleVisibility(combo)}
-          aria-label={`Visibility for ${publicId}`}
-        />
-        <div className={styles.internalName}>{combo.visibility === "public" ? "Public" : "Private"}</div>
+        <div className={styles.visibilityCell}>
+          <Toggle
+            size="sm"
+            checked={isPublic}
+            onChange={() => onToggleVisibility(combo)}
+            aria-label={`Visibility for ${publicId}`}
+          />
+          <span className={isPublic ? styles.visibilityPublic : styles.visibilityPrivate}>
+            {isPublic ? "Public" : "Private"}
+          </span>
+        </div>
       </td>
-      <td className="u-tnum">{combo.updatedAt ? new Date(combo.updatedAt).toLocaleDateString() : "—"}</td>
+      <td className={`u-tnum ${styles.updatedCell}`}>{combo.updatedAt ? new Date(combo.updatedAt).toLocaleDateString() : "—"}</td>
       <td className={styles.actionsCell}>
-        <button
-          type="button"
-          onClick={onSettings}
-          className={styles.iconAction}
-          title="Combo Settings"
-          aria-label={`Settings ${publicId}`}
-        >
-          <Icon className="text-[16px]">settings</Icon>
-        </button>
-        <button
-          type="button"
-          onClick={() => onCopy(publicId, copyKey)}
-          className={styles.iconAction}
-          title="Copy model id"
-          aria-label={`Copy ${publicId}`}
-        >
-          <Icon className={`text-[16px] ${copied === copyKey ? styles.success : ""}`}>
-            {copied === copyKey ? "check" : "content_copy"}
-          </Icon>
-        </button>
-        <button
-          type="button"
-          onClick={() => onEditLimits?.()}
-          className={styles.iconAction}
-          title="Context and output limits"
-          aria-label={`Limits ${publicId}`}
-        >
-          <Icon className="text-[16px]">data_usage</Icon>
-        </button>
-        <button
-          type="button"
-          onClick={onEdit}
-          className={styles.iconAction}
-          title="Edit"
-          aria-label={`Edit ${publicId}`}
-        >
-          <Icon className="text-[16px]">edit</Icon>
-        </button>
-        <button
-          type="button"
-          onClick={onDelete}
-          className={`${styles.iconAction} ${styles.dangerAction}`}
-          title="Delete"
-          aria-label={`Delete ${publicId}`}
-        >
-          <Icon className="text-[16px]">delete</Icon>
-        </button>
+        <div className={styles.rowActions}>
+          <Button variant="outline" size="sm" onClick={onEdit} aria-label={`Edit ${publicId}`}>Edit</Button>
+          <div className={styles.kebabWrap} ref={actionsRef}>
+            <button
+              type="button"
+              className={styles.iconAction}
+              title="More actions"
+              aria-label={`More actions for ${publicId}`}
+              aria-expanded={openMenu === "actions"}
+              onClick={() => openAnchoredMenu("actions")}
+            >
+              <Icon className="text-[16px]">more_vert</Icon>
+            </button>
+            {openMenu === "actions" && menuPos && createPortal(
+              <div
+                ref={menuRef}
+                className={styles.actionMenu}
+                style={{ position: "fixed", top: menuPos.top, left: menuPos.left, width: menuPos.width }}
+                role="menu"
+              >
+                <button type="button" role="menuitem" className={styles.actionMenuItem} onClick={() => { setOpenMenu(null); onCopy(publicId, copyKey); }}>
+                  <Icon className="text-[14px]">{copied === copyKey ? "check" : "content_copy"}</Icon>
+                  <span>Copy model id</span>
+                </button>
+                <button type="button" role="menuitem" className={styles.actionMenuItem} onClick={() => { setOpenMenu(null); onSettings(); }} aria-label={`Settings ${publicId}`}>
+                  <Icon className="text-[14px]">settings</Icon>
+                  <span>Settings</span>
+                </button>
+                <button type="button" role="menuitem" className={styles.actionMenuItem} onClick={() => { setOpenMenu(null); onEditLimits?.(); }} aria-label={`Limits ${publicId}`}>
+                  <Icon className="text-[14px]">data_usage</Icon>
+                  <span>Limits</span>
+                </button>
+                <button type="button" role="menuitem" className={`${styles.actionMenuItem} ${styles.actionMenuItemDanger}`} onClick={() => { setOpenMenu(null); onDelete(); }} aria-label={`Delete ${publicId}`}>
+                  <Icon className="text-[14px]">delete</Icon>
+                  <span>Delete</span>
+                </button>
+              </div>,
+              document.body
+            )}
+          </div>
+        </div>
       </td>
       {/* A <tr> may only contain <td>: the judge modal rides in a hidden cell. */}
       {isFusion && showJudgeSelect && (
