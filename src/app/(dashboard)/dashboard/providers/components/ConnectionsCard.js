@@ -3,6 +3,7 @@ import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getStatusVariant as getConnectionStatusVariant } from "@/shared/utils/connectionStatus";
+import { applyDemotionOverlay } from "@/sse/services/demotion.js";
 import PropTypes from "prop-types";
 import { Card, Badge, Button, Modal, Select, Toggle, EditConnectionModal, ConfirmModal } from "@/shared/components";
 
@@ -306,6 +307,8 @@ AddApiKeyModal.propTypes = {
 // Self-contained card: fetches, displays and manages all connections for a provider.
 export default function ConnectionsCard({ providerId, isOAuth }) {
   const [connections, setConnections] = useState([]);
+  const reorderBusy = useRef(false);
+  const [reordering, setReordering] = useState(false);
   const [proxyPools, setProxyPools] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -377,16 +380,24 @@ export default function ConnectionsCard({ providerId, isOAuth }) {
     } catch (e) { console.log("saveDemoteOnError error:", e); }
   };
 
-  const handleSwapPriority = async (i1, i2) => {
-    const next = [...connections];
-    [next[i1], next[i2]] = [next[i2], next[i1]];
-    setConnections(next);
+  const handleSwapPriority = async (id, swapWithId) => {
+    if (reorderBusy.current || !swapWithId) return;
+    reorderBusy.current = true;
+    setReordering(true);
     try {
-      await Promise.all([
-        fetch(`/api/providers/${next[i1].id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ priority: i1 }) }),
-        fetch(`/api/providers/${next[i2].id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ priority: i2 }) }),
-      ]);
-    } catch { await fetch_(); }
+      const response = await fetch(`/api/providers/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ swapWithId }),
+      });
+      if (!response.ok) throw new Error("Failed to reorder connections");
+    } catch (error) {
+      console.log("Error swapping priority:", error);
+    } finally {
+      await fetch_();
+      reorderBusy.current = false;
+      setReordering(false);
+    }
   };
 
   const handleDelete = async (id) => {
@@ -433,6 +444,9 @@ export default function ConnectionsCard({ providerId, isOAuth }) {
 
   if (loading) return <Card><div className="h-20 animate-pulse bg-black/5 rounded-lg" /></Card>;
 
+  const displayedConnections = demoteOnError === false ? connections : applyDemotionOverlay(connections);
+  const manualIndexById = new Map(connections.map((conn, index) => [conn.id, index]));
+
   return (
     <>
       <Card>
@@ -477,17 +491,17 @@ export default function ConnectionsCard({ providerId, isOAuth }) {
           </div>
         ) : (
           <>
-            <div className="flex flex-col divide-y divide-black/[0.03] dark:divide-white/[0.03] max-h-[500px] overflow-y-auto pr-1">
-              {connections.map((conn, idx) => (
+            <div title="Routing order includes auto-demotion. Arrows edit manual priority (#), not demotion." className="flex flex-col divide-y divide-black/[0.03] dark:divide-white/[0.03] max-h-[500px] overflow-y-auto pr-1">
+              {displayedConnections.map((conn) => (
                 <ConnectionRow
                   key={conn.id}
                   connection={conn}
                   proxyPools={proxyPools}
                   isOAuth={isOAuth}
-                  isFirst={idx === 0}
-                  isLast={idx === connections.length - 1}
-                  onMoveUp={() => handleSwapPriority(idx, idx - 1)}
-                  onMoveDown={() => handleSwapPriority(idx, idx + 1)}
+                  isFirst={reordering || manualIndexById.get(conn.id) === 0}
+                  isLast={reordering || manualIndexById.get(conn.id) === connections.length - 1}
+                  onMoveUp={() => handleSwapPriority(conn.id, connections[manualIndexById.get(conn.id) - 1]?.id)}
+                  onMoveDown={() => handleSwapPriority(conn.id, connections[manualIndexById.get(conn.id) + 1]?.id)}
                   onToggleActive={(isActive) => handleToggleActive(conn.id, isActive)}
                   onUpdateProxy={(poolId) => handleUpdateProxy(conn.id, poolId)}
                   onEdit={() => { setSelectedConnection(conn); setShowEditModal(true); }}

@@ -24,7 +24,8 @@ export function shouldDemoteStatus(status) {
 
 /**
  * Effective connection order: healthy keys first (curated priority order),
- * then demoted keys (also priority-ordered among themselves). Non-mutating.
+ * then demoted keys oldest failure first (new failures move to the tail).
+ * Timestamp ties fall back to curated priority. Non-mutating.
  * @param {Array<object>} connections - priority-sorted connections of one provider
  * @returns {Array<object>} new sorted array
  */
@@ -35,5 +36,7 @@ export function applyDemotionOverlay(connections) {
     (c.demotedAt ? demoted : healthy).push(c);
   }
   const byPriority = (a, b) => (a.priority || 999) - (b.priority || 999);
-  return [...healthy.sort(byPriority), ...demoted.sort(byPriority)];
+  const byFailureTime = (a, b) =>
+    ((Date.parse(a.demotedAt) || 0) - (Date.parse(b.demotedAt) || 0)) || byPriority(a, b);
+  return [...healthy.sort(byPriority), ...demoted.sort(byFailureTime)];
 }

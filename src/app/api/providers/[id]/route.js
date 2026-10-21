@@ -6,6 +6,7 @@ import {
   deleteProviderConnection,
 } from "@/models";
 import { toProviderConnectionResponse, usesAwsCredentialForm } from "@/lib/providerConnectionResponse";
+import { swapProviderConnectionPriorities } from "@/lib/db/repos/connectionsRepo.js";
 
 function normalizeProxyConfig(body = {}) {
   const hasAnyProxyField =
@@ -165,6 +166,19 @@ export async function PUT(request, { params }) {
   } catch (error) {
     console.log("Error updating connection:", error);
     return NextResponse.json({ error: "Failed to update connection" }, { status: 500 });
+  }
+}
+
+// PATCH /api/providers/[id] - Atomically swap two manual-priority positions.
+export async function PATCH(request, { params }) {
+  try {
+    const { id } = await params;
+    const { swapWithId } = await request.json();
+    await swapProviderConnectionPriorities(id, swapWithId);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    const status = error?.status === 400 || error?.status === 404 ? error.status : 500;
+    return NextResponse.json({ error: status === 500 ? "Failed to reorder connections" : error.message }, { status });
   }
 }
 

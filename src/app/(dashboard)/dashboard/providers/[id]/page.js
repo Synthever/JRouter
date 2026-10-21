@@ -15,6 +15,7 @@ import { useModelCaps } from "@/shared/hooks/useModelCaps";
 import { translate } from "@/i18n/runtime";
 import { fetchSuggestedModels } from "@/shared/utils/providerModelsFetcher";
 import { getProviderCustomModelRows } from "@/shared/utils/providerCustomModels";
+import { applyDemotionOverlay } from "@/sse/services/demotion.js";
 import ModelRow from "./ModelRow";
 import PassthroughModelsSection from "./PassthroughModelsSection";
 import CompatibleModelsSection from "./CompatibleModelsSection";
@@ -46,6 +47,8 @@ export default function ProviderDetailPage() {
   const providerId = params.id;
   const { getCaps } = useModelCaps();
   const [connections, setConnections] = useState([]);
+  const reorderBusy = useRef(false);
+  const [reordering, setReordering] = useState(false);
   const [loading, setLoading] = useState(true);
   const [providerNode, setProviderNode] = useState(null);
   const [proxyPools, setProxyPools] = useState([]);
@@ -939,28 +942,23 @@ export default function ProviderDetailPage() {
     }
   };
 
-  const handleSwapPriority = async (index1, index2) => {
-    // Optimistic update state
-    const newConnections = [...connections];
-    [newConnections[index1], newConnections[index2]] = [newConnections[index2], newConnections[index1]];
-    setConnections(newConnections);
-
+  const handleSwapPriority = async (id, swapWithId) => {
+    if (reorderBusy.current || !swapWithId) return;
+    reorderBusy.current = true;
+    setReordering(true);
     try {
-      await Promise.all([
-        fetch(`/api/providers/${newConnections[index1].id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ priority: index1 }),
-        }),
-        fetch(`/api/providers/${newConnections[index2].id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ priority: index2 }),
-        }),
-      ]);
+      const response = await fetch(`/api/providers/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ swapWithId }),
+      });
+      if (!response.ok) throw new Error("Failed to reorder connections");
     } catch (error) {
       console.log("Error swapping priority:", error);
+    } finally {
       await fetchConnections();
+      reorderBusy.current = false;
+      setReordering(false);
     }
   };
 
@@ -1086,10 +1084,13 @@ export default function ProviderDetailPage() {
     }
   };
 
+  // Display the same demotion overlay as routing; arrows still edit manual order.
+  const displayedConnections = providerDemoteOnError === false ? connections : applyDemotionOverlay(connections);
+  const manualIndexById = new Map(connections.map((conn, index) => [conn.id, index]));
   const connectionsList = (
-    <div className="flex min-w-0 flex-col divide-y divide-black/[0.03] dark:divide-white/[0.03] max-h-[500px] overflow-y-auto pr-1">
-      {connections
-        .map((conn, index) => (
+    <div title="Routing order includes auto-demotion. Arrows edit manual priority (#), not demotion." className="flex min-w-0 flex-col divide-y divide-black/[0.03] dark:divide-white/[0.03] max-h-[500px] overflow-y-auto pr-1">
+      {displayedConnections
+        .map((conn) => (
           <div key={conn.id} className="flex min-w-0 items-stretch">
             <div className="flex shrink-0 items-center pl-1 sm:pl-2">
               <input
@@ -1104,10 +1105,10 @@ export default function ProviderDetailPage() {
                 connection={conn}
                 proxyPools={proxyPools}
                 isOAuth={isOAuth}
-                isFirst={index === 0}
-                isLast={index === connections.length - 1}
-                onMoveUp={() => handleSwapPriority(index, index - 1)}
-                onMoveDown={() => handleSwapPriority(index, index + 1)}
+                isFirst={reordering || manualIndexById.get(conn.id) === 0}
+                isLast={reordering || manualIndexById.get(conn.id) === connections.length - 1}
+                onMoveUp={() => handleSwapPriority(conn.id, connections[manualIndexById.get(conn.id) - 1]?.id)}
+                onMoveDown={() => handleSwapPriority(conn.id, connections[manualIndexById.get(conn.id) + 1]?.id)}
                 onToggleActive={(isActive) => handleUpdateConnectionStatus(conn.id, isActive)}
                 autoPing={AUTO_PING_SETTINGS_KEYS[providerId] && conn.authType === "oauth" ? {
                   isActive: autoPing.connections[conn.id] === true || autoPing.schedules?.[conn.id]?.enabled === true,

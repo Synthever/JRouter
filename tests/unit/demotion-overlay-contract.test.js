@@ -6,14 +6,14 @@ const NOW = Date.now();
 const iso = (msAgo) => new Date(NOW - msAgo).toISOString();
 
 describe("applyDemotionOverlay", () => {
-  it("places demoted keys after every healthy key, priority order within each group", () => {
+  it("places demoted keys after healthy keys, oldest failure first", () => {
     const conns = [
       { id: "a", priority: 1 },
       { id: "b", priority: 2, demotedAt: iso(1000) },
       { id: "c", priority: 3 },
       { id: "d", priority: 4, demotedAt: iso(2000) },
     ];
-    expect(applyDemotionOverlay(conns).map((c) => c.id)).toEqual(["a", "c", "b", "d"]);
+    expect(applyDemotionOverlay(conns).map((c) => c.id)).toEqual(["a", "c", "d", "b"]);
   });
 
   it("all-demoted keeps relative priority order", () => {
@@ -24,6 +24,33 @@ describe("applyDemotionOverlay", () => {
       { id: "z", priority: 3, demotedAt: t },
     ];
     expect(applyDemotionOverlay(conns).map((c) => c.id)).toEqual(["x", "y", "z"]);
+  });
+
+  it("moves the latest failure to the tail even when every key is demoted", () => {
+    const conns = [
+      { id: "a", priority: 1, demotedAt: iso(0) },
+      { id: "b", priority: 2, demotedAt: iso(3000) },
+      { id: "c", priority: 3, demotedAt: iso(2000) },
+    ];
+    expect(applyDemotionOverlay(conns).map((c) => c.id)).toEqual(["b", "c", "a"]);
+  });
+
+  it("keeps timestamp ties deterministic by curated priority", () => {
+    const conns = [
+      { id: "b", priority: 2, demotedAt: iso(1) },
+      { id: "a", priority: 1, demotedAt: iso(1) },
+    ];
+    expect(applyDemotionOverlay(conns).map((c) => c.id)).toEqual(["a", "b"]);
+  });
+
+  it("restores a recovered key to its original priority without mutation", () => {
+    const conns = [
+      { id: "a", priority: 1, demotedAt: null },
+      { id: "b", priority: 2 },
+      { id: "c", priority: 3, demotedAt: iso(1) },
+    ];
+    expect(applyDemotionOverlay(conns).map((c) => c.id)).toEqual(["a", "b", "c"]);
+    expect(conns.map((c) => c.priority)).toEqual([1, 2, 3]);
   });
 
   it("no demotions → priority order unchanged", () => {

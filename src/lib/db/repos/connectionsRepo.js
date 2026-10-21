@@ -276,6 +276,32 @@ export async function updateProviderConnection(id, data) {
   return result;
 }
 
+// One transaction avoids the intermediate renumbering caused by two priority PUTs.
+export async function swapProviderConnectionPriorities(id, swapWithId) {
+  if (typeof swapWithId !== "string" || !swapWithId || id === swapWithId) {
+    throw Object.assign(new Error("Two different connection IDs are required"), { status: 400 });
+  }
+  const db = await getAdapter();
+  db.transaction(() => {
+    const first = db.get(`SELECT provider FROM providerConnections WHERE id = ?`, [id]);
+    const second = db.get(`SELECT provider FROM providerConnections WHERE id = ?`, [swapWithId]);
+    if (!first || !second) {
+      throw Object.assign(new Error("Connection not found"), { status: 404 });
+    }
+    if (first.provider !== second.provider) {
+      throw Object.assign(new Error("Connections must belong to the same provider"), { status: 400 });
+    }
+    const list = db.all(`SELECT * FROM providerConnections WHERE provider = ?`, [first.provider]).map(rowToConn);
+    list.sort((a, b) => (a.priority || 999) - (b.priority || 999));
+    const a = list.findIndex((c) => c.id === id);
+    const b = list.findIndex((c) => c.id === swapWithId);
+    [list[a], list[b]] = [list[b], list[a]];
+    list.forEach((c, index) => {
+      db.run(`UPDATE providerConnections SET priority = ? WHERE id = ?`, [index + 1, c.id]);
+    });
+  });
+}
+
 export async function deleteProviderConnection(id) {
   const db = await getAdapter();
   let ok = false;
