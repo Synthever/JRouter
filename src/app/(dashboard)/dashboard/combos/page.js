@@ -419,34 +419,31 @@ export default function CombosPage() {
             Group models under one name, then pick a strategy per combo
           </p>
         </div>
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-stretch">
-          <Button variant="contrast" icon="add" onClick={() => setShowCreateModal(true)} className="w-full whitespace-nowrap sm:w-auto">
-            Create Combo
+        {/* Preset generators stay dormant (hidden) — only the visible create
+            CTA moved to the table header so there is a single Create button. */}
+        <div className="hidden">
+          <Button
+            variant="secondary"
+            size="sm"
+            icon="edit_note"
+            loading={presetLoading === "cursor"}
+            disabled={!!presetLoading}
+            onClick={() => handleGeneratePresets("cursor")}
+            className="w-full whitespace-nowrap"
+          >
+            Cursor Default
           </Button>
-          <div className="hidden">
-            <Button
-              variant="secondary"
-              size="sm"
-              icon="edit_note"
-              loading={presetLoading === "cursor"}
-              disabled={!!presetLoading}
-              onClick={() => handleGeneratePresets("cursor")}
-              className="w-full whitespace-nowrap"
-            >
-              Cursor Default
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              icon="smart_toy"
-              loading={presetLoading === "claude"}
-              disabled={!!presetLoading}
-              onClick={() => handleGeneratePresets("claude")}
-              className="w-full whitespace-nowrap"
-            >
-              Claude Default
-            </Button>
-          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon="smart_toy"
+            loading={presetLoading === "claude"}
+            disabled={!!presetLoading}
+            onClick={() => handleGeneratePresets("claude")}
+            className="w-full whitespace-nowrap"
+          >
+            Claude Default
+          </Button>
         </div>
       </header>
 
