@@ -651,6 +651,30 @@
   border-bottom: 0;
 }
 
+.adapterIdentity {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.adapterLabel {
+  display: block;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.expandedRow > td {
+  background: var(--surface-2);
+  padding: 8px 12px 12px;
+}
+
+.expandedRow .tableWrap {
+  margin-top: 0;
+}
+
 .publicName {
   display: block;
   font-family: var(--font-mono);

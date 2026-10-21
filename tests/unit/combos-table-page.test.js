@@ -39,6 +39,6 @@ describe("combos page table layout", () => {
   });
 
   it("relabels the sidebar entry", () => {
-    expect(sidebar).toContain("Combos & Custom Model-IDs");
+    expect(sidebar).toContain('label: "Combos"');
   });
 });

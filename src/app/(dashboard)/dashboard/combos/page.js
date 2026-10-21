@@ -1144,39 +1144,77 @@ function ComboTableRow({
 }
 
 function CapacityAdapterSection({ capacityAdapter, onChange, activeProviders, getCaps }) {
+  // The model picker is a portal modal; keeping it out of the <tbody> keeps the
+  // table markup valid (a stray <tr> there leaks the pool rows into the outer
+  // table body).
+  const [pickerCap, setPickerCap] = useState(null);
+
   return (
-    <div className={styles.rows}>
-      {CAPACITY_ADAPTER_CAPS.map((cap) => (
-        <CapacityAdapterCap
-          key={cap.key}
-          cap={cap}
-          entry={capacityAdapter[cap.key] || EMPTY_CAP_ENTRY}
-          onChange={(entry) => onChange({ ...capacityAdapter, [cap.key]: entry })}
+    <>
+      <div className={styles.modelTableWrap}>
+        <table className={styles.modelTable} aria-label="Vision adapter pools">
+          <thead>
+            <tr>
+              <th scope="col">Adapter</th>
+              <th scope="col">Model pool</th>
+              <th scope="col">Round-robin</th>
+              <th scope="col">Status</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {CAPACITY_ADAPTER_CAPS.map((cap) => (
+              <CapacityAdapterRow
+                key={cap.key}
+                cap={cap}
+                entry={capacityAdapter[cap.key] || EMPTY_CAP_ENTRY}
+                onChange={(entry) => onChange({ ...capacityAdapter, [cap.key]: entry })}
+                getCaps={getCaps}
+                onOpenPicker={() => setPickerCap(cap)}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {pickerCap && (
+        <ModelSelectModal
+          className={controls.modelPicker}
+          portal
+          isOpen={!!pickerCap}
+          onClose={() => setPickerCap(null)}
+          onSelect={(model) => {
+            const value = model?.value || model?.name || model;
+            const entry = capacityAdapter[pickerCap.key] || EMPTY_CAP_ENTRY;
+            if (value && !entry.models.includes(value)) {
+              onChange({ ...capacityAdapter, [pickerCap.key]: { ...entry, models: [...entry.models, value] } });
+            }
+          }}
+          onDeselect={(model) => {
+            const value = model?.value || model?.name || model;
+            const entry = capacityAdapter[pickerCap.key] || EMPTY_CAP_ENTRY;
+            const next = entry.models.filter((m) => m !== value);
+            onChange({
+              ...capacityAdapter,
+              [pickerCap.key]: { ...entry, models: next.length === 0 ? [DEFAULT_FALLBACK_MODEL] : next },
+            });
+          }}
           activeProviders={activeProviders}
-          getCaps={getCaps}
+          title={`Add ${pickerCap.label} Model`}
+          addedModelValues={(capacityAdapter[pickerCap.key] || EMPTY_CAP_ENTRY).models}
+          capFilter={pickerCap.key}
+          closeOnSelect={false}
         />
-      ))}
-    </div>
+      )}
+    </>
   );
 }
 
-function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) {
-  const [showModelSelect, setShowModelSelect] = useState(false);
+function CapacityAdapterRow({ cap, entry, onChange, getCaps, onOpenPicker }) {
+  const [expanded, setExpanded] = useState(false);
   const { enabled, roundRobin, models } = entry;
 
   const patch = (p) => onChange({ ...entry, ...p });
-
-  const handleAdd = (model) => {
-    const value = model?.value || model?.name || model;
-    if (!value || models.includes(value)) return;
-    patch({ models: [...models, value] });
-  };
-
-  const handleDeselect = (model) => {
-    const value = model?.value || model?.name || model;
-    const next = models.filter((m) => m !== value);
-    patch({ models: next.length === 0 ? [DEFAULT_FALLBACK_MODEL] : next });
-  };
 
   const handleRemove = (index) => {
     const next = models.filter((_, i) => i !== index);
@@ -1191,137 +1229,168 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
     patch({ models: next });
   };
 
-  return (
-    <div className={styles.adapterRow}>
-      <div className={styles.adapterHeader}>
-        {/* Master toggle + icon + label */}
-        <div className={styles.identity}>
-          <Icon className="shrink-0 text-text-muted text-[16px]">{cap.icon}</Icon>
-          <div className="min-w-0 flex-1">
-            <div className={styles.nameLine}>
-              <h3 className={styles.adapterName}>{cap.label}</h3>
-              <StatusBadge variant={enabled ? "success" : "default"}>{enabled ? "Active" : "Disabled"}</StatusBadge>
-            </div>
-            <p className={styles.metadata}>{cap.desc}</p>
-          </div>
-        </div>
+  const previewModels = models.slice(0, 2);
+  const hiddenModels = Math.max(0, models.length - 2);
 
-        {/* Actions: Round-robin toggle + Add Model */}
-        <div className={styles.adapterActions}>
-          <Toggle size="sm" checked={enabled} onChange={(v) => patch({ enabled: v })} aria-label={`${enabled ? "Disable" : "Enable"} ${cap.label} adapter`} />
-          <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer select-none">
+  return (
+    <>
+      <tr>
+        <td>
+          <div className={styles.adapterIdentity}>
+            <Icon className="shrink-0 text-text-muted text-[16px]">{cap.icon}</Icon>
+            <div className="min-w-0">
+              <span className={styles.adapterLabel}>{cap.label}</span>
+              <span className={styles.internalName}>{cap.desc}</span>
+            </div>
+          </div>
+        </td>
+        <td>
+          {models.length === 0 ? (
+            <span className={styles.memberMore}>Empty — falls back to {DEFAULT_FALLBACK_MODEL}</span>
+          ) : (
+            <div className={styles.memberLine}>
+              {previewModels.map((model, index) => (
+                <code key={`${model}-${index}`} className={styles.modelChip} title={model}>
+                  {index > 0 && <span className={styles.chainSeparator} aria-hidden="true">→</span>}
+                  <span className={styles.modelChipText}>{model}</span>
+                </code>
+              ))}
+              {hiddenModels > 0 && (
+                <span className={styles.memberMore} title={models.slice(2).join("\n")}>
+                  +{hiddenModels} more
+                </span>
+              )}
+            </div>
+          )}
+        </td>
+        <td>
+          <Toggle
+            size="sm"
+            checked={roundRobin}
+            onChange={(v) => patch({ roundRobin: v })}
+            disabled={!enabled}
+            aria-label={`Round-robin ${cap.label} adapter`}
+          />
+        </td>
+        <td>
+          <div className={styles.visibilityCell}>
             <Toggle
               size="sm"
-              checked={roundRobin}
-              onChange={(v) => patch({ roundRobin: v })}
-              disabled={!enabled}
-              aria-label={`Round-robin ${cap.label} adapter`}
+              checked={enabled}
+              onChange={(v) => patch({ enabled: v })}
+              aria-label={`${enabled ? "Disable" : "Enable"} ${cap.label} adapter`}
             />
-            <span>Round-robin</span>
-          </label>
-          <Button
-            icon="add"
-            variant="secondary"
-            size="sm"
-            onClick={() => setShowModelSelect(true)}
-            disabled={!enabled}
-            title={`Add ${cap.label} model`}
-          >
-            Add Model
-          </Button>
-        </div>
-      </div>
+            <span className={enabled ? styles.visibilityPublic : styles.visibilityPrivate}>
+              {enabled ? "Active" : "Disabled"}
+            </span>
+          </div>
+        </td>
+        <td className={styles.actionsCell}>
+          <div className={styles.rowActions}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setExpanded((value) => !value)}
+              aria-expanded={expanded}
+              aria-label={`Manage ${cap.label} pool`}
+            >
+              {expanded ? "Close" : "Manage"}
+            </Button>
+            <Button
+              icon="add"
+              variant="secondary"
+              size="sm"
+              onClick={onOpenPicker}
+              disabled={!enabled}
+              title={`Add ${cap.label} model`}
+              aria-label={`Add ${cap.label} model`}
+            >
+              Add
+            </Button>
+          </div>
+        </td>
+      </tr>
 
-      {/* Model pool list/table */}
-      {models.length === 0 ? (
-        <div className="mt-3 py-2 text-center text-xs text-text-muted italic">
-          No models in pool (will fallback to {DEFAULT_FALLBACK_MODEL})
-        </div>
-      ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.table} aria-label={`${cap.label} model pool`}>
-            <thead>
-              <tr>
-                <th scope="col" className="w-8 text-center">#</th>
-                <th scope="col">Model</th>
-                <th scope="col" className="w-24 text-center">Order</th>
-                <th scope="col" className="w-9 text-right"><span className="sr-only">Actions</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              {models.map((model, index) => (
-                <tr key={`${model}-${index}`}>
-                  <td className="text-center text-text-muted text-[11px] font-sans">
-                    #{index + 1}
-                  </td>
-                  <td className="text-text-main">
-                    <div className={styles.poolModel}>
-                      <span className={styles.modelValue} title={model}>{model}</span>
-                      <CapacityBadges caps={getCaps?.(model)} colorOverride="text-text-muted" size={14} />
-                      {model === DEFAULT_FALLBACK_MODEL && (
-                        <StatusBadge dot={false}>Free default</StatusBadge>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-3 py-2 text-center">
-                    <div className="inline-flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleMove(index, -1)}
-                        disabled={!enabled || index === 0}
-                        className={styles.iconAction}
-                        title="Move up"
-                        aria-label={`Move ${model} up`}
-                      >
-                        <Icon className="text-[16px] leading-none">arrow_upward</Icon>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleMove(index, 1)}
-                        disabled={!enabled || index === models.length - 1}
-                        className={styles.iconAction}
-                        title="Move down"
-                        aria-label={`Move ${model} down`}
-                      >
-                        <Icon className="text-[16px] leading-none">arrow_downward</Icon>
-                      </button>
-                    </div>
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <button
-                      type="button"
-                      onClick={() => handleRemove(index)}
-                      disabled={!enabled}
-                      className={`${styles.iconAction} ${styles.dangerAction}`}
-                      title="Remove model"
-                      aria-label={`Remove ${model}`}
-                    >
-                      <Icon className="text-[16px] leading-none">close</Icon>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {/* Pool editor: the routing order matters, so it stays its own table. */}
+      {expanded && (
+        <tr className={styles.expandedRow}>
+          <td colSpan={5}>
+            {models.length === 0 ? (
+              <p className={styles.memberMore}>
+                No models in pool (will fallback to {DEFAULT_FALLBACK_MODEL})
+              </p>
+            ) : (
+              <div className={styles.tableWrap}>
+                <table className={styles.table} aria-label={`${cap.label} model pool`}>
+                  <thead>
+                    <tr>
+                      <th scope="col" className="w-8 text-center">#</th>
+                      <th scope="col">Model</th>
+                      <th scope="col" className="w-24 text-center">Order</th>
+                      <th scope="col" className="w-9 text-right"><span className="sr-only">Actions</span></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {models.map((model, index) => (
+                      <tr key={`${model}-${index}`}>
+                        <td className="text-center text-text-muted text-[11px] font-sans">
+                          #{index + 1}
+                        </td>
+                        <td className="text-text-main">
+                          <div className={styles.poolModel}>
+                            <span className={styles.modelValue} title={model}>{model}</span>
+                            <CapacityBadges caps={getCaps?.(model)} colorOverride="text-text-muted" size={14} />
+                            {model === DEFAULT_FALLBACK_MODEL && (
+                              <StatusBadge dot={false}>Free default</StatusBadge>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <div className="inline-flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleMove(index, -1)}
+                              disabled={!enabled || index === 0}
+                              className={styles.iconAction}
+                              title="Move up"
+                              aria-label={`Move ${model} up`}
+                            >
+                              <Icon className="text-[16px] leading-none">arrow_upward</Icon>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMove(index, 1)}
+                              disabled={!enabled || index === models.length - 1}
+                              className={styles.iconAction}
+                              title="Move down"
+                              aria-label={`Move ${model} down`}
+                            >
+                              <Icon className="text-[16px] leading-none">arrow_downward</Icon>
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleRemove(index)}
+                            disabled={!enabled}
+                            className={`${styles.iconAction} ${styles.dangerAction}`}
+                            title="Remove model"
+                            aria-label={`Remove ${model}`}
+                          >
+                            <Icon className="text-[16px] leading-none">close</Icon>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </td>
+        </tr>
       )}
-
-      {showModelSelect && (
-        <ModelSelectModal
-          className={controls.modelPicker}
-          portal
-          isOpen={showModelSelect}
-          onClose={() => setShowModelSelect(false)}
-          onSelect={handleAdd}
-          onDeselect={handleDeselect}
-          activeProviders={activeProviders}
-          title={`Add ${cap.label} Model`}
-          addedModelValues={models}
-          capFilter={cap.key}
-          closeOnSelect={false}
-        />
-      )}
-    </div>
+    </>
   );
 }
 

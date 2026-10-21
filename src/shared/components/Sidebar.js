@@ -26,7 +26,7 @@ const navGroups = [
       { href: "/dashboard", label: "Dashboard", icon: "layout-dashboard" },
       { href: "/dashboard/endpoint", label: "Endpoint & Key", icon: "api" },
       { href: "/dashboard/providers", label: "Providers", icon: "dns" },
-      { href: "/dashboard/combos", label: "Combos & Custom Model-IDs", icon: "layers" },
+      { href: "/dashboard/combos", label: "Combos", icon: "layers" },
     ],
   },
   {
