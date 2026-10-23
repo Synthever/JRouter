@@ -2,7 +2,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Navigation from "./components/Navigation";
-import HeroShaderBackground from "./components/HeroShaderBackground";
 import HeroSection from "./components/HeroSection";
 import HowItWorks from "./components/HowItWorks";
 import Features from "./components/Features";
@@ -51,26 +50,15 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="landing-page dark relative text-[var(--text)] bg-[var(--bg)] font-sans overflow-x-hidden antialiased min-h-screen">
-      {/* Hardware Hairline Grid Substrate */}
-      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none bg-[var(--bg)]">
-        <div 
-          className="absolute inset-0 opacity-40" 
-          style={{
-            backgroundImage: `linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px)`,
-            backgroundSize: '48px 48px'
-          }}
-        />
-      </div>
+    <div className="landing-page relative text-[var(--text)] bg-[var(--bg)] font-sans overflow-x-hidden antialiased min-h-screen">
+      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none bg-[var(--bg)]" />
 
       <div className="relative z-10">
         <Navigation />
         
         <main>
-          {/* Persistent full-bleed WebGL shader field active across Hero -> GetStarted -> HowItWorks -> Features */}
-          <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-black">
-            <HeroShaderBackground />
-          </div>
+          {/* Soft brand field keeps the approved cream canvas and colored cards legible. */}
+          <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-[var(--canvas)]" />
 
           <div className="relative z-10">
             <HeroSection />

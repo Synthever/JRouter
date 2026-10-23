@@ -4,13 +4,13 @@ export const CHART_GRID_STROKE = "var(--line)";
 export const CHART_AXIS_STROKE = "var(--text-2)";
 export const CHART_SERIES_STROKE = "var(--text)";
 
-// Category shades stay neutral; success, warning and danger remain reserved for status.
+// Entity identities keep one stable brand color each; status colors stay reserved.
 export const CHART_BAR_COLORS = [
-  "var(--text)",
-  "var(--text-2)",
-  "color-mix(in srgb, var(--text) 80%, var(--surface))",
-  "color-mix(in srgb, var(--text) 60%, var(--surface))",
-  "color-mix(in srgb, var(--text) 45%, var(--surface))",
+  "var(--brand-teal)",
+  "var(--brand-pink)",
+  "var(--brand-lavender)",
+  "var(--brand-peach)",
+  "var(--brand-ochre)",
 ];
 
 export const getBarColor = (index) => CHART_BAR_COLORS[index % CHART_BAR_COLORS.length];
@@ -18,7 +18,7 @@ export const getBarColor = (index) => CHART_BAR_COLORS[index % CHART_BAR_COLORS.
 export const axisProps = {
   stroke: CHART_AXIS_STROKE,
   fontSize: 11,
-  fontFamily: "var(--font-mono)",
+  fontFamily: "var(--font-ui)",
   tickLine: false,
   axisLine: false,
 };

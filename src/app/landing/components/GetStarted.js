@@ -80,7 +80,7 @@ export default function GetStarted() {
                   willChange: "transform, opacity",
                 }}
               >
-                <div className="flex-none size-7 rounded-lg bg-black/40 backdrop-blur-xl border-0 text-[var(--text)] flex items-center justify-center font-mono text-xs font-semibold shadow-md shadow-black/50">1</div>
+                <div className="flex-none size-7 rounded-[var(--r2)] bg-[var(--brand-ochre)] text-[var(--on-color)] flex items-center justify-center text-xs font-semibold">1</div>
                 <div>
                   <h4 className="font-semibold text-sm text-[var(--text)]">Launch Gateway</h4>
                   <p className="text-xs text-[var(--text-2)] mt-0.5">Run CLI command to launch local proxy process</p>
@@ -96,7 +96,7 @@ export default function GetStarted() {
                   willChange: "transform, opacity",
                 }}
               >
-                <div className="flex-none size-7 rounded-lg bg-black/40 backdrop-blur-xl border-0 text-[var(--text)] flex items-center justify-center font-mono text-xs font-semibold shadow-md shadow-black/50">2</div>
+                <div className="flex-none size-7 rounded-[var(--r2)] bg-[var(--brand-ochre)] text-[var(--on-color)] flex items-center justify-center text-xs font-semibold">2</div>
                 <div>
                   <h4 className="font-semibold text-sm text-[var(--text)]">Open Dashboard</h4>
                   <p className="text-xs text-[var(--text-2)] mt-0.5">Configure API credentials, combos, and proxy pools</p>
@@ -112,7 +112,7 @@ export default function GetStarted() {
                   willChange: "transform, opacity",
                 }}
               >
-                <div className="flex-none size-7 rounded-lg bg-black/40 backdrop-blur-xl border-0 text-[var(--text)] flex items-center justify-center font-mono text-xs font-semibold shadow-md shadow-black/50">3</div>
+                <div className="flex-none size-7 rounded-[var(--r2)] bg-[var(--brand-ochre)] text-[var(--on-color)] flex items-center justify-center text-xs font-semibold">3</div>
                 <div>
                   <h4 className="font-semibold text-sm text-[var(--text)]">Route Traffic</h4>
                   <p className="text-xs text-[var(--text-2)] mt-0.5">Point Claude Code, Codex, or agents to http://localhost:20128</p>
@@ -131,7 +131,7 @@ export default function GetStarted() {
               willChange: "transform, opacity",
             }}
           >
-            <div className="rounded-[var(--r3)] overflow-hidden bg-[var(--surface-inset)]/90 backdrop-blur-xl border border-[var(--line-2)] shadow-[var(--shadow-card)]">
+            <div className="rounded-[var(--r4)] overflow-hidden bg-[var(--surface)] border border-[var(--line)]">
               {/* Terminal header */}
               <div className="flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-2)]/90 border-b border-[var(--line)]">
                 <div className="w-2.5 h-2.5 rounded-full bg-[#FF5F56]/80"></div>

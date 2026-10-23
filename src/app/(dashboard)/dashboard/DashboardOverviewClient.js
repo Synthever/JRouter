@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useTransition } from "react";
+import React, { useState, useEffect, useTransition } from "react";
 import KpiBentoGrid from "./components/KpiBentoGrid";
 import ActivityTimelineCard from "./components/ActivityTimelineCard";
 import TopModelsCard from "./components/TopModelsCard";
@@ -13,56 +13,69 @@ export default function DashboardOverviewClient({ machineId }) {
   const [providers, setProviders] = useState([]);
   const [nodes, setNodes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [fetching, setFetching] = useState(false);
+  const [fetching, setFetching] = useState(true);
+  const [error, setError] = useState("");
+  const [connectionsError, setConnectionsError] = useState(false);
+  const [connectionsLoading, setConnectionsLoading] = useState(true);
+  const [refreshVersion, setRefreshVersion] = useState(0);
   const [isPending, startTransition] = useTransition();
 
-  // Fetch providers & nodes once on mount
   useEffect(() => {
-    Promise.all([
-      fetch("/api/providers").then((r) => (r.ok ? r.json() : null)),
-      fetch("/api/provider-nodes").then((r) => (r.ok ? r.json() : null)),
-    ])
-      .then(([provData, nodeData]) => {
-        if (provData?.connections) {
-          setProviders(provData.connections.filter((c) => c.isActive !== false));
-        }
-        if (nodeData?.nodes) {
-          setNodes(nodeData.nodes);
-        }
-      })
-      .catch((err) => console.error("Failed to load providers info:", err));
-  }, []);
-
-  // Fetch usage stats whenever period changes
-  const fetchStats = useCallback(async () => {
-    setFetching(true);
-    try {
-      const res = await fetch(`/api/usage/stats?period=${period}`);
-      if (res.ok) {
-        const data = await res.json();
-        setStats(data);
+    const controller = new AbortController();
+    const signal = controller.signal;
+    async function loadConnections() {
+      try {
+        const responses = await Promise.all([
+          fetch("/api/providers", { signal }),
+          fetch("/api/provider-nodes", { signal }),
+        ]);
+        if (responses.some((response) => !response.ok)) throw new Error("Connection lookup failed");
+        const [provData, nodeData] = await Promise.all(responses.map((response) => response.json()));
+        if (signal.aborted) return;
+        setProviders((provData.connections || []).filter((c) => c.isActive !== false));
+        setNodes(nodeData.nodes || []);
+        setConnectionsError(false);
+      } catch {
+        if (!signal.aborted) setConnectionsError(true);
+      } finally {
+        if (!signal.aborted) setConnectionsLoading(false);
       }
-    } catch (e) {
-      console.error("Failed to fetch stats:", e);
-    } finally {
-      setLoading(false);
-      setFetching(false);
     }
-  }, [period]);
+    loadConnections();
+    return () => controller.abort();
+  }, [refreshVersion]);
 
   useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+    const controller = new AbortController();
+    const signal = controller.signal;
+    async function loadStats() {
+      try {
+        const res = await fetch(`/api/usage/stats?period=${period}`, { signal });
+        if (!res.ok) throw new Error("Telemetry lookup failed");
+        const data = await res.json();
+        if (signal.aborted) return;
+        setStats(data);
+        setError("");
+      } catch {
+        if (!signal.aborted) setError("Could not load telemetry.");
+      } finally {
+        if (!signal.aborted) {
+          setLoading(false);
+          setFetching(false);
+        }
+      }
+    }
+    loadStats();
+    return () => controller.abort();
+  }, [period, refreshVersion]);
 
   const handlePeriodChange = (newPeriod) => {
-    startTransition(() => {
-      setPeriod(newPeriod);
-    });
+    setFetching(true);
+    startTransition(() => setPeriod(newPeriod));
   };
 
   return (
     <div className="dashboard-overview flex flex-col gap-6 w-full pb-10">
-      {/* 1. Top Section: Period Filters + 5 KPI Cards (.grid-stats) */}
       <KpiBentoGrid
         stats={stats}
         connectionsCount={providers.length}
@@ -70,19 +83,22 @@ export default function DashboardOverviewClient({ machineId }) {
         period={period}
         onPeriodChange={handlePeriodChange}
         fetching={fetching || isPending}
-        onRefresh={fetchStats}
+        loading={loading}
+        error={error}
+        connectionsError={connectionsError}
+        connectionsLoading={connectionsLoading}
+        onRefresh={() => {
+          setFetching(true);
+          setRefreshVersion((version) => version + 1);
+        }}
       />
-
-      {/* 2. Analytics Split: Activity Timeline (1.6fr) + Model Breakdown (1fr) */}
       <div className="overview-analytics">
-        <ActivityTimelineCard period={period} />
-        <TopModelsCard stats={stats} />
+        <ActivityTimelineCard period={period} refreshVersion={refreshVersion} />
+        <div className="overview-breakdowns">
+          <TopModelsCard stats={stats} />
+          <ProviderDistributionCard stats={stats} />
+        </div>
       </div>
-
-      {/* 3. Upstream Provider Distribution */}
-      <ProviderDistributionCard stats={stats} />
-
-      {/* 4. Full-Width Bottom Section: Interactive Activity Logs (.logs-table) */}
       <LatestRequestsTable initialRequests={stats?.recentRequests || []} />
     </div>
   );

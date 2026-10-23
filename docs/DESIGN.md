@@ -1,426 +1,541 @@
 ---
 version: alpha
 name: JRouter
-description: "Pedoman frontend monokrom dari /landing, dengan fondasi dark dan light mode."
+description: A vibrant JRoutermation-meets-data interface for JRouter.com (GTM data-orchestration platform). Anchors on white canvas with dark-navy primary CTAs, custom rounded display type, and saturated single-color feature cards — hot pink, deep teal, lavender, peach, ochre — that punctuate long-scroll explainer pages. Brand voltage comes from 3D-rendered JRoutermation illustrations (mountains, characters, mascots) used as full-bleed hero artifacts and the bright multi-color card surfaces showing product UI fragments.
+
 colors:
-  primary: "#FFFFFF"
-  bg: "#0A0A0B"
-  bg-2: "#0D0D0F"
-  surface: "#131315"
-  surface-2: "#1A1A1D"
-  surface-inset: "#101012"
-  surface-hover: "#232327"
-  text: "#EDEDEE"
-  text-2: "#A1A1A6"
-  text-3: "#6B6B70"
-  line: "rgba(255, 255, 255, 0.065)"
-  line-2: "rgba(255, 255, 255, 0.11)"
-  accent-line: "rgba(255, 255, 255, 0.18)"
-  pos: "#34D39A"
-  warn: "#F2B34B"
-  danger: "#FF6B6B"
-  light-bg: "#F7F7F8"
-  light-bg-2: "#EFEFEF"
-  light-surface: "#FFFFFF"
-  light-surface-2: "#F0F0F2"
-  light-surface-inset: "#EAEAEC"
-  light-surface-hover: "#E4E4E7"
-  light-text: "#0A0A0B"
-  light-text-2: "#52525B"
-  light-text-3: "#71717A"
-  light-line: "rgba(0, 0, 0, 0.08)"
-  light-line-2: "rgba(0, 0, 0, 0.14)"
-  light-accent-line: "rgba(0, 0, 0, 0.22)"
-  light-pos: "#15803D"
-  light-warn: "#B45309"
-  light-danger: "#DC2626"
+  primary: "#0a0a0a"
+  primary-active: "#1f1f1f"
+  primary-disabled: "#e5e5e5"
+  ink: "#0a0a0a"
+  body: "#3a3a3a"
+  body-strong: "#1a1a1a"
+  muted: "#6a6a6a"
+  muted-soft: "#9a9a9a"
+  hairline: "#e5e5e5"
+  hairline-soft: "#f0f0f0"
+  canvas: "#fffaf0"
+  surface-soft: "#faf5e8"
+  surface-card: "#f5f0e0"
+  surface-strong: "#ebe6d6"
+  surface-dark: "#0a1a1a"
+  surface-dark-elevated: "#1a2a2a"
+  on-primary: "#ffffff"
+  on-dark: "#ffffff"
+  on-dark-soft: "#a0a0a0"
+  brand-pink: "#ff4d8b"
+  brand-teal: "#1a3a3a"
+  brand-lavender: "#b8a4ed"
+  brand-peach: "#ffb084"
+  brand-ochre: "#e8b94a"
+  brand-mint: "#a4d4c5"
+  brand-coral: "#ff6b5a"
+  success: "#22c55e"
+  warning: "#f59e0b"
+  error: "#ef4444"
+
 typography:
-  display:
-    fontFamily: "Geist, system-ui, sans-serif"
-    fontSize: "36px"
-    fontWeight: 600
-    lineHeight: 1.12
-    letterSpacing: "-0.025em"
-  headline:
-    fontFamily: "Geist, system-ui, sans-serif"
-    fontSize: "24px"
-    fontWeight: 600
-    lineHeight: 1.333333
-    letterSpacing: "-0.025em"
-  title:
-    fontFamily: "Geist, system-ui, sans-serif"
-    fontSize: "14px"
-    fontWeight: 600
-    lineHeight: 1.428571
-  body:
-    fontFamily: "Geist, system-ui, sans-serif"
-    fontSize: "14px"
-    lineHeight: 1.625
-  label:
-    fontFamily: "Geist Mono, ui-monospace, monospace"
-    fontSize: "11px"
+  display-xl:
+    fontFamily: "Plain Black, Inter, sans-serif"
+    fontSize: 72px
     fontWeight: 500
-    lineHeight: 1.2
-    letterSpacing: "0.2em"
+    lineHeight: 1
+    letterSpacing: -2.5px
+  display-lg:
+    fontFamily: "Plain Black, Inter, sans-serif"
+    fontSize: 56px
+    fontWeight: 500
+    lineHeight: 1.05
+    letterSpacing: -2px
+  display-md:
+    fontFamily: "Plain Black, Inter, sans-serif"
+    fontSize: 40px
+    fontWeight: 500
+    lineHeight: 1.1
+    letterSpacing: -1px
+  display-sm:
+    fontFamily: "Plain Black, Inter, sans-serif"
+    fontSize: 32px
+    fontWeight: 500
+    lineHeight: 1.15
+    letterSpacing: -0.5px
+  title-lg:
+    fontFamily: "Inter, sans-serif"
+    fontSize: 24px
+    fontWeight: 600
+    lineHeight: 1.3
+    letterSpacing: -0.3px
+  title-md:
+    fontFamily: "Inter, sans-serif"
+    fontSize: 18px
+    fontWeight: 600
+    lineHeight: 1.4
+    letterSpacing: 0
+  title-sm:
+    fontFamily: "Inter, sans-serif"
+    fontSize: 16px
+    fontWeight: 600
+    lineHeight: 1.4
+    letterSpacing: 0
+  body-md:
+    fontFamily: "Inter, sans-serif"
+    fontSize: 16px
+    fontWeight: 400
+    lineHeight: 1.55
+    letterSpacing: 0
+  body-sm:
+    fontFamily: "Inter, sans-serif"
+    fontSize: 14px
+    fontWeight: 400
+    lineHeight: 1.55
+    letterSpacing: 0
+  caption:
+    fontFamily: "Inter, sans-serif"
+    fontSize: 13px
+    fontWeight: 500
+    lineHeight: 1.4
+    letterSpacing: 0
+  caption-uppercase:
+    fontFamily: "Inter, sans-serif"
+    fontSize: 12px
+    fontWeight: 600
+    lineHeight: 1.4
+    letterSpacing: 1.5px
+  button:
+    fontFamily: "Inter, sans-serif"
+    fontSize: 14px
+    fontWeight: 600
+    lineHeight: 1
+    letterSpacing: 0
+  nav-link:
+    fontFamily: "Inter, sans-serif"
+    fontSize: 14px
+    fontWeight: 500
+    lineHeight: 1.4
+    letterSpacing: 0
+
 rounded:
-  r1: "6px"
-  r2: "10px"
-  r3: "14px"
-  r4: "20px"
-  full: "999px"
+  xs: 6px
+  sm: 8px
+  md: 12px
+  lg: 16px
+  xl: 24px
+  pill: 9999px
+  full: 9999px
+
 spacing:
-  icon-gap: "8px"
-  control: "12px"
-  grid: "16px"
-  panel: "20px"
-  gutter: "24px"
-  group: "32px"
-  section-header: "48px"
-  section: "64px"
+  xxs: 4px
+  xs: 8px
+  sm: 12px
+  md: 16px
+  lg: 24px
+  xl: 32px
+  xxl: 48px
+  section: 96px
+
 components:
   button-primary:
     backgroundColor: "{colors.primary}"
-    textColor: "{colors.bg}"
-    rounded: "{rounded.r1}"
-    padding: "8px 16px"
-  button-primary-hover:
-    backgroundColor: "{colors.text}"
-    textColor: "{colors.bg}"
-    rounded: "{rounded.r1}"
+    textColor: "{colors.on-primary}"
+    typography: "{typography.button}"
+    rounded: "{rounded.md}"
+    padding: 12px 20px
+    height: 44px
+  button-primary-active:
+    backgroundColor: "{colors.primary-active}"
+    textColor: "{colors.on-primary}"
+    rounded: "{rounded.md}"
+  button-primary-disabled:
+    backgroundColor: "{colors.primary-disabled}"
+    textColor: "{colors.muted}"
+    rounded: "{rounded.md}"
   button-secondary:
-    backgroundColor: "{colors.surface-2}"
-    textColor: "{colors.text}"
-    rounded: "{rounded.r1}"
-    padding: "7px 14px"
-  button-secondary-hover:
-    backgroundColor: "{colors.surface-hover}"
-    textColor: "{colors.text}"
-    rounded: "{rounded.r1}"
-  # Target light mode; inverse CTA belum diterapkan di Button / .ui-btn.
-  light-button-primary:
-    backgroundColor: "{colors.light-text}"
-    textColor: "{colors.light-surface}"
-    rounded: "{rounded.r1}"
-    padding: "8px 16px"
-  light-button-primary-hover:
-    backgroundColor: "{colors.light-text-2}"
-    textColor: "{colors.light-surface}"
-    rounded: "{rounded.r1}"
-  light-button-secondary:
-    backgroundColor: "{colors.light-surface-2}"
-    textColor: "{colors.light-text}"
-    rounded: "{rounded.r1}"
-    padding: "7px 14px"
-  light-button-secondary-hover:
-    backgroundColor: "{colors.light-surface-hover}"
-    textColor: "{colors.light-text}"
-    rounded: "{rounded.r1}"
-  panel:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.text}"
-    rounded: "{rounded.r3}"
-    padding: "20px"
-  light-panel:
-    backgroundColor: "{colors.light-surface}"
-    textColor: "{colors.light-text}"
-    rounded: "{rounded.r3}"
-    padding: "20px"
-  input:
-    backgroundColor: "{colors.surface-2}"
-    textColor: "{colors.text}"
-    rounded: "{rounded.r1}"
-    padding: "8px 12px"
-  light-input:
-    backgroundColor: "{colors.light-surface-2}"
-    textColor: "{colors.light-text}"
-    rounded: "{rounded.r1}"
-    padding: "8px 12px"
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.ink}"
+    typography: "{typography.button}"
+    rounded: "{rounded.md}"
+    padding: 12px 20px
+    height: 44px
+  button-on-color:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.ink}"
+    typography: "{typography.button}"
+    rounded: "{rounded.md}"
+    padding: 12px 20px
+    height: 44px
+  button-text-link:
+    backgroundColor: transparent
+    textColor: "{colors.ink}"
+    typography: "{typography.button}"
+  text-link:
+    backgroundColor: transparent
+    textColor: "{colors.ink}"
+    typography: "{typography.body-md}"
+  top-nav:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.ink}"
+    typography: "{typography.nav-link}"
+    height: 64px
+  hero-band:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.ink}"
+    typography: "{typography.display-xl}"
+    padding: 96px
+  hero-illustration-card:
+    backgroundColor: "{colors.surface-soft}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.xl}"
+  feature-card-pink:
+    backgroundColor: "{colors.brand-pink}"
+    textColor: "{colors.on-primary}"
+    typography: "{typography.title-md}"
+    rounded: "{rounded.xl}"
+    padding: 32px
+  feature-card-teal:
+    backgroundColor: "{colors.brand-teal}"
+    textColor: "{colors.on-dark}"
+    typography: "{typography.title-md}"
+    rounded: "{rounded.xl}"
+    padding: 32px
+  feature-card-lavender:
+    backgroundColor: "{colors.brand-lavender}"
+    textColor: "{colors.ink}"
+    typography: "{typography.title-md}"
+    rounded: "{rounded.xl}"
+    padding: 32px
+  feature-card-peach:
+    backgroundColor: "{colors.brand-peach}"
+    textColor: "{colors.ink}"
+    typography: "{typography.title-md}"
+    rounded: "{rounded.xl}"
+    padding: 32px
+  feature-card-ochre:
+    backgroundColor: "{colors.brand-ochre}"
+    textColor: "{colors.ink}"
+    typography: "{typography.title-md}"
+    rounded: "{rounded.xl}"
+    padding: 32px
+  feature-card-cream:
+    backgroundColor: "{colors.surface-card}"
+    textColor: "{colors.ink}"
+    typography: "{typography.title-md}"
+    rounded: "{rounded.xl}"
+    padding: 32px
+  product-mockup-card:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.ink}"
+    typography: "{typography.title-md}"
+    rounded: "{rounded.lg}"
+    padding: 24px
+  testimonial-card:
+    backgroundColor: "{colors.surface-card}"
+    textColor: "{colors.ink}"
+    typography: "{typography.body-md}"
+    rounded: "{rounded.lg}"
+    padding: 24px
+  pricing-tier-card:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.ink}"
+    typography: "{typography.title-lg}"
+    rounded: "{rounded.lg}"
+    padding: 32px
+  pricing-tier-card-featured:
+    backgroundColor: "{colors.brand-teal}"
+    textColor: "{colors.on-dark}"
+    typography: "{typography.title-lg}"
+    rounded: "{rounded.lg}"
+    padding: 32px
+  text-input:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.ink}"
+    typography: "{typography.body-md}"
+    rounded: "{rounded.md}"
+    padding: 12px 16px
+    height: 44px
+  text-input-focused:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.md}"
+  category-tab:
+    backgroundColor: transparent
+    textColor: "{colors.muted}"
+    typography: "{typography.nav-link}"
+    rounded: "{rounded.pill}"
+    padding: 8px 16px
+  category-tab-active:
+    backgroundColor: "{colors.surface-card}"
+    textColor: "{colors.ink}"
+    typography: "{typography.nav-link}"
+    rounded: "{rounded.pill}"
+  badge-pill:
+    backgroundColor: "{colors.surface-card}"
+    textColor: "{colors.ink}"
+    typography: "{typography.caption}"
+    rounded: "{rounded.pill}"
+    padding: 4px 12px
+  expert-card:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.ink}"
+    typography: "{typography.title-md}"
+    rounded: "{rounded.lg}"
+    padding: 24px
+  cta-band-illustrated:
+    backgroundColor: "{colors.surface-soft}"
+    textColor: "{colors.ink}"
+    typography: "{typography.display-md}"
+    rounded: "{rounded.xl}"
+    padding: 80px
+  footer:
+    backgroundColor: "{colors.surface-soft}"
+    textColor: "{colors.body}"
+    typography: "{typography.body-sm}"
+    padding: 80px
 ---
-
-# Design System: JRouter
 
 ## Overview
 
-Pedoman ini mengambil bahasa visual `/landing` sebagai fondasi frontend JRouter: monokrom, tipografi teknis, panel berlapis, dan kontrol yang ringkas. Halaman lain mempertahankan identitas tersebut sambil menyesuaikan layout dengan tugas pengguna, seperti mengelola provider, membaca usage, atau mengubah settings.
+JRouter.com is the most playful B2B SaaS interface in the GTM-data category. The base atmosphere is **cream-tinted white canvas** (`{colors.canvas}` — #fffaf0) holding dark-navy ink type and **3D-rendered JRoutermation illustrations** (mountains, mascot characters, peach/ochre/lavender landscapes) as the dominant brand voltage. Where most data-platform brands play it cool with grids and gradients, JRouter leans hard into hand-crafted-looking 3D illustrations and saturated single-color feature cards.
+    
+Type voice runs **Plain Black** (or substituted with Inter weight 500-600) — a custom rounded display face used at very large sizes (72px hero) with negative letter-spacing. Body type uses Inter at standard weights. The display weight stays at 500, never bolder — the rounded character of the typeface gives it warmth without needing weight.
 
-**Cakupan:** dark dan light mode, token visual, pola komponen, responsive, motion, dan kriteria penerimaan. Dokumen ini tidak mengubah kode, menetapkan ulang fitur produk, atau mewajibkan layout marketing pada dashboard.
+Component voltage comes from **saturated single-color feature cards** in a 6-color palette: hot pink, deep teal, lavender, peach, ochre, and cream-card. Each card shows product UI fragments at small scale — JRoutergent agent runs, sequencer flows, CRM enrichment outputs. The colored card IS the primary visual element on every long-scroll page.
 
-### Status dan sumber acuan
-
-- **Teramati:** tersedia dalam kode yang ditinjau pada 2 Oktober 2026. Fondasi light mode sudah ada, tetapi `/landing` sendiri memaksa `.dark`.
-- **Target:** rekomendasi untuk halaman baru atau penyelarasan berikutnya. Target bukan klaim bahwa semua halaman sudah mengimplementasikannya.
-- **Legacy:** gaya kompatibilitas yang masih dipakai sebagian kode, bukan arah visual utama.
-
-Frontmatter memuat nilai acuan desain. Warna tanpa awalan adalah dark mode; `light-*` adalah pasangan light mode. Prefiks tersebut hanya nama dokumentasi, **bukan CSS variable baru**. Komponen `light-button-primary` dan hover-nya adalah **target** inverse CTA; token warna dasarnya sudah tersedia. Rincian batas implementasi dijelaskan di Components.
-
-| Sumber | Kegunaan |
-| --- | --- |
-| [`src/app/landing/page.js`](../src/app/landing/page.js) dan [`components/`](../src/app/landing/components/) | Komposisi landing, glass, tipografi, dan motion aktual |
-| [`src/app/globals.css`](../src/app/globals.css) | Token tema, radius, shadow, `.lp-*`, `.ui-*`, serta dashboard chrome |
-| [`src/app/layout.js`](../src/app/layout.js) | Font Geist / Geist Mono dan inisialisasi tema sebelum paint |
-| [`src/shared/components/`](../src/shared/components/) | Kontrol reusable dan variasi perilakunya |
-| [`src/store/themeStore.js`](../src/store/themeStore.js), [`ThemeProvider`](../src/shared/components/ThemeProvider.js) | Preferensi `light`, `dark`, dan `system` |
-| [`Spesifikasi dashboard 30 September`](superpowers/specs/2026-09-30-design-system-dashboard-shell-design.md) | Konteks historis; bukan sumber nilai terbaru |
-
-CSS dan komponen adalah sumber implementasi; dokumen ini adalah pedoman lintas halaman. Jika ditemukan perbedaan, catat apakah kode belum mengikuti target atau dokumentasi perlu diperbarui. Jangan mengubah kode hanya untuk menutup perbedaan tanpa scope pekerjaan yang jelas.
-
-### Prinsip bersama
-
-1. **Monokrom untuk struktur.** Gunakan tingkat surface, kontras teks, dan whitespace untuk hierarki; warna berfungsi sebagai status.
-2. **Teknis, tetapi terbaca.** Sans untuk navigasi dan isi; mono untuk kode, endpoint, label pendek, dan angka telemetry.
-3. **Glass untuk lapisan, bukan setiap elemen.** Panel luar boleh transparan; kontrol, data, dan isi bertingkat tetap memiliki latar yang terbaca.
-4. **Identitas sama, kepadatan berbeda.** Landing menjelaskan produk; dashboard membantu menyelesaikan tugas. Hero, shader, dan typewriter tidak menjadi template halaman operasional.
-5. **Kedua tema memiliki hierarki yang setara.** Light mode menggunakan canvas terang dan teks gelap, bukan filter invert atas dark mode.
+**Key Characteristics:**
+- Cream-tinted white canvas (`{colors.canvas}` — #fffaf0). The warmth differentiates JRouter from cool-gray competitor sites.
+- Dark navy/black primary CTAs (`{colors.primary}` — #0a0a0a). Buttons rounded `{rounded.md}` (12px) — friendly modern but not pill.
+- 6-color saturated feature card palette: `{colors.brand-pink}`, `{colors.brand-teal}`, `{colors.brand-lavender}`, `{colors.brand-peach}`, `{colors.brand-ochre}`, `{colors.surface-card}` (cream).
+- 3D JRoutermation illustrations (mountains, characters, abstract shapes) as full-bleed hero artifacts — the brand's most-recognized visual element.
+- Custom rounded Plain Black display typeface at 500 weight with -1 to -2.5px letter-spacing on display sizes.
+- Border radius is generous: `{rounded.md}` (12px) for buttons + inputs, `{rounded.lg}` (16px) for content cards, `{rounded.xl}` (24px) for feature cards. The bigger radius matches the rounded display type's character.
+- Product UI fragments embedded inside colored cards at small scale — agent run logs, sequencer flows, enrichment results.
+- Section rhythm `{spacing.section}` (96px) between major bands.
+- Footer is cream-tinted (`{colors.surface-soft}`) — JRouter does NOT use a dark footer. Even the closing band stays warm-light.
 
 ## Colors
 
-### Pemetaan token semantik
+### Brand & Accent
+- **Primary** (`{colors.primary}` — #0a0a0a): All primary CTAs, h1/h2 ink type. Near-black with slight warmth.
+- **Brand Pink** (`{colors.brand-pink}` — #ff4d8b): Hot-pink feature card surface. Sequencer / outbound feature pages.
+- **Brand Teal** (`{colors.brand-teal}` — #1a3a3a): Deep teal-green feature card. Often the featured pricing tier.
+- **Brand Lavender** (`{colors.brand-lavender}` — #b8a4ed): Soft lavender feature card.
+- **Brand Peach** (`{colors.brand-peach}` — #ffb084): Warm peach feature card.
+- **Brand Ochre** (`{colors.brand-ochre}` — #e8b94a): Mustard / ochre feature card and illustration accents.
+- **Brand Mint** (`{colors.brand-mint}` — #a4d4c5): Mint accent on illustrations and small badges.
+- **Brand Coral** (`{colors.brand-coral}` — #ff6b5a): Coral accent for highlights.
 
-Nilai ini berasal dari `:root` (light) dan `.dark` dalam `globals.css`.
+### Surface
+- **Canvas** (`{colors.canvas}` — #fffaf0): The default page floor. Cream-tinted white.
+- **Surface Soft** (`{colors.surface-soft}` — #faf5e8): Footer and CTA-band background.
+- **Surface Card** (`{colors.surface-card}` — #f5f0e0): Cream feature cards, testimonial cards.
+- **Surface Strong** (`{colors.surface-strong}` — #ebe6d6): Stronger cream for emphasized bands.
+- **Surface Dark** (`{colors.surface-dark}` — #0a1a1a): Dark teal-tinted near-black for occasional dark cards (rare).
+- **Surface Dark Elevated** (`{colors.surface-dark-elevated}` — #1a2a2a): Elevated dark cards.
+- **Hairline** (`{colors.hairline}` — #e5e5e5): 1px borders on cards and inputs.
 
-| CSS variable | Dark | Light | Peran |
-| --- | --- | --- | --- |
-| `--bg` | `#0A0A0B` | `#F7F7F8` | Canvas halaman |
-| `--bg-2` | `#0D0D0F` | `#EFEFEF` | Canvas sekunder |
-| `--surface` | `#131315` | `#FFFFFF` | Panel, card, modal |
-| `--surface-2` | `#1A1A1D` | `#F0F0F2` | Kontrol dan kelompok sekunder |
-| `--surface-inset` | `#101012` | `#EAEAEC` | Code well dan area recessed |
-| `--surface-hover` | `#232327` | `#E4E4E7` | Respons hover |
-| `--text` | `#EDEDEE` | `#0A0A0B` | Isi dan judul utama |
-| `--text-2` | `#A1A1A6` | `#52525B` | Deskripsi dan label sekunder |
-| `--text-3` | `#6B6B70` | `#71717A` | Informasi tersier; periksa kontras |
-| `--line` | putih 6.5% | hitam 8% | Hairline dan pemisah dekoratif |
-| `--line-2` | putih 11% | hitam 14% | Perimeter kontrol / panel kuat |
-| `--accent-line` | putih 18% | hitam 22% | Border hover / focus yang tersedia |
-| `--pos` | `#34D39A` | `#15803D` | Success |
-| `--warn` | `#F2B34B` | `#B45309` | Warning |
-| `--danger` | `#FF6B6B` | `#DC2626` | Error / destructive |
+### Text
+- **Ink** (`{colors.ink}` — #0a0a0a): Headlines and primary text.
+- **Body Strong** (`{colors.body-strong}` — #1a1a1a): Emphasized body, lead paragraphs.
+- **Body** (`{colors.body}` — #3a3a3a): Default running-text.
+- **Muted** (`{colors.muted}` — #6a6a6a): Sub-headings, breadcrumbs, footer body.
+- **Muted Soft** (`{colors.muted-soft}` — #9a9a9a): Captions, fine-print.
+- **On Primary / On Dark** (`{colors.on-primary}` — #ffffff): Text on primary buttons + dark feature cards (teal).
 
-Gunakan `var(--surface)`, `var(--text)`, atau alias Tailwind semantik seperti `bg-surface`, `text-text-main`, dan `text-text-muted`. Hindari pasangan hardcoded `bg-black` / `text-white` pada halaman yang mengikuti theme pengguna.
-
-Perhatikan alias: `--color-text-muted` menunjuk `--text-2`, sedangkan `--text-muted` berbeda pada light mode. Gunakan peran yang jelas dan jangan menyamakan dua nama tersebut. Nama inset yang diterapkan adalah `--surface-inset`, bukan `--inset` dalam spesifikasi lama.
-
-### Light mode
-
-**Teramati:** token terang, panel opaque putih, dan shadow light sudah tersedia. Theme store mengubah class `.dark` pada root; halaman biasa tidak perlu mengelola tema sendiri. `/landing` belum mengikuti pilihan tersebut karena wrapper-nya selalu `.dark`.
-
-**Target:** light mode mempertahankan radius, typography, spacing, dan struktur yang sama. Gunakan canvas `--bg`, panel `--surface`, kontrol `--surface-2`, dan teks `--text`. CTA utama memakai latar gelap dengan teks putih; secondary memakai surface netral dengan teks gelap. Logo dan ikon harus tetap terbaca tanpa membalik seluruh halaman.
-
-### Warna khusus landing dan legacy
-
-- Hero memakai putih murni serta utility `neutral-300` / `neutral-400`; jangan menganggap semua teksnya memakai token semantik.
-- Shader aktif menggunakan `#949494`, `#595959`, `#343434` dengan grain aktif; fallback CSS menggunakan gradient netral gelap. Ini efek marketing, bukan warna status. Nilai ini mengikuti kode lokal saat dokumentasi diselesaikan, termasuk perubahan paralel shader.
-- Traffic lights terminal memakai `#FF5F56`, `#FFBD2E`, `#27C93F`. Titik tersebut bukan pemetaan success/warning/error aplikasi.
-- Coral `--color-primary: #E56A4A` masih dipakai legacy, selection, dan beberapa focus treatment. `--promo` merah juga tersedia. Jangan menghapusnya dalam pekerjaan dokumentasi, tetapi jangan menjadikan coral atau promo sebagai aksen default halaman baru yang mengikuti landing.
-- Nama `colors.primary` pada frontmatter berarti permukaan CTA putih dark mode, **bukan alias** `--color-primary` yang masih coral.
-
-### Batas kontras
-
-Perhitungan berikut menggunakan warna solid, bukan screenshot atau komposit glass. Target teks biasa adalah WCAG AA minimal **4.5:1**, teks besar **3:1**, dan indikator kontrol/focus yang relevan **3:1** terhadap warna di sekitarnya.
-
-| Pasangan solid | Rasio | Keputusan |
-| --- | --- | --- |
-| Dark `--text` pada `--bg` | 16.91:1 | Layak untuk isi |
-| Dark `--text-2` pada `--surface` | 7.21:1 | Layak untuk teks sekunder |
-| Dark `--text-3` pada `--surface` | 3.50:1 | Tidak untuk teks kecil penting |
-| Light `--text` pada `--bg` | 18.48:1 | Layak untuk isi |
-| Light `--text-2` pada `--surface` | 7.73:1 | Layak untuk teks sekunder |
-| Light `--text-3` pada `--surface-2` | 4.25:1 | Tidak untuk teks kecil penting |
-| Putih pada light `--surface-hover` | 1.27:1 | Hindari; masalah hover `.ui-btn--soft` saat ini |
-| Putih dan `#0A0A0B`, kedua arah | 19.79:1 | Acuan CTA inverse |
-
-Gunakan `--text-2` untuk hint atau metadata penting jika `--text-3` tidak memenuhi kontras. Hairline dekoratif bukan pengganti focus ring yang terlihat. Status solid pada `--surface` memenuhi 4.5:1 untuk kedua tema, tetapi badge berwarna dan panel transparan tetap perlu pengukuran kompositnya sendiri. Jangan menyatakan seluruh UI sudah lolos aksesibilitas berdasarkan token ini saja.
+### Semantic
+- **Success** (`{colors.success}` — #22c55e): Success states.
+- **Warning** (`{colors.warning}` — #f59e0b): Warning callouts.
+- **Error** (`{colors.error}` — #ef4444): Validation errors.
 
 ## Typography
 
-**Font:** Geist untuk heading, body, navigasi, dan tombol; Geist Mono untuk label teknis, kode, endpoint, serta telemetry. Font dimuat lewat `next/font/google`; pertahankan `--font-sans` dan `--font-mono` beserta fallback yang ada.
+### Font Family
+The system runs **Plain Black** (a custom rounded display face) for headlines and **Inter** for body, navigation, and UI. Plain Black at weight 500 with negative letter-spacing handles every display headline; Inter handles the rest. The fallback stack walks `Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif` for both.
 
-| Peran | Nilai teramati | Penggunaan |
-| --- | --- | --- |
-| Hero display | 36 / 60 / 72px pada base / `sm` / `md`; weight 600; line-height 1.12; tracking -0.025em | Hero landing saja |
-| Section heading | 24 / 30px; weight 600; tracking tight | Judul section; jangan otomatis memakai ukuran hero di dashboard |
-| CTA heading | 24 / 30 / 36px | Penutup landing |
-| Feature title | 14px / 600 | Card ringkas |
-| Architecture title | 16px / 600 | Card penjelasan |
-| Card title utility | 17px / 600; line-height 1.25; tracking -0.015em | `.ui-card__title`; bukan ukuran yang dipakai semua `Card` |
-| Body section | 14px; line-height 1.625 | Deskripsi dan isi biasa |
-| Hero description | 16 / 18 / 20px; weight 300; line-height 1.625 | Isi marketing dengan lebar maksimal 672px |
-| Card detail | 12px; line-height 1.625 | Deskripsi singkat, bukan default paragraf panjang |
-| Eyebrow | Mono 11px / 500; line-height 1.2; tracking 0.2em; uppercase | `.lp-eyebrow` / `.ui-eyebrow` |
+### Hierarchy
 
-**Target halaman operasional:** gunakan body 14px atau lebih besar untuk isi penting; 12px dibatasi pada metadata pendek. Input mobile minimal 16px untuk menghindari auto-zoom iOS. Uppercase digunakan untuk label singkat, bukan paragraf atau nama model panjang.
+| Token | Size | Weight | Line Height | Letter Spacing | Use |
+|---|---|---|---|---|---|
+| `{typography.display-xl}` | 72px | 500 | 1.0 | -2.5px | Homepage h1 ("Go to market with unique data") — Plain Black |
+| `{typography.display-lg}` | 56px | 500 | 1.05 | -2px | Section heads — Plain Black |
+| `{typography.display-md}` | 40px | 500 | 1.1 | -1px | Sub-section heads, product names |
+| `{typography.display-sm}` | 32px | 500 | 1.15 | -0.5px | CTA-band heads, feature card titles |
+| `{typography.title-lg}` | 24px | 600 | 1.3 | -0.3px | Pricing plan names, larger feature titles |
+| `{typography.title-md}` | 18px | 600 | 1.4 | 0 | Card titles, intro paragraphs |
+| `{typography.title-sm}` | 16px | 600 | 1.4 | 0 | Small card titles, list labels |
+| `{typography.body-md}` | 16px | 400 | 1.55 | 0 | Default running-text |
+| `{typography.body-sm}` | 14px | 400 | 1.55 | 0 | Footer body, fine-print |
+| `{typography.caption}` | 13px | 500 | 1.4 | 0 | Badge labels, captions |
+| `{typography.caption-uppercase}` | 12px | 600 | 1.4 | 1.5px | Section labels, "FEATURED" badges |
+| `{typography.button}` | 14px | 600 | 1.0 | 0 | Standard button labels |
+| `{typography.nav-link}` | 14px | 500 | 1.4 | 0 | Top-nav menu items |
 
-Gunakan `.u-tnum` untuk token count, latency, quota, biaya, dan angka yang berubah. Utility tersebut mengaktifkan tabular numbers; font mono tetap dipilih secara terpisah jika diperlukan. Heading mengikuti struktur semantik halaman, bukan dipilih berdasarkan ukuran visual saja.
+### Principles
+Plain Black at weight 500 + negative letter-spacing IS the brand voice. Going to weight 700 reads as bombastic; the rounded character of the typeface adds warmth that bolder weight would flatten.
+
+The body-vs-display split is functional: Plain Black for Plain Black moments (headlines), Inter for everything else (running text, UI, buttons). Mixing them is a system violation.
+
+### Note on Font Substitutes
+If Plain Black is unavailable, **Inter** at weight 500 with -0.05em letter-spacing is a usable approximation. **Söhne Breit** at weight Buch is an alternative if licensed. **Recoleta** at weight 500 carries similar rounded-display warmth.
 
 ## Layout
 
-### Container dan spacing
+### Spacing System
+- **Base unit:** 4px.
+- **Tokens:** `{spacing.xxs}` 4px · `{spacing.xs}` 8px · `{spacing.sm}` 12px · `{spacing.md}` 16px · `{spacing.lg}` 24px · `{spacing.xl}` 32px · `{spacing.xxl}` 48px · `{spacing.section}` 96px.
+- **Section padding:** `{spacing.section}` (96px) between major editorial bands.
+- **Card internal padding:** `{spacing.xl}` (32px) for feature cards and pricing tiers; `{spacing.lg}` (24px) for testimonial and product mockup cards.
 
-| Acuan | Nilai teramati |
-| --- | --- |
-| `.lp-wrap` | Max-width 1120px, centered, padding horizontal 24px |
-| `.page` | Max-width 1180px, centered, width 100%; padding ditangani shell |
-| `.lp-section` | Padding vertikal 64px, tanpa border section |
-| Hero | Min-height 92vh, padding atas 128px / bawah 80px, horizontal 16 / 24px |
-| Grid features | Gap 16px, padding card 20px |
-| Card architecture | Gap 24px, padding card 24px |
-| Quickstart split | Gap 48px |
-| Dashboard page padding | 24px, naik ke 32px pada `lg` melalui shell |
+### Grid & Container
+- **Max content width:** ~1280px centered.
+- **Editorial body:** Single 12-column grid; hero often uses 7/5 split (h1 left, illustration right).
+- **Feature card grids:** 3-up at desktop, 2-up at tablet, 1-up at mobile.
+- **Pricing grid:** 3-4 up at desktop, 1-up at mobile.
 
-Spacing frontmatter merangkum nilai yang sudah dipakai, bukan menambahkan runtime scale baru. Gunakan jarak kecil untuk hubungan di dalam kontrol, jarak sedang untuk kelompok, dan jarak besar untuk section. Halaman operasional tidak membutuhkan padding 64px pada setiap panel.
-
-### Responsive
-
-Tailwind menggunakan `sm: 640px`, `md: 768px`, dan `lg: 1024px` pada pola landing berikut:
-
-- Features: 1 kolom, 2 pada `sm`, 4 pada `lg`.
-- Architecture: 1 kolom, 3 pada `md`.
-- Quickstart: stacked, lalu dua kolom pada `lg`.
-- Navigasi: menu mobile di bawah `md`; shortcut dashboard muncul mulai `sm`.
-- Tombol hero: vertikal lalu horizontal pada `sm`; CTA penutup juga menjadi full-width di mobile.
-- Footer: 2 / 4 / 5 kolom dengan area brand span 2.
-
-Dashboard memiliki breakpoint tersendiri sesuai data: `.grid-stats` memakai 5 kolom, lalu 3 pada maksimal 1050px, 2 pada 720px, dan 1 pada 420px. Split analytics menjadi satu kolom pada 860px. Jangan memaksakan grid landing pada semua halaman.
-
-**Target:** tidak ada horizontal overflow di viewport 390px; teks panjang dan aksi dapat wrap. Tabel atau code block boleh memiliki scroll lokal yang terlihat. Jangan menyalin aturan landing yang menyembunyikan scrollbar secara global. Pertahankan target sentuh sekitar 44px untuk aksi utama mobile, meskipun kontrol desktop lebih padat.
+### Whitespace Philosophy
+JRouter uses generous whitespace around big rounded display headlines and saturated feature cards. The cream canvas + colored cards + 3D illustrations create a playful warmth that competing data-platform sites lack.
 
 ## Elevation & Depth
 
-Depth berasal dari lapisan netral, perimeter halus, catchlight atas, dan shadow. Landing menambahkan glass di atas shader. Halaman operasional menggunakan panel yang stabil agar data tidak bergantung pada background animasi.
+| Level | Treatment | Use |
+|---|---|---|
+| Flat | No shadow, no border | Body sections, top nav, hero |
+| Soft hairline | 1px `{colors.hairline}` border | Inputs, small content cards |
+| Saturated card | Brand pink/teal/lavender/peach/ochre fill — no shadow | Feature cards |
+| Cream card | `{colors.surface-card}` background — no shadow | Testimonial, secondary cards |
+| Subtle drop shadow | Faint shadow at low alpha | Hover-elevated states (rare) |
 
-### Shadow bersama
+The system uses no heavy shadows. Depth comes from the saturated color contrast between cream canvas and bright feature cards.
 
-| Token | Dark | Light |
-| --- | --- | --- |
-| `--shadow-card` | `inset 0 1px 0 0 rgba(255,255,255,0.04), 0 24px 48px -34px rgba(0,0,0,0.85)` | `inset 0 1px 0 0 rgba(255,255,255,0.8), 0 2px 8px -2px rgba(0,0,0,0.08)` |
-| `--shadow-pop` | `inset 0 1px 0 0 rgba(255,255,255,0.06), 0 30px 60px -30px rgba(0,0,0,0.90)` | `inset 0 1px 0 0 rgba(255,255,255,0.9), 0 12px 32px -8px rgba(0,0,0,0.12)` |
-
-`--shadow-card` untuk panel; `--shadow-pop` untuk modal / lapisan mengambang. Light mode memakai bayangan lebih ringan, bukan shadow hitam dark mode yang disalin langsung.
-
-### Panel glass versus panel solid
-
-| Varian | Acuan | Batas penggunaan |
-| --- | --- | --- |
-| Solid shared | `--surface`, border 1px `--line`, radius `--r3`, `--shadow-card` | Default form, konfigurasi, tabel, dan data padat di kedua tema |
-| Glass landing dark | Hitam 30%, hover 40%, `backdrop-blur-xl`, tanpa border, shadow hitam 80% | Card marketing di atas background landing |
-| Glass overview | Override lokal `.dashboard-overview`, bukan perilaku global `Card` | Pengecualian overview; baca CSS terkini sebelum menyalinnya |
-| Light marketing | **Target:** mulai dari panel opaque `--surface`; transparansi opsional setelah kontras diverifikasi | Tidak ada implementasi light landing untuk dijadikan bukti visual |
-
-Glass landing dan glass overview bukan komponen varian bernama yang sudah disediakan oleh `Card`. Jangan menganggap prop `elev` menyediakan variasi tersebut; prop itu diterima tetapi tidak dipakai dalam styling `Card` saat ini.
-
-**Target fallback:** jika blur tidak tersedia atau pengguna memilih reduced transparency, panel memakai `--surface` opaque. Hindari blur bertingkat pada setiap card, inset, dan kontrol sekaligus. Shader tidak menjadi dependency untuk isi atau keterbacaan halaman.
+### Decorative Depth
+- **3D JRoutermation illustrations** — mountains, characters, mascots rendered in a hand-crafted 3D style. The brand's most-recognized depth element. Not a token — these are illustrated assets.
+- **Mascot characters** appear as inline figures in feature cards and CTAs.
 
 ## Shapes
 
-| Token | Ukuran | Peran |
-| --- | --- | --- |
-| `--r1` | 6px | Button, input, item navigasi |
-| `--r2` | 10px | Blok di dalam panel dan kelompok nested |
-| `--r3` | 14px | Card / panel |
-| `--r4` | 20px | Modal |
-| `--r-full` | 999px | Pill badge dan navigasi landing saat scrolled |
+### Border Radius Scale
 
-Gunakan scale yang sama pada kedua tema. Pills bukan bentuk default semua tombol. Landing masih memiliki utility radius 8px / 16px pada elemen tertentu; itu pengecualian lokal, bukan tambahan wajib pada scale bersama.
-
-Panel solid memakai hairline 1px; glass landing boleh tanpa border. Divider menjelaskan kelompok data, bukan dekorasi yang harus muncul di setiap section.
+| Token | Value | Use |
+|---|---|---|
+| `{rounded.xs}` | 6px | Small badges, dropdown items |
+| `{rounded.sm}` | 8px | Small buttons, hairline-border accent |
+| `{rounded.md}` | 12px | Standard CTA buttons, text inputs |
+| `{rounded.lg}` | 16px | Content cards, testimonial cards, pricing tiers |
+| `{rounded.xl}` | 24px | Feature cards (the saturated brand-color cards) |
+| `{rounded.pill}` | 9999px | Category tabs, badge pills |
+| `{rounded.full}` | 9999px / 50% | Avatars, icon buttons |
 
 ## Components
 
-### Pemetaan implementasi
+### Top Navigation
 
-Gunakan komponen dari [`src/shared/components/`](../src/shared/components/) sebelum membuat padanannya sendiri. Hero dan card landing masih memiliki JSX styling lokal; dokumentasi ini tidak menyatakan semuanya sudah direfaktor menjadi library.
-
-| Komponen | API / pola yang tersedia |
-| --- | --- |
-| [`Button`](../src/shared/components/Button.js) | `variant`: primary, secondary, outline, ghost, danger, success; `size`: sm, md, lg; `loading`, `disabled`, `fullWidth`, `icon`, `iconRight` |
-| [`Card`](../src/shared/components/Card.js) | `title`, `subtitle`, `icon`, `action`, `padding`, `hover`; `Section`, `Row`, `ListItem` |
-| [`Input`](../src/shared/components/Input.js) | `label`, `hint`, `error`, `icon`, `disabled`, serta native input props |
-| [`Modal`](../src/shared/components/Modal.js) | `isOpen`, `onClose`, `title`, `footer`, `size`, `closeOnOverlay`; `ConfirmModal` |
-| [`Icon`](../src/shared/components/Icon.js) | Wrapper Lucide SVG dengan pemetaan nama lama |
-| [`AppLogo`](../src/shared/components/AppLogo.js) | Asset logo bersama `/brand/jrouter.svg` |
-| [`DashboardLayout`](../src/shared/components/layouts/DashboardLayout.js) | Shell aplikasi dan constraint `.page` |
+**`top-nav`** — Cream nav bar pinned to top. 64px tall, `{colors.canvas}` background. Carries the JRouter logo + wordmark at left, primary horizontal menu (Product, Solutions, Resources, Pricing, Customers) center, right-side cluster with "Sign in" + "Try free" `{component.button-primary}`. Menu items in `{typography.nav-link}` (Inter 14px / 500).
 
 ### Buttons
 
-- **Teramati:** primary putih / teks gelap, secondary surface netral, radius 6px. Shared `Button` memiliki transisi 150ms, press scale 0.97, serta loading yang menonaktifkan tombol.
-- Size shared: `sm` tinggi 28px; `md` 34px; `lg` 40px. Nilai padding frontmatter berasal dari `.ui-btn`; size API `Button` memiliki padding sendiri. Hero lebih lapang dengan padding 12px × 24px.
-- **Target light primary:** latar `--text`, teks `--surface`; hover `--text-2` dengan teks putih. Ini belum diterapkan di shared `Button` maupun `.ui-btn--primary`.
-- **Teramati:** `Button` secondary mempertahankan teks semantik pada hover. `.ui-btn--soft:hover` memaksakan putih dan tidak aman di light mode; targetnya tetap memakai `--text`.
-- **Teramati:** varian `Button` danger / success masih memakai warna fixed-dark. Reuse komponen tidak berarti semua variannya sudah mengikuti tema; target penyelarasan memakai peran status tema dan background yang kontrasnya terukur.
-- **Target:** focus-visible jelas, aksi destructive memakai label eksplisit, loading memiliki nama/status yang dapat dibaca assistive technology. Jangan membuat secondary menyaingi CTA utama.
+**`button-primary`** — Background `{colors.primary}` (near-black), text `{colors.on-primary}` (white), type `{typography.button}` (Inter 14px / 600), padding 12px × 20px, height 44px, rounded `{rounded.md}` (12px).
 
-### Cards dan data
+**`button-secondary`** — Cream button with hairline outline. Background `{colors.canvas}`, text `{colors.ink}`, 1px hairline border.
 
-- Default shared `Card`: surface solid, hairline, radius 14px, shadow-card; padding `md` adalah 20px lalu 24px pada `sm`.
-- Panel glass mengikuti batas di Elevation & Depth; jangan mengganti seluruh card global agar satu halaman mengikuti landing.
-- **Target data:** header memiliki judul dan aksi terkait, angka menggunakan tabular numbers, overflow ditangani lokal. Hover interaktif hanya untuk elemen yang benar-benar dapat diaktifkan.
-- `Card.ListItem` saat ini menampilkan aksi pada hover; target aksesibilitas menuntut aksi juga tersedia saat keyboard focus dan pada touch.
+**`button-on-color`** — White button used over saturated brand-color feature cards. Same shape as primary but inverted (white background, ink text).
 
-### Inputs dan feedback
+**`button-text-link`** — Inline text button, no background. Used for "Sign in" and inline link CTAs.
 
-- Input memakai `--surface-2`, border `--line-2`, radius 6px, padding 8px × 12px; focus tersedia melalui border/ring `--accent-line`.
-- Error memakai `--danger`, ikon, dan teks; hint memakai mono. **Target:** label terhubung melalui `htmlFor` / `id`, hint/error melalui `aria-describedby`, dan error melalui `aria-invalid`. Rendering label saat ini tidak menjamin hubungan tersebut.
-- Default, hover, focus, disabled, loading, error, success, dan empty state harus memiliki tampilan yang jelas jika relevan. Disabled bukan cara menyembunyikan informasi penting.
-- Badge status memakai warna tema dengan label, bukan warna saja. `Badge` dan `.badge-*` belum sepenuhnya seragam; latar status fixed-dark tidak otomatis menjadi standar light mode.
+**`text-link`** — Inline body links in `{colors.ink}` with underline.
 
-### Navigation dan dialogs
+### Cards & Containers
 
-- Landing navigation fixed dan transparan, berubah menjadi glass pill setelah scroll 24px; max-width berubah dari 1280px menjadi 896px. Ini pola marketing, bukan pengganti sidebar dashboard.
-- **Target aplikasi:** pertahankan shell dan active state semantik; light/dark memakai token yang sama. Menu mobile memiliki `aria-expanded`, nama aksi, dan interaksi keyboard.
-- Modal memakai radius 20px, `--surface`, border `--line-2`, dan `--shadow-pop`. Escape serta body scroll lock sudah tersedia.
-- **Target modal:** dialog semantics, label judul, focus trap, focus return, dan tombol close yang dapat diakses di semua ukuran. Perilaku tersebut belum dijamin komponen sekarang; traffic lights bukan pengganti kontrol close yang memadai.
+**`hero-band`** — Cream-canvas hero with 7-5 grid: h1 + sub-headline + button row on the left, 3D JRoutermation illustration on the right. Vertical padding `{spacing.section}` (96px).
 
-### Icons dan assets
+**`hero-illustration-card`** — Right-side artifact holding 3D JRoutermation illustration (mountains, mascot character, abstract shapes). Background `{colors.surface-soft}`, rounded `{rounded.xl}` (24px). The illustration IS the artifact.
 
-Gunakan `Icon` / Lucide dengan default stroke 2; ukuran landing yang umum 14px untuk indikator link, 18px untuk aksi, 20px untuk feature, dan 24px untuk architecture. Ikon dekoratif disembunyikan dari pembaca layar; icon-only action memiliki accessible name.
+**`feature-card-pink`** / **`feature-card-teal`** / **`feature-card-lavender`** / **`feature-card-peach`** / **`feature-card-ochre`** — Saturated single-color feature cards. Background varies per variant; rounded `{rounded.xl}` (24px); padding `{spacing.xl}` (32px). Each card carries an h3 in `{typography.title-md}`, a body description, and a product UI fragment or mascot illustration. Text color flips to `{colors.on-dark}` (white) on pink and teal cards, `{colors.ink}` (dark) on lavender/peach/ochre cards (the lighter saturations have enough contrast for dark text).
 
-Gunakan `AppLogo` dan asset bersama; periksa kontras logo pada light mode. Nama produk yang menjadi patokan adalah JRouter. Metadata root masih menggunakan 9Router dan judul internal SVG masih memiliki branding lama; itu drift implementasi, bukan pilihan brand baru. Jangan membuat ulang logo atau provider marks dalam pekerjaan penyelarasan biasa.
+**`feature-card-cream`** — Lower-key feature card variant on `{colors.surface-card}`. Used for less-emphasized features that don't warrant a saturated color.
 
-### Motion
+**`product-mockup-card`** — Card showing actual JRouter product UI (JRoutergent agent runs, sequencer flows, CRM enrichment tables). Background `{colors.canvas}` with hairline border, rounded `{rounded.lg}`, padding `{spacing.lg}` (24px).
 
-| Pola teramati | Nilai |
-| --- | --- |
-| Reveal umum | `cubic-bezier(0.16, 1, 0.3, 1)`, sekitar 700–900ms, opacity + translation |
-| Feature stagger | 70ms per item |
-| Navigasi pill | 300ms |
-| Micro-interaction kontrol | Sekitar 150ms |
-| Typewriter hero | Ketik 42ms, hapus 18ms, hold 2000ms, jeda kosong 280ms |
-| Shader | Animasi kontinu, `uSpeed=0.3`, pixel density maksimal 2 |
+**`testimonial-card`** — Customer quote cards. Background `{colors.surface-card}` (cream), rounded `{rounded.lg}`, padding `{spacing.lg}` (24px). Top row has avatar + name + role; below sits the testimonial in `{typography.body-md}`.
 
-**Target:** micro-interaction pendek untuk dashboard; reveal panjang, typewriter, watermark, dan shader terbatas pada marketing. Saat reduced motion, tampilkan teks statis dan konten langsung tanpa reveal atau animasi kontinu. Hindari layout shift dari judul yang berubah. Landing belum memiliki fallback reduced-motion lengkap untuk efek tersebut; aturan smooth-scroll saja tidak mencukupi.
+**`pricing-tier-card`** — Standard tier card. Background `{colors.canvas}` with hairline, rounded `{rounded.lg}`, padding `{spacing.xl}` (32px).
+
+**`pricing-tier-card-featured`** — The featured tier flips to `{colors.brand-teal}` (deep teal-green). The teal surface IS the featured signal.
+
+**`expert-card`** — Used on /experts page. Background `{colors.canvas}` with hairline, rounded `{rounded.lg}`, padding `{spacing.lg}`. Carries an avatar at top, expert name, specialization, and a "Book session" link.
+
+### Inputs & Forms
+
+**`text-input`** — Background `{colors.canvas}`, text `{colors.ink}`, type `{typography.body-md}`, rounded `{rounded.md}` (12px), padding 12px × 16px, height 44px. 1px hairline border.
+
+**`text-input-focused`** — Border thickens to ink for emphasis.
+
+### Tabs / Badges
+
+**`category-tab`** + **`category-tab-active`** — Pill-shaped tabs in sub-nav. Inactive: transparent + muted text. Active: cream-card background + ink text. Padding 8px × 16px.
+
+**`badge-pill`** — Small cream-fill pill labels in `{typography.caption}` (13px / 500), rounded `{rounded.pill}`.
+
+### CTA / Footer
+
+**`cta-band-illustrated`** — Pre-footer "Turn your growth ideas into reality today" band. Background `{colors.surface-soft}`, rounded `{rounded.xl}`, padding 80px. Carries an h2 in `{typography.display-md}`, a sub-line, and a `{component.button-primary}` — usually paired with a 3D illustration of a mascot or scene.
+
+**`footer`** — Cream-tinted footer (NOT dark navy unlike most SaaS sites). Background `{colors.surface-soft}`, text `{colors.body}`. 4-column link list. Vertical padding 80px. Often features a horizon-style 3D mountain illustration at the very bottom — JRouter's signature footer mountain.
 
 ## Do's and Don'ts
 
 ### Do
-
-- **Do** gunakan token semantik agar layout yang sama bekerja pada kedua tema.
-- **Do** pertahankan Geist / Geist Mono, radius scale, dan hierarki surface lintas halaman.
-- **Do** pilih layout dari tugas pengguna dan bentuk data, bukan dari urutan section landing.
-- **Do** ukur kontras pada latar hasil komposit jika memakai glass.
-- **Do** pisahkan kondisi teramati, target, dan legacy ketika memperbarui pedoman ini.
-- **Do** mask API key / token pada tampilan biasa; aksi reveal atau copy harus disengaja. Contoh dan screenshot dokumentasi tidak memuat credential nyata.
+- Anchor every page on the cream canvas (`{colors.canvas}` — #fffaf0). The warm tint differentiates JRouter from cool-gray data sites.
+- Use 3D JRoutermation illustrations as hero artifacts. Hand-crafted 3D characters and mountains ARE the brand.
+- Cycle saturated feature cards across the page — pink → teal → lavender → peach → ochre → cream. Repeating the same color twice in a row reads as off-rhythm.
+- Use Plain Black at weight 500 with negative letter-spacing on every display headline.
+- Show product UI fragments inside saturated feature cards. The brand voltage is product-driven, not abstract.
+- Use cream footer (NOT dark). JRouter deliberately closes pages with warm cream rather than the standard dark-footer SaaS template.
+- Anchor every band with `{spacing.section}` (96px) vertical rhythm.
 
 ### Don't
+- Don't use cool grays for canvas. The cream tint is non-negotiable.
+- Don't use a 7th brand-color card. The 6-color palette is saturated enough.
+- Don't bold display weight beyond 500. Plain Black at 700 reads as bombastic.
+- Don't repeat the same brand-color card twice in a row.
+- Don't replace JRoutermation illustrations with flat vector art. The hand-crafted 3D character IS the brand voice.
+- Don't use a dark footer. The cream footer is part of the system's warm-throughout pacing.
+- Don't add hover state styling beyond what the system already encodes.
 
-- **Don't** memaksa `.dark` pada halaman operasional yang harus mengikuti theme pengguna.
-- **Don't** menyalin shader, typewriter, scrollbar hiding, atau glass hitam ke semua halaman.
-- **Don't** memakai putih pada hover surface terang, atau teks tersier berkontras rendah untuk informasi penting.
-- **Don't** menambahkan warna dekoratif, blur nested, dan shadow baru ketika token bersama sudah cukup.
-- **Don't** menganggap label clickable, card hover, atau titik traffic lights otomatis memiliki semantik kontrol yang benar.
-- **Don't** mengulang klaim keamanan seperti “zero-leak” atau klaim performa landing sebagai fakta terverifikasi tanpa pemeriksaan terpisah.
+## Responsive Behavior
 
-### Checklist penerimaan halaman
+### Breakpoints
 
-- [ ] Dark dan light mempertahankan hierarki; CTA, hover, active, dan focus terbaca.
-- [ ] Layout diperiksa minimal pada 390px, 768px, dan 1440px, termasuk string panjang.
-- [ ] Tidak ada overflow halaman; scroll lokal tabel / code tetap dapat ditemukan.
-- [ ] Default, loading, disabled, error, success, dan empty diperiksa jika relevan.
-- [ ] Keyboard, accessible names, label form, serta focus dialog bekerja.
-- [ ] Teks dan indikator penting memenuhi kontras pada background aktual.
-- [ ] Reduced motion / transparency dan kegagalan background dekoratif tidak menyembunyikan isi.
-- [ ] Credential dan contoh data sensitif tidak tampil tanpa kontrol yang sesuai.
-- [ ] Perubahan tidak mengubah perilaku produk atau theme di luar scope.
+| Name | Width | Key Changes |
+|---|---|---|
+| Mobile | < 768px | Hamburger nav; hero h1 72→36px; hero-illustration-card stacks below; feature grids 1-up; pricing 1-up |
+| Tablet | 768–1024px | Top nav tightens; feature cards 2-up; pricing 2-up |
+| Desktop | 1024–1440px | Full top-nav; 3-up feature cards; 3-up pricing tiers |
+| Wide | > 1440px | Same as desktop with more breathing room; max content 1280px |
 
-### Dokumentasi pendamping
+### Touch Targets
+- `{component.button-primary}` at minimum 44 × 44px (matches WCAG AAA).
+- `{component.text-input}` height is 44px.
 
-`DESIGN.md` menjadi acuan visual. [FRONTEND.md](FRONTEND.md) adalah pendamping teknis untuk cara menyusun route/layout, lokasi komponen, penggunaan theme, dan prosedur verifikasi. Simpan nilai visual hanya di sini dan referensikan dari dokumen teknis agar tidak ada dua sumber token. Dokumentasi brand terpisah, token export, atau component playground baru diperlukan ketika ada kebutuhan konkret; semuanya di luar perubahan ini.
+### Collapsing Strategy
+- Top nav collapses to hamburger at < 768px.
+- Hero 7-5 grid → single-column on mobile.
+- Feature card grids reduce columns rather than scaling.
+- Saturated feature cards retain their colored fill at every breakpoint.
+- Pricing tier cards collapse 4 → 2 → 1.
+
+## Iteration Guide
+
+1. Focus on ONE component at a time. Reference its YAML key (`{component.feature-card-pink}`, `{component.pricing-tier-card-featured}`).
+2. Pick the right brand-color card for the feature: pink for outbound/sequencer, teal for enterprise/featured, lavender for AI-agent products, peach for general SaaS warmth, ochre for community / experts.
+3. Variants of an existing component (`-active`, `-disabled`) live as separate entries.
+4. Use `{token.refs}` everywhere — never inline hex.
+5. Never document hover.
+6. Display headlines stay Plain Black 500 with negative letter-spacing. Body stays Inter 400.
+7. The cream-throughout palette is a system contract — don't add a dark footer.
+
+## Known Gaps
+
+- Plain Black is licensed to JRouter and not available as a public web font; Inter weight 500 with negative letter-spacing is the closest substitute.
+- 3D JRoutermation illustrations are commissioned assets, not system tokens — they're rendered per-page.
+- The mascot characters (named characters that recur across the site) are illustrated assets; their exact lineage and naming are not formalized in tokens.
+- Animation and transition timings (3D illustration parallax on scroll, feature card entrance animations) are not in scope.
+- Form validation states beyond `{component.text-input-focused}` are not extracted.
+- The actual JRouter product surface (in-app data tables, formula editor, agent builder) shares some tokens with the marketing site but adds many product-specific components that are out of scope.

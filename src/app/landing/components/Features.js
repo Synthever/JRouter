@@ -113,7 +113,7 @@ export default function Features() {
             return (
               <div 
                 key={feature.title}
-                className="p-5 rounded-[var(--r3)] bg-black/30 backdrop-blur-xl border-0 shadow-2xl shadow-black/80 hover:bg-black/40 flex flex-col justify-between"
+                className="p-5 rounded-[var(--r4)] bg-[var(--surface-card)] border border-[var(--line)] hover:bg-[var(--surface-strong)] flex flex-col justify-between"
                 style={{
                   transform: isVisible ? "translateY(0) scale(1)" : "translateY(24px) scale(0.96)",
                   opacity: isVisible ? 1 : 0,

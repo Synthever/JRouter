@@ -1,0 +1,255 @@
+.wrapper {
+  container: widget-grid / inline-size;
+  width: 100%;
+  min-width: 0;
+  --wg-accent: var(--text);
+}
+
+/* 6 columns + five 12px gutters span the available width; compact grids use 2. */
+.grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--wg-narrow-columns, 2), minmax(0, 1fr));
+  grid-auto-flow: row;
+  perspective: 1400px;
+}
+
+.cell {
+  position: relative;
+  min-width: 0;
+  grid-column: span var(--span-n);
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.cell[data-lifted] {
+  z-index: 20;
+}
+
+.surface {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transform-origin: top left;
+  border: 1px solid var(--line);
+  border-radius: var(--r4);
+  background: var(--surface);
+}
+
+.cell[data-lifted] .surface,
+.cell[data-resizing] .surface {
+  border-color: var(--line-2);
+}
+
+.liftShadow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  box-shadow: 0 24px 48px -16px rgb(0 0 0 / 22%), 0 8px 16px -8px rgb(0 0 0 / 12%);
+}
+
+.content {
+  position: relative;
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  padding: var(--wg-padding, 12px 16px 16px);
+}
+
+.header {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  margin-bottom: 8px;
+}
+
+.icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  color: var(--text-2);
+}
+
+.icon > svg {
+  width: 16px;
+  height: 16px;
+}
+
+.title {
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: var(--wg-title-size, 13px);
+  font-weight: var(--wg-title-weight, 500);
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grip,
+.resize {
+  display: flex;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-2);
+  touch-action: none;
+  transition: color 150ms, background-color 150ms;
+}
+
+.grip {
+  margin-right: -8px;
+  margin-left: auto;
+  cursor: grab;
+}
+
+.grip:hover,
+.grip[aria-pressed="true"] {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.grip[aria-pressed="true"] {
+  cursor: grabbing;
+}
+
+.grip:focus-visible,
+.resize:focus-visible {
+  outline: 2px solid var(--wg-accent);
+  outline-offset: 2px;
+}
+
+.body {
+  position: relative;
+  min-height: 0;
+  flex: 1;
+}
+
+.widget {
+  position: absolute;
+  inset: 0;
+  min-width: 0;
+}
+
+.resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 7px;
+  border-radius: 6px 0 16px 0;
+  cursor: ew-resize;
+  opacity: 0;
+  transition: color 150ms, opacity 150ms;
+}
+
+.cell:hover .resize,
+.cell[data-resizing] .resize,
+.resize:focus-visible {
+  opacity: 1;
+}
+
+.resize:hover,
+.resize:focus-visible {
+  color: var(--text);
+}
+
+.slots {
+  position: absolute;
+  overflow: visible;
+  pointer-events: none;
+  color: var(--text-2);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+@container widget-grid (min-width: 576px) {
+  .grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .cell {
+    grid-column: span var(--span);
+  }
+}
+
+@container widget-grid (max-width: 575.99px) {
+  .content {
+    padding: var(--wg-padding, 8px 12px 16px);
+  }
+
+  .header {
+    position: relative;
+    padding-right: 20px;
+    gap: 4px;
+    min-height: 44px;
+    margin-bottom: 4px;
+  }
+
+  .title {
+    white-space: normal;
+    overflow-wrap: normal;
+    line-height: 16px;
+    font-size: var(--wg-title-size, 12px);
+  }
+
+  .grip,
+  .resize {
+    width: 44px;
+    height: 44px;
+  }
+
+  .grip {
+    position: absolute;
+    right: -12px;
+    top: 0;
+    margin: 0;
+    justify-content: flex-end;
+    padding-right: 8px;
+  }
+
+  .resize {
+    opacity: 1;
+  }
+}
+
+@media (pointer: coarse) {
+  .grip,
+  .resize {
+    width: 44px;
+    height: 44px;
+  }
+
+  .resize {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grip,
+  .resize {
+    transition: none;
+  }
+
+  .liftShadow {
+    box-shadow: none;
+  }
+}

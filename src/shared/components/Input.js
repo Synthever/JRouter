@@ -27,7 +27,7 @@ export default function Input({
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
       {label && (
-        <label htmlFor={inputId} className="text-xs font-mono text-[var(--text-2)] uppercase tracking-wider">
+        <label htmlFor={inputId} className="text-sm font-medium text-[var(--text)]">
           {label}
           {required && <span className="text-[var(--danger)] ml-1">*</span>}
         </label>
@@ -62,13 +62,13 @@ export default function Input({
         />
       </div>
       {error && (
-        <p id={messageId} className="text-xs text-[var(--danger)] flex items-center gap-1 font-mono">
+        <p id={messageId} className="text-xs text-[var(--danger)] flex items-center gap-1">
           <Icon name="error" className="text-[14px]" />
           {error}
         </p>
       )}
       {hint && !error && (
-        <p id={messageId} className={cn("text-xs text-[var(--text-3)] font-mono", hintClassName)}>{hint}</p>
+        <p id={messageId} className={cn("text-xs text-[var(--text-3)]", hintClassName)}>{hint}</p>
       )}
     </div>
   );

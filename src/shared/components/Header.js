@@ -1,18 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import PropTypes from "prop-types";
 import ProviderIcon from "@/shared/components/ProviderIcon";
 import Icon from "@/shared/components/Icon";
 import HeaderMenu from "@/shared/components/HeaderMenu";
-import HeaderLanguage from "@/shared/components/HeaderLanguage";
 import { useHeaderSearchStore } from "@/store/headerSearchStore";
 import { OAUTH_PROVIDERS, APIKEY_PROVIDERS } from "@/shared/constants/config";
 import { MEDIA_PROVIDER_KINDS, AI_PROVIDERS } from "@/shared/constants/providers";
 import { getProviderIconSrc } from "@/shared/utils/providerIcon";
 import { translate } from "@/i18n/runtime";
+import { useNotificationStore } from "@/store/notificationStore";
+import { buildDashboardSearchIndex } from "@/shared/constants/dashboardNav";
+import { Bell, ChevronRight, PanelLeft, Search, X } from "lucide-react";
 
 const getPageInfo = (pathname) => {
   if (!pathname) return { title: "", breadcrumbs: [] };
@@ -163,12 +166,52 @@ const getPageInfo = (pathname) => {
 
 export default function Header({ onMenuClick, showMenuButton = true }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [displayName, setDisplayName] = useState("");
   const [loginMethod, setLoginMethod] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeResult, setActiveResult] = useState(0);
+  const [bellOpen, setBellOpen] = useState(false);
+  const bellRef = useRef(null);
+  const searchInputRef = useRef(null);
+  const contextualSearch = useHeaderSearchStore((s) => s.visible);
+  const notifications = useNotificationStore((s) => s.notifications);
+  const removeNotification = useNotificationStore((s) => s.removeNotification);
 
   // Memoize page info to prevent unnecessary recalculations
   const pageInfo = useMemo(() => getPageInfo(pathname), [pathname]);
   const { title, icon, breadcrumbs } = pageInfo;
+  const crumbs = breadcrumbs.length > 0 ? breadcrumbs : title ? [{ label: title, icon }] : [];
+
+  const navigateTo = useCallback((href) => {
+    setSearchOpen(false);
+    setSearchQuery("");
+    router.push(href);
+  }, [router]);
+
+  const searchEntries = useMemo(() => buildDashboardSearchIndex(), []);
+  const searchResults = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return searchEntries;
+    return searchEntries.filter((entry) => (
+      entry.label.toLowerCase().includes(query)
+      || entry.group.toLowerCase().includes(query)
+      || entry.href.toLowerCase().includes(query)
+    ));
+  }, [searchEntries, searchQuery]);
+
+  const initials = useMemo(() => {
+    const words = displayName.trim().split(/\s+/).filter(Boolean);
+    if (words.length === 0) return "JR";
+    return words.slice(0, 2).map((word) => word[0]).join("").toUpperCase();
+  }, [displayName]);
+
+  const dateText = useSyncExternalStore(
+    () => () => {},
+    () => new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }).toUpperCase(),
+    () => "",
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -196,6 +239,43 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
     };
   }, []);
 
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  useEffect(() => {
+    if (!searchOpen) return;
+    searchInputRef.current?.focus();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [searchOpen]);
+
+  useEffect(() => {
+    if (!bellOpen) return;
+    const onPointerDown = (event) => {
+      if (bellRef.current && !bellRef.current.contains(event.target)) setBellOpen(false);
+    };
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") setBellOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [bellOpen]);
+
   const handleLogout = async () => {
     try {
       const res = await fetch("/api/auth/logout", { method: "POST" });
@@ -207,99 +287,190 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
     }
   };
 
+  const onSearchKeyDown = (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setSearchOpen(false);
+      return;
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveResult((index) => Math.min(index + 1, Math.max(0, searchResults.length - 1)));
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveResult((index) => Math.max(0, index - 1));
+      return;
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const target = searchResults[activeResult];
+      if (target) navigateTo(target.href);
+    }
+  };
+
   return (
-    <header className="dashboard-header shrink-0 flex items-center z-20">
-      {/* Sidebar toggle button (Mobile + Desktop) */}
-      {showMenuButton && (
-        <div className="dashboard-header__navigation flex items-center shrink-0">
+    <header className="dashboard-header shrink-0 z-20">
+      <div className="dashboard-header__left">
+        {showMenuButton && (
           <button
             type="button"
             onClick={onMenuClick}
-            className="dashboard-header__action"
+            className="dashboard-header__action dashboard-header__menu-button"
             title="Toggle sidebar (Ctrl+B)"
             aria-label="Toggle sidebar"
           >
-            <Icon name="panel-left" className="text-[18px]" />
+            <PanelLeft size={18} aria-hidden="true" />
           </button>
-        </div>
-      )}
+        )}
 
-      {/* Page title with breadcrumbs */}
-      <div className="dashboard-header__title flex flex-col min-w-0 flex-1">
-        {breadcrumbs.length > 0 ? (
-          <div className="dashboard-header__breadcrumbs flex items-center gap-1.5 sm:gap-2 min-w-0">
-            {breadcrumbs.map((crumb, index) => (
-              <div
-                key={`${crumb.label}-${crumb.href || "current"}`}
-                className={`items-center gap-1.5 sm:gap-2 min-w-0 ${
-                  index < breadcrumbs.length - 1 ? "hidden sm:flex shrink-0" : "flex flex-1"
-                }`}
-              >
-                {index > 0 && (
-                  <Icon
-                    name="chevron_right"
-                    className="text-[var(--text-3)] text-base hidden sm:inline"
-                  />
-                )}
-                {crumb.href ? (
-                  <Link
-                    href={crumb.href}
-                    className="dashboard-header__crumb text-[13px] text-[var(--text-2)] hover:text-[var(--text)] transition-colors truncate"
-                  >
-                    {crumb.label}
+        <nav className="dashboard-header__crumbs" aria-label="Breadcrumb">
+          <span className="dashboard-header__workspace">Workspace</span>
+          <span className="dashboard-header__slash" aria-hidden="true">/</span>
+          {crumbs.map((crumb, index) => {
+            const isCurrent = index === crumbs.length - 1;
+            return (
+              <span key={`${crumb.label}-${crumb.href || "current"}`} className="dashboard-header__crumb-item">
+                {index > 0 && <ChevronRight size={14} className="dashboard-header__crumb-sep" aria-hidden="true" />}
+                {crumb.href && !isCurrent ? (
+                  <Link href={crumb.href} className="dashboard-header__crumb">
+                    {translate(crumb.label)}
                   </Link>
                 ) : (
-                  <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                  <span className="dashboard-header__current">
                     {crumb.image && (
                       <ProviderIcon
                         src={crumb.image}
                         alt={crumb.label}
-                        size={28}
-                        className="object-contain rounded-[var(--r1)] max-w-[24px] max-h-[24px] sm:max-w-[28px] sm:max-h-[28px] shrink-0"
+                        size={22}
+                        className="dashboard-header__current-icon"
                         fallbackText={crumb.label.slice(0, 2).toUpperCase()}
                       />
                     )}
-                    <h1 className="dashboard-header__heading font-semibold text-[var(--text)] tracking-[-0.02em] leading-tight truncate">
-                      {translate(crumb.label)}
-                    </h1>
-                  </div>
+                    <h1 className="dashboard-header__heading">{translate(crumb.label)}</h1>
+                  </span>
                 )}
-              </div>
-            ))}
-          </div>
-        ) : title ? (
-          <div className="flex items-center gap-2.5 min-w-0">
-            {icon && (
-              <Icon
-                name={icon}
-                className="dashboard-header__page-icon"
-              />
-            )}
-            <h1 className="dashboard-header__heading font-semibold text-[var(--text)] tracking-[-0.02em] leading-tight truncate">
-              {translate(title)}
-            </h1>
-          </div>
-        ) : null}
+              </span>
+            );
+          })}
+        </nav>
       </div>
 
-      {/* Right actions */}
-      <div className="dashboard-header__actions flex items-center shrink-0">
-        {displayName && (loginMethod === "OIDC" || loginMethod === "SAML") && (
-          <div
-            className="hidden sm:flex items-center max-w-[220px] px-2.5 py-1 rounded-[var(--r-full)] border border-[var(--line-2)] bg-[var(--surface-2)] text-xs text-[var(--text-2)] truncate font-mono"
-            title={displayName}
+      <div className="dashboard-header__actions">
+        {contextualSearch ? (
+          <HeaderSearch />
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setSearchQuery("");
+              setActiveResult(0);
+              setSearchOpen(true);
+            }}
+            className="dashboard-header__search-trigger"
+            aria-label="Search pages"
+            aria-haspopup="dialog"
           >
-            <Icon name="person" className="text-[14px] mr-1.5 text-[var(--text)]" />
-            <span className="truncate">{displayName}</span>
-            <span className="ml-2 shrink-0 rounded-[var(--r-full)] bg-[var(--surface)] border border-[var(--line)] px-1.5 py-0.2 text-[10px] font-mono uppercase text-[var(--text-2)]">
-              {loginMethod}
-            </span>
-          </div>
+            <Search size={16} aria-hidden="true" />
+            <span className="dashboard-header__search-label">Search pages...</span>
+            <kbd className="dashboard-header__kbd">⌘K</kbd>
+          </button>
         )}
-        <HeaderSearch />
-        <HeaderLanguage />
-        <HeaderMenu onLogout={handleLogout} />
+
+        {dateText && <span className="dashboard-header__date">{dateText}</span>}
+
+        <div className="dashboard-header__bell-wrap" ref={bellRef}>
+          <button
+            type="button"
+            onClick={() => setBellOpen((value) => !value)}
+            className="dashboard-header__action dashboard-header__bell"
+            aria-label="Notifications"
+            aria-expanded={bellOpen}
+            title="Notifications"
+          >
+            <Bell size={18} aria-hidden="true" />
+            {notifications.length > 0 && <span className="dashboard-header__dot" aria-hidden="true" />}
+          </button>
+          {bellOpen && (
+            <div className="dashboard-header__popover" role="dialog" aria-label="Notifications">
+              <p className="dashboard-header__popover-title">Notifications</p>
+              {notifications.length > 0 ? (
+                notifications.map((n) => (
+                  <div key={n.id} className="dashboard-header__popover-item">
+                    <div className="min-w-0">
+                      {n.title ? <p className="dashboard-header__popover-heading">{n.title}</p> : null}
+                      <p className="dashboard-header__popover-body">{n.message}</p>
+                    </div>
+                    {n.dismissible ? (
+                      <button
+                        type="button"
+                        onClick={() => removeNotification(n.id)}
+                        className="dashboard-header__popover-dismiss"
+                        aria-label="Dismiss notification"
+                      >
+                        <X size={16} aria-hidden="true" />
+                      </button>
+                    ) : null}
+                  </div>
+                ))
+              ) : (
+                <p className="dashboard-header__popover-body">No notifications yet.</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        <HeaderMenu initials={initials} displayName={displayName} loginMethod={loginMethod} onLogout={handleLogout} />
       </div>
+
+      {searchOpen && typeof document !== "undefined" && createPortal(
+        <div className="dashboard-palette-layer">
+          <div
+            className="dashboard-palette__backdrop"
+            onMouseDown={() => setSearchOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="dashboard-palette" role="dialog" aria-modal="true" aria-label="Search pages">
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(event) => {
+                setSearchQuery(event.target.value);
+                setActiveResult(0);
+              }}
+              onKeyDown={onSearchKeyDown}
+              placeholder="Jump to a page..."
+              aria-label="Search pages"
+              className="dashboard-palette__input"
+            />
+            <div className="dashboard-palette__results" role="listbox" aria-label="Pages">
+              {searchResults.length > 0 ? (
+                searchResults.map((entry, index) => (
+                  <button
+                    key={entry.href + entry.label}
+                    type="button"
+                    role="option"
+                    aria-selected={index === activeResult}
+                    onMouseEnter={() => setActiveResult(index)}
+                    onClick={() => navigateTo(entry.href)}
+                    className="dashboard-palette__option"
+                  >
+                    <Icon name={entry.icon} className="dashboard-palette__icon" aria-hidden="true" />
+                    <span className="dashboard-palette__label">{entry.label}</span>
+                    <ChevronRight size={16} className="dashboard-palette__chevron" aria-hidden="true" />
+                  </button>
+                ))
+              ) : (
+                <p className="dashboard-palette__empty">No page matches “{searchQuery.trim()}”.</p>
+              )}
+            </div>
+            <p className="dashboard-palette__hint">Type to filter · Enter to open · Esc to close</p>
+          </div>
+        </div>,
+        document.body,
+      )}
     </header>
   );
 }
@@ -314,9 +485,10 @@ function HeaderSearch() {
 
   return (
     <div className="dashboard-header__search relative">
-      <Icon
-        name="search"
-        className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--text-3)] text-[16px] pointer-events-none"
+      <Search
+        size={16}
+        className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)] pointer-events-none"
+        aria-hidden="true"
       />
       <input
         type="text"
@@ -324,16 +496,16 @@ function HeaderSearch() {
         onChange={(e) => setQuery(e.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="w-full h-9 pl-7 pr-7 rounded-[var(--r1)] border border-[var(--line-2)] bg-[var(--surface-inset)] text-xs text-[var(--text)] placeholder-[var(--text-2)] focus:outline-none focus:border-[var(--accent-line)] transition-colors"
+        className="dashboard-header__search-input dashboard-header__search-input--contextual"
       />
       {query && (
         <button
           type="button"
           onClick={() => setQuery("")}
-          className="absolute right-1 top-1/2 -translate-y-1/2 text-[var(--text-3)] hover:text-[var(--text)] p-0.5 rounded cursor-pointer"
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-3)] hover:text-[var(--text)] p-0.5 rounded cursor-pointer"
           aria-label="Clear search"
         >
-          <Icon name="close" className="text-[16px]" />
+          <X size={16} aria-hidden="true" />
         </button>
       )}
     </div>

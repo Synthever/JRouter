@@ -5,19 +5,17 @@ import PropTypes from "prop-types";
 import { useTheme } from "@/shared/hooks/useTheme";
 import ChangelogModal from "./ChangelogModal";
 import { ConfirmModal } from "./Modal";
-import Icon from "./Icon";
+import { History, LogOut, Moon, Power, Sun } from "lucide-react";
+import HeaderLanguage from "./HeaderLanguage";
 
-function MenuItem({ icon, label, onClick, trailing, danger }) {
+function MenuItem({ icon: IconComponent, label, onClick, trailing, danger }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={`dashboard-header__menu-item ${danger ? "is-danger" : ""}`}
     >
-      <Icon
-        name={icon}
-        className="text-[16px]"
-      />
+      <IconComponent size={16} aria-hidden="true" />
       <span className="flex-1 text-left">{label}</span>
       {trailing && <span className="text-base">{trailing}</span>}
     </button>
@@ -25,14 +23,14 @@ function MenuItem({ icon, label, onClick, trailing, danger }) {
 }
 
 MenuItem.propTypes = {
-  icon: PropTypes.string.isRequired,
+  icon: PropTypes.elementType.isRequired,
   label: PropTypes.string.isRequired,
   onClick: PropTypes.func.isRequired,
   trailing: PropTypes.node,
   danger: PropTypes.bool,
 };
 
-export default function HeaderMenu({ onLogout }) {
+export default function HeaderMenu({ onLogout, initials = "JR", displayName = "", loginMethod = "" }) {
   const [isOpen, setIsOpen] = useState(false);
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [shutdownOpen, setShutdownOpen] = useState(false);
@@ -84,34 +82,41 @@ export default function HeaderMenu({ onLogout }) {
         <button
           type="button"
           onClick={() => setIsOpen((v) => !v)}
-          className="dashboard-header__action"
-          title="Menu"
-          aria-label="Menu"
+          className="dashboard-header__avatar"
+          title={displayName || "Account"}
+          aria-label="Account menu"
           aria-expanded={isOpen}
         >
-          <Icon name="grid_view" />
+          <span>{initials}</span>
         </button>
 
         {isOpen && (
           <div className="dashboard-header__dropdown absolute right-0 top-full mt-2 w-60 z-50 overflow-hidden p-1">
+            {displayName ? (
+              <div className="dashboard-header__account">
+                <strong>{displayName}</strong>
+                {loginMethod ? <span>{loginMethod}</span> : null}
+              </div>
+            ) : null}
+            <HeaderLanguage variant="menu" />
             <MenuItem
-              icon="history"
+              icon={History}
               label="Change Log"
               onClick={() => { close(); setChangelogOpen(true); }}
             />
             <MenuItem
-              icon={isDark ? "light_mode" : "dark_mode"}
+              icon={isDark ? Sun : Moon}
               label="Theme"
               onClick={() => { toggleTheme(); close(); }}
             />
             <MenuItem
-              icon="power_settings_new"
+              icon={Power}
               label="Shutdown"
               danger
               onClick={() => { close(); setShutdownOpen(true); }}
             />
             <MenuItem
-              icon="logout"
+              icon={LogOut}
               label="Logout"
               danger
               onClick={() => { close(); onLogout(); }}
@@ -138,4 +143,7 @@ export default function HeaderMenu({ onLogout }) {
 
 HeaderMenu.propTypes = {
   onLogout: PropTypes.func.isRequired,
+  initials: PropTypes.string,
+  displayName: PropTypes.string,
+  loginMethod: PropTypes.string,
 };

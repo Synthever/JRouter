@@ -88,12 +88,12 @@ export default function HeroSection() {
   }, [currentText, isDeleting, phraseIndex]);
 
   return (
-    <section className="relative min-h-[92vh] flex flex-col items-center justify-center text-center px-4 sm:px-6 pt-32 pb-20 bg-transparent text-white w-full overflow-hidden">
+    <section className="relative min-h-[92vh] flex flex-col items-center justify-center text-center px-4 sm:px-6 pt-32 pb-20 bg-transparent text-[var(--text)] w-full overflow-hidden">
       {/* Foreground Hero Content */}
       <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center gap-6 sm:gap-8">
         {/* Eyebrow glass badge */}
         <div
-          className="border border-white/15 flex items-center gap-2.5 rounded-full py-1 px-3.5 bg-white/5 backdrop-blur-md shadow-lg shadow-black/40 hover:bg-white/10 hover:border-white/25"
+          className="border border-[var(--line-2)] flex items-center gap-2.5 rounded-full py-1.5 px-4 bg-[var(--surface-soft)]"
           style={{
             transform: hasEntered ? "scale(1) translateY(0)" : "scale(0.8) translateY(14px)",
             opacity: hasEntered ? 1 : 0,
@@ -102,20 +102,20 @@ export default function HeroSection() {
             willChange: "transform, opacity",
           }}
         >
-          <span className="text-xs sm:text-sm text-neutral-300 font-mono tracking-wider">
+          <span className="text-xs sm:text-sm text-[var(--text-2)] font-medium">
             GATEWAY ENTERPRISE AI PROXY INFRASTRUCTURE
           </span>
         </div>
 
         {/* Main heading with Typewriter animation */}
         <h1
-          className="text-4xl sm:text-6xl md:text-7xl font-semibold tracking-tight leading-[1.12] text-white min-h-[5.5rem] sm:min-h-[8.5rem] md:min-h-[10.5rem]"
+          className="text-4xl sm:text-6xl md:text-7xl font-medium tracking-[-0.045em] leading-[1.05] text-[var(--text)] min-h-[5.5rem] sm:min-h-[8.5rem] md:min-h-[10.5rem]"
           aria-label={HERO_PHRASES[phraseIndex]}
         >
           <span aria-hidden="true">
             {currentText}
             <span
-              className="inline-block w-[3px] sm:w-[4px] md:w-[5px] h-[0.82em] bg-white ml-1.5 align-middle rounded-full animate-pulse"
+              className="inline-block w-[3px] sm:w-[4px] md:w-[5px] h-[0.82em] bg-[var(--text)] ml-1.5 align-middle rounded-full animate-pulse"
             />
           </span>
           <span className="sr-only">{HERO_PHRASES[phraseIndex]}</span>
@@ -123,7 +123,7 @@ export default function HeroSection() {
 
         {/* Description */}
         <p
-          className="text-neutral-300 text-base sm:text-lg md:text-xl max-w-2xl font-light leading-relaxed"
+          className="text-[var(--text-2)] text-base sm:text-lg md:text-xl max-w-2xl leading-relaxed"
           style={{
             transform: descEntered ? "translateY(0)" : "translateY(28px)",
             opacity: descEntered ? 1 : 0,
@@ -138,7 +138,7 @@ export default function HeroSection() {
         <div className="flex flex-col sm:flex-row items-center gap-3.5 pt-2">
           <button
             onClick={() => router.push("/dashboard")}
-            className="cursor-pointer bg-white text-black px-6 py-3 rounded-md font-semibold flex items-center gap-2 hover:bg-neutral-200 text-sm sm:text-base shadow-xl"
+            className="cursor-pointer bg-[var(--color-primary)] text-[var(--primary-ink)] px-6 py-3 rounded-[var(--r2)] font-semibold flex items-center gap-2 hover:bg-[var(--color-primary-hover)] text-sm sm:text-base"
             style={{
               transform: btnEntered ? "translateX(0)" : "translateX(-32px)",
               opacity: btnEntered ? 1 : 0,
@@ -154,7 +154,7 @@ export default function HeroSection() {
             href="https://github.com/Synthever/JRouter"
             target="_blank"
             rel="noopener noreferrer"
-            className="cursor-pointer bg-white/10 hover:bg-white/20 px-6 py-3 rounded-md font-medium text-white border border-white/20 backdrop-blur-md flex items-center gap-2 text-sm sm:text-base"
+            className="cursor-pointer bg-[var(--surface)] hover:bg-[var(--surface-2)] px-6 py-3 rounded-[var(--r2)] font-medium text-[var(--text)] border border-[var(--line-2)] flex items-center gap-2 text-sm sm:text-base"
             style={{
               transform: btnEntered ? "translateX(0)" : "translateX(32px)",
               opacity: btnEntered ? 1 : 0,
@@ -172,7 +172,7 @@ export default function HeroSection() {
       {/* Upstream Ecosystem Bar */}
       <div className="relative z-10 mt-16 sm:mt-20 flex flex-col items-center gap-4">
         <p
-          className="text-xs sm:text-sm font-mono tracking-widest text-neutral-400 uppercase"
+          className="text-xs sm:text-sm font-medium text-[var(--text-3)]"
           style={{
             transform: ecoTitleEntered ? "translateY(0)" : "translateY(20px)",
             opacity: ecoTitleEntered ? 1 : 0,
@@ -182,9 +182,9 @@ export default function HeroSection() {
         >
           Routing Across 40+ AI Providers &amp; Developer Tools
         </p>
-        <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-neutral-400 text-xs sm:text-sm font-medium">
+        <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-[var(--text-2)] text-xs sm:text-sm font-medium">
           <div
-            className="flex items-center gap-2 hover:text-white"
+            className="flex items-center gap-2 hover:text-[var(--text)]"
             style={{
               transform: leftProvidersEntered ? "translateX(0)" : "translateX(-36px)",
               opacity: leftProvidersEntered ? 1 : 0,
@@ -199,7 +199,7 @@ export default function HeroSection() {
             <span>Claude</span>
           </div>
           <div
-            className="flex items-center gap-2 hover:text-white"
+            className="flex items-center gap-2 hover:text-[var(--text)]"
             style={{
               transform: leftProvidersEntered ? "translateX(0)" : "translateX(-36px)",
               opacity: leftProvidersEntered ? 1 : 0,
@@ -214,7 +214,7 @@ export default function HeroSection() {
             <span>OpenAI</span>
           </div>
           <div
-            className="flex items-center gap-2 hover:text-white"
+            className="flex items-center gap-2 hover:text-[var(--text)]"
             style={{
               transform: geminiEntered ? "translateY(0)" : "translateY(24px)",
               opacity: geminiEntered ? 1 : 0,
@@ -229,7 +229,7 @@ export default function HeroSection() {
             <span>Gemini</span>
           </div>
           <div
-            className="flex items-center gap-2 hover:text-white"
+            className="flex items-center gap-2 hover:text-[var(--text)]"
             style={{
               transform: rightProvidersEntered ? "translateX(0)" : "translateX(36px)",
               opacity: rightProvidersEntered ? 1 : 0,
@@ -242,7 +242,7 @@ export default function HeroSection() {
             <span>Z.ai</span>
           </div>
           <div
-            className="flex items-center gap-2 hover:text-white"
+            className="flex items-center gap-2 hover:text-[var(--text)]"
             style={{
               transform: rightProvidersEntered ? "translateX(0)" : "translateX(36px)",
               opacity: rightProvidersEntered ? 1 : 0,

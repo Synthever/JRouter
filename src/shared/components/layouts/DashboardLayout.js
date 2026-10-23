@@ -114,6 +114,7 @@ export default function DashboardLayout({ children }) {
   // Chat-style pages own their full-height layout, scroll container and padding.
   const isFullHeightPage = pathname === "/dashboard/basic-chat" || pathname === "/dashboard/playground";
   const hasGridBackground = GRID_BACKGROUND_PAGES.includes(pathname) || pathname.startsWith("/dashboard/cli-tools/");
+  const hidesPageScrollbar = pathname === "/dashboard";
 
   return (
     <div className={`flex w-full overflow-hidden bg-bg ${pathname === "/dashboard/playground" ? "h-dvh" : "h-screen"}`}>
@@ -158,7 +159,7 @@ export default function DashboardLayout({ children }) {
       <div
         className={cn(
           "hidden lg:flex transition-[width,opacity] duration-200 ease-in-out shrink-0 overflow-hidden",
-          desktopSidebarCollapsed ? "w-0 opacity-0 pointer-events-none" : "w-60 opacity-100"
+          desktopSidebarCollapsed ? "w-0 opacity-0 pointer-events-none" : "w-[246px] opacity-100"
         )}
       >
         <Sidebar onToggleCollapse={handleToggleSidebar} isCollapsed={desktopSidebarCollapsed} />
@@ -180,7 +181,7 @@ export default function DashboardLayout({ children }) {
           onMenuClick={handleToggleSidebar}
           isSidebarCollapsed={desktopSidebarCollapsed}
         />
-        <div className={`flex-1 custom-scrollbar ${hasGridBackground ? "dashboard-grid-bg" : ""} ${isFullHeightPage ? "flex flex-col min-h-0 overflow-hidden" : "overflow-y-auto p-6 lg:p-8"}`}>
+        <div className={`flex-1 custom-scrollbar ${hidesPageScrollbar ? "no-scrollbar" : ""} ${hasGridBackground ? "dashboard-grid-bg" : ""} ${isFullHeightPage ? "flex flex-col min-h-0 overflow-hidden" : "overflow-y-auto p-6 lg:p-8"}`}>
           <div className={isFullHeightPage ? "flex-1 min-h-0 w-full flex flex-col" : "page"}>{children}</div>
         </div>
       </main>
