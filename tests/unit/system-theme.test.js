@@ -19,4 +19,15 @@ describe("approved system theme contract", () => {
     expect(layout).toContain("localStorage.getItem('theme')");
     expect(layout).toContain("geistMono.variable");
   });
+  it("keeps dark surfaces neutral charcoal instead of a teal tint", () => {
+    const css = read("src/app/globals.css");
+    const dark = css.match(/\n\.dark\s*\{([^}]+)\}/)?.[1] || "";
+    const tokens = ["--bg", "--bg-2", "--surface", "--surface-2", "--surface-inset", "--canvas", "--surface-soft", "--surface-card", "--surface-strong"];
+    for (const token of tokens) {
+      const hex = dark.match(new RegExp(`${token}:\\s*(#[0-9a-f]{6});`, "i"))?.[1];
+      expect(hex, `${token} must be a hex colour`).toBeTruthy();
+      const [r, g, b] = [1, 3, 5].map((offset) => parseInt(hex.slice(offset, offset + 2), 16));
+      expect(Math.max(r, g, b) - Math.min(r, g, b), `${token} ${hex} must stay neutral`).toBeLessThanOrEqual(3);
+    }
+  });
 });

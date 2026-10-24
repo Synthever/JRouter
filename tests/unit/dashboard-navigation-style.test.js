@@ -81,7 +81,17 @@ describe("dashboard navigation styling contract", () => {
     expect(title).toContain("text-transform: uppercase;");
     expect(title).toContain("letter-spacing: 0.12em;");
     expect(sidebar).toContain("width: 246px;");
-    expect(sidebar).toContain("background: var(--surface-soft);");
+    // Sidebar shares the header's canvas token so both surfaces match in both themes.
+    expect(sidebar).toContain("background: var(--canvas);");
+  });
+
+  it("paints the sidebar and the header from the same canvas token in both themes", () => {
+    const css = read("src/app/globals.css");
+    const sidebar = css.match(/\n\.dashboard-sidebar\s*\{([^}]+)\}/)?.[1] || "";
+    const header = css.match(/\n\.dashboard-header\s*\{([^}]+)\}/)?.[1] || "";
+
+    expect(sidebar).toContain("background: var(--canvas);");
+    expect(header).toContain("background: var(--canvas);");
   });
 
   it("hands the mobile menu button and search collapse to the responsive shell rules", () => {

@@ -21,6 +21,7 @@ import Tooltip from "./components/Tooltip";
 import SecurityWarning from "./components/SecurityWarning";
 import styles from "./endpoint.module.css";
 import ConfigureApiKeyDialog from "./components/ConfigureApiKeyDialog";
+import EndpointStats from "./components/EndpointStats";
 import { useNotificationStore } from "@/store/notificationStore";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -810,6 +811,12 @@ export default function APIPageClient({ machineId }) {
   const lastUsedKey = keys
     .filter((key) => key.lastUsedAt)
     .sort((a, b) => Date.parse(b.lastUsedAt) - Date.parse(a.lastUsedAt))[0] || null;
+  const limitedNote = `${limitedKeyCount} limited to specific models${pausedKeyCount ? `, ${pausedKeyCount} paused` : ""}`;
+  const lastUsedValue = lastUsedKey ? formatDate(lastUsedKey.lastUsedAt, { withYear: false }) : "Never";
+  const lastUsedNote = lastUsedKey ? `${lastUsedKey.name} sent the latest request` : "No requests recorded yet";
+  const keyRequiredNote = requireApiKey
+    ? "Requests without a valid key are rejected"
+    : "Requests without a key are accepted";
   const keyQuery = keyFilter.trim().toLowerCase();
   const matchingKeys = keyQuery ? keys.filter((key) => key.name?.toLowerCase().includes(keyQuery)) : keys;
   const curlSnippet = [
@@ -827,36 +834,14 @@ export default function APIPageClient({ machineId }) {
         <p className={styles.sub}>Point your tools at the gateway, then decide which keys are allowed to use it.</p>
       </header>
 
-      <section className={styles.stats} aria-label="Endpoint summary">
-        <article className={`${styles.stat} ${styles.statLavender}`}>
-          <h3 className={styles.statTitle}>API keys</h3>
-          <p className={styles.statValue}>
-            {activeKeyCount}
-            <small>active</small>
-          </p>
-          <p className={styles.statNote}>
-            {limitedKeyCount} limited to specific models{pausedKeyCount ? `, ${pausedKeyCount} paused` : ""}
-          </p>
-        </article>
-        <article className={`${styles.stat} ${styles.statOchre}`}>
-          <h3 className={styles.statTitle}>Last used</h3>
-          <p className={styles.statValue}>
-            {lastUsedKey ? formatDate(lastUsedKey.lastUsedAt, { withYear: false }) : "Never"}
-          </p>
-          <p className={styles.statNote}>
-            {lastUsedKey ? `${lastUsedKey.name} sent the latest request` : "No requests recorded yet"}
-          </p>
-        </article>
-        <article className={`${styles.stat} ${requireApiKey ? styles.statTeal : styles.statPink}`}>
-          <h3 className={styles.statTitle}>Key required</h3>
-          <p className={styles.statValue}>{requireApiKey ? "On" : "Off"}</p>
-          <p className={styles.statNote}>
-            {requireApiKey
-              ? "Requests without a valid key are rejected"
-              : "Requests without a key are accepted"}
-          </p>
-        </article>
-      </section>
+      <EndpointStats
+        activeKeys={activeKeyCount}
+        limitedNote={limitedNote}
+        lastUsedValue={lastUsedValue}
+        lastUsedNote={lastUsedNote}
+        requireApiKey={requireApiKey}
+        keyRequiredNote={keyRequiredNote}
+      />
 
       <div className={styles.layout}>
         <section className={`${styles.panel} ${styles.endpointRail}`} aria-labelledby="endpoint-panel-title">
@@ -1161,9 +1146,6 @@ export default function APIPageClient({ machineId }) {
           <div className={styles.tryBlock}>
             <div className={styles.rowHead}>
               <span className={styles.rowLabel}>Try it from your terminal</span>
-            </div>
-            <div className={styles.codeWrap}>
-              <pre className={`${styles.codeBlock} font-mono`}><code>{curlSnippet}</code></pre>
               <button
                 type="button"
                 className={styles.codeCopy}
@@ -1172,6 +1154,9 @@ export default function APIPageClient({ machineId }) {
               >
                 <Icon className="text-[18px]">{copied === "curl" ? "check" : "content_copy"}</Icon>
               </button>
+            </div>
+            <div className={styles.codeWrap}>
+              <pre className={`${styles.codeBlock} font-mono`}><code>{curlSnippet}</code></pre>
             </div>
           </div>
         </section>

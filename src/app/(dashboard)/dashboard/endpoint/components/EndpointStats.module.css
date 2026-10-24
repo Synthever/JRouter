@@ -1,0 +1,155 @@
+.section {
+  min-width: 0;
+  margin-top: 12px;
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+.stats {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Card content keeps the reference scale: the values must not shrink with the
+   column span, so sizing stays viewport-based like docs/templates/endpoint. */
+.stats [data-widget-id] {
+  --text: var(--on-color);
+  --text-2: #272320;
+  --text-3: #3a3430;
+  --surface-2: rgb(255 250 240 / 35%);
+  --surface-inset: rgb(10 10 10 / 10%);
+  --line: transparent;
+  --line-2: rgb(10 10 10 / 30%);
+  --wg-padding: 20px 24px 22px;
+  --wg-title-size: 15px;
+  --wg-title-weight: 600;
+  --wg-accent: var(--on-color);
+}
+
+.stats [data-widget-id="apiKeys"] {
+  --surface: var(--brand-lavender);
+}
+
+.stats [data-widget-id="lastUsed"] {
+  --surface: var(--brand-ochre);
+}
+
+/* Teal is a dark surface, so the whole text scale flips to on-teal. */
+.stats[data-key-required="on"] [data-widget-id="keyRequired"] {
+  --surface: var(--brand-teal);
+  --text: var(--on-teal);
+  --text-2: var(--on-teal);
+  --text-3: #e8eee9;
+  --surface-2: rgb(255 255 255 / 16%);
+  --surface-inset: rgb(255 255 255 / 18%);
+  --line-2: rgb(255 255 255 / 40%);
+  --wg-accent: #ffffff;
+}
+
+/* Pink keeps the white text the previous card used. */
+.stats[data-key-required="off"] [data-widget-id="keyRequired"] {
+  --surface: var(--brand-pink);
+  --text: #ffffff;
+  --text-2: #ffffff;
+  --text-3: #ffe3ec;
+  --surface-2: rgb(255 255 255 / 20%);
+  --surface-inset: rgb(255 255 255 / 22%);
+  --line-2: rgb(255 255 255 / 40%);
+  --wg-accent: #ffffff;
+}
+
+.metric {
+  display: flex;
+  height: 100%;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.value {
+  margin: auto 0 0;
+  color: var(--text);
+  font-size: clamp(40px, 4.4vw, 56px);
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.unit {
+  margin-left: 6px;
+  color: var(--text-2);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.note {
+  margin: 10px 0 0;
+  color: var(--text-2);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.footer p {
+  margin: 0;
+}
+
+.reset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--r1);
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  cursor: pointer;
+  transition: color 150ms, background-color 150ms;
+}
+
+.reset:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.reset:focus-visible {
+  outline: 2px solid var(--text-2);
+  outline-offset: 2px;
+}
+
+@container (max-width: 575.99px) {
+  .note {
+    font-size: 13px;
+  }
+
+  .reset {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reset {
+    transition: none;
+  }
+}

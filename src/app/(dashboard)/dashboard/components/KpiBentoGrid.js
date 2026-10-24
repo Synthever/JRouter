@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { RefreshCw, RotateCcw } from "lucide-react";
 import WidgetGrid, { normalizeLayout } from "@/shared/components/ui/bento-grid";
 import { cn } from "@/shared/utils/cn";
+import { KPI_ITEMS, KPI_LAYOUT_STORAGE_KEY, sanitizeKpiLayout } from "@/shared/constants/dashboardKpi";
 import { AnimatedBackground } from "@/components/core/animated-background";
 import styles from "./KpiBentoGrid.module.css";
 
@@ -29,15 +30,7 @@ export const PERIOD_OPTIONS = [
   { value: "all", label: "All" },
 ];
 
-const LAYOUT_STORAGE_KEY = "jrouter.dashboard.kpiLayout.v1";
-// Reference layout: three equal cards, then two wider cards. Saved layouts win.
-const KPI_ITEMS = [
-  { id: "requests", title: "Total requests", defaultSpan: 2 },
-  { id: "cost", title: "Estimated cost", defaultSpan: 2 },
-  { id: "connections", title: "Connections", defaultSpan: 2 },
-  { id: "success", title: "Recent success", defaultSpan: 3 },
-  { id: "tokens", title: "Total tokens", defaultSpan: 3 },
-];
+const LAYOUT_ENDPOINT = "/api/dashboard/layout";
 const PERIOD_LABELS = {
   today: "Today", "24h": "Last 24 hours", "7d": "Last 7 days",
   "30d": "Last 30 days", "60d": "Last 60 days", all: "All time",
@@ -49,6 +42,22 @@ function browserStorage() {
     return typeof window === "undefined" ? null : window.localStorage;
   } catch {
     return null;
+  }
+}
+
+// Server sync is fire-and-forget: localStorage stays the instant cache, and a
+// failed request must never block the grid or lose the user's accepted layout.
+function persistLayout(method, layout) {
+  if (typeof fetch !== "function") return;
+  try {
+    const init = { method, cache: "no-store" };
+    if (layout) {
+      init.headers = { "Content-Type": "application/json" };
+      init.body = JSON.stringify({ layout });
+    }
+    Promise.resolve(fetch(LAYOUT_ENDPOINT, init)).catch(() => {});
+  } catch {
+    // A throwing fetch (blocked network) is equivalent to an offline browser.
   }
 }
 
@@ -74,36 +83,78 @@ export default function KpiBentoGrid({
   const [layoutVersion, setLayoutVersion] = useState(0);
   const [layout, setLayout] = useState(DEFAULT_LAYOUT);
   const restored = useRef(false);
+  // Snapshot of the local cache at mount, used for the one-time server migration.
+  const localLayout = useRef(null);
+  // Set as soon as the user commits or resets, so a slow GET cannot overwrite them.
+  const layoutTouched = useRef(false);
   useEffect(() => {
     if (restored.current) return;
     restored.current = true;
     try {
-      const saved = browserStorage()?.getItem(LAYOUT_STORAGE_KEY);
+      const saved = browserStorage()?.getItem(KPI_LAYOUT_STORAGE_KEY);
       // Browser-only restoration must follow the server's default-layout render.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (saved) setLayout(normalizeLayout(JSON.parse(saved), KPI_ITEMS));
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) localLayout.current = sanitizeKpiLayout(parsed);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setLayout(normalizeLayout(parsed, KPI_ITEMS));
+      }
     } catch {
       // A blocked store or malformed value must not disable the grid.
     }
   }, []);
+  useEffect(() => {
+    if (typeof fetch !== "function" || typeof AbortController !== "function") return undefined;
+    const controller = new AbortController();
+    let active = true;
+    // The database is canonical across browsers; localStorage only renders instantly.
+    fetch(LAYOUT_ENDPOINT, { cache: "no-store", signal: controller.signal })
+      .then((response) => (response?.ok ? response.json() : null))
+      .then((payload) => {
+        if (!active || layoutTouched.current) return;
+        if (Array.isArray(payload?.layout)) {
+          const serverLayout = sanitizeKpiLayout(payload.layout);
+          setLayout(serverLayout);
+          try {
+            browserStorage()?.setItem(KPI_LAYOUT_STORAGE_KEY, JSON.stringify(serverLayout));
+          } catch {
+            // The database stays authoritative even when the browser cache is blocked.
+          }
+          return;
+        }
+        // No server layout yet: push the browser's saved layout up exactly once.
+        if (!Array.isArray(localLayout.current)) return;
+        persistLayout("PUT", sanitizeKpiLayout(localLayout.current));
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, []);
   const saveLayout = (next) => {
     const canonical = normalizeLayout(next, KPI_ITEMS);
+    layoutTouched.current = true;
     setLayout(canonical);
     try {
-      browserStorage()?.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(canonical));
+      browserStorage()?.setItem(KPI_LAYOUT_STORAGE_KEY, JSON.stringify(canonical));
     } catch {
       // Keep the accepted layout in memory when browser persistence is unavailable.
     }
+    persistLayout("PUT", canonical);
   };
   const resetLayout = () => {
     restored.current = true;
+    layoutTouched.current = true;
+    localLayout.current = null;
     try {
-      browserStorage()?.removeItem(LAYOUT_STORAGE_KEY);
+      browserStorage()?.removeItem(KPI_LAYOUT_STORAGE_KEY);
     } catch {
       // Reset still takes effect for this mount if storage is blocked.
     }
     setLayout(DEFAULT_LAYOUT);
     setLayoutVersion((version) => version + 1);
+    persistLayout("DELETE");
   };
   const totalRequests = stats?.totalRequests || 0;
   const promptTokens = stats?.totalPromptTokens || 0;

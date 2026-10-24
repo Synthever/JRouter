@@ -852,8 +852,8 @@ function ApiKeyProviderRow({
     if (isCompatible && provider.apiType)
       return provider.apiType === "responses"
         ? "/providers/oai-r.png"
-        : "/providers/oai-cc.png";
-    if (isAnthropicCompatible) return "/providers/anthropic-m.png";
+        : getProviderIconSrc("openai");
+    if (isAnthropicCompatible) return getProviderIconSrc("anthropic");
     return getProviderIconSrc(provider.id);
   };
 

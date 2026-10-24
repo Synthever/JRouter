@@ -109,19 +109,19 @@
 
 .dark {
   /* Dark adaptation retains the full brand palette and existing theme choice. */
-  --bg: #0a1a1a;
-  --bg-2: #102323;
-  --surface: #1a2a2a;
-  --surface-2: #203535;
-  --surface-inset: #102323;
-  --surface-hover: #2b4141;
-  --canvas: #0a1a1a;
-  --surface-soft: #102323;
-  --surface-card: #1a2a2a;
-  --surface-strong: #203535;
+  --bg: #141414;
+  --bg-2: #181818;
+  --surface: #1c1c1c;
+  --surface-2: #242424;
+  --surface-inset: #171717;
+  --surface-hover: #2c2c2c;
+  --canvas: #141414;
+  --surface-soft: #181818;
+  --surface-card: #202020;
+  --surface-strong: #282828;
   --primary-ink: #0a0a0a;
-  --line: rgba(255, 255, 255, 0.065);
-  --line-2: rgba(255, 255, 255, 0.11);
+  --line: rgba(255, 255, 255, 0.07);
+  --line-2: rgba(255, 255, 255, 0.12);
   --accent-line: rgba(255, 255, 255, 0.18);
   --text: #fffaf0;
   --text-2: #d3d8cf;
@@ -239,13 +239,13 @@ select {
 
   /* Static fallbacks (explicit per-mode usage if needed) */
   --color-bg-light: #fffaf0;
-  --color-bg-dark: #0a1a1a;
+  --color-bg-dark: #141414;
   --color-surface-light: #fffaf0;
-  --color-surface-dark: #1a2a2a;
+  --color-surface-dark: #1c1c1c;
   --color-sidebar-light: #faf5e8;
-  --color-sidebar-dark: #102323;
+  --color-sidebar-dark: #141414;
   --color-border-light: #e5e7eb;
-  --color-border-dark: #333333;
+  --color-border-dark: #2e2e2e;
   --color-text-main-light: #0a0a0a;
   --color-text-main-dark: #ededed;
   --color-text-muted-light: #6B7280;
@@ -678,15 +678,15 @@ body:has(.landing-page)::-webkit-scrollbar,
 }
 
 .dark .dashboard-overview {
-  --canvas: #0a1a1a;
-  --surface-soft: #102020;
-  --surface-card: #1a2a2a;
-  --surface-strong: #2a3d3d;
+  --canvas: #141414;
+  --surface-soft: #181818;
+  --surface-card: #1c1c1c;
+  --surface-strong: #282828;
   --text: #ffffff;
   --text-2: #d6dcdc;
   --text-3: #a0a0a0;
-  --line: #2a3c3c;
-  --line-2: #3b5252;
+  --line: #2b2b2b;
+  --line-2: #3a3a3a;
   --pos: #4ade80;
   --warn: #f2b34b;
 }
@@ -1105,7 +1105,7 @@ body:has(.landing-page)::-webkit-scrollbar,
 .dashboard-sidebar {
   width: 246px;
   padding: 23px 16px 15px;
-  background: var(--surface-soft);
+  background: var(--canvas);
   border-right: 1px solid var(--line);
   box-shadow: none;
   font-family: var(--font-ui);

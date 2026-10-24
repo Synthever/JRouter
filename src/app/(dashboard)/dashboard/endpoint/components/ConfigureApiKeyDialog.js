@@ -75,9 +75,9 @@ export default function ConfigureApiKeyDialog({ keyId, onClose, onSaved }) {
       <Button variant="ghost" onClick={close} disabled={saving}>Cancel</Button>
       <Button variant="contrast" type="submit" form="api-key-settings" loading={saving} disabled={!form || saving}>Save Settings</Button>
     </>}>
-      {error && <div role="alert" className="mb-5 rounded-[var(--r1)] border border-[var(--danger)]/30 bg-[var(--danger)]/5 p-3 text-sm text-[var(--danger)]">{error}</div>}
-      {!form ? <p className="text-sm text-[var(--text-2)]" role="status">{error ? "Close this dialog and try Configure again." : "Loading key settings…"}</p> : <form id="api-key-settings" onSubmit={save} className="space-y-6">
-        <fieldset disabled={saving} className="space-y-6 min-w-0">
+      {error && <div role="alert" className="mb-5 rounded-[var(--r1)] border border-[var(--danger)]/30 bg-[var(--danger)]/5 p-3 text-xs text-[var(--danger)]">{error}</div>}
+      {!form ? <p className="text-xs text-[var(--text-2)]" role="status">{error ? "Close this dialog and try Configure again." : "Loading key settings…"}</p> : <form id="api-key-settings" onSubmit={save} className="space-y-5">
+        <fieldset disabled={saving} className="space-y-5 min-w-0">
           <SettingsSection title="General Information">
             <Input label="Key Name" value={form.name} onChange={(event) => change("name", event.target.value)} required maxLength={120} />
             <Input label="Description" value={form.description} onChange={(event) => change("description", event.target.value)} placeholder="Internal description (optional)" maxLength={500} />

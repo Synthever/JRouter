@@ -39,75 +39,15 @@
 }
 
 /* Summary cards --------------------------------------------------------- */
-
-.stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  margin-top: 12px;
-}
-
-.stat {
-  display: flex;
-  flex-direction: column;
-  min-height: 168px;
-  padding: 24px 28px;
-  border-radius: 24px;
-}
-
-.statLavender {
-  background: var(--brand-lavender);
-  color: var(--on-color);
-}
-
-.statOchre {
-  background: var(--brand-ochre);
-  color: var(--on-color);
-}
-
-.statTeal {
-  background: var(--brand-teal);
-  color: var(--on-teal);
-}
-
-.statPink {
-  background: var(--brand-pink);
-  color: #ffffff;
-}
-
-.statTitle {
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.statValue {
-  margin-top: auto;
-  font-size: clamp(40px, 4.4vw, 56px);
-  font-weight: 500;
-  letter-spacing: -0.05em;
-  line-height: 1;
-}
-
-.statValue small {
-  margin-left: 6px;
-  font-size: 16px;
-  font-weight: 500;
-  letter-spacing: 0;
-}
-
-.statNote {
-  margin-top: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.45;
-}
+/* The cards themselves live in components/EndpointStats.module.css: they are
+   WidgetGrid widgets, so the grid owns their sizing and colours. */
 
 /* Two-column layout ----------------------------------------------------- */
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 400px;
-  grid-template-areas: "keys endpoint";
+  grid-template-columns: 400px minmax(0, 1fr);
+  grid-template-areas: "endpoint keys";
   gap: 16px;
   align-items: start;
 }
@@ -119,7 +59,9 @@
 .endpointRail {
   grid-area: endpoint;
   position: sticky;
-  top: 24px;
+  /* Sticky insets here start at the scroller's 32px padding, so -16px parks the
+     card 16px under the top bar instead of 32px. */
+  top: -16px;
 }
 
 .panel {
@@ -228,12 +170,12 @@
   height: 22px;
   margin-top: 3px;
   background: #ffffff;
-  transform: translateX(3px);
+  translate: 3px 0;
 }
 
 .page [role="switch"][aria-checked="true"] > span {
   background: var(--bg);
-  transform: translateX(21px);
+  translate: 21px 0;
 }
 
 /* Badges and dots ------------------------------------------------------- */
@@ -462,14 +404,15 @@
 
 .codeBlock {
   margin: 0;
-  padding: 16px 52px 16px 16px;
-  border: 1px solid #2a3c3c;
+  padding: 16px;
+  border: 1px solid var(--line-2);
   border-radius: 16px;
-  background: #0a1a1a;
-  color: #e6f1ed;
+  background: var(--bg);
+  color: var(--text);
   font-size: 12px;
   line-height: 1.7;
   overflow-x: auto;
+  scrollbar-width: none;
   white-space: pre;
 }
 
@@ -477,23 +420,25 @@
   font: inherit;
 }
 
+.codeBlock::-webkit-scrollbar {
+  display: none;
+}
+
 .codeCopy {
-  position: absolute;
-  top: 8px;
-  right: 8px;
   display: grid;
   place-items: center;
+  flex: none;
   width: 34px;
   height: 34px;
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #e6f1ed;
+  color: var(--text);
   cursor: pointer;
 }
 
 .codeCopy:hover {
-  background: #1a2a2a;
+  background: var(--surface-2);
 }
 
 /* API key list ---------------------------------------------------------- */
@@ -778,30 +723,9 @@
   .endpointRail {
     position: static;
   }
-
-  .stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .stats .stat:last-child {
-    grid-column: span 2;
-  }
 }
 
 @container (max-width: 640px) {
-  .stats {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .stats .stat:last-child {
-    grid-column: auto;
-  }
-
-  .stat {
-    min-height: 148px;
-    padding: 20px;
-  }
-
   .panel {
     padding: 20px;
   }

@@ -15,6 +15,7 @@ afterEach(() => {
 const componentPath = "src/app/(dashboard)/dashboard/components/KpiBentoGrid.js";
 const gridPath = "src/shared/components/ui/bento-grid.js";
 const STORAGE_KEY = "jrouter.dashboard.kpiLayout.v1";
+const LAYOUT_ENDPOINT = "/api/dashboard/layout";
 const defaultLayout = [
   { id: "requests", span: 2 }, { id: "cost", span: 2 }, { id: "connections", span: 2 },
   { id: "success", span: 3 }, { id: "tokens", span: 3 },
@@ -30,15 +31,44 @@ function storageFixture(value) {
   };
 }
 
-function mountKpi(storage = storageFixture()) {
+function jsonResponse(body, { ok = true, status = 200 } = {}) {
+  return { ok, status, json: async () => body };
+}
+
+// Default: the database holds no layout yet, so cache-first restore is unchanged.
+function createFetchMock(handler = () => jsonResponse({ layout: null, updatedAt: null })) {
+  return vi.fn((url, init = {}) => {
+    try {
+      return Promise.resolve(handler(url, init));
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  });
+}
+
+async function settle(harness) {
+  harness.flush();
+  for (let i = 0; i < 4; i++) await Promise.resolve();
+  harness.flush();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  harness.flush();
+}
+
+function callsFor(fetchMock, method) {
+  return fetchMock.mock.calls.filter(([, init]) => (init?.method ?? "GET") === method);
+}
+
+function mountKpi(storage = storageFixture(), handler) {
   const browser = createBrowserFixture(storage);
   vi.stubGlobal("window", browser.window);
+  const fetchMock = createFetchMock(handler);
+  vi.stubGlobal("fetch", fetchMock);
   const harness = createHookHarness();
   const load = createComponentLoader({ react: harness.react });
   harness.mount(load(componentPath).default);
   cleanups.push(() => harness.cleanup());
   return {
-    harness, storage, browser,
+    harness, storage, browser, fetchMock,
     grid: () => elements(harness.tree, (node) => node.props.items && node.props.rowHeight)[0],
     reset: () => elements(harness.tree, (node) => node.props["aria-label"] === "Reset layout")[0],
   };
@@ -322,6 +352,120 @@ describe("dashboard browser layout persistence", () => {
     expect(storage.getItem).toHaveBeenCalledWith(STORAGE_KEY);
     expect(storage.setItem).not.toHaveBeenCalled();
     expect(storage.removeItem).not.toHaveBeenCalled();
+  });
+});
+
+describe("dashboard layout server persistence", () => {
+  const serverLayout = [
+    { id: "tokens", span: 6 }, { id: "success", span: 4 }, { id: "unknown", span: 2 },
+  ];
+  const canonicalServer = [
+    { id: "tokens", span: 6 }, { id: "success", span: 4 },
+    { id: "requests", span: 2 }, { id: "cost", span: 2 }, { id: "connections", span: 2 },
+  ];
+
+  it("adopts the database layout over localStorage and mirrors it into the cache", async () => {
+    const storage = storageFixture(JSON.stringify([...defaultLayout].reverse()));
+    const { harness, grid, fetchMock } = mountKpi(
+      storage,
+      () => jsonResponse({ layout: serverLayout, updatedAt: "2026-10-24T00:00:00.000Z" }),
+    );
+    await settle(harness);
+    expect(grid().props.layout).toEqual(canonicalServer);
+    expect(storage.setItem).toHaveBeenCalledExactlyOnceWith(STORAGE_KEY, JSON.stringify(canonicalServer));
+    expect(storage.removeItem).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe(LAYOUT_ENDPOINT);
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ cache: "no-store" });
+    expect(callsFor(fetchMock, "PUT")).toHaveLength(0);
+  });
+
+  it("migrates a saved browser layout exactly once when the database is empty", async () => {
+    const local = [{ id: "cost", span: 4 }, { id: "requests", span: 2 }];
+    const { harness, grid, storage, fetchMock } = mountKpi(storageFixture(JSON.stringify(local)));
+    await settle(harness);
+    const puts = callsFor(fetchMock, "PUT");
+    expect(puts).toHaveLength(1);
+    expect(puts[0][0]).toBe(LAYOUT_ENDPOINT);
+    expect(JSON.parse(puts[0][1].body)).toEqual({
+      layout: [
+        { id: "cost", span: 4 }, { id: "requests", span: 2 },
+        { id: "connections", span: 2 }, { id: "success", span: 3 }, { id: "tokens", span: 3 },
+      ],
+    });
+    expect(callsFor(fetchMock, "GET")).toHaveLength(1);
+    expect(grid().props.layout).toEqual([
+      { id: "cost", span: 4 }, { id: "requests", span: 2 },
+      { id: "connections", span: 2 }, { id: "success", span: 3 }, { id: "tokens", span: 3 },
+    ]);
+    expect(storage.setItem).not.toHaveBeenCalled();
+  });
+
+  it.each(["{bad-json", "null", "{}", "3"])("does not migrate unusable saved data %s", async (saved) => {
+    const { harness, fetchMock } = mountKpi(storageFixture(saved));
+    await settle(harness);
+    expect(callsFor(fetchMock, "PUT")).toHaveLength(0);
+    expect(callsFor(fetchMock, "GET")).toHaveLength(1);
+  });
+
+  it("persists an accepted commit with the canonical layout", async () => {
+    const { harness, grid, fetchMock } = mountKpi();
+    await settle(harness);
+    fetchMock.mockClear();
+    harness.act(() => grid().props.onLayoutCommit([{ id: "tokens", span: 99, extra: "discard" }]));
+    const puts = callsFor(fetchMock, "PUT");
+    expect(puts).toHaveLength(1);
+    expect(JSON.parse(puts[0][1].body)).toEqual({
+      layout: [{ id: "tokens", span: 6 }, ...defaultLayout.filter((entry) => entry.id !== "tokens")],
+    });
+    expect(puts[0][1].headers).toMatchObject({ "Content-Type": "application/json" });
+    expect(grid().props.layout).toEqual([
+      { id: "tokens", span: 6 }, ...defaultLayout.filter((entry) => entry.id !== "tokens"),
+    ]);
+  });
+
+  it("clears the stored layout on reset", async () => {
+    const { harness, reset, fetchMock } = mountKpi();
+    await settle(harness);
+    fetchMock.mockClear();
+    harness.act(() => reset().props.onClick());
+    const deletes = callsFor(fetchMock, "DELETE");
+    expect(deletes).toHaveLength(1);
+    expect(deletes[0][0]).toBe(LAYOUT_ENDPOINT);
+    expect(callsFor(fetchMock, "PUT")).toHaveLength(0);
+  });
+
+  it("keeps the in-memory layout usable when server writes fail", async () => {
+    const handler = (url, init) => ((init?.method ?? "GET") === "GET"
+      ? jsonResponse({ layout: null, updatedAt: null })
+      : Promise.reject(new Error("offline")));
+    const { harness, grid, reset, fetchMock } = mountKpi(storageFixture(), handler);
+    await settle(harness);
+    const next = [...defaultLayout].reverse();
+    expect(() => harness.act(() => grid().props.onLayoutCommit(next))).not.toThrow();
+    expect(grid().props.layout).toEqual(next);
+    await settle(harness);
+    expect(grid().props.layout).toEqual(next);
+    expect(() => harness.act(() => reset().props.onClick())).not.toThrow();
+    expect(grid().props.layout).toEqual(defaultLayout);
+    await settle(harness);
+    expect(grid().props.layout).toEqual(defaultLayout);
+    expect(callsFor(fetchMock, "PUT")).toHaveLength(1);
+    expect(callsFor(fetchMock, "DELETE")).toHaveLength(1);
+  });
+
+  it("ignores a slow database response after the user has committed", async () => {
+    let resolveGet;
+    const handler = (url, init) => ((init?.method ?? "GET") === "GET"
+      ? new Promise((resolve) => { resolveGet = resolve; })
+      : jsonResponse({ layout: null, updatedAt: null }));
+    const { harness, grid } = mountKpi(storageFixture(), handler);
+    harness.flush();
+    const next = [...defaultLayout].reverse();
+    harness.act(() => grid().props.onLayoutCommit(next));
+    resolveGet(jsonResponse({ layout: serverLayout, updatedAt: "2026-10-24T00:00:00.000Z" }));
+    await settle(harness);
+    expect(grid().props.layout).toEqual(next);
   });
 });
 

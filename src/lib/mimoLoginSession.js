@@ -709,7 +709,7 @@ function htmlPage(title, lines, autoClose = false) {
 <style>body{font-family:Inter,system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#fffaf0;color:#0a0a0a}
 .card{padding:2rem 2.5rem;border-radius:16px;background:#f5f0e0;border:1px solid #e5e5e5;text-align:center;max-width:420px}
 h1{font-size:1.1rem;font-weight:500;margin:.2rem 0 .6rem}p{color:#3a3a3a;font-size:.9rem;line-height:1.6}
-@media(prefers-color-scheme:dark){body{background:#0a1a1a;color:#fffaf0}.card{background:#1a2a2a;border-color:#2b4141}p{color:#d3d8cf}}</style></head>
+@media(prefers-color-scheme:dark){body{background:#141414;color:#fffaf0}.card{background:#1c1c1c;border-color:#2c2c2c}p{color:#d3d8cf}}</style></head>
 <body><div class="card"><h1>${title}</h1>${lines.map((l) => `<p>${l}</p>`).join("")}</div>
 <script>setTimeout(function(){try{window.opener&&window.opener.postMessage({mimoSession:"ok"},location.origin)}catch(e){}},300);${autoClose ? "setTimeout(function(){try{window.close()}catch(e){}},1600);" : ""}</script>
 </body></html>`;

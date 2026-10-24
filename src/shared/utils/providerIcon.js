@@ -11,6 +11,25 @@ const ICON_ALIASES = {
   "minimax-code-global": "minimax",
 };
 
+// Icons served from a CDN instead of /public/providers
+const REMOTE_ICONS = {
+  claude: "https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/claude/default.svg",
+};
+
+// Icons with a separate light-mode variant (dark variant is the default)
+const REMOTE_ICONS_LIGHT = {
+  cursor: "https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/cursor/mono.svg",
+  openai: "https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/openai/light.svg",
+  anthropic: "https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/anthropic/light.svg",
+};
+
+const REMOTE_ICONS_DARK = {
+  cursor: "https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/cursor/default.svg",
+  // The CDN's "dark" file is white-filled, which disappears on light surfaces
+  openai: "https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/openai/light.svg",
+  anthropic: "https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/anthropic/dark.svg",
+};
+
 // Runtime only — first 404 remembers id for the whole session
 const failedIds = new Set();
 
@@ -29,10 +48,12 @@ export function resolveProviderIconId(providerId) {
   return aliased;
 }
 
-/** `/providers/{id}.png` or null when previously failed. */
-export function getProviderIconSrc(providerId) {
+/** Remote URL or `/providers/{id}.png`; null when previously failed. */
+export function getProviderIconSrc(providerId, { isDark = true } = {}) {
   const id = resolveProviderIconId(providerId);
-  return id ? `/providers/${id}.png` : null;
+  if (!id) return null;
+  if (REMOTE_ICONS_LIGHT[id]) return isDark ? REMOTE_ICONS_DARK[id] : REMOTE_ICONS_LIGHT[id];
+  return REMOTE_ICONS[id] || `/providers/${id}.png`;
 }
 
 /** Call from img onError so later mounts skip the request. */

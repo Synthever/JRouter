@@ -1,10 +1,11 @@
 "use client";
 import Icon from "@/shared/components/Icon";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useNotificationStore } from "@/store/notificationStore";
 import { cn } from "@/shared/utils/cn";
+import useDashboardMotion from "@/shared/hooks/useDashboardMotion";
 import Sidebar from "../Sidebar";
 import Header from "../Header";
 
@@ -51,8 +52,11 @@ export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
   const pathname = usePathname();
+  const layoutRef = useRef(null);
   const notifications = useNotificationStore((state) => state.notifications);
   const removeNotification = useNotificationStore((state) => state.removeNotification);
+
+  useDashboardMotion(layoutRef, pathname);
 
   // Restore collapsed preference from localStorage
   useEffect(() => {
@@ -117,7 +121,7 @@ export default function DashboardLayout({ children }) {
   const hidesPageScrollbar = pathname === "/dashboard";
 
   return (
-    <div className={`flex w-full overflow-hidden bg-bg ${pathname === "/dashboard/playground" ? "h-dvh" : "h-screen"}`}>
+    <div ref={layoutRef} className={`flex w-full overflow-hidden bg-bg ${pathname === "/dashboard/playground" ? "h-dvh" : "h-screen"}`}>
       <div className="fixed top-4 right-4 z-[80] flex w-[min(92vw,380px)] flex-col gap-2">
         {notifications.map((n) => {
           const style = getToastStyle(n.type);

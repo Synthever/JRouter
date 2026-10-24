@@ -9,6 +9,8 @@ const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "
 const endpointPath = "src/app/(dashboard)/dashboard/endpoint";
 const pageSource = () => read(`${endpointPath}/EndpointPageClient.js`);
 const pageCss = () => read(`${endpointPath}/endpoint.module.css`);
+const statsSource = () => read(`${endpointPath}/components/EndpointStats.js`);
+const statsCss = () => read(`${endpointPath}/components/EndpointStats.module.css`);
 
 describe("endpoint dashboard surface", () => {
   it("shares the overview background with endpoint, providers, combos, and usage only", () => {
@@ -30,11 +32,11 @@ describe("endpoint dashboard surface", () => {
     }
   });
 
-  it("renders the reference layout: intro, three summary cards, keys column and endpoint rail", () => {
+  it("renders the reference layout: intro, adjustable summary cards, keys column and endpoint rail", () => {
     const source = pageSource();
     expect(source).toContain("dashboard-surface ${styles.page}");
     expect(source).toContain("<h1 className={styles.title}>Endpoint &amp; key</h1>");
-    expect(source.match(/<article className=\{`\$\{styles\.stat\}/g)).toHaveLength(3);
+    expect(source).toContain("<EndpointStats");
     expect(source).toContain("<div className={styles.layout}>");
     expect(source).toContain("${styles.keysPanel}");
     expect(source).toContain("${styles.endpointRail}");
@@ -44,11 +46,18 @@ describe("endpoint dashboard surface", () => {
 
   it("derives the summary cards from the real key list", () => {
     const source = pageSource();
+    const stats = statsSource();
     expect(source).toContain("const activeKeyCount = keys.filter((key) => key.isActive !== false && !key.isExpired).length;");
     expect(source).toContain("const limitedKeyCount = keys.filter((key) => (key.allowedModels?.length || 0) + (key.blockedModels?.length || 0) > 0).length;");
     expect(source).toContain("const lastUsedKey = keys");
-    expect(source).toContain('{lastUsedKey ? `${lastUsedKey.name} sent the latest request` : "No requests recorded yet"}');
-    expect(source).toContain('{requireApiKey ? "On" : "Off"}');
+    expect(source).toContain('const limitedNote = `${limitedKeyCount} limited to specific models${pausedKeyCount ? `, ${pausedKeyCount} paused` : ""}`;');
+    expect(source).toContain('const lastUsedValue = lastUsedKey ? formatDate(lastUsedKey.lastUsedAt, { withYear: false }) : "Never";');
+    expect(source).toContain('const lastUsedNote = lastUsedKey ? `${lastUsedKey.name} sent the latest request` : "No requests recorded yet";');
+    expect(source).toContain("activeKeys={activeKeyCount}");
+    expect(stats).toContain('{requireApiKey ? "On" : "Off"}');
+    expect(stats).toContain("{limitedNote}");
+    expect(stats).toContain("{lastUsedNote}");
+    expect(stats).toContain("{keyRequiredNote}");
   });
 
   it("keeps the require-key switch, name filter and copyable endpoints", () => {
@@ -70,23 +79,50 @@ describe("endpoint dashboard surface", () => {
 
   it("matches the reference scale and two-column layout in CSS", () => {
     const css = pageCss();
+    const stats = statsCss();
     expect(css).toMatch(/\.title\s*\{[^}]*font-size: clamp\(28px, 3\.4vw, 40px\);/s);
-    expect(css).toMatch(/\.stats\s*\{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/s);
-    expect(css).toMatch(/\.stat\s*\{[^}]*min-height: 168px;[^}]*border-radius: 24px;/s);
-    expect(css).toMatch(/\.statValue\s*\{[^}]*font-size: clamp\(40px, 4\.4vw, 56px\);/s);
-    expect(css).toMatch(/\.layout\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\) 400px;[^}]*grid-template-areas: "keys endpoint";/s);
+    expect(stats).toMatch(/\.value\s*\{[^}]*font-size: clamp\(40px, 4\.4vw, 56px\);/s);
+    expect(stats).toMatch(/\[data-widget-id="apiKeys"\]\s*\{[^}]*--surface: var\(--brand-lavender\);/s);
+    expect(stats).toMatch(/\[data-widget-id="lastUsed"\]\s*\{[^}]*--surface: var\(--brand-ochre\);/s);
+    expect(stats).toMatch(/data-key-required="on"[^{]*\{[^}]*--surface: var\(--brand-teal\);/s);
+    expect(stats).toMatch(/data-key-required="off"[^{]*\{[^}]*--surface: var\(--brand-pink\);/s);
+    expect(css).toMatch(/\.layout\s*\{[^}]*grid-template-columns: 400px minmax\(0, 1fr\);[^}]*grid-template-areas: "endpoint keys";/s);
     expect(css).toMatch(/\.panel\s*\{[^}]*padding: 28px;[^}]*border-radius: 24px;/s);
-    expect(css).toMatch(/\.endpointRail\s*\{[^}]*position: sticky;[^}]*top: 24px;/s);
+    expect(css).toMatch(/\.endpointRail\s*\{[^}]*position: sticky;[^}]*top: -16px;/s);
     expect(css).not.toMatch(/backdrop-filter|#131315|linear-gradient/);
   });
 
-  it("stacks to one column with the endpoint rail first when the surface narrows", () => {
+  it("stacks the keys column under the endpoint rail when the surface narrows", () => {
     const css = pageCss();
     const wide = css.slice(css.indexOf("@container (max-width: 1099px)"));
     expect(wide).toMatch(/\.layout\s*\{[^}]*grid-template-areas:\s*"endpoint"\s*"keys";/s);
     expect(wide).toMatch(/\.endpointRail\s*\{[^}]*position: static;/s);
-    expect(wide).toMatch(/\.stats\s*\{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/s);
     expect(css).toContain("container-type: inline-size;");
+  });
+
+  it("keeps the summary cards adjustable like the dashboard KPIs", () => {
+    const stats = statsSource();
+    expect(stats).toContain('from "@/shared/components/ui/bento-grid"');
+    expect(stats).toMatch(/id: "apiKeys", title: "API keys", defaultSpan: 2/);
+    expect(stats).toMatch(/id: "lastUsed", title: "Last used", defaultSpan: 2/);
+    expect(stats).toMatch(/id: "keyRequired", title: "Key required", defaultSpan: 2/);
+    expect(stats).toContain('const LAYOUT_STORAGE_KEY = "jrouter.endpoint.statsLayout.v1";');
+    expect(stats).toContain("normalizeLayout(JSON.parse(saved), ITEMS)");
+    expect(stats).toContain("rowHeight={168}");
+    expect(stats).toContain("narrowColumns={1}");
+    expect(stats).toContain("onLayoutChange={setLayout}");
+    expect(stats).toContain("onLayoutCommit={saveLayout}");
+    expect(stats).toContain('aria-label="Reset layout"');
+    expect(stats).toContain("Drag the grip to move a card. Drag its corner to resize.");
+  });
+
+  it("keeps the switch knob inside its track and hides the terminal scrollbar", () => {
+    const css = pageCss();
+    expect(css).toMatch(/\[role="switch"\] > span\s*\{[^}]*translate: 3px 0;/s);
+    expect(css).toMatch(/\[role="switch"\]\[aria-checked="true"\] > span\s*\{[^}]*translate: 21px 0;/s);
+    expect(css).not.toMatch(/transform: translateX\(/);
+    expect(css).toMatch(/\.codeBlock\s*\{[^}]*overflow-x: auto;[^}]*scrollbar-width: none;/s);
+    expect(css).toMatch(/\.codeBlock::-webkit-scrollbar\s*\{[^}]*display: none;/s);
   });
 
   it("keeps key rows on a fixed identity grid with mobile touch targets", () => {

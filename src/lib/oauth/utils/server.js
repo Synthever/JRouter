@@ -39,7 +39,7 @@ export function startLocalServer(onCallback, fixedPort = null) {
     .success { color: #1a3a3a; font-size: 3rem; }
     h1 { margin: 1rem 0; font-weight: 500; }
     p { color: #3a3a3a; }
-    @media (prefers-color-scheme: dark) { body { background: #0a1a1a; color: #fffaf0; } .container { background: #1a2a2a; border-color: #2b4141; } p { color: #d3d8cf; } .success { color: #a4d4c5; } }
+    @media (prefers-color-scheme: dark) { body { background: #141414; color: #fffaf0; } .container { background: #1c1c1c; border-color: #2c2c2c; } p { color: #d3d8cf; } .success { color: #a4d4c5; } }
     #countdown { font-weight: bold; }
   </style>
 </head>
@@ -181,7 +181,7 @@ function renderCodexResultPage(success, message) {
   const safeMessage = escapeHtml(message);
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>${title}</title>
-<style>body{font-family:Inter,system-ui,sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#fffaf0;color:#0a0a0a}.c{text-align:center;padding:2rem;background:#f5f0e0;border:1px solid #e5e5e5;border-radius:16px}.i{color:${color};font-size:3rem}h1{margin:1rem 0;font-weight:500}p{color:#3a3a3a}@media(prefers-color-scheme:dark){body{background:#0a1a1a;color:#fffaf0}.c{background:#1a2a2a;border-color:#2b4141}p{color:#d3d8cf}}</style>
+<style>body{font-family:Inter,system-ui,sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#fffaf0;color:#0a0a0a}.c{text-align:center;padding:2rem;background:#f5f0e0;border:1px solid #e5e5e5;border-radius:16px}.i{color:${color};font-size:3rem}h1{margin:1rem 0;font-weight:500}p{color:#3a3a3a}@media(prefers-color-scheme:dark){body{background:#141414;color:#fffaf0}.c{background:#1c1c1c;border-color:#2c2c2c}p{color:#d3d8cf}}</style>
 </head><body><div class="c"><div class="i">${icon}</div><h1>${title}</h1><p>${safeMessage}</p><p>Closing in <span id="cd">3</span>s...</p>
 <script>let n=3;const c=document.getElementById("cd");const t=setInterval(()=>{n--;c.textContent=n;if(n<=0){clearInterval(t);window.close();}},1000);</script>
 </div></body></html>`;
@@ -835,7 +835,7 @@ function renderXiaomiMimoResultPage(success, message) {
   .icon { color: ${color}; font-size: 3rem; }
   h1 { margin: 1rem 0; font-size: 1.25rem; font-weight: 500; }
   p { color: #3a3a3a; font-size: 0.875rem; }
-  @media (prefers-color-scheme: dark) { body { background: #0a1a1a; color: #fffaf0; } .container { background: #1a2a2a; border-color: #2b4141; } p { color: #d3d8cf; } }
+  @media (prefers-color-scheme: dark) { body { background: #141414; color: #fffaf0; } .container { background: #1c1c1c; border-color: #2c2c2c; } p { color: #d3d8cf; } }
 </style>
 </head>
 <body>
