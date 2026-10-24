@@ -3,12 +3,13 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
 import { getProviderIconSrc, markProviderIconMissing } from "@/shared/utils/providerIcon";
+import { useTheme } from "@/shared/hooks/useTheme";
 
-function resolveSrc(src, providerId) {
-  if (providerId) return getProviderIconSrc(providerId);
+function resolveSrc(src, providerId, isDark) {
+  if (providerId) return getProviderIconSrc(providerId, { isDark });
   if (!src) return null;
   const m = String(src).match(/^\/providers\/([^/]+)\.png$/i);
-  if (m) return getProviderIconSrc(m[1]);
+  if (m) return getProviderIconSrc(m[1], { isDark });
   return src;
 }
 
@@ -21,7 +22,8 @@ export default function ProviderIcon({
   fallbackText = "?",
   fallbackColor,
 }) {
-  const effectiveSrc = resolveSrc(src, providerId);
+  const { isDark } = useTheme();
+  const effectiveSrc = resolveSrc(src, providerId, isDark);
   const [errored, setErrored] = useState(false);
 
   if (!effectiveSrc || errored) {

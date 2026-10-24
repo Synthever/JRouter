@@ -1,0 +1,376 @@
+.panel {
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.filledPanel {
+  border-color: transparent;
+  background: var(--surface-card);
+}
+
+.activityPanel {
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.title {
+  margin: 0;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: normal;
+}
+
+.subtitle {
+  margin: 4px 0 0;
+  color: var(--text-3);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.metricControl {
+  flex-wrap: wrap;
+  gap: 2px;
+  max-width: 100%;
+  padding: 4px;
+  border-radius: 24px;
+  background: var(--surface-card);
+}
+
+.metricButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 20px;
+  color: var(--text-2);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.metricButton[aria-pressed="true"] {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.metricHighlight {
+  border-radius: inherit;
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.metricButton:focus-visible,
+.navigation:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
+
+.dot {
+  display: inline-block;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin: 0 0 16px;
+}
+
+.summaryItem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.summaryItem dt {
+  color: var(--text-3);
+  font-size: 13px;
+}
+
+.summaryItem dd {
+  order: -1;
+  margin: 0;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.chart {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 290px;
+}
+
+.chartPlot {
+  position: absolute;
+  inset: 0;
+}
+
+.chartState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 290px;
+  padding: 24px 12px;
+  color: var(--text-2);
+  font-size: 13px;
+  text-align: center;
+}
+
+.chartState p {
+  margin: 0;
+}
+
+.stateHint {
+  color: var(--text-3);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.stateHint code {
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.tooltip {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-card);
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.tooltipLabel {
+  margin: 0 0 6px;
+  color: var(--text-3);
+}
+
+.tooltipValue {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tooltipValue strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.modelList,
+.providerList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.modelItem {
+  padding: 14px 0;
+  border-top: 1px solid var(--surface-strong);
+}
+
+.modelItem:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.modelRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modelIdentity {
+  min-width: 0;
+}
+
+.modelName {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.modelProvider {
+  display: block;
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.modelValue {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 6px;
+  font-size: 14px;
+  text-align: right;
+}
+
+.modelValue strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.modelValue span {
+  color: var(--text-3);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.track {
+  height: 8px;
+  margin-top: 10px;
+  overflow: hidden;
+  border-radius: 9px;
+  background: var(--surface);
+}
+
+.track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.distribution {
+  display: flex;
+  height: 12px;
+  margin-top: 0;
+}
+
+.distribution > span {
+  flex-shrink: 0;
+  border-radius: 0;
+}
+
+.providerRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.providerIdentity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin-right: auto;
+}
+
+.providerIdentity strong {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.providerMetrics {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+  min-width: 0;
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.providerMetrics strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.emptyState {
+  margin: 0;
+  padding: 32px 8px;
+  color: var(--text-3);
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.footer {
+  margin-top: 12px;
+}
+
+.navigation {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  max-width: 100%;
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+.navigation svg {
+  flex: none;
+}
+
+.navigation:hover {
+  text-decoration-thickness: 2px;
+}
+
+@media (max-width: 640px) {
+  .metricButton {
+    min-height: 44px;
+    padding-inline: 10px;
+  }
+
+  .modelValue {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .metricButton {
+    transition: none;
+  }
+}

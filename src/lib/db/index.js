@@ -72,6 +72,11 @@ export {
   saveRequestDetail, getRequestDetails, getRequestDetailById, getDistinctProviders,
 } from "./repos/requestDetailsRepo.js";
 
+// Dashboard
+export {
+  getDashboardKpiLayout, saveDashboardKpiLayout, clearDashboardKpiLayout,
+} from "./repos/dashboardLayoutRepo.js";
+
 // Export/import full DB
 export async function exportDb() {
   const db = await getAdapter();

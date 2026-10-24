@@ -39,7 +39,7 @@ export default function Navigation() {
       <div
         className={`pointer-events-auto transition-all duration-300 ease-out flex items-center justify-between w-full ${
           isScrolled
-            ? "mt-3 sm:mt-4 max-w-4xl px-5 sm:px-6 py-2.5 rounded-full bg-black/30 backdrop-blur-xl border-0 shadow-2xl shadow-black/80"
+            ? "mt-3 sm:mt-4 max-w-4xl px-5 sm:px-6 py-2.5 rounded-full bg-[var(--surface-soft)] border border-[var(--line)]"
             : "max-w-7xl px-2 sm:px-4 py-5 bg-transparent border-transparent"
         }`}
       >
@@ -48,20 +48,20 @@ export default function Navigation() {
           {/* Logo */}
           <button
             type="button"
-            className="flex items-center gap-2.5 cursor-pointer bg-transparent border-none p-0 text-white"
+            className="flex items-center gap-2.5 cursor-pointer bg-transparent border-none p-0 text-[var(--text)]"
             onClick={() => router.push("/")}
             aria-label="Navigate to home"
           >
             <AppLogo size={36} />
-            <span className="text-white text-base font-semibold tracking-tight">JRouter</span>
+            <span className="text-[var(--text)] text-base font-semibold tracking-tight">JRouter</span>
           </button>
 
           {/* Desktop menu */}
-          <div className="hidden md:flex items-center gap-6 text-sm font-medium text-neutral-300">
-            <a className="hover:text-white transition-colors" href="#features">Features</a>
-            <a className="hover:text-white transition-colors" href="#how-it-works">How it Works</a>
-            <a className="hover:text-white transition-colors" href="https://github.com/Synthever/JRouter#readme" target="_blank" rel="noopener noreferrer">Docs</a>
-            <a className="hover:text-white transition-colors flex items-center gap-1" href="https://github.com/Synthever/JRouter" target="_blank" rel="noopener noreferrer">
+          <div className="hidden md:flex items-center gap-6 text-sm font-medium text-[var(--text-2)]">
+            <a className="hover:text-[var(--text)] transition-colors" href="#features">Features</a>
+            <a className="hover:text-[var(--text)] transition-colors" href="#how-it-works">How it Works</a>
+            <a className="hover:text-[var(--text)] transition-colors" href="https://github.com/Synthever/JRouter#readme" target="_blank" rel="noopener noreferrer">Docs</a>
+            <a className="hover:text-[var(--text)] transition-colors flex items-center gap-1" href="https://github.com/Synthever/JRouter" target="_blank" rel="noopener noreferrer">
               GitHub <Icon className="text-[14px]">open_in_new</Icon>
             </a>
           </div>
@@ -71,12 +71,12 @@ export default function Navigation() {
         <div className="flex items-center gap-3">
           <button 
             onClick={() => router.push("/dashboard")}
-            className="hidden sm:inline-flex cursor-pointer bg-white/10 hover:bg-white/20 transition px-4 py-1.5 sm:py-2 rounded-md sm:rounded-full text-xs sm:text-sm font-medium backdrop-blur-md text-white shadow-xs"
+            className="hidden sm:inline-flex cursor-pointer bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] transition px-4 py-2 rounded-[var(--r2)] text-xs sm:text-sm font-semibold text-[var(--primary-ink)]"
           >
             Dashboard
           </button>
           <button 
-            className="md:hidden text-white p-1.5 flex items-center justify-center cursor-pointer"
+            className="md:hidden text-[var(--text)] p-1.5 flex items-center justify-center cursor-pointer"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle menu"
           >
@@ -87,11 +87,11 @@ export default function Navigation() {
 
       {/* Mobile menu dropdown */}
       {mobileMenuOpen && (
-        <div className="pointer-events-auto md:hidden absolute top-full inset-x-4 mt-2 p-5 rounded-2xl bg-black/85 backdrop-blur-2xl border border-white/15 flex flex-col gap-3.5 shadow-2xl">
-          <a className="text-neutral-300 hover:text-white text-sm font-medium transition-colors" href="#features" onClick={() => setMobileMenuOpen(false)}>Features</a>
-          <a className="text-neutral-300 hover:text-white text-sm font-medium transition-colors" href="#how-it-works" onClick={() => setMobileMenuOpen(false)}>How it Works</a>
-          <a className="text-neutral-300 hover:text-white text-sm font-medium transition-colors" href="https://github.com/Synthever/JRouter#readme" target="_blank" rel="noopener noreferrer">Docs</a>
-          <a className="text-neutral-300 hover:text-white text-sm font-medium transition-colors flex items-center justify-between" href="https://github.com/Synthever/JRouter" target="_blank" rel="noopener noreferrer">
+        <div className="pointer-events-auto md:hidden absolute top-full inset-x-4 mt-2 p-5 rounded-[var(--r4)] bg-[var(--surface)] border border-[var(--line-2)] flex flex-col gap-3.5">
+          <a className="text-[var(--text-2)] hover:text-[var(--text)] text-sm font-medium transition-colors" href="#features" onClick={() => setMobileMenuOpen(false)}>Features</a>
+          <a className="text-[var(--text-2)] hover:text-[var(--text)] text-sm font-medium transition-colors" href="#how-it-works" onClick={() => setMobileMenuOpen(false)}>How it Works</a>
+          <a className="text-[var(--text-2)] hover:text-[var(--text)] text-sm font-medium transition-colors" href="https://github.com/Synthever/JRouter#readme" target="_blank" rel="noopener noreferrer">Docs</a>
+          <a className="text-[var(--text-2)] hover:text-[var(--text)] text-sm font-medium transition-colors flex items-center justify-between" href="https://github.com/Synthever/JRouter" target="_blank" rel="noopener noreferrer">
             <span>GitHub</span>
             <Icon className="text-[14px]">open_in_new</Icon>
           </a>
@@ -100,7 +100,7 @@ export default function Navigation() {
               setMobileMenuOpen(false);
               router.push("/dashboard");
             }}
-            className="mt-1 w-full bg-white text-black py-2 rounded-lg text-sm font-semibold hover:bg-neutral-200 transition"
+            className="mt-1 w-full bg-[var(--color-primary)] text-[var(--primary-ink)] py-2.5 rounded-[var(--r2)] text-sm font-semibold hover:bg-[var(--color-primary-hover)] transition"
           >
             Dashboard
           </button>

@@ -15,6 +15,7 @@ describe("endpoint key access UI", () => {
   });
 
   it("still surfaces the policy-based model restrictions per key", () => {
-    expect(source).toContain('" · Restricted models"');
+    expect(source).toContain("const restricted = (key.allowedModels?.length || 0) + (key.blockedModels?.length || 0) > 0;");
+    expect(source).toContain("{restricted && <span className={styles.badge}>Restricted models</span>}");
   });
 });

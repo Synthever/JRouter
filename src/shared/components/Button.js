@@ -4,13 +4,13 @@ import { cn } from "@/shared/utils/cn";
 import Icon from "@/shared/components/Icon";
 
 const variants = {
-  primary: "bg-white hover:bg-[#EDEDEE] text-[#0A0A0B] border border-transparent shadow-xs disabled:opacity-40",
+  primary: "bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-[var(--primary-ink)] border border-transparent disabled:opacity-40",
   contrast: "bg-[var(--text)] hover:bg-[var(--text-2)] text-[var(--bg)] border border-transparent shadow-none disabled:opacity-40",
   secondary: "bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] text-[var(--text)] border border-[var(--line-2)] disabled:opacity-40",
   outline: "bg-transparent hover:bg-[var(--surface-2)] text-[var(--text)] border border-[var(--line-2)] hover:border-[var(--accent-line)]",
   ghost: "bg-transparent hover:bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text)] border border-transparent",
-  danger: "bg-[#281515] hover:bg-[#381a1a] text-[#FF6B6B] border border-[#FF6B6B]/30 disabled:opacity-40",
-  success: "bg-[#14251D] hover:bg-[#1b3327] text-[#34D39A] border border-[#34D39A]/30 disabled:opacity-40",
+  danger: "bg-[color-mix(in_srgb,var(--danger)_10%,var(--surface))] hover:bg-[color-mix(in_srgb,var(--danger)_16%,var(--surface))] text-[var(--danger)] border border-[var(--danger)]/30 disabled:opacity-40",
+  success: "bg-[color-mix(in_srgb,var(--pos)_10%,var(--surface))] hover:bg-[color-mix(in_srgb,var(--pos)_16%,var(--surface))] text-[var(--pos)] border border-[var(--pos)]/30 disabled:opacity-40",
 };
 
 const sizes = {

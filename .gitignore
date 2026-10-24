@@ -111,3 +111,5 @@ debug.log
 /.next-providers-ui
 /.next-health-build
 /.next-health-preview
+/.next-claude-dashboard
+/.next-verify

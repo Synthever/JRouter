@@ -68,7 +68,7 @@ export default function HowItWorks() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
           {/* Step 1: Client CLI & SDKs */}
           <div
-            className="p-6 rounded-[var(--r3)] bg-black/30 backdrop-blur-xl border-0 shadow-2xl shadow-black/80 flex flex-col gap-4"
+            className="p-6 rounded-[var(--r4)] bg-[var(--surface-card)] border border-[var(--line)] flex flex-col gap-4"
             style={{
               transform: isVisible ? "translateY(0)" : "translateY(32px)",
               opacity: isVisible ? 1 : 0,
@@ -90,7 +90,7 @@ export default function HowItWorks() {
 
           {/* Step 2: JRouter Gateway */}
           <div
-            className="p-6 rounded-[var(--r3)] bg-black/30 backdrop-blur-xl border-0 shadow-2xl shadow-black/80 flex flex-col gap-4"
+            className="p-6 rounded-[var(--r4)] bg-[var(--surface-card)] border border-[var(--line)] flex flex-col gap-4"
             style={{
               transform: isVisible ? "translateY(0)" : "translateY(32px)",
               opacity: isVisible ? 1 : 0,
@@ -112,7 +112,7 @@ export default function HowItWorks() {
 
           {/* Step 3: Upstream Providers */}
           <div
-            className="p-6 rounded-[var(--r3)] bg-black/30 backdrop-blur-xl border-0 shadow-2xl shadow-black/80 flex flex-col gap-4"
+            className="p-6 rounded-[var(--r4)] bg-[var(--surface-card)] border border-[var(--line)] flex flex-col gap-4"
             style={{
               transform: isVisible ? "translateY(0)" : "translateY(32px)",
               opacity: isVisible ? 1 : 0,

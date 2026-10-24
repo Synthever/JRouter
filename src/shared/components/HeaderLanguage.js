@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import PropTypes from "prop-types";
 import { LOCALE_COOKIE, normalizeLocale } from "@/i18n/config";
 import { onLocaleChange } from "@/i18n/runtime";
 import LanguageSwitcher from "./LanguageSwitcher";
+import { Languages } from "lucide-react";
 
 function getLocaleFromCookie() {
   if (typeof document === "undefined") return "en";
@@ -14,7 +16,7 @@ function getLocaleFromCookie() {
   return normalizeLocale(value);
 }
 
-export default function HeaderLanguage() {
+export default function HeaderLanguage({ variant = "icon" }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef(null);
   const locale = useSyncExternalStore(onLocaleChange, getLocaleFromCookie, () => "en");
@@ -37,12 +39,20 @@ export default function HeaderLanguage() {
         type="button"
         ref={triggerRef}
         onClick={() => setOpen(true)}
-        className="dashboard-header__action"
+        className={variant === "menu" ? "dashboard-header__menu-item" : "dashboard-header__action"}
         title="Language"
         aria-label={`Language (${locale})`}
         data-i18n-skip="true"
       >
-        <span className="dashboard-header__locale">{locale.split("-")[0].toUpperCase()}</span>
+        {variant === "menu" ? (
+          <>
+            <Languages size={16} aria-hidden="true" />
+            <span className="flex-1 text-left">Language</span>
+            <span className="dashboard-header__locale">{locale.split("-")[0].toUpperCase()}</span>
+          </>
+        ) : (
+          <span className="dashboard-header__locale">{locale.split("-")[0].toUpperCase()}</span>
+        )}
       </button>
 
       <LanguageSwitcher
@@ -53,3 +63,7 @@ export default function HeaderLanguage() {
     </>
   );
 }
+
+HeaderLanguage.propTypes = {
+  variant: PropTypes.oneOf(["icon", "menu"]),
+};

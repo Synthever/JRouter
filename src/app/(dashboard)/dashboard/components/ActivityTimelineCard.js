@@ -1,205 +1,188 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useId } from "react";
 import {
-  AreaChart,
-  Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { Activity, Zap, DollarSign, Layers } from "lucide-react";
+import { Activity } from "lucide-react";
 import { AnimatedBackground } from "@/components/core/animated-background";
 import { fmtTokens, fmtCost } from "./KpiBentoGrid";
+import styles from "./DashboardAnalytics.module.css";
 
 const VIEW_MODES = [
-  { value: "requests", label: "Requests", icon: Layers },
-  { value: "tokens", label: "Tokens", icon: Zap },
-  { value: "cost", label: "Cost", icon: DollarSign },
+  { value: "requests", label: "Requests", color: "var(--brand-pink)" },
+  { value: "tokens", label: "Tokens", color: "var(--brand-lavender)" },
+  { value: "cost", label: "Cost", color: "var(--brand-peach)" },
 ];
+const EMPTY_DATA = [];
+
+function formatValue(value, mode) {
+  if (mode === "cost") return fmtCost(value);
+  if (mode === "tokens") return fmtTokens(value);
+  return Math.round(value).toLocaleString();
+}
 
 function CustomTooltip({ active, payload, label, mode }) {
-  if (!active || !payload || !payload.length) return null;
-  const val = payload[0].value;
+  if (!active || !payload?.length) return null;
+  const metric = VIEW_MODES.find((item) => item.value === mode);
   return (
-    <div className="rounded-[var(--r2)] border border-[var(--line-2)] bg-[var(--surface-2)]/95 backdrop-blur-md px-3 py-2 shadow-[var(--shadow-pop)] text-xs font-mono">
-      <div className="text-[var(--text-3)] mb-1 text-[11px]">{label}</div>
-      <div className="flex items-center gap-2">
-        <span className="size-2 rounded-full bg-[var(--text)]" />
-        <span className="text-[var(--text-2)] capitalize">{mode}:</span>
-        <span className="text-[var(--text)] font-semibold u-tnum">
-          {mode === "cost" ? fmtCost(val) : mode === "tokens" ? fmtTokens(val) : Number(val).toLocaleString()}
-        </span>
+    <div className={styles.tooltip}>
+      <p className={styles.tooltipLabel}>{label}</p>
+      <div className={styles.tooltipValue}>
+        <span className={styles.dot} style={{ backgroundColor: metric.color }} aria-hidden="true" />
+        <span>{metric.label}:</span>
+        <strong>{formatValue(payload[0].value, mode)}</strong>
       </div>
     </div>
   );
 }
 
-export default function ActivityTimelineCard({ period = "7d" }) {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function ActivityTimelineCard({ period = "7d", refreshVersion = 0 }) {
+  const [result, setResult] = useState(null);
   const [viewMode, setViewMode] = useState("requests");
-  const [mounted, setMounted] = useState(false);
+  const headingId = useId();
+  // A result belongs to its period and refresh. Hide stale totals while fetching.
+  const loading = !result || result.period !== period || result.refreshVersion !== refreshVersion;
+  const data = result?.data || EMPTY_DATA;
+  const error = !loading && result.error;
+  const metric = VIEW_MODES.find((item) => item.value === viewMode);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/usage/chart?period=${period}`);
-      if (res.ok) {
+    const controller = new AbortController();
+    async function fetchData() {
+      try {
+        const res = await fetch(`/api/usage/chart?period=${period}`, { signal: controller.signal });
+        if (!res.ok) throw new Error(`Activity request failed (${res.status})`);
         const json = await res.json();
-        setData(Array.isArray(json) ? json : []);
+        if (!controller.signal.aborted) {
+          setResult({ period, refreshVersion, data: Array.isArray(json) ? json : [], error: false });
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Failed to fetch activity chart data:", error);
+          setResult({ period, refreshVersion, data: [], error: true });
+        }
       }
-    } catch (e) {
-      console.error("Failed to fetch activity chart data:", e);
-    } finally {
-      setLoading(false);
     }
-  }, [period]);
-
-  useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    return () => controller.abort();
+  }, [period, refreshVersion]);
 
-  // Aggregate stats
   const { total, peak, avg } = useMemo(() => {
     if (!data.length) return { total: 0, peak: 0, avg: 0 };
-    const values = data.map((d) => Number(d[viewMode] || 0));
-    const sum = values.reduce((a, b) => a + b, 0);
-    const max = Math.max(...values, 0);
-    const mean = sum / values.length;
-    return { total: sum, peak: max, avg: mean };
+    const values = data.map((item) => Number(item[viewMode] || 0));
+    const total = values.reduce((sum, value) => sum + value, 0);
+    const peak = values.reduce((max, value) => Math.max(max, value), 0);
+    return { total, peak, avg: total / values.length };
   }, [data, viewMode]);
+  const hasData = data.some((item) => (item[viewMode] || 0) > 0);
 
-  const hasData = data.some((d) => (d[viewMode] || 0) > 0);
-
-  const formatYAxis = (val) => {
-    if (viewMode === "cost") return `$${Number(val).toFixed(2)}`;
-    if (viewMode === "tokens") return fmtTokens(val);
-    if (val >= 1000) return `${(val / 1000).toFixed(1)}k`;
-    return String(val);
+  const formatYAxis = (value) => {
+    if (viewMode === "cost") return fmtCost(value);
+    if (viewMode === "tokens") return fmtTokens(value);
+    if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
+    return String(value);
   };
 
   return (
-    <div className="ui-card p-5 flex flex-col justify-between">
-      {/* Card Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+    <section className={`${styles.panel} ${styles.activityPanel}`} aria-labelledby={headingId} aria-busy={loading}>
+      <div className={styles.header}>
         <div>
-          <div className="flex items-center gap-2">
-            <span className="ui-eyebrow text-[10px] text-[var(--text-2)]">
-              ACTIVITY TIMELINE
-            </span>
-            <span className="text-[var(--text-3)]">·</span>
-            <span className="text-xs text-[var(--text-3)]">Throughput over time</span>
-          </div>
-          <div className="mt-1 flex items-center gap-4 text-xs font-mono text-[var(--text-2)]">
-            <span>
-              Total:{" "}
-              <strong className="text-[var(--text)] font-semibold u-tnum">
-                {viewMode === "cost" ? fmtCost(total) : viewMode === "tokens" ? fmtTokens(total) : total.toLocaleString()}
-              </strong>
-            </span>
-            <span className="text-[var(--text-3)]">·</span>
-            <span>
-              Peak:{" "}
-              <strong className="text-[var(--text)] font-semibold u-tnum">
-                {viewMode === "cost" ? fmtCost(peak) : viewMode === "tokens" ? fmtTokens(peak) : Math.round(peak).toLocaleString()}
-              </strong>
-            </span>
-            <span className="text-[var(--text-3)]">·</span>
-            <span>
-              Avg:{" "}
-              <strong className="text-[var(--text)] font-semibold u-tnum">
-                {viewMode === "cost" ? fmtCost(avg) : viewMode === "tokens" ? fmtTokens(avg) : Math.round(avg).toLocaleString()}
-              </strong>
-            </span>
-          </div>
+          <h2 id={headingId} className={styles.title}>Activity</h2>
+          <p className={styles.subtitle}>Throughput over time</p>
         </div>
-
-        {/* View Mode Toggle */}
         <AnimatedBackground
           value={viewMode}
           onValueChange={setViewMode}
           aria-label="Activity metric"
-          containerClassName="dashboard-segmented-control self-start sm:self-auto"
-          className="dashboard-segment-highlight"
+          containerClassName={styles.metricControl}
+          className={styles.metricHighlight}
         >
-          {VIEW_MODES.map((m) => {
-            const IconComp = m.icon;
-            return (
-              <button
-                key={m.value}
-                data-id={m.value}
-                type="button"
-                aria-label={`${m.label} view`}
-                className="dashboard-segment"
-              >
-                <IconComp className="size-3" />
-                {m.label}
-              </button>
-            );
-          })}
+          {VIEW_MODES.map((item) => (
+            <button
+              key={item.value}
+              data-id={item.value}
+              type="button"
+              aria-label={`${item.label} view`}
+              className={styles.metricButton}
+            >
+              <span className={styles.dot} style={{ backgroundColor: item.color }} aria-hidden="true" />
+              {item.label}
+            </button>
+          ))}
         </AnimatedBackground>
       </div>
 
-      {/* Chart Canvas */}
-      <div className="w-full h-[220px] sm:h-[240px]">
-        {!mounted || loading ? (
-          <div className="w-full h-full flex items-center justify-center text-xs font-mono text-[var(--text-3)] animate-pulse">
-            Loading timeline telemetry...
+      <dl className={styles.summary} aria-label={`${metric.label} summary`}>
+        {[["Total", total], ["Peak", peak], ["Average", avg]].map(([label, value]) => (
+          <div key={label} className={styles.summaryItem}>
+            <dt>{label}</dt>
+            <dd title={loading || error ? undefined : Number(value).toLocaleString(undefined, { maximumFractionDigits: 4 })}>
+              {loading || error ? "—" : formatValue(value, viewMode)}
+            </dd>
+          </div>
+        ))}
+      </dl>
+
+      <div className={styles.chart}>
+        {loading ? (
+          <div className={styles.chartState} role="status">Loading timeline telemetry...</div>
+        ) : error ? (
+          <div className={styles.chartState} role="status">
+            <p>Activity could not be loaded</p>
+            <p className={styles.stateHint}>Refresh the dashboard to try again.</p>
           </div>
         ) : !hasData ? (
-          <div className="dashboard-card-inset w-full h-full flex flex-col items-center justify-center border border-dashed border-[var(--line)] rounded-[var(--r2)] bg-[var(--surface-inset)] p-6 text-center">
-            <Activity className="size-6 text-[var(--text-3)] mb-2" />
-            <p className="text-xs font-mono text-[var(--text-2)]">No activity recorded for this period</p>
-            <p className="text-[11px] text-[var(--text-3)] mt-1">
-              Send requests to <code className="text-[var(--text-2)] bg-[var(--surface-2)] px-1 py-0.5 rounded-[var(--r1)] border border-[var(--line)]">/v1/chat/completions</code> to see real-time volume.
+          <div className={styles.chartState} role="status">
+            <Activity size={24} aria-hidden="true" />
+            <p>No activity recorded for this period</p>
+            <p className={styles.stateHint}>
+              Send requests to <code>/v1/chat/completions</code> to see real-time volume.
             </p>
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--text)" stopOpacity={0.14} />
-                  <stop offset="95%" stopColor="var(--text)" stopOpacity={0.00} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid stroke="var(--line)" strokeDasharray="3 3" vertical={false} />
-              <XAxis
-                dataKey="label"
-                stroke="var(--text-2)"
-                fontSize={11}
-                fontFamily="var(--font-mono)"
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                stroke="var(--text-2)"
-                fontSize={11}
-                fontFamily="var(--font-mono)"
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={formatYAxis}
-              />
-              <Tooltip content={<CustomTooltip mode={viewMode} />} />
-              <Area
-                type="monotone"
-                dataKey={viewMode}
-                stroke="var(--text)"
-                strokeWidth={2}
-                fillOpacity={1}
-                fill="url(#areaGradient)"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          <div className={styles.chartPlot}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+              <BarChart
+                data={data}
+                margin={{ top: 12, right: 8, left: 0, bottom: 0 }}
+                accessibilityLayer
+                aria-label={`${metric.label} over time`}
+              >
+                <CartesianGrid stroke="var(--line)" strokeDasharray="3 5" vertical={false} />
+                <XAxis
+                  dataKey="label"
+                  stroke="var(--text-3)"
+                  fontSize={12}
+                  fontFamily="var(--font-ui)"
+                  tickLine={false}
+                  axisLine={false}
+                  minTickGap={24}
+                  tickMargin={10}
+                />
+                <YAxis
+                  stroke="var(--text-3)"
+                  fontSize={12}
+                  fontFamily="var(--font-ui)"
+                  width={viewMode === "cost" ? 72 : 52}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={formatYAxis}
+                  allowDecimals={viewMode !== "requests"}
+                />
+                <Tooltip cursor={{ fill: "var(--surface-inset)", fillOpacity: 0.45 }} content={<CustomTooltip mode={viewMode} />} />
+                <Bar dataKey={viewMode} name={metric.label} fill={metric.color} radius={[8, 8, 0, 0]} maxBarSize={60} isAnimationActive={false} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         )}
       </div>
-    </div>
+    </section>
   );
 }

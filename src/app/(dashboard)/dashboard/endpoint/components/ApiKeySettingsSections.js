@@ -9,9 +9,9 @@ import { API_KEY_ENDPOINTS, QUOTA_CYCLES } from "@/shared/constants/apiKeyPolicy
 
 export function SettingsSection({ title, hint, children }) {
   return (
-    <section className="space-y-4 border-b border-[var(--line)] pb-6 last:border-0 last:pb-0">
+    <section className="space-y-4 border-b border-[var(--line)] pb-5 last:border-0 last:pb-0">
       <div>
-        <h3 className="text-sm font-semibold text-[var(--text)]">{title}</h3>
+        <h3 className="text-[13px] font-semibold text-[var(--text)]">{title}</h3>
         {hint && <p className="mt-1 text-xs text-[var(--text-2)]">{hint}</p>}
       </div>
       {children}
@@ -31,7 +31,7 @@ export function KeyRoleSection({ value, onChange }) {
         {KEY_ROLE_OPTIONS.map((option) => (
           <label
             key={option.value}
-            className={`flex items-start gap-3 cursor-pointer rounded-[var(--r2)] border p-3 transition-colors ${value === option.value ? "border-[var(--accent-line)] bg-[var(--surface-2)]" : "border-[var(--line)] hover:bg-[var(--surface-2)]"}`}
+            className={`flex items-start gap-3 cursor-pointer rounded-[var(--r1)] border p-3 transition-colors ${value === option.value ? "border-[var(--accent-line)] bg-[var(--surface-2)]" : "border-[var(--line)] hover:bg-[var(--surface-2)]"}`}
           >
             <input
               type="radio"
@@ -42,7 +42,7 @@ export function KeyRoleSection({ value, onChange }) {
               className="mt-0.5 size-4 accent-[var(--text)] shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--text)]"
             />
             <span>
-              <span className="block text-sm font-medium">{option.label}</span>
+              <span className="block text-[13px] font-medium">{option.label}</span>
               <span className="block mt-1 text-xs text-[var(--text-2)]">{option.hint}</span>
             </span>
           </label>
@@ -98,7 +98,7 @@ function ModelRestrictionPicker({ title, values, onChange, activeProviders, mode
   return (
     <div className="space-y-2 min-w-0">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-medium">{title}</span>
+        <span className="text-[13px] font-medium">{title}</span>
         <Button type="button" variant="secondary" size="sm" icon="add" onClick={() => setOpen(!open)} aria-expanded={open}>{open ? "Close picker" : "Choose models"}</Button>
       </div>
       <p className="text-xs text-[var(--text-2)]">{hint}</p>
@@ -107,7 +107,7 @@ function ModelRestrictionPicker({ title, values, onChange, activeProviders, mode
           <span className="break-all">{value}</span><Icon name="close" className="text-[14px] shrink-0" />
         </button>)}
       </div>}
-      {open && <div className="rounded-[var(--r2)] border border-[var(--line-2)] p-3">
+      {open && <div className="rounded-[var(--r1)] border border-[var(--line-2)] p-3">
         <ModelPickerList searchQuery={searchQuery} onSearchChange={setSearchQuery} combos={filteredCombos} groups={visibleGroups} addedModelValues={values} onSelect={(model) => { if (!model.isPlaceholder) toggle(model.value || model.name); }} />
       </div>}
     </div>
@@ -127,9 +127,9 @@ export function EndpointPermissions({ values, onChange }) {
   return (
     <SettingsSection title="Allowed Endpoints / Modalities" hint="Only endpoint families supported by JRouter are listed. Clearing every permission denies all inference requests.">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {API_KEY_ENDPOINTS.map(({ value, label, hint }) => <label key={value} className={`flex items-start gap-3 cursor-pointer rounded-[var(--r2)] border p-3 transition-colors ${values.includes(value) ? "border-[var(--accent-line)] bg-[var(--surface-2)]" : "border-[var(--line)] hover:bg-[var(--surface-2)]"}`}>
+        {API_KEY_ENDPOINTS.map(({ value, label, hint }) => <label key={value} className={`flex items-start gap-3 cursor-pointer rounded-[var(--r1)] border p-3 transition-colors ${values.includes(value) ? "border-[var(--accent-line)] bg-[var(--surface-2)]" : "border-[var(--line)] hover:bg-[var(--surface-2)]"}`}>
           <input type="checkbox" checked={values.includes(value)} onChange={(event) => onChange(event.target.checked ? [...values, value] : values.filter((item) => item !== value))} className="mt-0.5 size-4 accent-[var(--text)] shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--text)]" />
-          <span><span className="block text-sm font-medium">{label}</span><span className="block mt-1 text-xs text-[var(--text-2)]">{hint}</span></span>
+          <span><span className="block text-[13px] font-medium">{label}</span><span className="block mt-1 text-xs text-[var(--text-2)]">{hint}</span></span>
         </label>)}
       </div>
     </SettingsSection>

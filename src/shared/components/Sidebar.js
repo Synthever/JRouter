@@ -7,6 +7,12 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/shared/utils/cn";
 import { APP_CONFIG, UPDATER_CONFIG } from "@/shared/constants/config";
 import { MEDIA_PROVIDER_KINDS } from "@/shared/constants/providers";
+import {
+  DASHBOARD_NAV_GROUPS,
+  DASHBOARD_DEBUG_ITEMS,
+  DASHBOARD_SYSTEM_ITEMS,
+  DASHBOARD_SETTINGS_ITEM,
+} from "@/shared/constants/dashboardNav";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import useSettingsStore from "@/store/settingsStore";
 import Button from "./Button";
@@ -19,48 +25,9 @@ const VISIBLE_MEDIA_KINDS = ["embedding", "image", "video", "tts", "stt", "syste
 // Combined entry: webSearch + webFetch share one page at /dashboard/media-providers/web
 const COMBINED_WEB_ITEM = { id: "web", label: "Web Fetch & Search", icon: "travel_explore", href: "/dashboard/media-providers/web" };
 
-const navGroups = [
-  {
-    title: null,
-    items: [
-      { href: "/dashboard", label: "Dashboard", icon: "layout-dashboard" },
-      { href: "/dashboard/endpoint", label: "Endpoint & Key", icon: "api" },
-      { href: "/dashboard/providers", label: "Providers", icon: "dns" },
-      { href: "/dashboard/combos", label: "Combos", icon: "layers" },
-    ],
-  },
-  {
-    title: "Chat",
-    items: [
-      { href: "/dashboard/playground", label: "Playground", icon: "science" },
-    ],
-  },
-  {
-    title: "Monitor",
-    items: [
-      { href: "/dashboard/usage", label: "Usage", icon: "bar_chart" },
-      { href: "/dashboard/health", label: "Health", icon: "monitoring" },
-      { href: "/dashboard/quota", label: "Quota Tracker", icon: "data_usage" },
-    ],
-  },
-  {
-    title: "Tools",
-    items: [
-      { href: "/dashboard/token-saver", label: "Token Saver", icon: "savings" },
-      { href: "/dashboard/cli-tools", label: "CLI Tools", icon: "terminal" },
-    ],
-  },
-];
-
-const debugItems = [
-  { href: "/dashboard/console-log", label: "Console Log", icon: "terminal" },
-  { href: "/dashboard/translator", label: "Translator", icon: "translate" },
-];
-
-const systemItems = [
-  { href: "/dashboard/proxy-pools", label: "Proxy Pools", icon: "lan" },
-  { href: "/dashboard/skills", label: "Skills", icon: "extension" },
-];
+const navGroups = DASHBOARD_NAV_GROUPS;
+const debugItems = DASHBOARD_DEBUG_ITEMS;
+const systemItems = DASHBOARD_SYSTEM_ITEMS;
 
 const navItemClass = (active) => cn("dashboard-sidebar__item group", active && "is-active");
 
@@ -139,16 +106,18 @@ export default function Sidebar({ onClose, onToggleCollapse }) {
 
   return (
     <>
-      <aside className="dashboard-sidebar flex w-60 flex-col h-full min-h-0">
+      <aside className="dashboard-sidebar flex w-[246px] flex-col h-full min-h-0">
         {/* Logo */}
         <div className="dashboard-sidebar__brand shrink-0">
           <Link href="/dashboard" onClick={onClose} className="dashboard-sidebar__brand-link">
-            <AppLogo size={32} className="shrink-0" />
+            <AppLogo size={38} className="dashboard-sidebar__logo shrink-0" />
             <div className="flex flex-col min-w-0 gap-0.5">
-              <span className="text-[13px] font-semibold tracking-tight text-[var(--text)] truncate">
+              <span className="dashboard-sidebar__brand-name">
                 {APP_CONFIG.name}
               </span>
-              <span className="text-[10px] font-mono text-[var(--text-2)] u-tnum">v{APP_CONFIG.version}</span>
+              <span className="dashboard-sidebar__brand-meta u-tnum">
+                GATEWAY / v{APP_CONFIG.version}
+              </span>
             </div>
           </Link>
           {updateInfo && (
@@ -199,7 +168,7 @@ export default function Sidebar({ onClose, onToggleCollapse }) {
                     name={item.icon}
                     className={cn(
                       "text-[16px]",
-                      isActive(item.href) ? "text-[var(--text)]" : "text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
+                      "text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
                     )}
                   />
                   <span className="text-[12.5px] font-medium">{item.label}</span>
@@ -269,7 +238,7 @@ export default function Sidebar({ onClose, onToggleCollapse }) {
                   name={item.icon}
                   className={cn(
                     "text-[16px]",
-                    isActive(item.href) ? "text-[var(--text)]" : "text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
+                    "text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
                   )}
                 />
                 <span className="text-[12.5px] font-medium">{item.label}</span>
@@ -291,7 +260,7 @@ export default function Sidebar({ onClose, onToggleCollapse }) {
                     name={item.icon}
                     className={cn(
                       "text-[16px]",
-                      isActive(item.href) ? "text-[var(--text)]" : "text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
+                      "text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
                     )}
                   />
                   <span className="text-[12.5px] font-medium">{item.label}</span>
@@ -301,19 +270,16 @@ export default function Sidebar({ onClose, onToggleCollapse }) {
 
             {/* Settings */}
             <Link
-              href="/dashboard/profile"
+              href={DASHBOARD_SETTINGS_ITEM.href}
               onClick={onClose}
-              aria-current={isActive("/dashboard/profile") ? "page" : undefined}
-              className={navItemClass(isActive("/dashboard/profile"))}
+              aria-current={isActive(DASHBOARD_SETTINGS_ITEM.href) ? "page" : undefined}
+              className={navItemClass(isActive(DASHBOARD_SETTINGS_ITEM.href))}
             >
               <Icon
-                name="settings"
-                className={cn(
-                  "text-[16px]",
-                  isActive("/dashboard/profile") ? "text-[var(--text)]" : "text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
-                )}
+                name={DASHBOARD_SETTINGS_ITEM.icon}
+                className="text-[16px] text-[var(--text-3)] group-hover:text-[var(--text)] transition-colors"
               />
-              <span className="text-[12.5px] font-medium">Settings</span>
+              <span className="text-[12.5px] font-medium">{DASHBOARD_SETTINGS_ITEM.label}</span>
             </Link>
           </div>
         </nav>

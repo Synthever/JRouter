@@ -1,10 +1,11 @@
 "use client";
 import Icon from "@/shared/components/Icon";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useNotificationStore } from "@/store/notificationStore";
 import { cn } from "@/shared/utils/cn";
+import useDashboardMotion from "@/shared/hooks/useDashboardMotion";
 import Sidebar from "../Sidebar";
 import Header from "../Header";
 
@@ -51,8 +52,11 @@ export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
   const pathname = usePathname();
+  const layoutRef = useRef(null);
   const notifications = useNotificationStore((state) => state.notifications);
   const removeNotification = useNotificationStore((state) => state.removeNotification);
+
+  useDashboardMotion(layoutRef, pathname);
 
   // Restore collapsed preference from localStorage
   useEffect(() => {
@@ -114,9 +118,10 @@ export default function DashboardLayout({ children }) {
   // Chat-style pages own their full-height layout, scroll container and padding.
   const isFullHeightPage = pathname === "/dashboard/basic-chat" || pathname === "/dashboard/playground";
   const hasGridBackground = GRID_BACKGROUND_PAGES.includes(pathname) || pathname.startsWith("/dashboard/cli-tools/");
+  const hidesPageScrollbar = pathname === "/dashboard";
 
   return (
-    <div className={`flex w-full overflow-hidden bg-bg ${pathname === "/dashboard/playground" ? "h-dvh" : "h-screen"}`}>
+    <div ref={layoutRef} className={`flex w-full overflow-hidden bg-bg ${pathname === "/dashboard/playground" ? "h-dvh" : "h-screen"}`}>
       <div className="fixed top-4 right-4 z-[80] flex w-[min(92vw,380px)] flex-col gap-2">
         {notifications.map((n) => {
           const style = getToastStyle(n.type);
@@ -158,7 +163,7 @@ export default function DashboardLayout({ children }) {
       <div
         className={cn(
           "hidden lg:flex transition-[width,opacity] duration-200 ease-in-out shrink-0 overflow-hidden",
-          desktopSidebarCollapsed ? "w-0 opacity-0 pointer-events-none" : "w-60 opacity-100"
+          desktopSidebarCollapsed ? "w-0 opacity-0 pointer-events-none" : "w-[246px] opacity-100"
         )}
       >
         <Sidebar onToggleCollapse={handleToggleSidebar} isCollapsed={desktopSidebarCollapsed} />
@@ -180,7 +185,7 @@ export default function DashboardLayout({ children }) {
           onMenuClick={handleToggleSidebar}
           isSidebarCollapsed={desktopSidebarCollapsed}
         />
-        <div className={`flex-1 custom-scrollbar ${hasGridBackground ? "dashboard-grid-bg" : ""} ${isFullHeightPage ? "flex flex-col min-h-0 overflow-hidden" : "overflow-y-auto p-6 lg:p-8"}`}>
+        <div className={`flex-1 custom-scrollbar ${hidesPageScrollbar ? "no-scrollbar" : ""} ${hasGridBackground ? "dashboard-grid-bg" : ""} ${isFullHeightPage ? "flex flex-col min-h-0 overflow-hidden" : "overflow-y-auto p-6 lg:p-8"}`}>
           <div className={isFullHeightPage ? "flex-1 min-h-0 w-full flex flex-col" : "page"}>{children}</div>
         </div>
       </main>
