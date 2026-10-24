@@ -3,8 +3,7 @@ import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import PropTypes from "prop-types";
-import { Card, Button, Input, Modal, CardSkeleton, Toggle, ConfirmModal } from "@/shared/components";
-import StatusBadge from "@/shared/components/StatusBadge";
+import { Button, Input, Modal, CardSkeleton, Toggle, ConfirmModal } from "@/shared/components";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import {
   TUNNEL_BENEFITS,
@@ -24,34 +23,98 @@ import styles from "./endpoint.module.css";
 import ConfigureApiKeyDialog from "./components/ConfigureApiKeyDialog";
 import { useNotificationStore } from "@/store/notificationStore";
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// Deterministic formatting keeps server and client markup identical.
+function formatDate(value, { withYear = true } = {}) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const stamp = `${MONTHS[date.getUTCMonth()]} ${date.getUTCDate()}`;
+  return withYear ? `${stamp}, ${date.getUTCFullYear()}` : stamp;
+}
+
+function countLabel(value) {
+  return Number(value || 0).toLocaleString("en-US");
+}
+
+function quotaLabel(key) {
+  if (key.maxTokensQuota != null) return `${countLabel(key.quotaTokens)} / ${countLabel(key.maxTokensQuota)} tokens`;
+  if (key.maxCostUsd != null) return `$${Number(key.quotaCost || 0).toFixed(2)} / $${Number(key.maxCostUsd).toFixed(2)}`;
+  return "Unlimited quota";
+}
+
+const AVATAR_TONES = ["var(--brand-lavender)", "var(--brand-peach)", "var(--brand-ochre)", "var(--brand-mint)"];
+
 function ConnectionBadge({ enabled, reachable, loading, checking, previouslyReachable, error, loadingLabel }) {
   let label = "Disabled";
-  let variant = "default";
+  let tone = "";
   if (loading) {
     label = loadingLabel;
   } else if (enabled) {
     label = reachable ? "Connected" : previouslyReachable ? "Reconnecting" : "Checking";
-    variant = reachable ? "success" : "warning";
+    tone = reachable ? styles.badgeOn : styles.badgeWarn;
   } else if (error) {
     label = "Error";
-    variant = "error";
+    tone = styles.badgeError;
   } else if (checking) {
     label = "Checking";
+    tone = styles.badgeWarn;
   }
 
   return (
-    <StatusBadge
-      variant={variant}
-      className={`${styles.statusBadge} ${variant === "warning" ? styles.statusWarning : variant === "error" ? styles.statusError : ""}`}
-    >
+    <span className={`${styles.badge} ${tone}`}>
+      <i className={styles.dot} aria-hidden="true" />
       {label}
-    </StatusBadge>
+    </span>
   );
 }
+
+ConnectionBadge.propTypes = {
+  enabled: PropTypes.bool,
+  reachable: PropTypes.bool,
+  loading: PropTypes.bool,
+  checking: PropTypes.bool,
+  previouslyReachable: PropTypes.bool,
+  error: PropTypes.bool,
+  loadingLabel: PropTypes.string,
+};
+
+/** One remote-access row inside the endpoint rail. */
+function RemoteRow({ icon, tone, title, description, badge, children, action }) {
+  return (
+    <div className={styles.remoteRow}>
+      <span className={styles.tile} style={{ background: tone }} aria-hidden="true">
+        <Icon className="text-[20px]">{icon}</Icon>
+      </span>
+      <div className={styles.remoteBody}>
+        <b className={styles.remoteTitle}>
+          {title}
+          {badge}
+        </b>
+        <p className={styles.remoteDesc}>{description}</p>
+        {children}
+      </div>
+      <div className={styles.remoteActions}>{action}</div>
+    </div>
+  );
+}
+
+RemoteRow.propTypes = {
+  icon: PropTypes.string.isRequired,
+  tone: PropTypes.string.isRequired,
+  title: PropTypes.string.isRequired,
+  description: PropTypes.string.isRequired,
+  badge: PropTypes.node,
+  children: PropTypes.node,
+  action: PropTypes.node,
+};
 
 export default function APIPageClient({ machineId }) {
   const [keys, setKeys] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [keyFilter, setKeyFilter] = useState("");
+  const [freshKeyName, setFreshKeyName] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [newKeyName, setNewKeyName] = useState("");
   // The create dialog defaults to user: handing out an owner key by accident is
@@ -129,6 +192,13 @@ export default function APIPageClient({ machineId }) {
   useEffect(() => {
     if (tsLogRef.current) tsLogRef.current.scrollTop = tsLogRef.current.scrollHeight;
   }, [tsInstallLog]);
+
+  // Clear the "just created" highlight after the reference flash animation.
+  useEffect(() => {
+    if (!freshKeyName) return;
+    const timer = setTimeout(() => setFreshKeyName(""), 2000);
+    return () => clearTimeout(timer);
+  }, [freshKeyName]);
 
   useEffect(() => {
     fetchData();
@@ -648,6 +718,7 @@ export default function APIPageClient({ machineId }) {
 
   const handleCreateKey = async () => {
     if (!newKeyName.trim()) return;
+    const createdName = newKeyName.trim();
 
     try {
       const res = await fetch("/api/keys", {
@@ -660,6 +731,8 @@ export default function APIPageClient({ machineId }) {
       if (res.ok) {
         setCreatedKey(data.key);
         await fetchData();
+        setFreshKeyName(createdName);
+        setKeyFilter("");
         setNewKeyName("");
         setNewKeyRole("user");
         setShowAddModal(false);
@@ -731,22 +804,72 @@ export default function APIPageClient({ machineId }) {
 
   const currentEndpoint = baseUrl;
 
+  const activeKeyCount = keys.filter((key) => key.isActive !== false && !key.isExpired).length;
+  const pausedKeyCount = keys.length - activeKeyCount;
+  const limitedKeyCount = keys.filter((key) => (key.allowedModels?.length || 0) + (key.blockedModels?.length || 0) > 0).length;
+  const lastUsedKey = keys
+    .filter((key) => key.lastUsedAt)
+    .sort((a, b) => Date.parse(b.lastUsedAt) - Date.parse(a.lastUsedAt))[0] || null;
+  const keyQuery = keyFilter.trim().toLowerCase();
+  const matchingKeys = keyQuery ? keys.filter((key) => key.name?.toLowerCase().includes(keyQuery)) : keys;
+  const curlSnippet = [
+    `curl ${currentEndpoint}/chat/completions \\`,
+    '  -H "Authorization: Bearer $JROUTER_API_KEY" \\',
+    '  -H "Content-Type: application/json" \\',
+    "  -d '{\"model\":\"<model-id>\",",
+    '       "messages":[{"role":"user","content":"Hello"}]}\'',
+  ].join("\n");
+
   return (
     <div className={`dashboard-surface ${styles.page}`}>
-      {/* Endpoint Card */}
-      <Card className={`ui-card ${styles.panel}`}>
-        <div className={styles.header}>
-          <div>
-            <h2 className="ui-eyebrow">
-              <Icon className="text-[16px]">api</Icon>
-              API Endpoint
-            </h2>
-            <p className={styles.description}>Connect your tools locally or enable secure remote access.</p>
-          </div>
-        </div>
+      <header className={styles.intro}>
+        <h1 className={styles.title}>Endpoint &amp; key</h1>
+        <p className={styles.sub}>Point your tools at the gateway, then decide which keys are allowed to use it.</p>
+      </header>
 
-        {/* Endpoint rows */}
-        <div className="flex flex-col">
+      <section className={styles.stats} aria-label="Endpoint summary">
+        <article className={`${styles.stat} ${styles.statLavender}`}>
+          <h3 className={styles.statTitle}>API keys</h3>
+          <p className={styles.statValue}>
+            {activeKeyCount}
+            <small>active</small>
+          </p>
+          <p className={styles.statNote}>
+            {limitedKeyCount} limited to specific models{pausedKeyCount ? `, ${pausedKeyCount} paused` : ""}
+          </p>
+        </article>
+        <article className={`${styles.stat} ${styles.statOchre}`}>
+          <h3 className={styles.statTitle}>Last used</h3>
+          <p className={styles.statValue}>
+            {lastUsedKey ? formatDate(lastUsedKey.lastUsedAt, { withYear: false }) : "Never"}
+          </p>
+          <p className={styles.statNote}>
+            {lastUsedKey ? `${lastUsedKey.name} sent the latest request` : "No requests recorded yet"}
+          </p>
+        </article>
+        <article className={`${styles.stat} ${requireApiKey ? styles.statTeal : styles.statPink}`}>
+          <h3 className={styles.statTitle}>Key required</h3>
+          <p className={styles.statValue}>{requireApiKey ? "On" : "Off"}</p>
+          <p className={styles.statNote}>
+            {requireApiKey
+              ? "Requests without a valid key are rejected"
+              : "Requests without a key are accepted"}
+          </p>
+        </article>
+      </section>
+
+      <div className={styles.layout}>
+        <section className={`${styles.panel} ${styles.endpointRail}`} aria-labelledby="endpoint-panel-title">
+          <div className={styles.panelHead}>
+            <div>
+              <h2 className={styles.panelTitle} id="endpoint-panel-title">
+                <Icon className="text-[18px]" aria-hidden="true">api</Icon>
+                API endpoint
+              </h2>
+              <p className={styles.panelDesc}>Connect your tools locally or enable secure remote access.</p>
+            </div>
+          </div>
+
           {/* Local */}
           <EndpointRow
             label="Local"
@@ -754,11 +877,15 @@ export default function APIPageClient({ machineId }) {
             copyId="local_url"
             copied={copied}
             onCopy={copy}
+            badge="Always on"
           />
           {/* Cloudflare Tunnel */}
-          <div className={styles.row}>
-            <span className={styles.label}>
-              Tunnel
+          <RemoteRow
+            icon="cloud_upload"
+            tone="var(--brand-peach)"
+            title="Tunnel"
+            description="Reach this gateway from anywhere through a secure public URL."
+            badge={(
               <ConnectionBadge
                 enabled={tunnelEnabled}
                 reachable={tunnelReachable}
@@ -768,108 +895,120 @@ export default function APIPageClient({ machineId }) {
                 error={tunnelStatus?.type === "error"}
                 loadingLabel="Starting"
               />
-            </span>
-            {tunnelEnabled && !tunnelLoading && tunnelReachable ? (
+            )}
+            action={(
               <>
-                <div className={styles.field}>
-                  <output className={`${styles.endpointValue} font-mono`} aria-label="Tunnel endpoint" tabIndex={0}>
-                    {`${tunnelPublicUrl || tunnelUrl}/v1`}
-                  </output>
-                </div>
+                {tunnelLoading ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={styles.ctaSm}
+                    icon="power_settings_new"
+                    onClick={() => { setTunnelLoading(false); setTunnelProgress(""); }}
+                  >
+                    Stop
+                  </Button>
+                ) : tunnelEnabled ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={styles.ctaSm}
+                    icon="power_settings_new"
+                    onClick={() => setShowDisableTunnelModal(true)}
+                  >
+                    Disable
+                  </Button>
+                ) : tunnelStatus?.type === "error" ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={styles.ctaSm}
+                    icon="cloud_upload"
+                    onClick={() => setShowEnableTunnelModal(true)}
+                  >
+                    Enable
+                  </Button>
+                ) : tunnelChecking ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={styles.ctaSm}
+                    icon="power_settings_new"
+                    onClick={() => setTunnelChecking(false)}
+                  >
+                    Stop
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={styles.ctaSm}
+                    icon="cloud_upload"
+                    onClick={() => {
+                      if (isLoginUnsafe) {
+                        setTunnelStatus({ type: "error", message: `Security required: ${unsafeReason}` });
+                        return;
+                      }
+                      if (!requireApiKey) {
+                        setTunnelStatus({ type: "error", message: "Security required: Enable \"Require API key\" before activating the tunnel." });
+                        return;
+                      }
+                      setShowEnableTunnelModal(true);
+                    }}
+                  >
+                    Enable
+                  </Button>
+                )}
+              </>
+            )}
+          >
+            {tunnelEnabled && !tunnelLoading && tunnelReachable && (
+              <div className={styles.urlBox}>
+                <output className={`${styles.endpointValue} font-mono`} aria-label="Tunnel endpoint" tabIndex={0}>
+                  {`${tunnelPublicUrl || tunnelUrl}/v1`}
+                </output>
                 <button
+                  type="button"
                   onClick={() => copy(`${tunnelPublicUrl || tunnelUrl}/v1`, "tunnel_url")}
                   className={styles.iconButton}
                   aria-label="Copy tunnel endpoint"
                 >
                   <Icon className="text-[18px]">{copied === "tunnel_url" ? "check" : "content_copy"}</Icon>
                 </button>
-                <button
-                  onClick={() => setShowDisableTunnelModal(true)}
-                  className={`${styles.iconButton} ${styles.dangerButton}`}
-                  title="Disable Tunnel"
-                  aria-label="Disable Tunnel"
-                >
-                  <Icon className="text-[18px]">power_settings_new</Icon>
-                </button>
-              </>
-            ) : tunnelEnabled && !tunnelLoading && !tunnelReachable ? (
-              <>
-                <div className={`${styles.status} ${styles.warning}`}>
-                  <Icon className="animate-spin text-sm">progress_activity</Icon>
-                  {tunnelEverReachable ? "Tunnel reconnecting..." : "Tunnel checking..."}
-                </div>
-                <button
-                  onClick={() => setShowDisableTunnelModal(true)}
-                  className={`${styles.iconButton} ${styles.dangerButton}`}
-                  title="Disable Tunnel"
-                  aria-label="Disable Tunnel"
-                >
-                  <Icon className="text-[18px]">power_settings_new</Icon>
-                </button>
-              </>
-            ) : tunnelLoading ? (
-              <>
-                <div className={styles.status}>
-                  <Icon className="animate-spin text-sm">progress_activity</Icon>
-                  {tunnelProgress || "Creating tunnel..."}
-                </div>
-                <button
-                  onClick={() => { setTunnelLoading(false); setTunnelProgress(""); }}
-                  className={`${styles.iconButton} ${styles.dangerButton}`}
-                  title="Stop"
-                  aria-label="Stop creating tunnel"
-                >
-                  <Icon className="text-[18px]">power_settings_new</Icon>
-                </button>
-              </>
-            ) : tunnelStatus?.type === "error" ? (
-              <>
-                <div className={`${styles.status} ${styles.error}`}>
-                  <Icon className="text-sm">error</Icon>
-                  {tunnelStatus.message}
-                </div>
-                <Button variant="secondary" size="sm" icon="cloud_upload" onClick={() => setShowEnableTunnelModal(true)}>Enable</Button>
-              </>
-            ) : tunnelChecking ? (
-              <>
-                <div className={styles.status}>
-                  <Icon className="animate-spin text-sm">progress_activity</Icon>
-                  Checking...
-                </div>
-                <button
-                  onClick={() => setTunnelChecking(false)}
-                  className={`${styles.iconButton} ${styles.dangerButton}`}
-                  title="Stop"
-                  aria-label="Stop checking tunnel"
-                >
-                  <Icon className="text-[18px]">power_settings_new</Icon>
-                </button>
-              </>
-            ) : (
-              <Button
-                variant="secondary"
-                size="sm"
-                icon="cloud_upload"
-                onClick={() => {
-                  if (isLoginUnsafe) {
-                    setTunnelStatus({ type: "error", message: `Security required: ${unsafeReason}` });
-                    return;
-                  }
-                  if (!requireApiKey) {
-                    setTunnelStatus({ type: "error", message: "Security required: Enable \"Require API key\" before activating the tunnel." });
-                    return;
-                  }
-                  setShowEnableTunnelModal(true);
-                }}
-              >
-                Enable
-              </Button>
+              </div>
             )}
-          </div>
+            {tunnelEnabled && !tunnelLoading && !tunnelReachable && (
+              <p className={styles.remoteStatus}>
+                <Icon className="animate-spin text-[16px]" aria-hidden="true">progress_activity</Icon>
+                {tunnelEverReachable ? "Tunnel reconnecting..." : "Tunnel checking..."}
+              </p>
+            )}
+            {tunnelLoading && (
+              <p className={styles.remoteStatus}>
+                <Icon className="animate-spin text-[16px]" aria-hidden="true">progress_activity</Icon>
+                {tunnelProgress || "Creating tunnel..."}
+              </p>
+            )}
+            {!tunnelEnabled && !tunnelLoading && tunnelStatus?.type === "error" && (
+              <p className={`${styles.remoteStatus} ${styles.remoteStatusError}`} role="alert">
+                <Icon className="text-[16px]" aria-hidden="true">error</Icon>
+                {tunnelStatus.message}
+              </p>
+            )}
+            {!tunnelEnabled && !tunnelLoading && !tunnelStatus && tunnelChecking && (
+              <p className={styles.remoteStatus}>
+                <Icon className="animate-spin text-[16px]" aria-hidden="true">progress_activity</Icon>
+                Checking...
+              </p>
+            )}
+          </RemoteRow>
           {/* Tailscale */}
-          <div className={styles.row}>
-            <span className={styles.label}>
-              Tailscale
+          <RemoteRow
+            icon="vpn_lock"
+            tone="var(--brand-lavender)"
+            title="Tailscale"
+            description="Reach this gateway from devices on your private tailnet."
+            badge={(
               <ConnectionBadge
                 enabled={tsEnabled}
                 reachable={tsReachable}
@@ -878,267 +1017,328 @@ export default function APIPageClient({ machineId }) {
                 error={tsStatus?.type === "error"}
                 loadingLabel="Connecting"
               />
-            </span>
-            {tsEnabled && !tsLoading && tsReachable ? (
+            )}
+            action={(
               <>
-                <div className={styles.field}>
-                  <output className={`${styles.endpointValue} font-mono`} aria-label="Tailscale endpoint" tabIndex={0}>
-                    {`${tsUrl}/v1`}
-                  </output>
-                </div>
+                {(tsLoading || tsConnecting) ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={styles.ctaSm}
+                    icon="power_settings_new"
+                    onClick={() => { setTsLoading(false); setTsConnecting(false); setTsProgress(""); clearUserAuth(); }}
+                  >
+                    Stop
+                  </Button>
+                ) : tsEnabled ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={styles.ctaSm}
+                    icon="power_settings_new"
+                    onClick={() => setShowDisableTsModal(true)}
+                  >
+                    Disable
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={styles.ctaSm}
+                    icon="vpn_lock"
+                    onClick={() => {
+                      if (isLoginUnsafe) {
+                        setTsStatus({ type: "error", message: `Security required: ${unsafeReason}` });
+                        return;
+                      }
+                      handleOpenTsModal();
+                    }}
+                  >
+                    Enable
+                  </Button>
+                )}
+              </>
+            )}
+          >
+            {tsEnabled && !tsLoading && tsReachable && (
+              <div className={styles.urlBox}>
+                <output className={`${styles.endpointValue} font-mono`} aria-label="Tailscale endpoint" tabIndex={0}>
+                  {`${tsUrl}/v1`}
+                </output>
                 <button
+                  type="button"
                   onClick={() => copy(`${tsUrl}/v1`, "ts_url")}
                   className={styles.iconButton}
                   aria-label="Copy Tailscale endpoint"
                 >
                   <Icon className="text-[18px]">{copied === "ts_url" ? "check" : "content_copy"}</Icon>
                 </button>
-                <button
-                  onClick={() => setShowDisableTsModal(true)}
-                  className={`${styles.iconButton} ${styles.dangerButton}`}
-                  title="Disable Tailscale"
-                  aria-label="Disable Tailscale"
-                >
-                  <Icon className="text-[18px]">power_settings_new</Icon>
-                </button>
-              </>
-            ) : tsEnabled && !tsLoading && !tsReachable ? (
-              <>
-                <div className={`${styles.status} ${styles.warning}`}>
-                  <Icon className="animate-spin text-sm">progress_activity</Icon>
-                  {tsEverReachable ? "Tailscale reconnecting..." : "Tailscale checking..."}
-                </div>
-                <button
-                  onClick={() => setShowDisableTsModal(true)}
-                  className={`${styles.iconButton} ${styles.dangerButton}`}
-                  title="Disable Tailscale"
-                  aria-label="Disable Tailscale"
-                >
-                  <Icon className="text-[18px]">power_settings_new</Icon>
-                </button>
-              </>
-            ) : (tsLoading || tsConnecting) ? (
-              <>
-                <div className={styles.status}>
-                  <Icon className="animate-spin text-sm">progress_activity</Icon>
-                  {tsProgress || "Connecting..."}
-                </div>
-                {tsAuthUrl && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    icon="open_in_new"
-                    onClick={() => window.open(tsAuthUrl, "tailscale_auth", "width=600,height=700,noopener,noreferrer")}
-                  >
-                    {tsAuthLabel || "Open"}
-                  </Button>
-                )}
-                <button
-                  onClick={() => { setTsLoading(false); setTsConnecting(false); setTsProgress(""); clearUserAuth(); }}
-                  className={`${styles.iconButton} ${styles.dangerButton}`}
-                  title="Stop"
-                  aria-label="Stop connecting Tailscale"
-                >
-                  <Icon className="text-[18px]">power_settings_new</Icon>
-                </button>
-              </>
-            ) : tsStatus?.type === "error" ? (
-              <>
-                <div className={`${styles.status} ${styles.error}`}>
-                  <Icon className="text-sm">error</Icon>
-                  {tsStatus.message}
-                </div>
-                <Button variant="secondary" size="sm" icon="vpn_lock" onClick={handleOpenTsModal}>Enable</Button>
-              </>
-            ) : (
+              </div>
+            )}
+            {tsEnabled && !tsLoading && !tsReachable && (
+              <p className={styles.remoteStatus}>
+                <Icon className="animate-spin text-[16px]" aria-hidden="true">progress_activity</Icon>
+                {tsEverReachable ? "Tailscale reconnecting..." : "Tailscale checking..."}
+              </p>
+            )}
+            {(tsLoading || tsConnecting) && (
+              <p className={styles.remoteStatus}>
+                <Icon className="animate-spin text-[16px]" aria-hidden="true">progress_activity</Icon>
+                {tsProgress || "Connecting..."}
+              </p>
+            )}
+            {(tsLoading || tsConnecting) && tsAuthUrl && (
               <Button
+                variant="outline"
                 size="sm"
-                icon="vpn_lock"
-                onClick={() => {
-                  if (isLoginUnsafe) {
-                    setTsStatus({ type: "error", message: `Security required: ${unsafeReason}` });
-                    return;
-                  }
-                  handleOpenTsModal();
-                }}
-                variant="secondary"
+                className={styles.ctaSm}
+                icon="open_in_new"
+                onClick={() => window.open(tsAuthUrl, "tailscale_auth", "width=600,height=700,noopener,noreferrer")}
               >
-                Enable
+                {tsAuthLabel || "Open"}
               </Button>
             )}
-          </div>
-        </div>
-
-        {/* Pre-enable security gate banner */}
-        {isLoginUnsafe && !tunnelEnabled && !tsEnabled && (
-          <div className="mt-4">
-            <SecurityWarning
-              message={unsafeReason}
-              action={{ label: "Open settings", href: "/dashboard/profile" }}
-            />
-          </div>
-        )}
-
-        {/* Security warnings when tunnel or tailscale is active */}
-        {(tunnelEnabled || tsEnabled) && (
-          <div className="mt-4 flex flex-col gap-2">
-            {!requireApiKey && (
-              <SecurityWarning
-                message="Require API key is disabled — your endpoint is publicly accessible without authentication."
-                action={{ label: "Enable", href: "#require-api-key" }}
-              />
+            {!tsEnabled && !tsLoading && !tsConnecting && tsStatus?.type === "error" && (
+              <p className={`${styles.remoteStatus} ${styles.remoteStatusError}`} role="alert">
+                <Icon className="text-[16px]" aria-hidden="true">error</Icon>
+                {tsStatus.message}
+              </p>
             )}
-            {(!requireLogin || !hasPassword) && (
-              <SecurityWarning
-                message={
-                  !requireLogin
-                    ? "Require login is disabled — anyone can access your dashboard via tunnel."
-                    : "Dashboard uses the default password — change it in Profile settings."
-                }
-                action={{
-                  label: !requireLogin ? "Enable" : "Change password",
-                  href: "/dashboard/profile",
-                }}
-              />
-            )}
-          </div>
-        )}
+          </RemoteRow>
 
-        {/* Tunnel dashboard access option */}
-        {(tunnelEnabled || tsEnabled) && (
-          <div className="mt-5 pt-5 border-t border-border-subtle flex items-center gap-3">
-            <Toggle
-              aria-label="Allow dashboard access via tunnel"
-              checked={tunnelDashboardAccess}
-              onChange={() => handleTunnelDashboardAccess(!tunnelDashboardAccess)}
-            />
-            <div className="flex items-center gap-1.5 min-w-0">
-              <p className="font-medium text-sm">Allow dashboard access via tunnel</p>
-              <Tooltip text="When enabled, the dashboard can be accessed through your tunnel or Tailscale URL (login still required). When disabled, dashboard access via tunnel/Tailscale is completely blocked." />
+          {/* Pre-enable security gate banner */}
+          {isLoginUnsafe && !tunnelEnabled && !tsEnabled && (
+            <div className={styles.railNote}>
+              <SecurityWarning
+                message={unsafeReason}
+                action={{ label: "Open settings", href: "/dashboard/profile" }}
+              />
+            </div>
+          )}
+
+          {/* Security warnings when tunnel or tailscale is active */}
+          {(tunnelEnabled || tsEnabled) && (
+            <div className={styles.railWarnings}>
+              {!requireApiKey && (
+                <SecurityWarning
+                  message="Require API key is disabled — your endpoint is publicly accessible without authentication."
+                  action={{ label: "Enable", href: "#require-api-key" }}
+                />
+              )}
+              {(!requireLogin || !hasPassword) && (
+                <SecurityWarning
+                  message={
+                    !requireLogin
+                      ? "Require login is disabled — anyone can access your dashboard via tunnel."
+                      : "Dashboard uses the default password — change it in Profile settings."
+                  }
+                  action={{
+                    label: !requireLogin ? "Enable" : "Change password",
+                    href: "/dashboard/profile",
+                  }}
+                />
+              )}
+            </div>
+          )}
+
+          {(tunnelEnabled || tsEnabled) && (
+            <div className={styles.accessRow}>
+              <Toggle
+                aria-label="Allow dashboard access via tunnel"
+                checked={tunnelDashboardAccess}
+                onChange={() => handleTunnelDashboardAccess(!tunnelDashboardAccess)}
+              />
+              <div className={styles.accessCopy}>
+                <p className={styles.accessTitle}>
+                  Allow dashboard access via tunnel
+                  <Tooltip text="When enabled, the dashboard can be accessed through your tunnel or Tailscale URL (login still required). When disabled, dashboard access via tunnel/Tailscale is completely blocked." />
+                </p>
+                <span className={styles.accessHint}>Dashboard login is still required.</span>
+              </div>
+            </div>
+          )}
+
+          <div className={styles.tryBlock}>
+            <div className={styles.rowHead}>
+              <span className={styles.rowLabel}>Try it from your terminal</span>
+            </div>
+            <div className={styles.codeWrap}>
+              <pre className={`${styles.codeBlock} font-mono`}><code>{curlSnippet}</code></pre>
+              <button
+                type="button"
+                className={styles.codeCopy}
+                onClick={() => copy(curlSnippet, "curl")}
+                aria-label="Copy curl command"
+              >
+                <Icon className="text-[18px]">{copied === "curl" ? "check" : "content_copy"}</Icon>
+              </button>
             </div>
           </div>
-        )}
-      </Card>
+        </section>
 
-      {/* API Keys */}
-      <Card className={`ui-card ${styles.panel}`} id="require-api-key">
-        <div className={styles.header}>
-          <div>
-            <h2 className="ui-eyebrow">
-              <Icon className="text-[16px]">vpn_key</Icon>
-              API Keys
-            </h2>
-            <p className={styles.description}>Manage credentials used to authenticate API requests.</p>
-          </div>
-          <Button variant="contrast" icon="add" onClick={() => setShowAddModal(true)}>
-            Create Key
-          </Button>
-        </div>
-
-        <div className={styles.settingsRow}>
-          <div>
-            <p className="text-sm font-medium">Require API key</p>
-            <p className="text-xs text-text-muted mt-1">
-              Requests without a valid key will be rejected
-            </p>
-          </div>
-          <Toggle
-            aria-label="Require API key"
-            checked={requireApiKey}
-            onChange={() => handleRequireApiKey(!requireApiKey)}
-          />
-        </div>
-
-        {isRemoteHost && !requireApiKey && (
-          <div className="mb-4 -mt-2">
-            <SecurityWarning message="Endpoint is exposed without an API key." />
-          </div>
-        )}
-
-        {keys.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="inline-flex items-center justify-center text-text-muted mb-4">
-              <Icon className="text-[32px]">vpn_key</Icon>
+        <section className={`${styles.panel} ${styles.keysPanel}`} id="require-api-key" aria-labelledby="keys-panel-title">
+          <div className={styles.panelHead}>
+            <div>
+              <h2 className={styles.panelTitle} id="keys-panel-title">
+                <Icon className="text-[18px]" aria-hidden="true">vpn_key</Icon>
+                API keys
+              </h2>
+              <p className={styles.panelDesc}>Manage credentials used to authenticate API requests.</p>
             </div>
-            <p className="text-text-main font-medium mb-1">No API keys yet</p>
-            <p className="text-sm text-text-muted mb-4">Create your first API key to get started</p>
-            <Button variant="contrast" icon="add" onClick={() => setShowAddModal(true)}>
-              Create Key
+            <Button className={styles.cta} variant="contrast" icon="add" onClick={() => setShowAddModal(true)}>
+              Create key
             </Button>
           </div>
-        ) : (
-          <div className="flex flex-col">
-            {keys.map((key) => (
-              <div
-                key={key.id}
-                className={styles.keyRow}
-              >
-                <div className={styles.keyDetails}>
-                  <div className={styles.keyName}>
-                    <p className="text-sm font-medium break-words min-w-0">{key.name}</p>
-                    <StatusBadge variant={key.isActive === false ? "default" : key.isExpired ? "error" : "success"} className={styles.statusBadge}>
-                      {key.isActive === false ? "Paused" : key.isExpired ? "Expired" : "Active"}
-                    </StatusBadge>
-                  </div>
-                  <div className={styles.keyCredential}>
-                    <code className={`${styles.keyValue} text-xs text-text-muted font-mono`} data-i18n-skip>
-                      {key.keyPrefix}
-                    </code>
-                    <button
-                      onClick={() => copyKey(key.id)}
-                      className={styles.iconButton}
-                      aria-label="Copy API key"
+
+          <div className={styles.requireRow}>
+            <div>
+              <p className={styles.requireTitle}>Require API key</p>
+              <p className={styles.requireHint}>Requests without a valid key will be rejected</p>
+            </div>
+            <Toggle
+              aria-label="Require API key"
+              checked={requireApiKey}
+              onChange={() => handleRequireApiKey(!requireApiKey)}
+            />
+          </div>
+
+          {!requireApiKey && (
+            <p className={styles.inlineWarn} role="status">
+              {isRemoteHost ? "This endpoint is exposed remotely without a key. " : ""}
+              Anyone who can reach this endpoint can send requests. Turn this back on before enabling Tunnel or Tailscale.
+            </p>
+          )}
+
+          <div className={styles.listTools}>
+            <label className={styles.filter}>
+              <Icon className="text-[18px]" aria-hidden="true">search</Icon>
+              <input
+                type="search"
+                value={keyFilter}
+                onChange={(event) => setKeyFilter(event.target.value)}
+                placeholder="Filter keys by name"
+                aria-label="Filter keys"
+              />
+            </label>
+            <span className={styles.count} aria-live="polite">
+              {keyQuery
+                ? `${matchingKeys.length} of ${keys.length} keys`
+                : `${keys.length} ${keys.length === 1 ? "key" : "keys"}`}
+            </span>
+          </div>
+
+          {keys.length === 0 ? (
+            <div className={styles.emptyState}>
+              <Icon className="text-[32px]" aria-hidden="true">vpn_key</Icon>
+              <p className={styles.emptyTitle}>No API keys yet</p>
+              <p className={styles.emptyHint}>Create your first API key to get started.</p>
+              <Button className={styles.ctaSm} variant="contrast" icon="add" onClick={() => setShowAddModal(true)}>
+                Create key
+              </Button>
+            </div>
+          ) : matchingKeys.length === 0 ? (
+            <div className={styles.emptyState}>
+              <p className={styles.emptyHint}>
+                No keys match “{keyFilter.trim()}”. Clear the filter or create a new key.
+              </p>
+            </div>
+          ) : (
+            <ul className={styles.keyList}>
+              {matchingKeys.map((key, index) => {
+                const keyState = key.isActive === false ? "Paused" : key.isExpired ? "Expired" : "Active";
+                const stateTone = key.isActive === false ? "" : key.isExpired ? styles.badgeError : styles.badgeOn;
+                const restricted = (key.allowedModels?.length || 0) + (key.blockedModels?.length || 0) > 0;
+                return (
+                  <li
+                    key={key.id}
+                    className={`${styles.keyRow} ${key.isActive === false ? styles.keyRowOff : ""} ${freshKeyName === key.name ? styles.fresh : ""}`}
+                  >
+                    <span
+                      className={styles.avatar}
+                      style={{ background: AVATAR_TONES[index % AVATAR_TONES.length] }}
+                      aria-hidden="true"
                     >
-                      <Icon className="text-[14px]">
-                        {copied === key.id ? "check" : "content_copy"}
-                      </Icon>
-                    </button>
-                  </div>
-                  <p className={`${styles.keyMeta} text-xs text-text-muted mt-1`}>
-                    Created {new Date(key.createdAt).toLocaleDateString()}
-                    {key.lastUsedAt && ` · Last used ${new Date(key.lastUsedAt).toLocaleDateString()}`}
-                  </p>
-                  <p className="text-xs text-text-muted mt-1">
-                    {key.maxTokensQuota != null ? `${Number(key.quotaTokens || 0).toLocaleString()} / ${Number(key.maxTokensQuota).toLocaleString()} tokens` : key.maxCostUsd != null ? `$${Number(key.quotaCost || 0).toFixed(2)} / $${Number(key.maxCostUsd).toFixed(2)}` : "Unlimited quota"}
-                    {key.rateLimitRpm != null && ` · ${key.rateLimitRpm} RPM`}
-                    {(key.allowedModels?.length > 0 || key.blockedModels?.length > 0) && " · Restricted models"}
-                  </p>
-                </div>
-                <div className={styles.keyActions}>
-                  <Button variant="secondary" size="sm" icon="settings" onClick={() => setConfigureKeyId(key.id)} aria-label={`Configure ${key.name}`}>Configure</Button>
-                  <Toggle
-                    aria-label={`${key.isActive === false ? "Resume" : "Pause"} ${key.name}`}
-                    size="sm"
-                    checked={key.isActive ?? true}
-                    onChange={(checked) => {
-                      if (key.isActive && !checked) {
-                        setConfirmState({
-                          title: "Pause API Key",
-                          message: `Pause API key "${key.name}"?\n\nThis key will stop working immediately but can be resumed later.`,
-                          onConfirm: async () => {
-                            setConfirmState(null);
+                      {(key.name || "?").charAt(0).toUpperCase()}
+                    </span>
+                    <div className={styles.keyBody}>
+                      <div className={styles.keyTitle}>
+                        <b>{key.name}</b>
+                        <span className={`${styles.badge} ${stateTone}`}>
+                          <i className={styles.dot} aria-hidden="true" />
+                          {keyState}
+                        </span>
+                        {key.role === "owner" && <span className={`${styles.badge} ${styles.badgeLav}`}>Owner</span>}
+                        {restricted && <span className={styles.badge}>Restricted models</span>}
+                      </div>
+                      <div className={styles.keyCredential}>
+                        <code className={`${styles.keyValue} font-mono`} data-i18n-skip>
+                          {key.keyPrefix}
+                        </code>
+                        <button
+                          type="button"
+                          onClick={() => copyKey(key.id)}
+                          className={styles.iconButton}
+                          aria-label={`Copy ${key.name} key`}
+                        >
+                          <Icon className="text-[16px]">
+                            {copied === key.id ? "check" : "content_copy"}
+                          </Icon>
+                        </button>
+                      </div>
+                      <div className={styles.keyMeta}>
+                        <span>Created {formatDate(key.createdAt)}</span>
+                        <span>{key.lastUsedAt ? `Last used ${formatDate(key.lastUsedAt)}` : "Never used"}</span>
+                        <span>{quotaLabel(key)}</span>
+                        {key.rateLimitRpm != null && <span>{key.rateLimitRpm} RPM</span>}
+                      </div>
+                    </div>
+                    <div className={styles.keyActions}>
+                      <Button
+                        className={styles.ctaSm}
+                        variant="outline"
+                        size="sm"
+                        icon="settings"
+                        onClick={() => setConfigureKeyId(key.id)}
+                        aria-label={`Configure ${key.name}`}
+                      >
+                        Configure
+                      </Button>
+                      <Toggle
+                        aria-label={`${key.isActive === false ? "Resume" : "Pause"} ${key.name}`}
+                        size="sm"
+                        checked={key.isActive ?? true}
+                        onChange={(checked) => {
+                          if (key.isActive && !checked) {
+                            setConfirmState({
+                              title: "Pause API Key",
+                              message: `Pause API key "${key.name}"?\n\nThis key will stop working immediately but can be resumed later.`,
+                              onConfirm: async () => {
+                                setConfirmState(null);
+                                handleToggleKey(key.id, checked);
+                              }
+                            });
+                          } else {
                             handleToggleKey(key.id, checked);
                           }
-                        });
-                      } else {
-                        handleToggleKey(key.id, checked);
-                      }
-                    }}
-                    title={key.isActive ? "Pause key" : "Resume key"}
-                  />
-                  <button
-                    onClick={() => handleDeleteKey(key.id)}
-                    className={`${styles.iconButton} ${styles.dangerButton}`}
-                    aria-label="Delete API key"
-                  >
-                    <Icon className="text-[18px]">delete</Icon>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
+                        }}
+                        title={key.isActive ? "Pause key" : "Resume key"}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteKey(key.id)}
+                        className={`${styles.iconButton} ${styles.dangerButton}`}
+                        aria-label={`Delete ${key.name}`}
+                      >
+                        <Icon className="text-[18px]">delete</Icon>
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      </div>
 
       {configureKeyId && <ConfigureApiKeyDialog key={configureKeyId} keyId={configureKeyId} onClose={() => setConfigureKeyId(null)} onSaved={(updated) => setKeys((previous) => previous.map((key) => key.id === updated.id ? updated : key))} />}
 

@@ -4,7 +4,6 @@ import Icon from "@/shared/components/Icon";
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import {
-  Card,
   Skeleton,
   Button,
   Modal,
@@ -26,7 +25,11 @@ import { useNotificationStore } from "@/store/notificationStore";
 import { useHeaderSearchStore } from "@/store/headerSearchStore";
 import ModelAvailabilityBadge from "./components/ModelAvailabilityBadge";
 import AddCompatibleModal from "./components/AddCompatibleModal";
-import { STATUS_FILTER_OPTIONS, matchesStatusFilter } from "./utils";
+import {
+  STATUS_FILTER_OPTIONS,
+  computeProviderSummary,
+  matchesStatusFilter,
+} from "./utils";
 import styles from "./providers.module.css";
 
 function getStatusDisplay(connected, error, errorCode) {
@@ -371,18 +374,107 @@ export default function ProvidersPage() {
       : apikeyEntries.slice(0, APIKEY_INITIAL_VISIBLE);
   const hiddenApikeyCount = apikeyEntries.length - APIKEY_INITIAL_VISIBLE;
 
+  // Summary strip counts the full catalog, not the filtered view, so the
+  // numbers stay put while the status filter and search change the sections.
+  const summaryEntries = [];
+  const seenSummaryIds = new Set();
+  const addSummaryEntry = (id, name, stats, extra = {}) => {
+    if (!id || seenSummaryIds.has(id)) return;
+    seenSummaryIds.add(id);
+    summaryEntries.push({ id, name, stats, ...extra });
+  };
+  Object.entries(OAUTH_PROVIDERS).forEach(([key, info]) => {
+    if (info.hidden) return;
+    addSummaryEntry(key, info.name, getProviderStats(key, dualAuthTypes(info, key)), {
+      noAuth: !!info.noAuth,
+    });
+  });
+  Object.entries(FREE_PROVIDERS).forEach(([key, info]) => {
+    if (info.hidden) return;
+    addSummaryEntry(key, info.name, getProviderStats(key, dualAuthTypes(info, key)), {
+      noAuth: !!info.noAuth,
+      free: true,
+    });
+  });
+  Object.entries(FREE_TIER_PROVIDERS).forEach(([key, info]) => {
+    if (info.hidden || !(info.serviceKinds ?? ["llm"]).includes("llm")) return;
+    addSummaryEntry(key, info.name, getProviderStats(key, dualAuthTypes(info, key)), {
+      noAuth: !!info.noAuth,
+      free: true,
+    });
+  });
+  Object.entries(APIKEY_PROVIDERS).forEach(([key, info]) => {
+    if (info.hidden || !(info.serviceKinds ?? ["llm"]).includes("llm")) return;
+    addSummaryEntry(key, info.name, getProviderStats(key, "apikey"), {
+      noAuth: !!info.noAuth,
+    });
+  });
+  providerNodes
+    .filter(
+      (node) =>
+        node.type === "openai-compatible" ||
+        node.type === "anthropic-compatible",
+    )
+    .forEach((node) => {
+      addSummaryEntry(
+        node.id,
+        node.name ||
+          (node.type === "anthropic-compatible"
+            ? "Anthropic Compatible"
+            : "OpenAI Compatible"),
+        getProviderStats(node.id, "apikey"),
+      );
+    });
+  const summary = computeProviderSummary(summaryEntries);
+  const freeReadyLabel = summary.readyFreeNames.length
+    ? `${summary.readyFreeNames.join(", ")} ${
+        summary.readyFreeNames.length > 1 ? "are" : "is"
+      } ready to use`
+    : "Sign in to start using them";
+
+  const customCount =
+    compatibleProviders.length + anthropicCompatibleProviders.length;
+  const freeCount = freeEntries.length + freeTierEntries.length;
+  const apikeyCount = isApikeySearching || showAllApikey
+    ? apikeyEntries.length
+    : visibleApikeyEntries.length;
+  const jumpSections = [
+    { key: "custom", label: "Custom", count: customCount },
+    { key: "oauth", label: "OAuth", count: oauthEntries.length },
+    { key: "free", label: "Free", count: freeCount },
+    { key: "apikey", label: "API key", count: apikeyCount },
+  ].filter((section) => section.count > 0);
+
+  const jumpToSection = (key) => {
+    if (typeof document === "undefined") return;
+    const target = document.getElementById(`s-${key}`);
+    if (!target) return;
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    target.scrollIntoView({
+      behavior: reduceMotion ? "auto" : "smooth",
+      block: "start",
+    });
+  };
+
   if (loading) {
     return (
       <div className={`dashboard-surface ${styles.page}`} aria-busy="true" aria-label="Loading providers">
+        <div className={styles.stats}>
+          {[0, 1, 2].map((card) => (
+            <Skeleton key={card} className={styles.statSkeleton} />
+          ))}
+        </div>
         {[0, 1].map((section) => (
-          <Card key={section} className={`ui-card ${styles.panel}`}>
+          <div key={section} className={styles.section}>
             <Skeleton className="mb-5 h-4 w-40" />
-            <div className={styles.list}>
-              {[0, 1, 2].map((card) => (
-                <Skeleton key={card} className="h-16" />
+            <div className={styles.grid}>
+              {[0, 1, 2, 3].map((card) => (
+                <Skeleton key={card} className={styles.cardSkeleton} />
               ))}
             </div>
-          </Card>
+          </div>
         ))}
       </div>
     );
@@ -398,25 +490,63 @@ export default function ProvidersPage() {
 
   return (
     <div className={`dashboard-surface ${styles.page}`}>
+      <section className={styles.stats} aria-label="Provider summary">
+        <article className={`${styles.statCard} ${styles.statLavender}`}>
+          <h2 className={styles.statTitle}>Providers in use</h2>
+          <p className={styles.statValue}>
+            {summary.activeCount}
+            <small>of {summary.total}</small>
+          </p>
+          <p className={styles.statCaption}>Switched on and carrying connections</p>
+        </article>
+        <article className={`${styles.statCard} ${styles.statOchre}`}>
+          <h2 className={styles.statTitle}>Most connections</h2>
+          <p className={`${styles.statValue} ${styles.statValueName}`}>
+            {summary.topProvider?.name || "None"}
+          </p>
+          <p className={styles.statCaption}>
+            {summary.topProvider
+              ? `${summary.topProvider.connections} connections`
+              : "Connect a provider to get started"}
+          </p>
+        </article>
+        <article className={`${styles.statCard} ${styles.statTeal}`}>
+          <h2 className={styles.statTitle}>Free to try</h2>
+          <p className={styles.statValue}>{summary.freeCount}</p>
+          <p className={styles.statCaption}>{freeReadyLabel}</p>
+        </article>
+      </section>
+
       <div className={styles.toolbar}>
-        <p className={styles.description}>
-          Connect upstream accounts and manage access to your models.
-        </p>
-        <div className={styles.filter}>
-          <label htmlFor="provider-status-filter">Connection status</label>
-          <select
-            id="provider-status-filter"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className={styles.select}
-            aria-label="Filter providers by connection status"
-          >
-            {STATUS_FILTER_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+        <nav className={styles.chips} aria-label="Jump to a provider section">
+          {jumpSections.map((section) => (
+            <button
+              key={section.key}
+              type="button"
+              className={styles.chip}
+              onClick={() => jumpToSection(section.key)}
+            >
+              {section.label}
+              <b>{section.count}</b>
+            </button>
+          ))}
+        </nav>
+        <div
+          className={styles.tabs}
+          role="group"
+          aria-label="Filter providers by connection status"
+        >
+          {STATUS_FILTER_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className={styles.tab}
+              aria-pressed={statusFilter === option.value}
+              onClick={() => setStatusFilter(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -427,10 +557,14 @@ export default function ProvidersPage() {
         </div>
       )}
 
-      <section className={`ui-card ${styles.panel}`} aria-labelledby="custom-providers-heading">
-        <div className={styles.header}>
+      <section id="s-custom" className={styles.section} aria-labelledby="custom-providers-heading">
+        <div className={styles.sectionHeader}>
           <div>
-            <h2 id="custom-providers-heading" className="ui-eyebrow"><Icon className="text-[16px]">api</Icon>Custom endpoints</h2>
+            <h2 id="custom-providers-heading" className={styles.sectionTitle}>
+              <Icon className={styles.sectionIcon}>api</Icon>
+              Custom endpoints
+              <small>{customCount}</small>
+            </h2>
             <p className={styles.description}>Connect APIs that use the OpenAI or Anthropic format.</p>
           </div>
           <div className={styles.actions}>
@@ -452,14 +586,13 @@ export default function ProvidersPage() {
             </Button>
           </div>
         </div>
-        {compatibleProviders.length === 0 &&
-        anthropicCompatibleProviders.length === 0 ? (
+        {customCount === 0 ? (
           <div className={styles.empty}>
             <p className={styles.emptyTitle}>No custom endpoints to show</p>
             <p>Add a compatible API, or adjust your search and filters.</p>
           </div>
         ) : (
-          <ul className={styles.list}>
+          <ul className={styles.grid}>
             {[...compatibleProviders, ...anthropicCompatibleProviders].map(
               (info) => (
                 <ApiKeyProviderRow
@@ -479,10 +612,14 @@ export default function ProvidersPage() {
       </section>
 
       {oauthEntries.length > 0 && (
-      <section className={`ui-card ${styles.panel}`} aria-labelledby="oauth-providers-heading">
-        <div className={styles.header}>
+      <section id="s-oauth" className={styles.section} aria-labelledby="oauth-providers-heading">
+        <div className={styles.sectionHeader}>
           <div>
-            <h2 id="oauth-providers-heading" className="ui-eyebrow"><Icon className="text-[16px]">lock</Icon>OAuth connections</h2>
+            <h2 id="oauth-providers-heading" className={styles.sectionTitle}>
+              <Icon className={styles.sectionIcon}>lock</Icon>
+              OAuth connections
+              <small>{oauthEntries.length}</small>
+            </h2>
             <p className={styles.description}>Sign in with your provider account to connect.</p>
           </div>
           <div className={styles.actions}>
@@ -502,7 +639,7 @@ export default function ProvidersPage() {
             </Button>
           </div>
         </div>
-        <ul className={styles.list}>
+        <ul className={styles.grid}>
           {oauthEntries.map(([key, info]) => {
             const authTypes = dualAuthTypes(info, key);
             return (
@@ -521,10 +658,14 @@ export default function ProvidersPage() {
       )}
 
       {(freeEntries.length > 0 || freeTierEntries.length > 0) && (
-      <section className={`ui-card ${styles.panel}`} aria-labelledby="free-providers-heading">
-        <div className={styles.header}>
+      <section id="s-free" className={styles.section} aria-labelledby="free-providers-heading">
+        <div className={styles.sectionHeader}>
           <div>
-            <h2 id="free-providers-heading" className="ui-eyebrow"><Icon className="text-[16px]">bolt</Icon>Free-tier providers</h2>
+            <h2 id="free-providers-heading" className={styles.sectionTitle}>
+              <Icon className={styles.sectionIcon}>bolt</Icon>
+              Free-tier providers
+              <small>{freeCount}</small>
+            </h2>
             <p className={styles.description}>Providers with free access or a free usage tier.</p>
           </div>
           <Button
@@ -541,7 +682,7 @@ export default function ProvidersPage() {
             {testingMode === "free" ? "Testing..." : "Test connections"}
           </Button>
         </div>
-        <ul className={styles.list}>
+        <ul className={styles.grid}>
           {freeEntries.map(([key, info]) => {
             // Dual-auth (e.g. kiro): count/toggle oauth + apikey/api_key so the
             // card total matches the provider detail page.
@@ -577,10 +718,18 @@ export default function ProvidersPage() {
       )}
 
       {apikeyEntries.length > 0 && (
-      <section className={`ui-card ${styles.panel}`} aria-labelledby="apikey-providers-heading">
-        <div className={styles.header}>
+      <section id="s-apikey" className={styles.section} aria-labelledby="apikey-providers-heading">
+        <div className={styles.sectionHeader}>
           <div>
-            <h2 id="apikey-providers-heading" className="ui-eyebrow"><Icon className="text-[16px]">vpn_key</Icon>API key connections</h2>
+            <h2 id="apikey-providers-heading" className={styles.sectionTitle}>
+              <Icon className={styles.sectionIcon}>vpn_key</Icon>
+              API key connections
+              <small>
+                {isApikeySearching || showAllApikey
+                  ? apikeyEntries.length
+                  : `${visibleApikeyEntries.length} of ${apikeyEntries.length}`}
+              </small>
+            </h2>
             <p className={styles.description}>Connect providers using an API key from their dashboard.</p>
           </div>
           <Button
@@ -597,7 +746,7 @@ export default function ProvidersPage() {
             {testingMode === "apikey" ? "Testing..." : "Test connections"}
           </Button>
         </div>
-        <ul className={styles.list}>
+        <ul className={styles.grid}>
           {visibleApikeyEntries.map(([key, info]) => (
             <ApiKeyProviderRow
               key={key}
@@ -743,53 +892,66 @@ ApiKeyProviderRow.propTypes = {
 };
 
 function ProviderListRow({ providerId, provider, stats, authType, iconSrc, protocol, readyWithoutAuth, onToggle }) {
-  const { connected, error, errorCode, errorTime, allDisabled } = stats;
+  const { connected, error, errorCode, errorTime, allDisabled, total } = stats;
   const authLabels = { free: "Free", oauth: "OAuth", apikey: "API Key", compatible: "Compatible" };
   const href = `/dashboard/providers/${providerId}`;
+  const isLive = total > 0 && !allDisabled;
 
   return (
-    <li className={styles.providerRow}>
-      <Link href={href} className={styles.providerLink}>
-        <div className={styles.providerIcon}>
-          <ProviderIcon
-            src={iconSrc}
-            alt=""
-            size={28}
-            className="object-contain max-w-7 max-h-7"
-            fallbackText={provider.textIcon || provider.id.slice(0, 2).toUpperCase()}
-            fallbackColor={provider.color}
-          />
+    <li className={styles.cardItem}>
+      <article className={`${styles.card} ${isLive ? styles.cardLive : ""} ${allDisabled ? styles.cardOff : ""}`}>
+        <Link
+          href={href}
+          className={styles.cardLink}
+          aria-label={`Open ${provider.name}`}
+        />
+        <div className={styles.cardHead}>
+          <span className={styles.cardLogo}>
+            <ProviderIcon
+              src={iconSrc}
+              alt=""
+              size={28}
+              className="object-contain max-w-7 max-h-7"
+              fallbackText={provider.textIcon || provider.id.slice(0, 2).toUpperCase()}
+              fallbackColor={provider.color}
+            />
+          </span>
+          <div className={styles.identity}>
+            <h3 className={styles.providerName} title={provider.name} data-i18n-skip>{provider.name}</h3>
+            <p className={styles.metadata}>
+              <span>{protocol || authLabels[authType]}</span>
+              <span className={styles.providerAddress} title={provider.baseUrl || providerId}>
+                {provider.baseUrl || providerId}
+              </span>
+            </p>
+          </div>
         </div>
-        <div className={styles.identity}>
-          <h3 className={styles.providerName} title={provider.name} data-i18n-skip>{provider.name}</h3>
-          <p className={styles.metadata}>
-            <span>{protocol || authLabels[authType]}</span>
-            <span className={styles.providerAddress} title={provider.baseUrl || providerId}>
-              {provider.baseUrl || providerId}
-            </span>
-          </p>
+        <div className={styles.cardFoot}>
+          <div className={styles.status}>
+            {allDisabled ? <StatusBadge>Paused</StatusBadge>
+              : readyWithoutAuth ? <StatusBadge variant="success">Ready</StatusBadge>
+              : getStatusDisplay(connected, error, errorCode)}
+            {!allDisabled && !readyWithoutAuth && errorTime && (
+              <span className={styles.errorTime} title={`Last error ${errorTime}`}>
+                {errorTime}
+              </span>
+            )}
+          </div>
+          <div className={styles.rowActions}>
+            {total > 0 && (
+              <Toggle
+                checked={!allDisabled}
+                onChange={onToggle}
+                aria-label={`${allDisabled ? "Enable" : "Disable"} ${provider.name}`}
+                title={allDisabled ? "Enable provider" : "Disable provider"}
+              />
+            )}
+            <Link href={href} className={styles.iconButton} aria-label={`Configure ${provider.name}`} title={`Configure ${provider.name}`}>
+              <Icon className="text-[16px]">settings</Icon>
+            </Link>
+          </div>
         </div>
-        <div className={styles.status}>
-          {allDisabled ? <StatusBadge>Disabled</StatusBadge>
-            : readyWithoutAuth ? <StatusBadge variant="success">Ready</StatusBadge>
-            : getStatusDisplay(connected, error, errorCode)}
-          {!allDisabled && !readyWithoutAuth && errorTime && <span>{errorTime}</span>}
-        </div>
-      </Link>
-      <div className={styles.rowActions}>
-        {stats.total > 0 && (
-          <Toggle
-            size="sm"
-            checked={!allDisabled}
-            onChange={onToggle}
-            aria-label={`${allDisabled ? "Enable" : "Disable"} ${provider.name}`}
-            title={allDisabled ? "Enable provider" : "Disable provider"}
-          />
-        )}
-        <Link href={href} className={styles.iconButton} aria-label={`Configure ${provider.name}`} title={`Configure ${provider.name}`}>
-          <Icon className="text-[16px]">settings</Icon>
-        </Link>
-      </div>
+      </article>
     </li>
   );
 }
