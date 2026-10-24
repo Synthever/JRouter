@@ -12,72 +12,14 @@
   --providers-stick-offset: 24px;
 }
 
-/* Summary strip: three saturated cards above the provider sections. */
+/* Summary strip ---------------------------------------------------------- */
+/* Skeleton placeholder only: the live cards are WidgetGrid widgets rendered by
+   components/ProviderStats, which owns their sizing and colours. */
 .stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   min-width: 0;
-}
-
-.statCard {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 160px;
-  padding: 24px 28px;
-  border-radius: var(--r4);
-  color: #0a0a0a;
-}
-
-.statLavender {
-  background: var(--brand-lavender);
-}
-
-.statOchre {
-  background: var(--brand-ochre);
-}
-
-.statTeal {
-  background: var(--brand-teal);
-  color: #fff;
-}
-
-.statTitle {
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1.3;
-}
-
-.statValue {
-  margin-top: auto;
-  padding-top: 16px;
-  font-family: var(--font-display);
-  font-size: clamp(40px, 4.4vw, 56px);
-  font-weight: 500;
-  letter-spacing: -0.05em;
-  line-height: 1;
-  overflow-wrap: anywhere;
-}
-
-.statValue small {
-  margin-left: 6px;
-  font-size: 16px;
-  font-weight: 500;
-  letter-spacing: 0;
-}
-
-.statValueName {
-  font-size: clamp(24px, 2.4vw, 34px);
-  letter-spacing: -0.03em;
-  line-height: 1.1;
-}
-
-.statCaption {
-  margin-top: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.4;
 }
 
 .statSkeleton {
@@ -595,11 +537,6 @@
 
   .stats > :last-child {
     grid-column: auto;
-  }
-
-  .statCard {
-    min-height: 132px;
-    padding: 20px;
   }
 
   .section {

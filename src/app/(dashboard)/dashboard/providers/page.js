@@ -25,6 +25,7 @@ import { useNotificationStore } from "@/store/notificationStore";
 import { useHeaderSearchStore } from "@/store/headerSearchStore";
 import ModelAvailabilityBadge from "./components/ModelAvailabilityBadge";
 import AddCompatibleModal from "./components/AddCompatibleModal";
+import ProviderStats from "./components/ProviderStats";
 import {
   STATUS_FILTER_OPTIONS,
   computeProviderSummary,
@@ -490,32 +491,18 @@ export default function ProvidersPage() {
 
   return (
     <div className={`dashboard-surface ${styles.page}`}>
-      <section className={styles.stats} aria-label="Provider summary">
-        <article className={`${styles.statCard} ${styles.statLavender}`}>
-          <h2 className={styles.statTitle}>Providers in use</h2>
-          <p className={styles.statValue}>
-            {summary.activeCount}
-            <small>of {summary.total}</small>
-          </p>
-          <p className={styles.statCaption}>Switched on and carrying connections</p>
-        </article>
-        <article className={`${styles.statCard} ${styles.statOchre}`}>
-          <h2 className={styles.statTitle}>Most connections</h2>
-          <p className={`${styles.statValue} ${styles.statValueName}`}>
-            {summary.topProvider?.name || "None"}
-          </p>
-          <p className={styles.statCaption}>
-            {summary.topProvider
-              ? `${summary.topProvider.connections} connections`
-              : "Connect a provider to get started"}
-          </p>
-        </article>
-        <article className={`${styles.statCard} ${styles.statTeal}`}>
-          <h2 className={styles.statTitle}>Free to try</h2>
-          <p className={styles.statValue}>{summary.freeCount}</p>
-          <p className={styles.statCaption}>{freeReadyLabel}</p>
-        </article>
-      </section>
+      <ProviderStats
+        activeCount={summary.activeCount}
+        totalCount={summary.total}
+        topProviderName={summary.topProvider?.name || "None"}
+        topProviderNote={
+          summary.topProvider
+            ? `${summary.topProvider.connections} connections`
+            : "Connect a provider to get started"
+        }
+        freeCount={summary.freeCount}
+        freeReadyLabel={freeReadyLabel}
+      />
 
       <div className={styles.toolbar}>
         <nav className={styles.chips} aria-label="Jump to a provider section">

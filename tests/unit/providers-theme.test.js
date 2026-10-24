@@ -7,9 +7,11 @@ const providersPath = "src/app/(dashboard)/dashboard/providers";
 describe("providers dashboard layout contract", () => {
   it("renders a summary strip, sticky chips and four card-grid panels", () => {
     const source = read(`${providersPath}/page.js`);
+    const stats = read(`${providersPath}/components/ProviderStats.js`);
     expect(source).toContain("dashboard-surface ${styles.page}");
     expect(source).toContain("computeProviderSummary(");
-    expect(source).toContain('aria-label="Provider summary"');
+    expect(source).toContain("<ProviderStats");
+    expect(stats).toContain('aria-label="Provider summary"');
     expect(source).toContain('aria-label="Jump to a provider section"');
     expect(
       source.match(/className=\{styles\.section\} aria-labelledby=/g),
@@ -24,6 +26,7 @@ describe("providers dashboard layout contract", () => {
 
   it("styles the summary strip and provider card grid like the reference", () => {
     const css = read(`${providersPath}/providers.module.css`);
+    const statsCss = read(`${providersPath}/components/ProviderStats.module.css`);
     expect(css).not.toContain("backdrop-filter");
     expect(css).toMatch(
       /\.grid\s*\{[^}]*grid-template-columns: repeat\(auto-fill, minmax\(250px, 1fr\)\);/,
@@ -31,16 +34,35 @@ describe("providers dashboard layout contract", () => {
     expect(css).toMatch(
       /@media \(max-width: 639px\)\s*\{[\s\S]*?\.grid\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\);/,
     );
+    // The strip's grid now only hosts the loading skeletons.
     expect(css).toMatch(/\.stats\s*\{[^}]*grid-template-columns: repeat\(3,/);
-    expect(css).toMatch(/\.statLavender\s*\{[^}]*background: var\(--brand-lavender\);/);
-    expect(css).toMatch(/\.statOchre\s*\{[^}]*background: var\(--brand-ochre\);/);
-    expect(css).toMatch(/\.statTeal\s*\{[^}]*background: var\(--brand-teal\);/);
+    expect(statsCss).toMatch(/\[data-widget-id="providersInUse"\]\s*\{[^}]*--surface: var\(--brand-lavender\);/);
+    expect(statsCss).toMatch(/\[data-widget-id="mostConnections"\]\s*\{[^}]*--surface: var\(--brand-ochre\);/);
+    expect(statsCss).toMatch(/\[data-widget-id="freeToTry"\]\s*\{[^}]*--surface: var\(--brand-teal\);/);
+    expect(statsCss).toMatch(/\.value\s*\{[^}]*font-size: clamp\(40px, 4\.4vw, 56px\);/s);
+    expect(statsCss).toMatch(/\.valueName\s*\{[^}]*font-size: clamp\(24px, 2\.4vw, 34px\);/s);
     expect(css).toMatch(/\.cardLive\s*\{[^}]*background: var\(--surface-card\);/);
     expect(css).toMatch(/\.cardLink\s*\{[^}]*position: absolute;[^}]*inset: 0;/);
     expect(css).toMatch(/\.tabs\s*\{[^}]*border-radius: var\(--r-full\);/);
     expect(css).toMatch(
       /\.tab\[aria-pressed="true"\]\s*\{[^}]*background: var\(--canvas\);/,
     );
+  });
+
+  it("keeps the provider summary cards adjustable like the dashboard KPIs", () => {
+    const stats = read(`${providersPath}/components/ProviderStats.js`);
+    expect(stats).toContain('from "@/shared/components/ui/bento-grid"');
+    expect(stats).toMatch(/id: "providersInUse", title: "Providers in use", defaultSpan: 2/);
+    expect(stats).toMatch(/id: "mostConnections", title: "Most connections", defaultSpan: 2/);
+    expect(stats).toMatch(/id: "freeToTry", title: "Free to try", defaultSpan: 2/);
+    expect(stats).toContain('const LAYOUT_STORAGE_KEY = "jrouter.providers.statsLayout.v1";');
+    expect(stats).toContain("normalizeLayout(JSON.parse(saved), ITEMS)");
+    expect(stats).toContain("rowHeight={168}");
+    expect(stats).toContain("narrowColumns={1}");
+    expect(stats).toContain("onLayoutChange={setLayout}");
+    expect(stats).toContain("onLayoutCommit={saveLayout}");
+    expect(stats).toContain('aria-label="Reset layout"');
+    expect(stats).toContain("Drag the grip to move a card. Drag its corner to resize.");
   });
 
   it("keeps semantic status, filter and toggle controls", () => {

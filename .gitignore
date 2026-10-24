@@ -112,3 +112,4 @@ debug.log
 /.next-health-build
 /.next-health-preview
 /.next-claude-dashboard
+/.next-verify
