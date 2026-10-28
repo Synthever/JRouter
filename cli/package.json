@@ -1,6 +1,6 @@
 {
   "name": "@synthever/jrouter",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "JRouter CLI - Start and manage the JRouter server",
   "bin": {
     "jrouter": "./cli.js"

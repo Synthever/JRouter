@@ -2,6 +2,17 @@
 
 All notable changes to the `@synthever/jrouter` CLI package.
 
+## cli-v1.0.6 (2026-10-27)
+
+- feat(dashboard): redesigned overview, endpoint and provider dashboards — system theme, bento stat layouts with drag/resize persistence, card tilt
+- feat(combos): combos table with publication controls; publish combos under a custom model-id
+- feat(keys): owner/user role control when creating and configuring API keys; user-role keys are limited to published custom model-ids
+- feat(cli): manage provider connections, Backup and Restore from the terminal UI
+- fix(providers): honour the demotion queue order
+- fix(dashboard): single Create button on the combos page; keep the combos table readable on mobile
+- fix(db): keep combo visibility, public name and API key role across backup restore
+- fix(dashboard): stop the 15s false timeout on reasoning model tests
+
 ## cli-v1.0.5 (2026-10-20)
 
 - docs(cli): rewrite README around JRouter's own features — routing/token/operations capabilities instead of an upstream-oriented list
