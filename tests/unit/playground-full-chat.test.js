@@ -1,9 +1,11 @@
 /**
- * Model Playground — full-height chat room.
+ * Model Playground — redesign contracts.
  *
- * PlaygroundPageClient.js and Header.js are JSX so we cannot import them in
- * Vitest without a JSX transform.  Read the source text and verify the
- * header/scrim removal directly.
+ * The playground is JSX, so it cannot be imported in Vitest without a JSX
+ * transform.  These tests read the source text (and the CSS module) and check
+ * the contracts the redesign promised: a full-height route, the page intro
+ * with three KPI cards, three working modes, config-only route plans, and
+ * composer height caps for short viewports.
  */
 
 import { describe, expect, it } from "vitest";
@@ -11,30 +13,35 @@ import { readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
 
-describe("Model Playground full-height chat", () => {
-  it("renders no page header block so the chat room fills the page", () => {
+describe("Playground redesign contracts", () => {
+  it("keeps the playground a full-height route", () => {
+    const layout = read("src/shared/components/layouts/DashboardLayout.js");
+    expect(layout).toContain('pathname === "/dashboard/playground" ? "h-dvh" : "h-screen"');
+    expect(layout).toContain('pathname === "/dashboard/basic-chat" || pathname === "/dashboard/playground"');
+  });
+
+  it("renders the page intro and the three KPI cards", () => {
     const source = read("src/app/(dashboard)/dashboard/playground/PlaygroundPageClient.js");
-    expect(source).not.toContain("Test and compare models through JRouter");
-    expect(source).not.toContain("styles.header");
-    expect(source).not.toContain("styles.eyebrow");
+    expect(source).toContain("<h1 className={styles.title}>Playground</h1>");
+    expect(source).toContain("<PlaygroundStats");
+    const stats = read("src/app/(dashboard)/dashboard/playground/PlaygroundStats.js");
+    expect(stats).toContain('id: "activeTarget"');
+    expect(stats).toContain('id: "cacheCompression"');
+    expect(stats).toContain('id: "routingPipeline"');
   });
 
-  it("renders no top-bar title for the playground route", () => {
-    const source = read("src/shared/components/Header.js");
-    expect(source).not.toContain('includes("/playground")');
-    expect(source).not.toContain('title: "Model Playground"');
+  it("offers three working modes", () => {
+    const source = read("src/app/(dashboard)/dashboard/playground/PlaygroundPageClient.js");
+    for (const value of ["single", "compare", "json"]) {
+      expect(source).toContain(`{ value: "${value}"`);
+    }
+    expect(source).toContain("<PlaygroundJsonView");
   });
 
-  it("sizes the playground shell to the visible mobile viewport", () => {
-    const source = read("src/shared/components/layouts/DashboardLayout.js");
-    expect(source).toContain('pathname === "/dashboard/playground" ? "h-dvh" : "h-screen"');
-  });
-
-  it("lets full-height content shrink without scrolling the outer page", () => {
-    const source = read("src/shared/components/layouts/DashboardLayout.js");
-    expect(source).toContain('"flex flex-col min-h-0 overflow-hidden"');
-    expect(source).toContain('"flex-1 min-h-0 w-full flex flex-col"');
-    expect(source).not.toContain("flex-1 overflow-y-auto custom-scrollbar");
+  it("never fabricates upstream telemetry", () => {
+    const rail = read("src/app/(dashboard)/dashboard/playground/PlaygroundRail.js");
+    expect(rail).toContain("Route plan from config.");
+    expect(rail).not.toMatch(/x-jrouter-upstream|x-cache-hit|Weight:\s*\d/);
   });
 
   it("caps a multiline mobile input relative to the viewport height", () => {
@@ -49,10 +56,9 @@ describe("Model Playground full-height chat", () => {
     expect(landscape).toContain("max-height: min(200px, 20dvh)");
   });
 
-  it("keeps the composer free of the fade scrim and elevation shadow", () => {
-    const source = read("src/app/(dashboard)/dashboard/playground/playground.module.css");
-    expect(source).not.toContain(".composerWrap::before");
-    const composer = source.slice(source.indexOf(".composer {"), source.indexOf(".composer:focus-within"));
-    expect(composer).not.toContain("box-shadow");
+  it("renders no playground-specific top-bar title", () => {
+    const source = read("src/shared/components/Header.js");
+    expect(source).not.toContain('includes("/playground")');
+    expect(source).not.toContain('title: "Model Playground"');
   });
 });

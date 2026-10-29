@@ -20,6 +20,14 @@
 @media (max-width: 1023px) { .page { padding: 12px 24px 16px; --pg-pad-x: 24px; --pg-inset: 16px; } }
 @media (max-width: 639px) { .page { padding: 8px 12px 12px; --pg-pad-x: 12px; --pg-inset: 12px; gap: 12px; } }
 
+/* Keyboard focus fallback for every control inside the workbench. Component
+   rules below refine it (inset rings, the composer's border-only focus), and
+   their equal-or-higher specificity wins because they come later. */
+.page :where(button, summary, a[href], [role="button"], [tabindex]):focus-visible {
+  outline: 2px solid var(--text-2);
+  outline-offset: 2px;
+}
+
 .intro {
   display: flex;
   align-items: flex-end;
@@ -194,6 +202,9 @@
 }
 
 .systemHead::-webkit-details-marker { display: none; }
+
+/* The card clips overflow, so the summary keeps its ring inside the box. */
+.systemHead:focus-visible { outline: 2px solid var(--text-2); outline-offset: -2px; }
 
 .systemTitle {
   display: inline-flex;
@@ -1048,9 +1059,17 @@
 
 @media (prefers-reduced-motion: reduce) {
   .page *,
+  .page *::before,
+  .page *::after,
   .composer {
     animation: none;
     transition: none;
+  }
+
+  /* Looping indicators keep their resting state instead of blinking. */
+  .caret {
+    animation: none;
+    opacity: 1;
   }
 
   .sendButton:active:not(:disabled) {
