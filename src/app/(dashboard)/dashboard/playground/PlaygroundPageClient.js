@@ -4,19 +4,21 @@ import Icon from "@/shared/components/Icon";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Tooltip } from "@/shared/components";
-import ProviderIcon from "@/shared/components/ProviderIcon";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
+import { useModelCaps } from "@/shared/hooks/useModelCaps";
 import { useModelCatalog } from "@/shared/hooks/useModelCatalog";
-import PlaygroundMarkdown from "./PlaygroundMarkdown";
+import ModelIcon from "./PlaygroundModelIcon";
 import PlaygroundStats from "./PlaygroundStats";
 import PlaygroundRail from "./PlaygroundRail";
+import PlaygroundTranscript from "./PlaygroundTranscript";
 import ModelPickerPopover from "./ModelPickerPopover";
 import {
-  buildMetricParts,
+  buildCurl,
   buildRoutePlan,
   cacheShare,
+  estimateTokens,
+  formatContext,
   formatCount,
-  formatLatency,
   shortModelName,
 } from "./playgroundUtils.js";
 import usePlaygroundLane from "./usePlaygroundLane.js";
@@ -29,61 +31,6 @@ const SUGGESTIONS = [
   "Write a short TypeScript example",
   "Compare REST and GraphQL",
 ];
-
-function providerInitials(name) {
-  return (name || "?").slice(0, 2).toUpperCase();
-}
-
-function ModelIcon({ model, providerId, providerName, providerColor, isCombo, size = 16 }) {
-  const connectionId = providerId && !isCombo ? providerId : "";
-  if (!connectionId) {
-    return (
-      <span className={styles.modelFallback} style={{ width: size, height: size }}>
-        <Icon style={{ fontSize: Math.max(10, Math.round(size * 0.7)) }}>{isCombo ? "layers" : "science"}</Icon>
-      </span>
-    );
-  }
-  return (
-    <ProviderIcon
-      providerId={connectionId}
-      alt={providerName || "model"}
-      size={size}
-      fallbackText={providerInitials(providerName)}
-      fallbackColor={providerColor}
-    />
-  );
-}
-
-// Nine-cell grid whose cells light up in sequence while the model works.
-function ActivityGlyph() {
-  return (
-    <span className={styles.activityGrid} aria-hidden="true">
-      {Array.from({ length: 9 }, (_, index) => <span key={index} />)}
-    </span>
-  );
-}
-
-// Waiting-for-first-token state. The running clock lives here so the 120ms ticks
-// re-render this row instead of the whole conversation.
-function ActivityState({ label, startedAt }) {
-  const [elapsedMs, setElapsedMs] = useState(0);
-
-  useEffect(() => {
-    const timer = setInterval(() => setElapsedMs(Date.now() - startedAt), 120);
-    return () => clearInterval(timer);
-  }, [startedAt]);
-
-  return (
-    <p className={styles.activity} role="status">
-      <ActivityGlyph />
-      <span className={styles.activityText}>{label}</span>
-      <span className={styles.activityDots} aria-hidden="true">
-        <span /><span /><span />
-      </span>
-      <span className={styles.activityElapsed}>{formatLatency(elapsedMs)}</span>
-    </p>
-  );
-}
 
 export default function PlaygroundPageClient() {
   const [providers, setProviders] = useState([]);
@@ -99,6 +46,8 @@ export default function PlaygroundPageClient() {
   const [params, setParams] = useState({ ...DEFAULT_PARAMS });
   const [thinkingOpen, setThinkingOpen] = useState({});
   const [railOpen, setRailOpen] = useState(true);
+  const [systemPrompt, setSystemPrompt] = useState("");
+  const [systemOpen, setSystemOpen] = useState(false);
 
   const paramsRef = useRef({ ...DEFAULT_PARAMS });
   const systemPromptRef = useRef("");
@@ -113,10 +62,21 @@ export default function PlaygroundPageClient() {
   const atBottomRef = useRef(true);
   const { copied, copy } = useCopyToClipboard();
 
+  // Header telemetry: the selected target's real context window (from the model
+  // catalog) and the exact request the last turn sent, replayed as a cURL.
+  const caps = useModelCaps();
+  const contextWindow = selectedModel ? caps.getCaps(selectedModel.value)?.contextWindow || 0 : 0;
+  const headerCurl = lastTurn?.request ? buildCurl(lastTurn.request) : "";
+
   // The rail owns the fields; the turn engine reads them through the ref at send time.
   useEffect(() => {
     paramsRef.current = params;
   }, [params]);
+
+  // Same contract for the system instructions card above the transcript.
+  useEffect(() => {
+    systemPromptRef.current = systemPrompt;
+  }, [systemPrompt]);
 
   // One mount loader: picker sources plus the KPI sources. Requests are isolated
   // with allSettled, so a failing card never blocks the chat or the picker.
@@ -219,6 +179,12 @@ export default function PlaygroundPageClient() {
     atBottomRef.current = true;
   };
 
+  // Clear thread drops the conversation but keeps the draft and the target.
+  const handleClearThread = () => {
+    resetLane();
+    setThinkingOpen({});
+  };
+
   const handleSelectModel = (next) => {
     if (!next?.value) return;
     lane.selectModel(next);
@@ -265,146 +231,6 @@ export default function PlaygroundPageClient() {
   const modelCatalog = useModelCatalog({ isOpen: pickerOpen, activeProviders: providers, modelAliases });
   const hasCatalog = modelCatalog.filteredCombos.length
     + Object.values(modelCatalog.visibleGroups).reduce((total, group) => total + group.models.length, 0) > 0;
-
-  const renderMessage = (message) => {
-    if (message.role === "divider") {
-      return <p key={message.id} className={styles.divider}>{message.content}</p>;
-    }
-
-    if (message.role === "user") {
-      return (
-        <div key={message.id} className={`${styles.row} ${styles.rowUser}`}>
-          <div className={styles.userBubble}>{message.content}</div>
-        </div>
-      );
-    }
-
-    const isThinkingVisible = thinkingOpen[message.id] === true;
-    const reasoningMs = message.firstTokenMs ?? message.totalMs;
-    const reasoningSeconds = Number.isFinite(reasoningMs) ? Math.max(1, Math.round(reasoningMs / 1000)) : 0;
-    const isStreamingMessage = message.status === "streaming";
-    const isWaiting = isStreamingMessage && !message.content && !message.reasoning;
-    const isAnswering = isStreamingMessage && !!message.content;
-    const metaParts = message.meta
-      ? buildMetricParts({
-        firstTokenMs: message.firstTokenMs,
-        totalMs: message.totalMs,
-        usage: message.meta.usage,
-        finishReason: message.meta.finishReason,
-        reportedModel: message.meta.reportedModel,
-        requestedModel: message.meta.requestedModel,
-        stopped: message.meta.stopped,
-      })
-      : [];
-    const canRetry = message.status === "done" && messages[messages.length - 1]?.id === message.id;
-    const actionsVisible = !isStreamingMessage;
-
-    return (
-      <div key={message.id} className={styles.row}>
-        <div className={styles.assistantHead}>
-          <ModelIcon
-            providerId={message.providerId}
-            providerName={message.providerName}
-            isCombo={message.isCombo}
-            size={16}
-          />
-          <span className={styles.assistantName}>{message.modelName || "Assistant"}</span>
-          {message.providerName ? (
-            <span className={styles.assistantProvider}>{message.providerName}</span>
-          ) : null}
-        </div>
-
-        {message.status === "error" ? (
-          <div className={styles.error} role="alert">
-            <p className={styles.errorHead}>
-              <Icon>error</Icon> Request failed
-            </p>
-            <p className={styles.errorBody}>{message.error}</p>
-            <div className={styles.errorActions}>
-              <Button variant="secondary" size="sm" icon="refresh" onClick={() => handleRetry(message.id)}>
-                Retry
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <>
-            {message.reasoning ? (
-              <div className={styles.thinking}>
-                <button
-                  type="button"
-                  className={styles.thinkingToggle}
-                  onClick={() => toggleThinking(message.id)}
-                  aria-expanded={isThinkingVisible}
-                >
-                  <Icon>stars</Icon>
-                  {isStreamingMessage && !message.content
-                    ? "Thinking…"
-                    : reasoningSeconds > 0
-                      ? `Thought for ${reasoningSeconds}s`
-                      : "Thoughts"}
-                  <Icon className={styles.chevronSmall}>{isThinkingVisible ? "expand_less" : "expand_more"}</Icon>
-                </button>
-                {isThinkingVisible ? <div className={styles.thinkingBody}>{message.reasoning}</div> : null}
-              </div>
-            ) : null}
-
-            {isWaiting ? (
-              <ActivityState label="Generating" startedAt={message.startedAt} />
-            ) : null}
-
-            {message.content ? (
-              <div className={styles.assistantBody}>
-                <PlaygroundMarkdown content={message.content} />
-                {isAnswering ? <span className={styles.caret} aria-hidden="true">▍</span> : null}
-              </div>
-            ) : null}
-
-            {!message.content && !message.reasoning && !isStreamingMessage ? (
-              <p className={styles.note}>
-                {message.meta?.stopped ? "Stopped before any output." : "The model returned no text."}
-              </p>
-            ) : null}
-
-            {!message.content && message.reasoning && !isStreamingMessage ? (
-              <p className={styles.note}>This model returned reasoning only.</p>
-            ) : null}
-          </>
-        )}
-
-        {actionsVisible && !isWaiting ? (
-          <div className={styles.actions}>
-            <button
-              type="button"
-              className={styles.actionButton}
-              data-state={copied === message.id ? "copied" : undefined}
-              onClick={() => copyMessage(message)}
-              disabled={!message.content && !message.reasoning}
-            >
-              <Icon>{copied === message.id ? "check" : "content_copy"}</Icon>
-              {copied === message.id ? "Copied" : "Copy"}
-            </button>
-            {canRetry ? (
-              <button type="button" className={styles.actionButton} onClick={() => handleRetry(message.id)}>
-                <Icon>refresh</Icon>
-                Retry
-              </button>
-            ) : null}
-          </div>
-        ) : null}
-
-        {metaParts.length > 0 ? (
-          <p className={styles.meta}>
-            {metaParts.map((part, index) => (
-              <span key={part}>
-                {index > 0 ? <span className={styles.metaSep}>·</span> : null}
-                {part}
-              </span>
-            ))}
-          </p>
-        ) : null}
-      </div>
-    );
-  };
 
   const emptyHint = selectedModel
     ? `Test ${selectedModel.name} through JRouter.`
@@ -505,7 +331,39 @@ export default function PlaygroundPageClient() {
               />
             </div>
 
+            <div className={styles.pills}>
+              {selectedModel?.isCombo ? <span className={styles.pill}>combo</span> : null}
+              {contextWindow ? <span className={styles.pill}>{formatContext(contextWindow)} ctx</span> : null}
+              <span className={styles.pill} data-tone={isStreaming ? "live" : "idle"}>
+                {params.stream ? "SSE stream" : "JSON"}
+              </span>
+            </div>
+
             <div className={styles.toolbarActions}>
+              <Tooltip text="Copy as cURL">
+                <button
+                  type="button"
+                  className={styles.iconButton}
+                  onClick={() => copy(headerCurl, "curl")}
+                  disabled={!headerCurl}
+                  aria-label="Copy request as cURL"
+                >
+                  <Icon>terminal</Icon>
+                </button>
+              </Tooltip>
+
+              <Tooltip text="Clear thread">
+                <button
+                  type="button"
+                  className={styles.iconButton}
+                  onClick={handleClearThread}
+                  disabled={messages.length === 0}
+                  aria-label="Clear thread"
+                >
+                  <Icon>delete</Icon>
+                </button>
+              </Tooltip>
+
               <Tooltip text="New chat">
                 <button
                   type="button"
@@ -533,6 +391,28 @@ export default function PlaygroundPageClient() {
           </div>
 
           <div className={styles.chatBody} ref={scrollRef} onScroll={handleScroll} role="region" aria-label="Conversation" tabIndex={0}>
+            <details
+              className={styles.systemCard}
+              open={systemOpen}
+              onToggle={(event) => setSystemOpen(event.currentTarget.open)}
+            >
+              <summary className={styles.systemHead}>
+                <span className={styles.systemTitle}><Icon>article</Icon> System instructions</span>
+                <span className={styles.systemMeta}>
+                  {systemPrompt.trim() ? `~${estimateTokens(systemPrompt)} tokens` : "empty"}
+                  <Icon className={styles.chevronSmall}>{systemOpen ? "expand_less" : "expand_more"}</Icon>
+                </span>
+              </summary>
+              <textarea
+                className={styles.systemInput}
+                rows={3}
+                value={systemPrompt}
+                onChange={(event) => setSystemPrompt(event.target.value)}
+                placeholder="Sent as the first message of every request."
+                aria-label="System instructions"
+              />
+            </details>
+
             <div className={styles.canvas}>
               {loadError ? (
                 <p className={styles.loadError} role="alert">
@@ -563,7 +443,16 @@ export default function PlaygroundPageClient() {
                     </div>
                   ) : null}
                 </div>
-              ) : messages.map(renderMessage)}
+              ) : (
+                <PlaygroundTranscript
+                  messages={messages}
+                  thinkingOpen={thinkingOpen}
+                  onToggleThinking={toggleThinking}
+                  copied={copied}
+                  onCopy={copyMessage}
+                  onRetry={handleRetry}
+                />
+              )}
             </div>
           </div>
 

@@ -35,6 +35,14 @@ export function formatCount(value) {
   return Number.isFinite(value) ? value.toLocaleString("en-US") : "";
 }
 
+// Context window as a compact header label: 1_048_576 -> "1M", 128_000 -> "128K".
+export function formatContext(tokens) {
+  const value = Number(tokens) || 0;
+  if (value >= 1_000_000) return `${Math.round(value / 100_000) / 10}M`;
+  if (value >= 1000) return `${Math.round(value / 1000)}K`;
+  return value > 0 ? String(value) : "";
+}
+
 export function formatSpeed(usage, firstTokenMs, totalMs) {
   const completion = usage?.completion_tokens;
   if (!Number.isFinite(completion) || completion <= 0) return "";

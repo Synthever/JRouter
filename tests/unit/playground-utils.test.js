@@ -4,6 +4,7 @@ import {
   buildRoutePlan,
   cacheShare,
   estimateTokens,
+  formatContext,
   formatLatency,
   formatSpeed,
   shortModelName,
@@ -50,6 +51,19 @@ describe("estimateTokens", () => {
     expect(estimateTokens("")).toBe(0);
     expect(estimateTokens("abcd")).toBe(1);
     expect(estimateTokens("abcde")).toBe(2);
+  });
+});
+
+describe("formatContext", () => {
+  it("renders a million-token window as a single unit", () => {
+    expect(formatContext(1_048_576)).toBe("1M");
+  });
+  it("rounds thousands to a K label", () => {
+    expect(formatContext(128_000)).toBe("128K");
+  });
+  it("stays empty without a window", () => {
+    expect(formatContext(0)).toBe("");
+    expect(formatContext(null)).toBe("");
   });
 });
 

@@ -98,6 +98,64 @@
   background: var(--surface);
 }
 
+/* System instructions: a collapsed card above the transcript, not a modal. */
+.systemCard {
+  margin: 16px 20px 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r3);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.systemHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  color: var(--text-2);
+  font-size: 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.systemHead::-webkit-details-marker { display: none; }
+
+.systemTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.systemTitle svg { font-size: 14px; }
+
+.systemMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-3);
+  font-family: var(--pg-mono);
+  font-size: 10px;
+}
+
+.systemInput {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--pg-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.systemInput:focus-visible { outline: 2px solid var(--text-2); outline-offset: -2px; }
+
 .rail {
   display: flex;
   flex-direction: column;
@@ -219,6 +277,32 @@
   border: 1px solid var(--line-2);
   border-radius: var(--r1);
   color: var(--text-2);
+}
+
+/* Target facts the header can prove: combo, real context window, transport. */
+.pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.pill {
+  padding: 2px 8px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-full);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-family: var(--pg-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pill[data-tone="live"] {
+  border-color: color-mix(in srgb, var(--pos) 45%, transparent);
+  color: var(--pos);
 }
 
 .toolbarActions {
@@ -622,12 +706,13 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 3px 7px;
-  margin-top: 5px;
+  gap: 4px 8px;
+  margin-top: 8px;
   color: var(--text-3);
   font-family: var(--pg-mono);
-  font-size: 10.5px;
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
+  line-height: 1.4;
 }
 
 .metaSep {
