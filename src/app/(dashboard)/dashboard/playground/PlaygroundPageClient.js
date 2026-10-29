@@ -3,7 +3,7 @@ import Icon from "@/shared/components/Icon";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Tooltip } from "@/shared/components";
+import { Button, SegmentedControl, Tooltip } from "@/shared/components";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import { useModelCaps } from "@/shared/hooks/useModelCaps";
 import { useModelCatalog } from "@/shared/hooks/useModelCatalog";
@@ -25,11 +25,22 @@ import usePlaygroundLane from "./usePlaygroundLane.js";
 import styles from "./playground.module.css";
 
 const MAX_COMPOSER_HEIGHT = 200;
+const MODE_STORAGE_KEY = "jrouter.playground.mode.v1";
+const MODES = ["single", "compare", "json"];
 const DEFAULT_PARAMS = { useDefaults: true, temperature: 0.7, maxTokens: 4096, topP: 0.95, stream: true, jsonMode: false };
 const SUGGESTIONS = [
   "Explain your capabilities",
   "Write a short TypeScript example",
   "Compare REST and GraphQL",
+];
+const MODE_OPTIONS = [
+  { value: "single", label: "Single" },
+  { value: "compare", label: "Compare" },
+  { value: "json", label: "JSON API" },
+];
+const LANE_OPTIONS = [
+  { value: "a", label: "Lane A" },
+  { value: "b", label: "Lane B" },
 ];
 
 export default function PlaygroundPageClient() {
@@ -42,7 +53,12 @@ export default function PlaygroundPageClient() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [mode, setMode] = useState("single");
+  const [activeLane, setActiveLane] = useState("a");
+  // Which lane JSON mode mirrors; the request inspector itself lands in Task 9.
+  const [jsonLane, setJsonLane] = useState("a");
+  // One picker is open at a time, keyed by lane: null, "a" or "b".
+  const [pickerFor, setPickerFor] = useState(null);
   const [params, setParams] = useState({ ...DEFAULT_PARAMS });
   const [thinkingOpen, setThinkingOpen] = useState({});
   const [railOpen, setRailOpen] = useState(true);
@@ -53,22 +69,16 @@ export default function PlaygroundPageClient() {
   const systemPromptRef = useRef("");
   const [input, setInput] = useState("");
   const restoreDraft = useCallback((text) => setInput((current) => current || text), []);
-  const lane = usePlaygroundLane({ apiKey, paramsRef, systemPromptRef, onRestoreDraft: restoreDraft });
-  const { model: selectedModel, messages, isStreaming, lastTurn, send, stop, retry, reset: resetLane } = lane;
+  const laneA = usePlaygroundLane({ apiKey, paramsRef, systemPromptRef, onRestoreDraft: restoreDraft });
+  const laneB = usePlaygroundLane({ apiKey, paramsRef, systemPromptRef, onRestoreDraft: restoreDraft });
   const router = useRouter();
 
   const inputRef = useRef(null);
-  const scrollRef = useRef(null);
-  const atBottomRef = useRef(true);
+  const scrollRefs = useRef({ a: null, b: null });
+  const atBottomRefs = useRef({ a: true, b: true });
   const { copied, copy } = useCopyToClipboard();
 
-  // Header telemetry: the selected target's real context window (from the model
-  // catalog) and the exact request the last turn sent, replayed as a cURL.
-  const caps = useModelCaps();
-  const contextWindow = selectedModel ? caps.getCaps(selectedModel.value)?.contextWindow || 0 : 0;
-  const headerCurl = lastTurn?.request ? buildCurl(lastTurn.request) : "";
-
-  // The rail owns the fields; the turn engine reads them through the ref at send time.
+  // The rail owns the fields; both turn engines read them through the ref at send time.
   useEffect(() => {
     paramsRef.current = params;
   }, [params]);
@@ -124,6 +134,18 @@ export default function PlaygroundPageClient() {
     return () => { cancelled = true; };
   }, []);
 
+  // The mode survives reloads. Browser-only restoration has to follow the server's
+  // single-lane render, so it cannot be part of the initial state.
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(MODE_STORAGE_KEY);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (MODES.includes(saved)) setMode(saved);
+    } catch {
+      // A blocked store just means the default single mode.
+    }
+  }, []);
+
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
@@ -136,67 +158,115 @@ export default function PlaygroundPageClient() {
     element.style.height = `${Math.min(element.scrollHeight, MAX_COMPOSER_HEIGHT)}px`;
   }, [input]);
 
-  const scrollToBottom = useCallback(() => {
-    const element = scrollRef.current;
-    if (element) element.scrollTop = element.scrollHeight;
+  const changeMode = (next) => {
+    if (!MODES.includes(next) || next === mode) return;
+    setMode(next);
+    setPickerFor(null);
+    try {
+      window.localStorage.setItem(MODE_STORAGE_KEY, next);
+    } catch {
+      // The mode still applies for this session when storage is blocked.
+    }
+  };
+
+  const handleActiveLane = (key) => {
+    setActiveLane(key);
+    // The lane in view is also the lane JSON mode will inspect.
+    setJsonLane(key);
+  };
+
+  // Compare renders both lanes; every other mode edits lane A (or the persisted
+  // JSON lane), so all single-view chrome keeps one source of truth.
+  const laneKeyInView = mode === "json" ? jsonLane : "a";
+  const laneInView = laneKeyInView === "b" ? laneB : laneA;
+  const lanes = mode === "compare"
+    ? [{ key: "a", lane: laneA }, { key: "b", lane: laneB }]
+    : [{ key: laneKeyInView, lane: laneInView }];
+  const headerLane = lanes[0];
+  const viewLane = mode === "compare" ? (activeLane === "b" ? laneB : laneA) : laneInView;
+  const viewModel = viewLane.model;
+
+  const handleLaneScroll = (key) => {
+    const element = scrollRefs.current[key];
+    if (!element) return;
+    atBottomRefs.current[key] = element.scrollHeight - element.scrollTop - element.clientHeight < 80;
+  };
+
+  const followLane = useCallback((key) => {
+    const element = scrollRefs.current[key];
+    if (element && atBottomRefs.current[key]) element.scrollTop = element.scrollHeight;
   }, []);
 
   // Follow new output only while the reader is already at the bottom, so scrolling
   // back through a long answer is not yanked away by incoming tokens.
-  useEffect(() => {
-    if (atBottomRef.current) scrollToBottom();
-  }, [messages, scrollToBottom]);
+  useEffect(() => { followLane("a"); }, [laneA.messages, followLane]);
+  useEffect(() => { followLane("b"); }, [laneB.messages, followLane]);
+  // A lane hidden below 1100px has no box to scroll until the tabs reveal it.
+  useEffect(() => { followLane(activeLane); }, [activeLane, followLane]);
 
-  const canSend = !isStreaming && !!selectedModel && input.trim().length > 0;
-
-  const handleScroll = () => {
-    const element = scrollRef.current;
-    if (!element) return;
-    atBottomRef.current = element.scrollHeight - element.scrollTop - element.clientHeight < 80;
+  const openPicker = (key) => {
+    if (mode === "compare") handleActiveLane(key);
+    setPickerFor(key);
   };
 
-  // Follow the new turn only when a turn actually started; focus lands back in the composer.
-  const followTurn = useCallback((turn) => {
-    if (!turn) return;
-    atBottomRef.current = true;
-    Promise.resolve(turn).catch(() => {}).finally(() => inputRef.current?.focus());
-  }, []);
-
-  // Reset session clears the transcript, the draft and any open overlay.
-  const handleResetSession = () => {
-    resetLane();
-    setInput("");
-    setThinkingOpen({});
-    setPickerOpen(false);
-    atBottomRef.current = true;
-    inputRef.current?.focus();
+  const togglePicker = (key) => {
+    if (pickerFor === key) {
+      setPickerFor(null);
+      return;
+    }
+    openPicker(key);
   };
 
-  // Clear thread drops the conversation but keeps the draft and the target.
-  const handleClearThread = () => {
-    resetLane();
-    setThinkingOpen({});
-  };
+  // Header telemetry: the target's real context window (from the model catalog)
+  // and the exact request the last turn in view sent, replayed as a cURL.
+  const caps = useModelCaps();
+  const contextWindow = viewModel ? caps.getCaps(viewModel.value)?.contextWindow || 0 : 0;
+  const headerCurl = viewLane.lastTurn?.request ? buildCurl(viewLane.lastTurn.request) : "";
 
-  const handleSelectModel = (next) => {
-    if (!next?.value) return;
-    lane.selectModel(next);
-    setPickerOpen(false);
-    inputRef.current?.focus();
-  };
+  const composerTargets = lanes;
+  const composerBusy = laneA.isStreaming || laneB.isStreaming;
+  const missingTarget = composerTargets.find((entry) => !entry.lane.model) || null;
+  const canSend = !composerBusy && !missingTarget && input.trim().length > 0;
+  const hasMessages = laneA.messages.length > 0 || laneB.messages.length > 0;
 
-  const handleSend = () => {
+  // One composer feeds every lane in view, so a compare turn is a single prompt
+  // broadcast to both targets.
+  const submit = () => {
     const text = input.trim();
-    if (!text || !selectedModel || isStreaming) return;
-    const turn = send(text);
-    if (!turn) return;
+    if (!text || composerBusy) return;
+    const ready = composerTargets.filter((entry) => entry.lane.model);
+    if (ready.length === 0) return;
     setInput("");
-    followTurn(turn);
+    ready.forEach((entry) => {
+      // A send always jumps to the new turn, even if the reader had scrolled back.
+      atBottomRefs.current[entry.key] = true;
+      entry.lane.send(text);
+    });
+    inputRef.current?.focus();
   };
 
-  // Replay the same question against the model that answered it.
-  const handleRetry = (assistantId) => {
-    followTurn(retry(assistantId));
+  const stopAll = () => {
+    laneA.stop();
+    laneB.stop();
+  };
+
+  // Reset session clears both transcripts, the draft and any open overlay.
+  const handleResetSession = () => {
+    laneA.reset();
+    laneB.reset();
+    setInput("");
+    setThinkingOpen({});
+    setPickerFor(null);
+    atBottomRefs.current = { a: true, b: true };
+    inputRef.current?.focus();
+  };
+
+  // Clear thread drops the conversations but keeps the draft and the targets.
+  const handleClearThread = () => {
+    laneA.reset();
+    laneB.reset();
+    setThinkingOpen({});
+    atBottomRefs.current = { a: true, b: true };
   };
 
   const copyMessage = (message) => {
@@ -209,7 +279,7 @@ export default function PlaygroundPageClient() {
     if (event.key !== "Enter" || event.shiftKey) return;
     if (event.nativeEvent?.isComposing) return;
     event.preventDefault();
-    if (canSend) handleSend();
+    if (canSend) submit();
   };
 
   const handleSuggestion = (suggestion) => {
@@ -221,31 +291,62 @@ export default function PlaygroundPageClient() {
     setThinkingOpen((previous) => ({ ...previous, [messageId]: !previous[messageId] }));
   };
 
-  const modelCatalog = useModelCatalog({ isOpen: pickerOpen, activeProviders: providers, modelAliases });
+  const modelCatalog = useModelCatalog({ isOpen: pickerFor !== null, activeProviders: providers, modelAliases });
   const hasCatalog = modelCatalog.filteredCombos.length
     + Object.values(modelCatalog.visibleGroups).reduce((total, group) => total + group.models.length, 0) > 0;
 
-  const emptyHint = selectedModel
-    ? `Test ${selectedModel.name} through JRouter.`
-    : !loading && providers.length === 0
-      ? "No providers connected yet. Connect one from the Providers page to test models here."
-      : "Pick a model, then send your first message through JRouter.";
+  const emptyHintFor = (lane, key) => {
+    if (mode === "compare") {
+      return lane.model
+        ? `Test ${lane.model.name} against lane ${key === "a" ? "B" : "A"}.`
+        : `Pick a model for lane ${key.toUpperCase()}, then send a prompt to compare both.`;
+    }
+    return lane.model
+      ? `Test ${lane.model.name} through JRouter.`
+      : !loading && providers.length === 0
+        ? "No providers connected yet. Connect one from the Providers page to test models here."
+        : "Pick a model, then send your first message through JRouter.";
+  };
+
+  const composerPlaceholder = mode === "compare"
+    ? laneA.model && laneB.model
+      ? `Message ${laneA.model.name} and ${laneB.model.name}…`
+      : "Pick a model for each lane to compare…"
+    : viewModel
+      ? `Message ${viewModel.name}...`
+      : "Select a model to start…";
 
   // KPI props carry only values the APIs returned; nothing here is estimated.
-  const targets = [selectedModel].filter(Boolean);
+  // `targets` is what is actually selected, so a half-filled compare reads one target.
+  const targets = (mode === "compare" ? [laneA.model, laneB.model] : [headerLane.lane.model]).filter(Boolean);
   const primaryTarget = targets[0] || null;
   const cache = cacheShare(usageStats);
-  const routePlan = buildRoutePlan(primaryTarget, combos, providers, settings?.comboStrategies || {});
+  const routePlanA = buildRoutePlan(laneA.model, combos, providers, settings?.comboStrategies || {});
+  const routePlanB = buildRoutePlan(laneB.model, combos, providers, settings?.comboStrategies || {});
+  // Single view follows the lane on screen; compare keeps the routing card on lane A
+  // because the rail already lists both plans, one per lane.
+  const viewPlan = mode === "compare"
+    ? routePlanA
+    : buildRoutePlan(headerLane.lane.model, combos, providers, settings?.comboStrategies || {});
+  const routePlans = mode === "compare"
+    ? [{ key: "a", plan: routePlanA }, { key: "b", plan: routePlanB }]
+    : [{ key: "a", plan: viewPlan }];
   const saverNote = settings === null
     ? "Token saver status unavailable"
     : `Token saver: RTK ${settings.rtkEnabled ? "on" : "off"} · Headroom ${settings.headroomEnabled ? "on" : "off"}`;
 
   const statsProps = {
-    targetLabel: primaryTarget ? shortModelName(primaryTarget.name) : "No target",
-    targetNote: primaryTarget
-      ? `${primaryTarget.providerName || "Unknown provider"} · ${primaryTarget.isCombo ? "combo" : "direct"}`
-      : "Pick a model to start",
-    targetStatus: primaryTarget ? (isStreaming ? "streaming" : "ready") : "idle",
+    targetLabel: targets.length > 1
+      ? `${targets.length} targets`
+      : primaryTarget
+        ? shortModelName(primaryTarget.name)
+        : "No target",
+    targetNote: targets.length > 1
+      ? targets.map((target) => target.providerName || "Unknown provider").join(" + ")
+      : primaryTarget
+        ? `${primaryTarget.providerName || "Unknown provider"} · ${primaryTarget.isCombo ? "combo" : "direct"}`
+        : "Pick a model to start",
+    targetStatus: targets.length ? (composerBusy ? "streaming" : "ready") : "idle",
     cachePercent: cache.percent,
     cacheNote: usageStats === null
       ? "Usage data unavailable"
@@ -254,10 +355,34 @@ export default function PlaygroundPageClient() {
         : "No prompt tokens today",
     saverNote,
     hasCache: cache.hasData,
-    routeLabel: routePlan.label,
-    routeNote: routePlan.summary,
-    routeStrategy: routePlan.strategy ? `${routePlan.strategy} · from config` : "from config",
+    routeLabel: viewPlan.label,
+    routeNote: viewPlan.summary,
+    routeStrategy: viewPlan.strategy ? `${viewPlan.strategy} · from config` : "from config",
   };
+
+  const systemCard = (
+    <details
+      className={styles.systemCard}
+      open={systemOpen}
+      onToggle={(event) => setSystemOpen(event.currentTarget.open)}
+    >
+      <summary className={styles.systemHead}>
+        <span className={styles.systemTitle}><Icon>article</Icon> System instructions</span>
+        <span className={styles.systemMeta}>
+          {systemPrompt.trim() ? `~${estimateTokens(systemPrompt)} tokens` : "empty"}
+          <Icon className={styles.chevronSmall}>{systemOpen ? "expand_less" : "expand_more"}</Icon>
+        </span>
+      </summary>
+      <textarea
+        className={styles.systemInput}
+        rows={3}
+        value={systemPrompt}
+        onChange={(event) => setSystemPrompt(event.target.value)}
+        placeholder="Sent as the first message of every request."
+        aria-label="System instructions"
+      />
+    </details>
+  );
 
   return (
     <div className={styles.page}>
@@ -267,6 +392,12 @@ export default function PlaygroundPageClient() {
           <p className={styles.sub}>Test models, combos, prompt routing, and streaming latencies in real time.</p>
         </div>
         <div className={styles.introActions}>
+          <SegmentedControl
+            aria-label="Playground mode"
+            value={mode}
+            onChange={changeMode}
+            options={MODE_OPTIONS}
+          />
           <Button variant="secondary" size="sm" icon="refresh" onClick={handleResetSession}>
             Reset session
           </Button>
@@ -280,54 +411,71 @@ export default function PlaygroundPageClient() {
       <div className={styles.workbench} data-rail={railOpen ? "open" : "closed"}>
         <section className={styles.chat} aria-label="Playground chat">
           <div className={styles.chatHeader}>
-            <div className={styles.modelTriggerWrap}>
-              <button
-                type="button"
-                data-model-trigger
-                className={styles.modelTrigger}
-                onClick={() => setPickerOpen((open) => !open)}
-                aria-haspopup="dialog"
-                aria-expanded={pickerOpen}
-              >
-                <ModelIcon
-                  providerId={selectedModel?.providerId}
-                  providerName={selectedModel?.providerName}
-                  providerColor={selectedModel?.providerColor}
-                  isCombo={selectedModel?.isCombo}
-                  size={18}
-                />
-                <span className={styles.modelTriggerText}>
-                  <span className={styles.modelNameRow}>
-                    <span className={styles.modelName}>
-                      {selectedModel ? selectedModel.name : loading ? "Loading models…" : "Select a model"}
-                    </span>
-                    {selectedModel?.isCombo ? <span className={styles.modelBadge}>combo</span> : null}
-                  </span>
-                  <span className={styles.modelProvider}>
-                    {selectedModel
-                      ? selectedModel.providerName || selectedModel.value
-                      : !loading && providers.length === 0
-                        ? "No connected providers"
-                        : "Choose from connected providers"}
-                  </span>
-                </span>
-                <Icon className={styles.chevron}>{pickerOpen ? "expand_less" : "expand_more"}</Icon>
-              </button>
-
-              <ModelPickerPopover
-                isOpen={pickerOpen}
-                onClose={() => setPickerOpen(false)}
-                onSelect={handleSelectModel}
-                selectedModel={selectedModel?.value}
-                activeProviders={providers}
-                modelAliases={modelAliases}
+            {mode === "compare" ? (
+              <SegmentedControl
+                size="sm"
+                aria-label="Active lane"
+                value={activeLane}
+                onChange={handleActiveLane}
+                options={LANE_OPTIONS}
               />
-            </div>
+            ) : (
+              <div className={styles.modelTriggerWrap}>
+                <button
+                  type="button"
+                  data-model-trigger
+                  className={styles.modelTrigger}
+                  onClick={() => togglePicker(headerLane.key)}
+                  aria-haspopup="dialog"
+                  aria-expanded={pickerFor === headerLane.key}
+                >
+                  <ModelIcon
+                    providerId={headerLane.lane.model?.providerId}
+                    providerName={headerLane.lane.model?.providerName}
+                    providerColor={headerLane.lane.model?.providerColor}
+                    isCombo={headerLane.lane.model?.isCombo}
+                    size={18}
+                  />
+                  <span className={styles.modelTriggerText}>
+                    <span className={styles.modelNameRow}>
+                      <span className={styles.modelName}>
+                        {headerLane.lane.model
+                          ? headerLane.lane.model.name
+                          : loading ? "Loading models…" : "Select a model"}
+                      </span>
+                      {headerLane.lane.model?.isCombo ? <span className={styles.modelBadge}>combo</span> : null}
+                    </span>
+                    <span className={styles.modelProvider}>
+                      {headerLane.lane.model
+                        ? headerLane.lane.model.providerName || headerLane.lane.model.value
+                        : !loading && providers.length === 0
+                          ? "No connected providers"
+                          : "Choose from connected providers"}
+                    </span>
+                  </span>
+                  <Icon className={styles.chevron}>{pickerFor === headerLane.key ? "expand_less" : "expand_more"}</Icon>
+                </button>
+
+                <ModelPickerPopover
+                  isOpen={pickerFor === headerLane.key}
+                  onClose={() => setPickerFor(null)}
+                  onSelect={(model) => {
+                    headerLane.lane.selectModel(model);
+                    setPickerFor(null);
+                    inputRef.current?.focus();
+                  }}
+                  selectedModel={headerLane.lane.model?.value}
+                  activeProviders={providers}
+                  modelAliases={modelAliases}
+                />
+              </div>
+            )}
 
             <div className={styles.pills}>
-              {selectedModel?.isCombo ? <span className={styles.pill}>combo</span> : null}
+              {mode === "compare" ? <span className={styles.pill}>lane {activeLane}</span> : null}
+              {viewModel?.isCombo ? <span className={styles.pill}>combo</span> : null}
               {contextWindow ? <span className={styles.pill}>{formatContext(contextWindow)} ctx</span> : null}
-              <span className={styles.pill} data-tone={isStreaming ? "live" : "idle"}>
+              <span className={styles.pill} data-tone={composerBusy ? "live" : "idle"}>
                 {params.stream ? "SSE stream" : "JSON"}
               </span>
             </div>
@@ -350,7 +498,7 @@ export default function PlaygroundPageClient() {
                   type="button"
                   className={styles.iconButton}
                   onClick={handleClearThread}
-                  disabled={messages.length === 0}
+                  disabled={!hasMessages}
                   aria-label="Clear thread"
                 >
                   <Icon>delete</Icon>
@@ -371,70 +519,127 @@ export default function PlaygroundPageClient() {
             </div>
           </div>
 
-          <div className={styles.chatBody} ref={scrollRef} onScroll={handleScroll} role="region" aria-label="Conversation" tabIndex={0}>
-            <details
-              className={styles.systemCard}
-              open={systemOpen}
-              onToggle={(event) => setSystemOpen(event.currentTarget.open)}
-            >
-              <summary className={styles.systemHead}>
-                <span className={styles.systemTitle}><Icon>article</Icon> System instructions</span>
-                <span className={styles.systemMeta}>
-                  {systemPrompt.trim() ? `~${estimateTokens(systemPrompt)} tokens` : "empty"}
-                  <Icon className={styles.chevronSmall}>{systemOpen ? "expand_less" : "expand_more"}</Icon>
-                </span>
-              </summary>
-              <textarea
-                className={styles.systemInput}
-                rows={3}
-                value={systemPrompt}
-                onChange={(event) => setSystemPrompt(event.target.value)}
-                placeholder="Sent as the first message of every request."
-                aria-label="System instructions"
-              />
-            </details>
-
-            <div className={styles.canvas}>
-              {loadError ? (
-                <p className={styles.loadError} role="alert">
-                  <Icon>error</Icon>
-                  {loadError}
-                </p>
-              ) : null}
-
-              {messages.length === 0 ? (
-                <div className={styles.empty}>
-                  <span className={styles.emptyIcon}>
-                    <Icon>science</Icon>
-                  </span>
-                  <p className={styles.emptyTitle}>Start a conversation</p>
-                  <p className={styles.emptyHint}>{emptyHint}</p>
-                  {selectedModel && hasCatalog ? (
-                    <div className={styles.suggestions}>
-                      {SUGGESTIONS.map((suggestion) => (
-                        <button
-                          key={suggestion}
-                          type="button"
-                          className={styles.suggestion}
-                          onClick={() => handleSuggestion(suggestion)}
-                        >
-                          {suggestion}
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              ) : (
-                <PlaygroundTranscript
-                  messages={messages}
-                  thinkingOpen={thinkingOpen}
-                  onToggleThinking={toggleThinking}
-                  copied={copied}
-                  onCopy={copyMessage}
-                  onRetry={handleRetry}
-                />
-              )}
+          {loadError ? (
+            <div className={styles.chatNotice}>
+              <p className={styles.loadError} role="alert">
+                <Icon>error</Icon>
+                {loadError}
+              </p>
             </div>
+          ) : null}
+
+          <div className={styles.lanes} data-mode={mode} data-active={activeLane}>
+            {lanes.map(({ key, lane }) => (
+              <section
+                key={key}
+                className={styles.lane}
+                data-lane={key}
+                aria-label={mode === "compare" ? `Lane ${key.toUpperCase()}` : undefined}
+              >
+                {mode === "compare" ? (
+                  <div className={styles.laneHead}>
+                    <span className={styles.laneLetter}>{key.toUpperCase()}</span>
+                    <div className={styles.modelTriggerWrap}>
+                      <button
+                        type="button"
+                        data-model-trigger
+                        className={styles.modelTrigger}
+                        onClick={() => togglePicker(key)}
+                        aria-haspopup="dialog"
+                        aria-expanded={pickerFor === key}
+                        aria-label={`Lane ${key.toUpperCase()} model`}
+                      >
+                        <ModelIcon
+                          providerId={lane.model?.providerId}
+                          providerName={lane.model?.providerName}
+                          providerColor={lane.model?.providerColor}
+                          isCombo={lane.model?.isCombo}
+                          size={18}
+                        />
+                        <span className={styles.modelTriggerText}>
+                          <span className={styles.modelNameRow}>
+                            <span className={styles.modelName}>
+                              {lane.model ? lane.model.name : loading ? "Loading models…" : "Select a model"}
+                            </span>
+                            {lane.model?.isCombo ? <span className={styles.modelBadge}>combo</span> : null}
+                          </span>
+                          <span className={styles.modelProvider}>
+                            {lane.model
+                              ? lane.model.providerName || lane.model.value
+                              : "Choose from connected providers"}
+                          </span>
+                        </span>
+                        <Icon className={styles.chevron}>{pickerFor === key ? "expand_less" : "expand_more"}</Icon>
+                      </button>
+
+                      <ModelPickerPopover
+                        isOpen={pickerFor === key}
+                        onClose={() => setPickerFor(null)}
+                        onSelect={(model) => {
+                          lane.selectModel(model);
+                          setPickerFor(null);
+                          inputRef.current?.focus();
+                        }}
+                        selectedModel={lane.model?.value}
+                        activeProviders={providers}
+                        modelAliases={modelAliases}
+                      />
+                    </div>
+                    <span className={styles.laneStatus}>
+                      {lane.isStreaming ? "streaming" : lane.model ? "ready" : "no model"}
+                    </span>
+                  </div>
+                ) : null}
+
+                <div
+                  className={styles.laneBody}
+                  ref={(element) => { scrollRefs.current[key] = element; }}
+                  onScroll={() => handleLaneScroll(key)}
+                  role="region"
+                  aria-label={mode === "compare" ? `Lane ${key.toUpperCase()} conversation` : "Conversation"}
+                  tabIndex={0}
+                >
+                  {mode !== "compare" ? systemCard : null}
+
+                  <div className={styles.canvas}>
+                    {lane.messages.length === 0 ? (
+                      <div className={styles.empty}>
+                        <span className={styles.emptyIcon}>
+                          <Icon>science</Icon>
+                        </span>
+                        <p className={styles.emptyTitle}>
+                          {mode === "compare" ? `Lane ${key.toUpperCase()}` : "Start a conversation"}
+                        </p>
+                        <p className={styles.emptyHint}>{emptyHintFor(lane, key)}</p>
+                        {lane.model && hasCatalog ? (
+                          <div className={styles.suggestions}>
+                            {SUGGESTIONS.map((suggestion) => (
+                              <button
+                                key={suggestion}
+                                type="button"
+                                className={styles.suggestion}
+                                onClick={() => handleSuggestion(suggestion)}
+                              >
+                                {suggestion}
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <PlaygroundTranscript
+                        messages={lane.messages}
+                        thinkingOpen={thinkingOpen}
+                        onToggleThinking={toggleThinking}
+                        copied={copied}
+                        onCopy={copyMessage}
+                        onRetry={lane.retry}
+                      />
+                    )}
+                  </div>
+                </div>
+              </section>
+            ))}
           </div>
 
           <div className={styles.composerWrap}>
@@ -446,42 +651,50 @@ export default function PlaygroundPageClient() {
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={selectedModel ? `Message ${selectedModel.name}...` : "Select a model to start…"}
+                placeholder={composerPlaceholder}
                 aria-label="Message"
               />
 
               <div className={styles.composerBar}>
-                {selectedModel ? (
-                  <span className={styles.composerContext}>
-                    <ModelIcon
-                      providerId={selectedModel.providerId}
-                      providerName={selectedModel.providerName}
-                      providerColor={selectedModel.providerColor}
-                      isCombo={selectedModel.isCombo}
-                      size={13}
-                    />
-                    <span className={styles.composerContextName}>
-                      {selectedModel.providerName || selectedModel.name}
-                    </span>
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    className={styles.suggestion}
-                    onClick={() => setPickerOpen(true)}
-                  >
-                    Select a model
-                  </button>
-                )}
+                <div className={styles.composerContexts}>
+                  {composerTargets.map(({ key, lane }) => (
+                    lane.model ? (
+                      <span key={key} className={styles.composerContext}>
+                        <ModelIcon
+                          providerId={lane.model.providerId}
+                          providerName={lane.model.providerName}
+                          providerColor={lane.model.providerColor}
+                          isCombo={lane.model.isCombo}
+                          size={13}
+                        />
+                        <span className={styles.composerContextName}>
+                          {mode === "compare" ? `${key.toUpperCase()} · ` : ""}
+                          {lane.model.providerName || lane.model.name}
+                        </span>
+                      </span>
+                    ) : null
+                  ))}
+
+                  {missingTarget ? (
+                    <button
+                      type="button"
+                      className={styles.suggestion}
+                      onClick={() => openPicker(missingTarget.key)}
+                      aria-label={`Select a model for lane ${missingTarget.key.toUpperCase()}`}
+                    >
+                      Select a model
+                    </button>
+                  ) : null}
+                </div>
 
                 <span className={styles.composerButtons}>
-                  {isStreaming ? (
+                  {composerBusy ? (
                     <Tooltip text="Stop generating">
                       <button
                         type="button"
                         className={styles.sendButton}
                         data-mode="stop"
-                        onClick={stop}
+                        onClick={stopAll}
                         aria-label="Stop generating"
                       >
                         <Icon>stop</Icon>
@@ -492,7 +705,7 @@ export default function PlaygroundPageClient() {
                       <button
                         type="button"
                         className={styles.sendButton}
-                        onClick={handleSend}
+                        onClick={submit}
                         disabled={!canSend}
                         aria-label="Send message"
                       >
@@ -515,8 +728,8 @@ export default function PlaygroundPageClient() {
               params={params}
               onParamsChange={setParams}
               onResetParams={() => setParams({ ...DEFAULT_PARAMS })}
-              routePlans={[{ key: "a", plan: routePlan }]}
-              lastTurn={lastTurn}
+              routePlans={routePlans}
+              lastTurn={viewLane.lastTurn}
               saver={{ label: saverNote }}
               onOpenTokenSaver={() => router.push("/dashboard/token-saver")}
             />
