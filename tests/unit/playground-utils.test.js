@@ -201,7 +201,7 @@ describe("buildCurl", () => {
       body: { model: "it's", messages: [] },
     });
     expect(curl).toContain("curl -X POST '/api/v1/chat/completions'");
-    expect(curl).toContain("Authorization: Bearer ***");
+    expect(curl).toContain("Authorization: Bearer $JROUTER_API_KEY");
     expect(curl).not.toContain("sk-secret");
     expect(curl).toContain("'\''");
   });

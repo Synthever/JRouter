@@ -136,7 +136,7 @@ export function buildRoutePlan(target, combos = [], providers = [], strategies =
 
 export const RAW_LIMIT = 256 * 1024;
 // Display-only stand-in for the key: a copied cURL must never carry a live one.
-const API_KEY_PLACEHOLDER = "***";
+const API_KEY_PLACEHOLDER = "$JROUTER_API_KEY";
 
 export function buildPayload({ model, history = [], systemPrompt = "", params }) {
   const messages = [];
