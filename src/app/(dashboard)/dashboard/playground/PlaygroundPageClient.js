@@ -162,21 +162,14 @@ export default function PlaygroundPageClient() {
     Promise.resolve(turn).catch(() => {}).finally(() => inputRef.current?.focus());
   }, []);
 
-  const handleNewChat = () => {
+  // Reset session clears the transcript, the draft and any open overlay.
+  const handleResetSession = () => {
     resetLane();
     setInput("");
     setThinkingOpen({});
     setPickerOpen(false);
     atBottomRef.current = true;
     inputRef.current?.focus();
-  };
-
-  // Reset session clears the transcript and any open overlay, leaving the draft alone.
-  const handleResetSession = () => {
-    resetLane();
-    setThinkingOpen({});
-    setPickerOpen(false);
-    atBottomRef.current = true;
   };
 
   // Clear thread drops the conversation but keeps the draft and the target.
@@ -361,18 +354,6 @@ export default function PlaygroundPageClient() {
                   aria-label="Clear thread"
                 >
                   <Icon>delete</Icon>
-                </button>
-              </Tooltip>
-
-              <Tooltip text="New chat">
-                <button
-                  type="button"
-                  className={styles.iconButton}
-                  onClick={handleNewChat}
-                  disabled={messages.length === 0}
-                  aria-label="New chat"
-                >
-                  <Icon>add</Icon>
                 </button>
               </Tooltip>
 
