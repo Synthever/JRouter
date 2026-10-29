@@ -8,11 +8,10 @@ import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import { useModelCatalog } from "@/shared/hooks/useModelCatalog";
 import PlaygroundMarkdown from "./PlaygroundMarkdown";
 import ModelPickerPopover from "./ModelPickerPopover";
+import { buildMetricParts, formatLatency } from "./playgroundUtils.js";
+import usePlaygroundLane from "./usePlaygroundLane.js";
 import styles from "./playground.module.css";
 
-// Chat goes through the same OpenAI-compatible JRouter endpoint every other client uses,
-// so combos, provider fallback, translation and usage tracking all apply unchanged.
-const CHAT_ENDPOINT = "/api/v1/chat/completions";
 const MAX_COMPOSER_HEIGHT = 200;
 const SUGGESTIONS = [
   "Explain your capabilities",
@@ -20,86 +19,8 @@ const SUGGESTIONS = [
   "Compare REST and GraphQL",
 ];
 
-function createId() {
-  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
-  return `pg_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-}
-
-// Elapsed-time measurements happen in event handlers and stream callbacks, never
-// during render — reading the clock through one helper keeps that explicit.
-function now() {
-  return Date.now();
-}
-
-function formatLatency(ms) {
-  if (!Number.isFinite(ms) || ms <= 0) return "";
-  return ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(1)}s`;
-}
-
-function formatCount(value) {
-  return Number.isFinite(value) ? value.toLocaleString("en-US") : "";
-}
-
 function providerInitials(name) {
   return (name || "?").slice(0, 2).toUpperCase();
-}
-
-// Upscale error payloads from the router, upstream providers and the network into one line.
-function errorMessageFrom(payload) {
-  const raw = payload?.error?.message ?? payload?.error ?? payload?.message ?? payload?.msg;
-  if (typeof raw === "string" && raw.trim()) return raw.trim();
-  if (raw && typeof raw === "object") {
-    try {
-      return JSON.stringify(raw);
-    } catch {
-      return "";
-    }
-  }
-  return "";
-}
-
-// Only non-empty, numeric values are sent, so untouched fields keep the provider default.
-function buildGenerationParams(settings) {
-  const params = {};
-  const temperature = Number.parseFloat(settings.temperature);
-  if (Number.isFinite(temperature)) params.temperature = temperature;
-  const maxTokens = Number.parseInt(settings.maxTokens, 10);
-  if (Number.isFinite(maxTokens) && maxTokens > 0) params.max_tokens = maxTokens;
-  const topP = Number.parseFloat(settings.topP);
-  if (Number.isFinite(topP)) params.top_p = topP;
-  return params;
-}
-
-function toRequestMessages(messages) {
-  return messages
-    .filter((message) => message.role === "user" || message.role === "assistant")
-    .map((message) => ({ role: message.role, content: message.content }));
-}
-
-// Reasoning fields some providers stream alongside (or instead of) the answer text.
-function reasoningDeltaFrom(delta) {
-  const raw = delta?.reasoning_content ?? delta?.reasoning;
-  return typeof raw === "string" ? raw : "";
-}
-
-// Latency · prompt tokens · completion tokens · finish reason · routed model.
-function buildMetaParts(meta) {
-  const parts = [];
-  const latency = formatLatency(meta.latencyMs);
-  if (latency) parts.push(latency);
-  const prompt = formatCount(meta.usage?.prompt_tokens);
-  if (prompt) parts.push(`${prompt} in`);
-  const completion = formatCount(meta.usage?.completion_tokens);
-  if (completion) {
-    parts.push(`${completion} out`);
-  } else {
-    const total = formatCount(meta.usage?.total_tokens);
-    if (total) parts.push(`${total} tokens`);
-  }
-  if (meta.finishReason) parts.push(meta.finishReason);
-  if (meta.responseModel && meta.responseModel !== meta.requestedModel) parts.push(meta.responseModel);
-  if (meta.stopped) parts.push("stopped");
-  return parts;
 }
 
 function ModelIcon({ model, providerId, providerName, providerColor, isCombo, size = 16 }) {
@@ -160,22 +81,35 @@ export default function PlaygroundPageClient() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
-  const [selectedModel, setSelectedModel] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
-  const [isStreaming, setIsStreaming] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [generation, setGeneration] = useState({ temperature: "", maxTokens: "", topP: "" });
   const [thinkingOpen, setThinkingOpen] = useState({});
 
-  const abortRef = useRef(null);
+  const paramsRef = useRef({ useDefaults: true, temperature: "0.7", maxTokens: "4096", topP: "0.95", stream: true, jsonMode: false });
+  const systemPromptRef = useRef("");
+  const [input, setInput] = useState("");
+  const restoreDraft = useCallback((text) => setInput((current) => current || text), []);
+  const lane = usePlaygroundLane({ apiKey, paramsRef, systemPromptRef, onRestoreDraft: restoreDraft });
+  const { model: selectedModel, messages, isStreaming, send, stop, retry, reset: resetLane } = lane;
+
   const inputRef = useRef(null);
   const scrollRef = useRef(null);
   const settingsRef = useRef(null);
   const atBottomRef = useRef(true);
-  const streamingRef = useRef(false);
   const { copied, copy } = useCopyToClipboard();
+
+  // The settings popover still owns the fields; the hook reads them through the ref.
+  useEffect(() => {
+    paramsRef.current = {
+      useDefaults: !generation.temperature && !generation.maxTokens && !generation.topP,
+      temperature: generation.temperature,
+      maxTokens: generation.maxTokens,
+      topP: generation.topP,
+      stream: true,
+      jsonMode: false,
+    };
+  }, [generation]);
 
   // Model picker sources: same connections/aliases data the Combo picker uses.
   useEffect(() => {
@@ -251,8 +185,6 @@ export default function PlaygroundPageClient() {
     };
   }, [settingsOpen]);
 
-  useEffect(() => () => abortRef.current?.abort(), []);
-
   const canSend = !isStreaming && !!selectedModel && input.trim().length > 0;
 
   const handleScroll = () => {
@@ -261,12 +193,15 @@ export default function PlaygroundPageClient() {
     atBottomRef.current = element.scrollHeight - element.scrollTop - element.clientHeight < 80;
   };
 
+  // Follow the new turn only when a turn actually started; focus lands back in the composer.
+  const followTurn = useCallback((turn) => {
+    if (!turn) return;
+    atBottomRef.current = true;
+    Promise.resolve(turn).catch(() => {}).finally(() => inputRef.current?.focus());
+  }, []);
+
   const handleNewChat = () => {
-    abortRef.current?.abort();
-    abortRef.current = null;
-    streamingRef.current = false;
-    setIsStreaming(false);
-    setMessages([]);
+    resetLane();
     setInput("");
     setThinkingOpen({});
     setSettingsOpen(false);
@@ -275,233 +210,25 @@ export default function PlaygroundPageClient() {
     inputRef.current?.focus();
   };
 
-  const handleSelectModel = (model) => {
-    if (!model?.value) return;
-    const label = model.name || model.value;
-    const previous = selectedModel;
-    const changed = previous?.value !== model.value;
-    setSelectedModel({
-      value: model.value,
-      name: label,
-      providerId: model.providerId || "",
-      providerName: model.providerName || "",
-      providerColor: model.providerColor || "",
-      isCombo: model.isCombo === true,
-    });
+  const handleSelectModel = (next) => {
+    if (!next?.value) return;
+    lane.selectModel(next);
     setPickerOpen(false);
-    // Keep the transcript so the same context can be replayed against another model.
-    setMessages((current) => (
-      changed && current.some((message) => message.role !== "divider")
-        ? [...current, {
-          id: createId(),
-          role: "divider",
-          from: previous?.name || previous?.value || "",
-          to: label,
-          content: `Model switched to ${label}`,
-        }]
-        : current
-    ));
     inputRef.current?.focus();
   };
 
-  const handleStop = () => {
-    abortRef.current?.abort();
-  };
-
-  const patchAssistant = useCallback((assistantId, patch) => {
-    setMessages((previous) => previous.map((message) => (
-      message.id === assistantId ? { ...message, ...patch } : message
-    )));
-  }, []);
-
-  // `base` is the transcript the new turn runs against. Retry passes the history
-  // truncated at the retried question instead of the whole conversation.
-  const runTurn = async (question, base, model, startedAt) => {
-    if (!question || !model || streamingRef.current) return;
-
-    const assistantId = createId();
-    const history = [...base, { id: createId(), role: "user", content: question }];
-
-    setMessages([
-      ...history,
-      {
-        id: assistantId,
-        role: "assistant",
-        content: "",
-        status: "streaming",
-        modelName: model.name,
-        providerId: model.providerId,
-        providerName: model.providerName,
-        isCombo: model.isCombo,
-        startedAt,
-        reasoning: "",
-        meta: null,
-      },
-    ]);
-    setInput("");
-    streamingRef.current = true;
-    setIsStreaming(true);
-    atBottomRef.current = true;
-
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    const patch = (values) => patchAssistant(assistantId, values);
-
-    let content = "";
-    let reasoning = "";
-    let usage = null;
-    let finishReason = "";
-    let responseModel = "";
-    let elapsedMs = null;
-
-    const finalize = (status, extra = {}) => {
-      patch({
-        content,
-        reasoning,
-        status,
-        elapsedMs,
-        meta: {
-          latencyMs: elapsedMs ?? Date.now() - startedAt,
-          usage,
-          finishReason,
-          responseModel,
-          requestedModel: model.value,
-          ...extra,
-        },
-      });
-    };
-
-    try {
-      const headers = { "Content-Type": "application/json", Accept: "text/event-stream" };
-      if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
-
-      const response = await fetch(CHAT_ENDPOINT, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          model: model.value,
-          messages: toRequestMessages(history),
-          stream: true,
-          ...buildGenerationParams(generation),
-        }),
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => null);
-        throw new Error(errorMessageFrom(payload) || `Request failed (${response.status})`);
-      }
-      if (!response.body) throw new Error("The response contained no body to read.");
-
-      // A buffered JSON body means the reply was not streamed after all.
-      if ((response.headers.get("content-type") || "").includes("application/json")) {
-        const payload = await response.json().catch(() => null);
-        const failure = errorMessageFrom(payload);
-        if (failure) throw new Error(failure);
-        const message = payload?.choices?.[0]?.message;
-        content = typeof message?.content === "string" ? message.content : "";
-        reasoning = reasoningDeltaFrom(message);
-        usage = payload?.usage || null;
-        finishReason = payload?.choices?.[0]?.finish_reason || "";
-        responseModel = typeof payload?.model === "string" ? payload.model : "";
-        finalize(content ? "done" : "empty");
-        return;
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split(/\r?\n/);
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed.startsWith("data:")) continue;
-          const payload = trimmed.slice(5).trim();
-          if (!payload || payload === "[DONE]") continue;
-
-          let chunk;
-          try {
-            chunk = JSON.parse(payload);
-          } catch {
-            continue;
-          }
-
-          if (chunk?.error) throw new Error(errorMessageFrom(chunk) || "Request failed.");
-
-          const choice = chunk?.choices?.[0];
-          const deltaText = typeof choice?.delta?.content === "string" ? choice.delta.content : "";
-          const deltaReasoning = reasoningDeltaFrom(choice?.delta);
-          if (deltaText || deltaReasoning) {
-            content += deltaText;
-            reasoning += deltaReasoning;
-            if (!elapsedMs) elapsedMs = now() - startedAt;
-            patch({ content, reasoning });
-          }
-          if (choice?.finish_reason) finishReason = choice.finish_reason;
-          if (chunk?.usage && typeof chunk.usage === "object") usage = chunk.usage;
-          if (typeof chunk?.model === "string" && chunk.model) responseModel = chunk.model;
-        }
-      }
-
-      finalize(content || reasoning ? "done" : "empty");
-    } catch (error) {
-      if (error?.name === "AbortError") {
-        finalize("done", { stopped: true });
-      } else {
-        patch({ content, reasoning, status: "error", error: error?.message || "Request failed." });
-        // Hand the prompt back so the user can edit and retry.
-        setInput((current) => current || question);
-      }
-    } finally {
-      if (abortRef.current === controller) abortRef.current = null;
-      streamingRef.current = false;
-      setIsStreaming(false);
-      inputRef.current?.focus();
-    }
-  };
-
-  const sendMessage = () => {
+  const handleSend = () => {
     const text = input.trim();
-    if (!text || !selectedModel || streamingRef.current) return;
-    return runTurn(text, messages, selectedModel, now());
+    if (!text || !selectedModel || isStreaming) return;
+    const turn = send(text);
+    if (!turn) return;
+    setInput("");
+    followTurn(turn);
   };
 
   // Replay the same question against the model that answered it.
   const handleRetry = (assistantId) => {
-    if (streamingRef.current) return;
-    const index = messages.findIndex((message) => message.id === assistantId);
-    if (index < 0) return;
-    const answered = messages[index];
-
-    let questionIndex = -1;
-    for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
-      if (messages[cursor].role === "user") {
-        questionIndex = cursor;
-        break;
-      }
-    }
-    if (questionIndex < 0) return;
-
-    const question = messages[questionIndex].content;
-    const base = messages.slice(0, questionIndex);
-    const model = {
-      value: answered.meta?.requestedModel || "",
-      name: answered.modelName || "",
-      providerId: answered.providerId || "",
-      providerName: answered.providerName || "",
-      providerColor: selectedModel?.providerColor || "",
-      isCombo: answered.isCombo === true,
-    };
-    if (!model.value) return;
-    runTurn(question, base, model, now());
+    followTurn(retry(assistantId));
   };
 
   const copyMessage = (message) => {
@@ -514,7 +241,7 @@ export default function PlaygroundPageClient() {
     if (event.key !== "Enter" || event.shiftKey) return;
     if (event.nativeEvent?.isComposing) return;
     event.preventDefault();
-    if (canSend) sendMessage();
+    if (canSend) handleSend();
   };
 
   const handleGenerationChange = (field) => (event) => {
@@ -548,11 +275,22 @@ export default function PlaygroundPageClient() {
     }
 
     const isThinkingVisible = thinkingOpen[message.id] === true;
-    const reasoningSeconds = message.meta?.latencyMs ? Math.max(1, Math.round(message.meta.latencyMs / 1000)) : 0;
+    const reasoningMs = message.firstTokenMs ?? message.totalMs;
+    const reasoningSeconds = Number.isFinite(reasoningMs) ? Math.max(1, Math.round(reasoningMs / 1000)) : 0;
     const isStreamingMessage = message.status === "streaming";
     const isWaiting = isStreamingMessage && !message.content && !message.reasoning;
     const isAnswering = isStreamingMessage && !!message.content;
-    const metaParts = message.meta ? buildMetaParts(message.meta) : [];
+    const metaParts = message.meta
+      ? buildMetricParts({
+        firstTokenMs: message.firstTokenMs,
+        totalMs: message.totalMs,
+        usage: message.meta.usage,
+        finishReason: message.meta.finishReason,
+        reportedModel: message.meta.reportedModel,
+        requestedModel: message.meta.requestedModel,
+        stopped: message.meta.stopped,
+      })
+      : [];
     const canRetry = message.status === "done" && messages[messages.length - 1]?.id === message.id;
     const actionsVisible = !isStreamingMessage;
 
@@ -896,7 +634,7 @@ export default function PlaygroundPageClient() {
                     type="button"
                     className={styles.sendButton}
                     data-mode="stop"
-                    onClick={handleStop}
+                    onClick={stop}
                     aria-label="Stop generating"
                   >
                     <Icon>stop</Icon>
@@ -907,7 +645,7 @@ export default function PlaygroundPageClient() {
                   <button
                     type="button"
                     className={styles.sendButton}
-                    onClick={sendMessage}
+                    onClick={handleSend}
                     disabled={!canSend}
                     aria-label="Send message"
                   >
