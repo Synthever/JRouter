@@ -7,8 +7,16 @@ import ProviderIcon from "@/shared/components/ProviderIcon";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import { useModelCatalog } from "@/shared/hooks/useModelCatalog";
 import PlaygroundMarkdown from "./PlaygroundMarkdown";
+import PlaygroundStats from "./PlaygroundStats";
 import ModelPickerPopover from "./ModelPickerPopover";
-import { buildMetricParts, formatLatency } from "./playgroundUtils.js";
+import {
+  buildMetricParts,
+  buildRoutePlan,
+  cacheShare,
+  formatCount,
+  formatLatency,
+  shortModelName,
+} from "./playgroundUtils.js";
 import usePlaygroundLane from "./usePlaygroundLane.js";
 import styles from "./playground.module.css";
 
@@ -78,6 +86,9 @@ export default function PlaygroundPageClient() {
   const [providers, setProviders] = useState([]);
   const [modelAliases, setModelAliases] = useState({});
   const [apiKey, setApiKey] = useState("");
+  const [combos, setCombos] = useState([]);
+  const [usageStats, setUsageStats] = useState(null);
+  const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
@@ -111,30 +122,41 @@ export default function PlaygroundPageClient() {
     };
   }, [generation]);
 
-  // Model picker sources: same connections/aliases data the Combo picker uses.
+  // One mount loader: picker sources plus the KPI sources. Requests are isolated
+  // with allSettled, so a failing card never blocks the chat or the picker.
   useEffect(() => {
     let cancelled = false;
 
+    async function readJson(result) {
+      if (result.status !== "fulfilled" || !result.value.ok) return null;
+      return result.value.json().catch(() => null);
+    }
+
     async function load() {
       try {
-        const [providersRes, aliasesRes, keysRes] = await Promise.all([
+        const results = await Promise.allSettled([
           fetch("/api/providers", { cache: "no-store" }),
           fetch("/api/models/alias", { cache: "no-store" }),
           fetch("/api/keys", { cache: "no-store" }),
+          fetch("/api/combos", { cache: "no-store" }),
+          fetch("/api/usage/stats?period=today", { cache: "no-store" }),
+          fetch("/api/settings", { cache: "no-store" }),
         ]);
-        const providersData = providersRes.ok ? await providersRes.json().catch(() => ({})) : {};
-        const aliasesData = aliasesRes.ok ? await aliasesRes.json().catch(() => ({})) : {};
-        const keysData = keysRes.ok ? await keysRes.json().catch(() => ({})) : {};
+        const [providersData, aliasesData, keysData, combosData, usageData, settingsData] =
+          await Promise.all(results.map(readJson));
         if (cancelled) return;
 
         setProviders(
-          Array.isArray(providersData.connections)
+          Array.isArray(providersData?.connections)
             ? providersData.connections.filter((connection) => connection?.isActive !== false)
             : []
         );
-        setModelAliases(aliasesData.aliases && typeof aliasesData.aliases === "object" ? aliasesData.aliases : {});
-        setApiKey((keysData.keys || []).find((key) => key.isActive !== false)?.key || "");
-        if (!providersRes.ok) setLoadError("Providers could not be loaded. Reload the page to try again.");
+        setModelAliases(aliasesData?.aliases && typeof aliasesData.aliases === "object" ? aliasesData.aliases : {});
+        setApiKey((keysData?.keys || []).find((key) => key.isActive !== false)?.key || "");
+        setCombos(Array.isArray(combosData?.combos) ? combosData.combos : []);
+        setUsageStats(usageData && typeof usageData === "object" && !Array.isArray(usageData) ? usageData : null);
+        setSettings(settingsData && typeof settingsData === "object" && !Array.isArray(settingsData) ? settingsData : null);
+        if (!providersData) setLoadError("Providers could not be loaded. Reload the page to try again.");
       } catch (error) {
         if (!cancelled) setLoadError(error?.message || "Providers and models could not be loaded.");
       } finally {
@@ -407,8 +429,40 @@ export default function PlaygroundPageClient() {
       ? "No providers connected yet. Connect one from the Providers page to test models here."
       : "Pick a model, then send your first message through JRouter.";
 
+  // KPI props carry only values the APIs returned; nothing here is estimated.
+  const targets = [selectedModel].filter(Boolean);
+  const primaryTarget = targets[0] || null;
+  const cache = cacheShare(usageStats);
+  const routePlan = buildRoutePlan(primaryTarget, combos, providers, settings?.comboStrategies || {});
+  const saverNote = settings === null
+    ? "Token saver status unavailable"
+    : `Token saver: RTK ${settings.rtkEnabled ? "on" : "off"} · Headroom ${settings.headroomEnabled ? "on" : "off"}`;
+
+  const statsProps = {
+    targetLabel: primaryTarget ? shortModelName(primaryTarget.name) : "No target",
+    targetNote: primaryTarget
+      ? `${primaryTarget.providerName || "Unknown provider"} · ${primaryTarget.isCombo ? "combo" : "direct"}`
+      : "Pick a model to start",
+    targetStatus: primaryTarget ? (isStreaming ? "streaming" : "ready") : "idle",
+    cachePercent: cache.percent,
+    cacheNote: usageStats === null
+      ? "Usage data unavailable"
+      : cache.hasData
+        ? `${formatCount(cache.cached)} cached tokens today`
+        : "No prompt tokens today",
+    saverNote,
+    hasCache: cache.hasData,
+    routeLabel: routePlan.label,
+    routeNote: routePlan.summary,
+    routeStrategy: routePlan.strategy ? `${routePlan.strategy} · from config` : "from config",
+  };
+
   return (
     <div className={styles.page}>
+      <div className={styles.statsSlot}>
+        <PlaygroundStats {...statsProps} />
+      </div>
+
       <div className={styles.workspace}>
       <div className={`${styles.column} ${styles.toolbar}`}>
         <div className={styles.modelTriggerWrap}>
