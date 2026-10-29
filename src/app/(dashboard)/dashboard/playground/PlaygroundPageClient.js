@@ -96,6 +96,8 @@ export default function PlaygroundPageClient() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [generation, setGeneration] = useState({ temperature: "", maxTokens: "", topP: "" });
   const [thinkingOpen, setThinkingOpen] = useState({});
+  // The rail is always mounted in this task; Task 6 adds the toggle that uses setRailOpen.
+  const [railOpen, setRailOpen] = useState(true);
 
   const paramsRef = useRef({ useDefaults: true, temperature: "0.7", maxTokens: "4096", topP: "0.95", stream: true, jsonMode: false });
   const systemPromptRef = useRef("");
@@ -230,6 +232,14 @@ export default function PlaygroundPageClient() {
     setPickerOpen(false);
     atBottomRef.current = true;
     inputRef.current?.focus();
+  };
+
+  // Reset session clears the transcript and any open overlay, leaving the draft alone.
+  const handleResetSession = () => {
+    resetLane();
+    setThinkingOpen({});
+    setPickerOpen(false);
+    atBottomRef.current = true;
   };
 
   const handleSelectModel = (next) => {
@@ -459,261 +469,281 @@ export default function PlaygroundPageClient() {
 
   return (
     <div className={styles.page}>
+      <header className={styles.intro}>
+        <div className={styles.introText}>
+          <h1 className={styles.title}>Playground</h1>
+          <p className={styles.sub}>Test models, combos, prompt routing, and streaming latencies in real time.</p>
+        </div>
+        <div className={styles.introActions}>
+          <Button variant="secondary" size="sm" icon="refresh" onClick={handleResetSession}>
+            Reset session
+          </Button>
+        </div>
+      </header>
+
       <div className={styles.statsSlot}>
         <PlaygroundStats {...statsProps} />
       </div>
 
-      <div className={styles.workspace}>
-      <div className={`${styles.column} ${styles.toolbar}`}>
-        <div className={styles.modelTriggerWrap}>
-          <button
-            type="button"
-            data-model-trigger
-            className={styles.modelTrigger}
-            onClick={() => setPickerOpen((open) => !open)}
-            aria-haspopup="dialog"
-            aria-expanded={pickerOpen}
-          >
-            <ModelIcon
-              providerId={selectedModel?.providerId}
-              providerName={selectedModel?.providerName}
-              providerColor={selectedModel?.providerColor}
-              isCombo={selectedModel?.isCombo}
-              size={18}
-            />
-            <span className={styles.modelTriggerText}>
-              <span className={styles.modelNameRow}>
-                <span className={styles.modelName}>
-                  {selectedModel ? selectedModel.name : loading ? "Loading models…" : "Select a model"}
-                </span>
-                {selectedModel?.isCombo ? <span className={styles.modelBadge}>combo</span> : null}
-              </span>
-              <span className={styles.modelProvider}>
-                {selectedModel
-                  ? selectedModel.providerName || selectedModel.value
-                  : !loading && providers.length === 0
-                    ? "No connected providers"
-                    : "Choose from connected providers"}
-              </span>
-            </span>
-            <Icon className={styles.chevron}>{pickerOpen ? "expand_less" : "expand_more"}</Icon>
-          </button>
-
-          <ModelPickerPopover
-            isOpen={pickerOpen}
-            onClose={() => setPickerOpen(false)}
-            onSelect={handleSelectModel}
-            selectedModel={selectedModel?.value}
-            activeProviders={providers}
-            modelAliases={modelAliases}
-          />
-        </div>
-
-        <div className={styles.toolbarActions}>
-          <Tooltip text="New chat">
-            <button
-              type="button"
-              className={styles.iconButton}
-              onClick={handleNewChat}
-              disabled={messages.length === 0}
-              aria-label="New chat"
-            >
-              <Icon>add</Icon>
-            </button>
-          </Tooltip>
-
-          <span ref={settingsRef} className={styles.settingsAnchor}>
-            <Tooltip text="Generation settings">
+      <div className={styles.workbench} data-rail={railOpen ? "open" : "closed"}>
+        <section className={styles.chat} aria-label="Playground chat">
+          <div className={styles.chatHeader}>
+            <div className={styles.modelTriggerWrap}>
               <button
                 type="button"
-                className={styles.iconButton}
-                onClick={() => setSettingsOpen((open) => !open)}
-                aria-expanded={settingsOpen}
-                aria-label="Generation settings"
+                data-model-trigger
+                className={styles.modelTrigger}
+                onClick={() => setPickerOpen((open) => !open)}
+                aria-haspopup="dialog"
+                aria-expanded={pickerOpen}
               >
-                <Icon>settings</Icon>
-              </button>
-            </Tooltip>
-
-            {settingsOpen ? (
-              <div className={styles.settingsPopover} role="dialog" aria-label="Generation settings">
-                <div className={styles.settingsHead}>
-                  <span>Generation</span>
-                  <button
-                    type="button"
-                    className={styles.settingsClose}
-                    onClick={() => setSettingsOpen(false)}
-                    aria-label="Close settings"
-                  >
-                    <Icon>close</Icon>
-                  </button>
-                </div>
-
-                <label className={styles.settingsField}>
-                  <span className={styles.settingsLabel}>Temperature</span>
-                  <input
-                    type="number"
-                    min="0"
-                    max="2"
-                    step="0.1"
-                    placeholder="default"
-                    value={generation.temperature}
-                    onChange={handleGenerationChange("temperature")}
-                    className={styles.settingsInput}
-                  />
-                </label>
-
-                <label className={styles.settingsField}>
-                  <span className={styles.settingsLabel}>Max tokens</span>
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    placeholder="default"
-                    value={generation.maxTokens}
-                    onChange={handleGenerationChange("maxTokens")}
-                    className={styles.settingsInput}
-                  />
-                </label>
-
-                <label className={styles.settingsField}>
-                  <span className={styles.settingsLabel}>Top P</span>
-                  <input
-                    type="number"
-                    min="0"
-                    max="1"
-                    step="0.05"
-                    placeholder="default"
-                    value={generation.topP}
-                    onChange={handleGenerationChange("topP")}
-                    className={styles.settingsInput}
-                  />
-                </label>
-
-                <p className={styles.settingsHint}>
-                  Applied to the next request. Empty fields use the provider default.
-                </p>
-
-                {generation.temperature || generation.maxTokens || generation.topP ? (
-                  <button
-                    type="button"
-                    className={styles.settingsReset}
-                    onClick={() => setGeneration({ temperature: "", maxTokens: "", topP: "" })}
-                  >
-                    Reset to provider defaults
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
-          </span>
-        </div>
-      </div>
-
-      <div className={styles.scroll} ref={scrollRef} onScroll={handleScroll} role="region" aria-label="Conversation" tabIndex={0}>
-        <div className={`${styles.column} ${styles.canvas}`}>
-          {loadError ? (
-            <p className={styles.loadError} role="alert">
-              <Icon>error</Icon>
-              {loadError}
-            </p>
-          ) : null}
-
-          {messages.length === 0 ? (
-            <div className={styles.empty}>
-              <span className={styles.emptyIcon}>
-                <Icon>science</Icon>
-              </span>
-              <p className={styles.emptyTitle}>Start a conversation</p>
-              <p className={styles.emptyHint}>{emptyHint}</p>
-              {selectedModel && hasCatalog ? (
-                <div className={styles.suggestions}>
-                  {SUGGESTIONS.map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      type="button"
-                      className={styles.suggestion}
-                      onClick={() => handleSuggestion(suggestion)}
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : messages.map(renderMessage)}
-        </div>
-      </div>
-
-      <div className={`${styles.column} ${styles.composerWrap}`}>
-        <div className={styles.composer}>
-          <textarea
-            ref={inputRef}
-            rows={1}
-            className={styles.textarea}
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={selectedModel ? `Message ${selectedModel.name}...` : "Select a model to start…"}
-            aria-label="Message"
-          />
-
-          <div className={styles.composerBar}>
-            {selectedModel ? (
-              <span className={styles.composerContext}>
                 <ModelIcon
-                  providerId={selectedModel.providerId}
-                  providerName={selectedModel.providerName}
-                  providerColor={selectedModel.providerColor}
-                  isCombo={selectedModel.isCombo}
-                  size={13}
+                  providerId={selectedModel?.providerId}
+                  providerName={selectedModel?.providerName}
+                  providerColor={selectedModel?.providerColor}
+                  isCombo={selectedModel?.isCombo}
+                  size={18}
                 />
-                <span className={styles.composerContextName}>
-                  {selectedModel.providerName || selectedModel.name}
+                <span className={styles.modelTriggerText}>
+                  <span className={styles.modelNameRow}>
+                    <span className={styles.modelName}>
+                      {selectedModel ? selectedModel.name : loading ? "Loading models…" : "Select a model"}
+                    </span>
+                    {selectedModel?.isCombo ? <span className={styles.modelBadge}>combo</span> : null}
+                  </span>
+                  <span className={styles.modelProvider}>
+                    {selectedModel
+                      ? selectedModel.providerName || selectedModel.value
+                      : !loading && providers.length === 0
+                        ? "No connected providers"
+                        : "Choose from connected providers"}
+                  </span>
                 </span>
-              </span>
-            ) : (
-              <button
-                type="button"
-                className={styles.suggestion}
-                onClick={() => setPickerOpen(true)}
-              >
-                Select a model
+                <Icon className={styles.chevron}>{pickerOpen ? "expand_less" : "expand_more"}</Icon>
               </button>
-            )}
 
-            <span className={styles.composerButtons}>
-              {isStreaming ? (
-                <Tooltip text="Stop generating">
+              <ModelPickerPopover
+                isOpen={pickerOpen}
+                onClose={() => setPickerOpen(false)}
+                onSelect={handleSelectModel}
+                selectedModel={selectedModel?.value}
+                activeProviders={providers}
+                modelAliases={modelAliases}
+              />
+            </div>
+
+            <div className={styles.toolbarActions}>
+              <Tooltip text="New chat">
+                <button
+                  type="button"
+                  className={styles.iconButton}
+                  onClick={handleNewChat}
+                  disabled={messages.length === 0}
+                  aria-label="New chat"
+                >
+                  <Icon>add</Icon>
+                </button>
+              </Tooltip>
+
+              <span ref={settingsRef} className={styles.settingsAnchor}>
+                <Tooltip text="Generation settings">
                   <button
                     type="button"
-                    className={styles.sendButton}
-                    data-mode="stop"
-                    onClick={stop}
-                    aria-label="Stop generating"
+                    className={styles.iconButton}
+                    onClick={() => setSettingsOpen((open) => !open)}
+                    aria-expanded={settingsOpen}
+                    aria-label="Generation settings"
                   >
-                    <Icon>stop</Icon>
+                    <Icon>settings</Icon>
                   </button>
                 </Tooltip>
-              ) : (
-                <Tooltip text="Send">
-                  <button
-                    type="button"
-                    className={styles.sendButton}
-                    onClick={handleSend}
-                    disabled={!canSend}
-                    aria-label="Send message"
-                  >
-                    <Icon>arrow_upward</Icon>
-                  </button>
-                </Tooltip>
-              )}
-            </span>
+
+                {settingsOpen ? (
+                  <div className={styles.settingsPopover} role="dialog" aria-label="Generation settings">
+                    <div className={styles.settingsHead}>
+                      <span>Generation</span>
+                      <button
+                        type="button"
+                        className={styles.settingsClose}
+                        onClick={() => setSettingsOpen(false)}
+                        aria-label="Close settings"
+                      >
+                        <Icon>close</Icon>
+                      </button>
+                    </div>
+
+                    <label className={styles.settingsField}>
+                      <span className={styles.settingsLabel}>Temperature</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="2"
+                        step="0.1"
+                        placeholder="default"
+                        value={generation.temperature}
+                        onChange={handleGenerationChange("temperature")}
+                        className={styles.settingsInput}
+                      />
+                    </label>
+
+                    <label className={styles.settingsField}>
+                      <span className={styles.settingsLabel}>Max tokens</span>
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        placeholder="default"
+                        value={generation.maxTokens}
+                        onChange={handleGenerationChange("maxTokens")}
+                        className={styles.settingsInput}
+                      />
+                    </label>
+
+                    <label className={styles.settingsField}>
+                      <span className={styles.settingsLabel}>Top P</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        placeholder="default"
+                        value={generation.topP}
+                        onChange={handleGenerationChange("topP")}
+                        className={styles.settingsInput}
+                      />
+                    </label>
+
+                    <p className={styles.settingsHint}>
+                      Applied to the next request. Empty fields use the provider default.
+                    </p>
+
+                    {generation.temperature || generation.maxTokens || generation.topP ? (
+                      <button
+                        type="button"
+                        className={styles.settingsReset}
+                        onClick={() => setGeneration({ temperature: "", maxTokens: "", topP: "" })}
+                      >
+                        Reset to provider defaults
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </span>
+            </div>
           </div>
-          <p className={styles.hint}>
-            <kbd>Enter</kbd> to send · <kbd>Shift</kbd> + <kbd>Enter</kbd> for a new line
-          </p>
-        </div>
-      </div>
+
+          <div className={styles.chatBody} ref={scrollRef} onScroll={handleScroll} role="region" aria-label="Conversation" tabIndex={0}>
+            <div className={styles.canvas}>
+              {loadError ? (
+                <p className={styles.loadError} role="alert">
+                  <Icon>error</Icon>
+                  {loadError}
+                </p>
+              ) : null}
+
+              {messages.length === 0 ? (
+                <div className={styles.empty}>
+                  <span className={styles.emptyIcon}>
+                    <Icon>science</Icon>
+                  </span>
+                  <p className={styles.emptyTitle}>Start a conversation</p>
+                  <p className={styles.emptyHint}>{emptyHint}</p>
+                  {selectedModel && hasCatalog ? (
+                    <div className={styles.suggestions}>
+                      {SUGGESTIONS.map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          type="button"
+                          className={styles.suggestion}
+                          onClick={() => handleSuggestion(suggestion)}
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : messages.map(renderMessage)}
+            </div>
+          </div>
+
+          <div className={styles.composerWrap}>
+            <div className={styles.composer}>
+              <textarea
+                ref={inputRef}
+                rows={1}
+                className={styles.textarea}
+                value={input}
+                onChange={(event) => setInput(event.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={selectedModel ? `Message ${selectedModel.name}...` : "Select a model to start…"}
+                aria-label="Message"
+              />
+
+              <div className={styles.composerBar}>
+                {selectedModel ? (
+                  <span className={styles.composerContext}>
+                    <ModelIcon
+                      providerId={selectedModel.providerId}
+                      providerName={selectedModel.providerName}
+                      providerColor={selectedModel.providerColor}
+                      isCombo={selectedModel.isCombo}
+                      size={13}
+                    />
+                    <span className={styles.composerContextName}>
+                      {selectedModel.providerName || selectedModel.name}
+                    </span>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    className={styles.suggestion}
+                    onClick={() => setPickerOpen(true)}
+                  >
+                    Select a model
+                  </button>
+                )}
+
+                <span className={styles.composerButtons}>
+                  {isStreaming ? (
+                    <Tooltip text="Stop generating">
+                      <button
+                        type="button"
+                        className={styles.sendButton}
+                        data-mode="stop"
+                        onClick={stop}
+                        aria-label="Stop generating"
+                      >
+                        <Icon>stop</Icon>
+                      </button>
+                    </Tooltip>
+                  ) : (
+                    <Tooltip text="Send">
+                      <button
+                        type="button"
+                        className={styles.sendButton}
+                        onClick={handleSend}
+                        disabled={!canSend}
+                        aria-label="Send message"
+                      >
+                        <Icon>arrow_upward</Icon>
+                      </button>
+                    </Tooltip>
+                  )}
+                </span>
+              </div>
+              <p className={styles.hint}>
+                <kbd>Enter</kbd> to send · <kbd>Shift</kbd> + <kbd>Enter</kbd> for a new line
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {railOpen ? (
+          <aside className={styles.rail} aria-label="Execution parameters">
+            {/* PlaygroundRail mounts here in Task 6; the settings popover lives in the header until then. */}
+          </aside>
+        ) : null}
       </div>
     </div>
   );
