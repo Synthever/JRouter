@@ -128,3 +128,120 @@ describe("buildRoutePlan", () => {
     expect(plan.kind).toBe("direct");
   });
 });
+
+import {
+  buildCurl,
+  buildPayload,
+  consumeSseStream,
+  maskRequestHeaders,
+  RAW_LIMIT,
+} from "@/app/(dashboard)/dashboard/playground/playgroundUtils.js";
+
+const params = { useDefaults: true, temperature: 0.7, maxTokens: 4096, topP: 0.95, stream: true, jsonMode: false };
+const target = { value: "river/deepseek-v4", name: "deepseek-v4" };
+
+describe("buildPayload", () => {
+  it("omits sampling params while provider defaults are on", () => {
+    const payload = buildPayload({ model: target, history: [], systemPrompt: "", params });
+    expect(payload).toEqual({ model: "river/deepseek-v4", messages: [], stream: true });
+  });
+  it("prepends the system prompt and keeps only user/assistant turns", () => {
+    const payload = buildPayload({
+      model: target,
+      history: [
+        { role: "divider", content: "switched" },
+        { role: "user", content: "hi" },
+        { role: "assistant", content: "hello" },
+        { role: "user", content: "" },
+      ],
+      systemPrompt: "  Be terse.  ",
+      params,
+    });
+    expect(payload.messages).toEqual([
+      { role: "system", content: "Be terse." },
+      { role: "user", content: "hi" },
+      { role: "assistant", content: "hello" },
+    ]);
+  });
+  it("sends sampling params, stream flag and JSON mode when requested", () => {
+    const payload = buildPayload({
+      model: target,
+      history: [{ role: "user", content: "hi" }],
+      systemPrompt: "",
+      params: { ...params, useDefaults: false, stream: false, jsonMode: true },
+    });
+    expect(payload).toMatchObject({
+      temperature: 0.7, max_tokens: 4096, top_p: 0.95, stream: false,
+      response_format: { type: "json_object" },
+    });
+  });
+});
+
+describe("maskRequestHeaders", () => {
+  it("masks bearer tokens and keeps other headers", () => {
+    expect(maskRequestHeaders({
+      Authorization: "Bearer sk-live-abcd",
+      "Content-Type": "application/json",
+    })).toEqual({
+      Authorization: "Bearer ••••abcd",
+      "Content-Type": "application/json",
+    });
+  });
+  it("never leaks the raw key", () => {
+    const masked = JSON.stringify(maskRequestHeaders({ Authorization: "Bearer sk-live-abcd" }));
+    expect(masked).not.toContain("sk-live");
+  });
+});
+
+describe("buildCurl", () => {
+  it("uses an environment placeholder and escapes single quotes", () => {
+    const curl = buildCurl({
+      url: "/api/v1/chat/completions",
+      headers: { Authorization: "Bearer sk-secret", "Content-Type": "application/json" },
+      body: { model: "it's", messages: [] },
+    });
+    expect(curl).toContain("curl -X POST '/api/v1/chat/completions'");
+    expect(curl).toContain("Authorization: Bearer ***");
+    expect(curl).not.toContain("sk-secret");
+    expect(curl).toContain("'\''");
+  });
+});
+
+describe("consumeSseStream", () => {
+  const frame = (payload) => `data: ${JSON.stringify(payload)}\n\n`;
+
+  it("accumulates content, reasoning, usage and model", async () => {
+    const text = [
+      frame({ choices: [{ delta: { reasoning_content: "think" } }] }),
+      frame({ choices: [{ delta: { content: "Hel" } }] }),
+      frame({ choices: [{ delta: { content: "lo" }, finish_reason: "stop" }], model: "vendor/actual" }),
+      frame({ usage: { prompt_tokens: 3, completion_tokens: 2 } }),
+      "data: [DONE]\n\n",
+    ].join("");
+    const seen = [];
+    const result = await consumeSseStream(new Response(text).body, { onDelta: (value) => seen.push(value.content) });
+    expect(result).toMatchObject({
+      content: "Hello",
+      reasoning: "think",
+      finishReason: "stop",
+      responseModel: "vendor/actual",
+      usage: { prompt_tokens: 3, completion_tokens: 2 },
+      truncated: false,
+    });
+    expect(seen).toEqual(["", "Hel", "Hello"]);
+    expect(result.frames).toBe(4);
+  });
+
+  it("throws the upstream error message", async () => {
+    const body = new Response(frame({ error: { message: "quota exhausted" } })).body;
+    await expect(consumeSseStream(body)).rejects.toThrow("quota exhausted");
+  });
+
+  it("caps the captured raw text", async () => {
+    const big = "x".repeat(RAW_LIMIT + 1000);
+    const body = new Response(`data: ${JSON.stringify({ choices: [{ delta: { content: big } }] })}\n\n`).body;
+    const result = await consumeSseStream(body);
+    expect(result.rawText.length).toBeLessThanOrEqual(RAW_LIMIT);
+    expect(result.truncated).toBe(true);
+  });
+});

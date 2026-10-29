@@ -133,3 +133,131 @@ export function buildRoutePlan(target, combos = [], providers = [], strategies =
     connections: connections.length,
   };
 }
+
+export const RAW_LIMIT = 256 * 1024;
+// Display-only stand-in for the key: a copied cURL must never carry a live one.
+const API_KEY_PLACEHOLDER = "***";
+
+export function buildPayload({ model, history = [], systemPrompt = "", params }) {
+  const messages = [];
+  const system = String(systemPrompt || "").trim();
+  if (system) messages.push({ role: "system", content: system });
+  for (const message of history) {
+    if (message?.role !== "user" && message?.role !== "assistant") continue;
+    if (!message.content) continue;
+    messages.push({ role: message.role, content: message.content });
+  }
+
+  const payload = { model: model.value, messages, stream: params?.stream !== false };
+  if (!params?.useDefaults) {
+    const temperature = Number.parseFloat(params?.temperature);
+    if (Number.isFinite(temperature)) payload.temperature = temperature;
+    const maxTokens = Number.parseInt(params?.maxTokens, 10);
+    if (Number.isFinite(maxTokens) && maxTokens > 0) payload.max_tokens = maxTokens;
+    const topP = Number.parseFloat(params?.topP);
+    if (Number.isFinite(topP)) payload.top_p = topP;
+  }
+  if (params?.jsonMode) payload.response_format = { type: "json_object" };
+  return payload;
+}
+
+export function maskRequestHeaders(headers = {}) {
+  const out = {};
+  for (const [key, value] of Object.entries(headers)) {
+    if (/^authorization$/i.test(key)) {
+      const token = String(value || "").replace(/^Bearer\s+/i, "");
+      out.Authorization = token ? `Bearer ••••${token.slice(-4)}` : "Bearer ••••";
+    } else {
+      out[key] = String(value);
+    }
+  }
+  return out;
+}
+
+const shellQuote = (value) => String(value).replace(/'/g, "'\''");
+
+export function buildCurl({ url, headers = {}, body }) {
+  const args = [`curl -X POST '${shellQuote(url)}'`];
+  for (const [key, value] of Object.entries(headers)) {
+    if (/^authorization$/i.test(key) || /^content-type$/i.test(key)) continue;
+    args.push(`  -H '${key}: ${shellQuote(value)}'`);
+  }
+  args.push(`  -H 'Authorization: Bearer ${API_KEY_PLACEHOLDER}'`);
+  if (body !== undefined) {
+    args.push(`  -H 'Content-Type: application/json'`);
+    args.push(`  -d '${shellQuote(JSON.stringify(body))}'`);
+  }
+  return args.join(" \\\n");
+}
+
+// Reads an OpenAI-style SSE body. Mirrors the parser the playground shipped with,
+// with request/response capture for the JSON inspector.
+export async function consumeSseStream(body, { onDelta } = {}) {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let content = "";
+  let reasoning = "";
+  let usage = null;
+  let finishReason = "";
+  let responseModel = "";
+  let frames = 0;
+  let rawText = "";
+  let truncated = false;
+
+  const capture = (text) => {
+    if (truncated) return;
+    const room = RAW_LIMIT - rawText.length;
+    if (room <= 0) {
+      truncated = true;
+      return;
+    }
+    if (text.length > room) {
+      rawText += text.slice(0, room);
+      truncated = true;
+      return;
+    }
+    rawText += text;
+  };
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    const chunkText = decoder.decode(value, { stream: true });
+    capture(chunkText);
+    buffer += chunkText;
+    const lines = buffer.split(/\r?\n/);
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith("data:")) continue;
+      const payload = trimmed.slice(5).trim();
+      if (!payload || payload === "[DONE]") continue;
+      frames += 1;
+
+      let chunk;
+      try {
+        chunk = JSON.parse(payload);
+      } catch {
+        continue;
+      }
+
+      if (chunk?.error) throw new Error(errorMessageFrom(chunk) || "Request failed.");
+
+      const choice = chunk?.choices?.[0];
+      const deltaText = typeof choice?.delta?.content === "string" ? choice.delta.content : "";
+      const deltaReasoning = reasoningDeltaFrom(choice?.delta);
+      if (deltaText || deltaReasoning) {
+        content += deltaText;
+        reasoning += deltaReasoning;
+        if (onDelta) onDelta({ content, reasoning });
+      }
+      if (choice?.finish_reason) finishReason = choice.finish_reason;
+      if (chunk?.usage && typeof chunk.usage === "object") usage = chunk.usage;
+      if (typeof chunk?.model === "string" && chunk.model) responseModel = chunk.model;
+    }
+  }
+
+  return { content, reasoning, usage, finishReason, responseModel, frames, rawText, truncated };
+}
