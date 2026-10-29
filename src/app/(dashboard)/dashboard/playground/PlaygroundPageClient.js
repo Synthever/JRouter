@@ -2,12 +2,14 @@
 import Icon from "@/shared/components/Icon";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button, Tooltip } from "@/shared/components";
 import ProviderIcon from "@/shared/components/ProviderIcon";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import { useModelCatalog } from "@/shared/hooks/useModelCatalog";
 import PlaygroundMarkdown from "./PlaygroundMarkdown";
 import PlaygroundStats from "./PlaygroundStats";
+import PlaygroundRail from "./PlaygroundRail";
 import ModelPickerPopover from "./ModelPickerPopover";
 import {
   buildMetricParts,
@@ -21,6 +23,7 @@ import usePlaygroundLane from "./usePlaygroundLane.js";
 import styles from "./playground.module.css";
 
 const MAX_COMPOSER_HEIGHT = 200;
+const DEFAULT_PARAMS = { useDefaults: true, temperature: 0.7, maxTokens: 4096, topP: 0.95, stream: true, jsonMode: false };
 const SUGGESTIONS = [
   "Explain your capabilities",
   "Write a short TypeScript example",
@@ -93,36 +96,27 @@ export default function PlaygroundPageClient() {
   const [loadError, setLoadError] = useState("");
 
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [generation, setGeneration] = useState({ temperature: "", maxTokens: "", topP: "" });
+  const [params, setParams] = useState({ ...DEFAULT_PARAMS });
   const [thinkingOpen, setThinkingOpen] = useState({});
-  // The rail is always mounted in this task; Task 6 adds the toggle that uses setRailOpen.
   const [railOpen, setRailOpen] = useState(true);
 
-  const paramsRef = useRef({ useDefaults: true, temperature: "0.7", maxTokens: "4096", topP: "0.95", stream: true, jsonMode: false });
+  const paramsRef = useRef({ ...DEFAULT_PARAMS });
   const systemPromptRef = useRef("");
   const [input, setInput] = useState("");
   const restoreDraft = useCallback((text) => setInput((current) => current || text), []);
   const lane = usePlaygroundLane({ apiKey, paramsRef, systemPromptRef, onRestoreDraft: restoreDraft });
-  const { model: selectedModel, messages, isStreaming, send, stop, retry, reset: resetLane } = lane;
+  const { model: selectedModel, messages, isStreaming, lastTurn, send, stop, retry, reset: resetLane } = lane;
+  const router = useRouter();
 
   const inputRef = useRef(null);
   const scrollRef = useRef(null);
-  const settingsRef = useRef(null);
   const atBottomRef = useRef(true);
   const { copied, copy } = useCopyToClipboard();
 
-  // The settings popover still owns the fields; the hook reads them through the ref.
+  // The rail owns the fields; the turn engine reads them through the ref at send time.
   useEffect(() => {
-    paramsRef.current = {
-      useDefaults: !generation.temperature && !generation.maxTokens && !generation.topP,
-      temperature: generation.temperature,
-      maxTokens: generation.maxTokens,
-      topP: generation.topP,
-      stream: true,
-      jsonMode: false,
-    };
-  }, [generation]);
+    paramsRef.current = params;
+  }, [params]);
 
   // One mount loader: picker sources plus the KPI sources. Requests are isolated
   // with allSettled, so a failing card never blocks the chat or the picker.
@@ -193,22 +187,6 @@ export default function PlaygroundPageClient() {
     if (atBottomRef.current) scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  useEffect(() => {
-    if (!settingsOpen) return undefined;
-    const handlePointerDown = (event) => {
-      if (settingsRef.current && !settingsRef.current.contains(event.target)) setSettingsOpen(false);
-    };
-    const handleKeyDown = (event) => {
-      if (event.key === "Escape") setSettingsOpen(false);
-    };
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [settingsOpen]);
-
   const canSend = !isStreaming && !!selectedModel && input.trim().length > 0;
 
   const handleScroll = () => {
@@ -228,7 +206,6 @@ export default function PlaygroundPageClient() {
     resetLane();
     setInput("");
     setThinkingOpen({});
-    setSettingsOpen(false);
     setPickerOpen(false);
     atBottomRef.current = true;
     inputRef.current?.focus();
@@ -274,10 +251,6 @@ export default function PlaygroundPageClient() {
     if (event.nativeEvent?.isComposing) return;
     event.preventDefault();
     if (canSend) handleSend();
-  };
-
-  const handleGenerationChange = (field) => (event) => {
-    setGeneration((previous) => ({ ...previous, [field]: event.target.value }));
   };
 
   const handleSuggestion = (suggestion) => {
@@ -545,90 +518,17 @@ export default function PlaygroundPageClient() {
                 </button>
               </Tooltip>
 
-              <span ref={settingsRef} className={styles.settingsAnchor}>
-                <Tooltip text="Generation settings">
-                  <button
-                    type="button"
-                    className={styles.iconButton}
-                    onClick={() => setSettingsOpen((open) => !open)}
-                    aria-expanded={settingsOpen}
-                    aria-label="Generation settings"
-                  >
-                    <Icon>settings</Icon>
-                  </button>
-                </Tooltip>
-
-                {settingsOpen ? (
-                  <div className={styles.settingsPopover} role="dialog" aria-label="Generation settings">
-                    <div className={styles.settingsHead}>
-                      <span>Generation</span>
-                      <button
-                        type="button"
-                        className={styles.settingsClose}
-                        onClick={() => setSettingsOpen(false)}
-                        aria-label="Close settings"
-                      >
-                        <Icon>close</Icon>
-                      </button>
-                    </div>
-
-                    <label className={styles.settingsField}>
-                      <span className={styles.settingsLabel}>Temperature</span>
-                      <input
-                        type="number"
-                        min="0"
-                        max="2"
-                        step="0.1"
-                        placeholder="default"
-                        value={generation.temperature}
-                        onChange={handleGenerationChange("temperature")}
-                        className={styles.settingsInput}
-                      />
-                    </label>
-
-                    <label className={styles.settingsField}>
-                      <span className={styles.settingsLabel}>Max tokens</span>
-                      <input
-                        type="number"
-                        min="1"
-                        step="1"
-                        placeholder="default"
-                        value={generation.maxTokens}
-                        onChange={handleGenerationChange("maxTokens")}
-                        className={styles.settingsInput}
-                      />
-                    </label>
-
-                    <label className={styles.settingsField}>
-                      <span className={styles.settingsLabel}>Top P</span>
-                      <input
-                        type="number"
-                        min="0"
-                        max="1"
-                        step="0.05"
-                        placeholder="default"
-                        value={generation.topP}
-                        onChange={handleGenerationChange("topP")}
-                        className={styles.settingsInput}
-                      />
-                    </label>
-
-                    <p className={styles.settingsHint}>
-                      Applied to the next request. Empty fields use the provider default.
-                    </p>
-
-                    {generation.temperature || generation.maxTokens || generation.topP ? (
-                      <button
-                        type="button"
-                        className={styles.settingsReset}
-                        onClick={() => setGeneration({ temperature: "", maxTokens: "", topP: "" })}
-                      >
-                        Reset to provider defaults
-                      </button>
-                    ) : null}
-                  </div>
-                ) : null}
-              </span>
+              <Tooltip text={railOpen ? "Hide parameters" : "Show parameters"}>
+                <button
+                  type="button"
+                  className={styles.iconButton}
+                  onClick={() => setRailOpen((open) => !open)}
+                  aria-expanded={railOpen}
+                  aria-label="Toggle execution rail"
+                >
+                  <Icon>settings</Icon>
+                </button>
+              </Tooltip>
             </div>
           </div>
 
@@ -741,7 +641,15 @@ export default function PlaygroundPageClient() {
 
         {railOpen ? (
           <aside className={styles.rail} aria-label="Execution parameters">
-            {/* PlaygroundRail mounts here in Task 6; the settings popover lives in the header until then. */}
+            <PlaygroundRail
+              params={params}
+              onParamsChange={setParams}
+              onResetParams={() => setParams({ ...DEFAULT_PARAMS })}
+              routePlans={[{ key: "a", plan: routePlan }]}
+              lastTurn={lastTurn}
+              saver={{ label: saverNote }}
+              onOpenTokenSaver={() => router.push("/dashboard/token-saver")}
+            />
           </aside>
         ) : null}
       </div>
