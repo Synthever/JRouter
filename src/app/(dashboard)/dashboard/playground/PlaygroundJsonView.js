@@ -85,7 +85,7 @@ export default function PlaygroundJsonView({ turns, activeKey = "a", onSelectKey
           {tab === "response" ? (
             <>
               <div className={styles.facts}>
-                <span>status {response?.status || 0}</span>
+                <span>{response?.status ? `status ${response.status}` : "status —"}</span>
                 <span>{response?.contentType || "unknown content-type"}</span>
                 <span>{response?.frames ? `${response.frames} frames` : "buffered JSON"}</span>
                 <span>{response?.durationMs ? `${response.durationMs}ms` : "—"}</span>
