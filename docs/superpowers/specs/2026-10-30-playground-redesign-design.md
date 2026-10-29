@@ -168,7 +168,7 @@ Rules:
 - Lane errors stay in the lane (error bubble + Retry); the composer keeps the failed prompt for editing, as today.
 - KPI fetches failing never block chat; each card has its own unavailable copy.
 - JSON inspector renders error payloads and aborted turns; `truncated` marker above the cap.
-- Mode switch is a `tablist` (`role="tab"`, `aria-selected`, arrow-key navigation); sliders and toggles are labelled; the rail toggle has `aria-expanded`; `focus-visible` uses the existing outline pattern; `prefers-reduced-motion` disables transitions.
+- Mode switch reuses the shared `SegmentedControl` (`role="group"`, `aria-pressed`, arrow-free tab order) instead of a bespoke tablist; sliders and toggles are labelled; the rail toggle has `aria-expanded`; `focus-visible` uses the existing outline pattern; `prefers-reduced-motion` disables transitions.
 - Tab order: intro controls → KPI reset → chat header → transcript → composer → rail.
 
 ## 11. Out of Scope
