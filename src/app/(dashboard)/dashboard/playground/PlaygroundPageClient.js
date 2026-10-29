@@ -8,6 +8,7 @@ import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import { useModelCaps } from "@/shared/hooks/useModelCaps";
 import { useModelCatalog } from "@/shared/hooks/useModelCatalog";
 import ModelIcon from "./PlaygroundModelIcon";
+import PlaygroundJsonView from "./PlaygroundJsonView";
 import PlaygroundStats from "./PlaygroundStats";
 import PlaygroundRail from "./PlaygroundRail";
 import PlaygroundTranscript from "./PlaygroundTranscript";
@@ -282,10 +283,12 @@ export default function PlaygroundPageClient() {
     if (canSend) submit();
   };
 
-  const handleSuggestion = (suggestion) => {
+  // Memoized like the other handlers: the React Compiler's ref check rejects a
+  // render-created closure that reads inputRef when it is passed down as a prop.
+  const handleSuggestion = useCallback((suggestion) => {
     setInput(suggestion);
     inputRef.current?.focus();
-  };
+  }, []);
 
   const toggleThinking = (messageId) => {
     setThinkingOpen((previous) => ({ ...previous, [messageId]: !previous[messageId] }));
@@ -409,7 +412,7 @@ export default function PlaygroundPageClient() {
       </div>
 
       <div className={styles.workbench} data-rail={railOpen ? "open" : "closed"}>
-        <section className={styles.chat} aria-label="Playground chat">
+        <section className={styles.chat} aria-label={mode === "json" ? "JSON API" : "Playground chat"}>
           <div className={styles.chatHeader}>
             {mode === "compare" ? (
               <SegmentedControl
@@ -529,7 +532,16 @@ export default function PlaygroundPageClient() {
           ) : null}
 
           <div className={styles.lanes} data-mode={mode} data-active={activeLane}>
-            {lanes.map(({ key, lane }) => (
+            {mode === "json" ? (
+              <PlaygroundJsonView
+                turns={[
+                  { key: "a", label: "Lane A", turn: laneA.lastTurn },
+                  ...(laneB.model ? [{ key: "b", label: "Lane B", turn: laneB.lastTurn }] : []),
+                ]}
+                activeKey={jsonLane}
+                onSelectKey={setJsonLane}
+              />
+            ) : lanes.map(({ key, lane }) => (
               <section
                 key={key}
                 className={styles.lane}
