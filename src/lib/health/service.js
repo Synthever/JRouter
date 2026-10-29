@@ -67,6 +67,15 @@ export async function updateHealthConfig(id, input) {
   return Object.fromEntries(Object.keys(DEFAULT_CONFIG).map((key) => [key, saved[key]]));
 }
 
+/** Applies one config to every configured model; validation runs before any write. */
+export async function applyHealthConfigToAll(input) {
+  let config;
+  try { config = validateConfig(input, DEFAULT_CONFIG); } catch (error) { throw new HealthError(error.message); }
+  const models = await getConfiguredHealthModels();
+  const updated = await repo.saveHealthConfigs(models.map((model) => model.id), config);
+  return { updated, config };
+}
+
 export async function checkModel(id, { model, scheduled = false } = {}) {
   model ||= await requireModel(id);
   const lease = await repo.claimCheck(id, scheduled);

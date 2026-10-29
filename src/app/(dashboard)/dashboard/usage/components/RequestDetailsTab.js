@@ -7,8 +7,9 @@ import Drawer from "@/shared/components/Drawer";
 import Pagination from "@/shared/components/Pagination";
 import Input from "@/shared/components/Input";
 import StatusBadge from "@/shared/components/StatusBadge";
+import UsageMenu from "./UsageMenu";
 import { cn } from "@/shared/utils/cn";
-import { AI_PROVIDERS, getProviderByAlias } from "@/shared/constants/providers";
+import { AI_PROVIDERS, getProviderByAlias, ANTHROPIC_COMPATIBLE_PREFIX, CUSTOM_EMBEDDING_PREFIX, OPENAI_COMPATIBLE_PREFIX } from "@/shared/constants/providers";
 import styles from "../usage.module.css";
 
 let providerNameCache = null;
@@ -51,7 +52,13 @@ function getProviderName(providerId, cache) {
   }
 
   const providerConfig = getProviderByAlias(providerId) || AI_PROVIDERS[providerId];
-  return providerConfig?.name || providerId;
+  if (providerConfig?.name) return providerConfig.name;
+  // A compatible node that was deleted keeps its generated id in historical rows;
+  // never show that uuid as a provider name.
+  if ([OPENAI_COMPATIBLE_PREFIX, ANTHROPIC_COMPATIBLE_PREFIX, CUSTOM_EMBEDDING_PREFIX].some((prefix) => providerId.startsWith(prefix))) {
+    return "Custom provider";
+  }
+  return providerId;
 }
 
 function CollapsibleSection({ title, children, defaultOpen = false, icon = null }) {
@@ -184,43 +191,36 @@ export default function RequestDetailsTab() {
 
   const hasFilters = !!(filters.provider || filters.startDate || filters.endDate);
 
+  const providerOptions = [
+    { value: "", label: "All Providers" },
+    ...providers.map((provider) => ({ value: provider.id, label: provider.name })),
+  ];
+
   return (
     <div className={styles.page}>
-      <section className={`ui-card ${styles.section}`} aria-labelledby="usage-filters-heading">
+      <section className={`${styles.section}`} aria-labelledby="usage-filters-heading">
         <div className={styles.sectionHeader}>
-          <h2 id="usage-filters-heading" className="ui-eyebrow flex items-center gap-2">
-            <Icon className="text-[16px]">search</Icon> Filters
+          <h2 id="usage-filters-heading" className={styles.sectionTitle}>
+            <Icon className={styles.sectionIcon}>search</Icon>
+            Filters
           </h2>
           <Button
             variant="ghost"
-            size="sm"
             onClick={handleClearFilters}
             disabled={!hasFilters}
           >
-            Clear Filters
+            Clear filters
           </Button>
         </div>
         <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div className="flex min-w-0 flex-col gap-1.5">
-            <label
-              htmlFor="provider-filter"
-              className="font-mono text-xs uppercase tracking-wider text-[var(--text-2)]"
-            >
-              Provider
-            </label>
-            <select
-              id="provider-filter"
+            <span className="text-sm font-medium text-[var(--text)]">Provider</span>
+            <UsageMenu
+              options={providerOptions}
               value={filters.provider}
-              onChange={(e) => setFilters({ ...filters, provider: e.target.value })}
-              className={styles.filterSelect}
-            >
-              <option value="">All Providers</option>
-              {providers.map((provider) => (
-                <option key={provider.id} value={provider.id}>
-                  {provider.name}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => setFilters({ ...filters, provider: value })}
+              ariaLabel="Filter by provider"
+            />
           </div>
 
           <Input
@@ -241,16 +241,20 @@ export default function RequestDetailsTab() {
         </div>
       </section>
 
-      <section className={`ui-card ${styles.section}`} aria-labelledby="usage-history-heading">
+      <section className={`${styles.section}`} aria-labelledby="usage-history-heading">
         <div className={styles.sectionHeader}>
           <div className="min-w-0">
-            <h2 id="usage-history-heading" className="ui-eyebrow flex items-center gap-2">
-              <Icon className="text-[16px]">history</Icon> Request History
+            <h2 id="usage-history-heading" className={styles.sectionTitle}>
+              <Icon className={styles.sectionIcon}>history</Icon>
+              Request history
+              <small>
+                {pagination.totalItems
+                  ? `${pagination.totalItems.toLocaleString()} recorded`
+                  : "No requests"}
+              </small>
             </h2>
             <p className={styles.sectionDescription}>
-              {pagination.totalItems
-                ? `${pagination.totalItems.toLocaleString()} recorded requests`
-                : "Per-request tokens, latency and payloads"}
+              Per-request tokens, latency and payloads
             </p>
           </div>
         </div>
@@ -403,10 +407,11 @@ export default function RequestDetailsTab() {
             </dl>
 
             {selectedDetail.pxpipe && (
-              <div className={`ui-card ${styles.section}`}>
+              <div className={`${styles.section}`}>
                 <div className={styles.sectionHeader}>
-                  <h3 className="ui-eyebrow flex items-center gap-2">
-                    <Icon className="text-[16px]">image</Icon> PXPIPE
+                  <h3 className={styles.sectionTitle}>
+                    <Icon className={styles.sectionIcon}>image</Icon>
+                    PXPIPE
                   </h3>
                   <StatusBadge variant={selectedDetail.pxpipe.applied ? "success" : "warning"}>
                     {selectedDetail.pxpipe.applied ? "Activated" : "Skipped"}

@@ -10,7 +10,8 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
-import { SegmentedControl, Skeleton } from "@/shared/components";
+import { Skeleton } from "@/shared/components";
+import PillTabs from "./PillTabs";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/shared/components/ui/chart";
 import styles from "../usage.module.css";
 import {
@@ -73,20 +74,21 @@ export default function UsageChart({ period = "7d" }) {
   const chartConfig = { volume: { label: cfg.label, color: "var(--text)" } };
 
   return (
-    <section className={`ui-card ${styles.section}`} aria-labelledby="usage-chart-heading">
+    <section className={`${styles.section}`} aria-labelledby="usage-chart-heading">
       <div className={styles.sectionHeader}>
         <div className="min-w-0">
-          <h2 id="usage-chart-heading" className="ui-eyebrow flex items-center gap-2">
-            <Icon className="text-[16px]">timeline</Icon> Usage Over Time
+          <h2 id="usage-chart-heading" className={styles.sectionTitle}>
+            <Icon className={styles.sectionIcon}>timeline</Icon>
+            Usage over time
           </h2>
           <p className={styles.sectionDescription}>Volume trend for the selected period</p>
         </div>
-        <SegmentedControl
+        <PillTabs
           options={VIEW_MODES}
           value={viewMode}
           onChange={setViewMode}
-          size="sm"
-          aria-label="Usage metric"
+          ariaLabel="Usage metric"
+          compact
         />
       </div>
 

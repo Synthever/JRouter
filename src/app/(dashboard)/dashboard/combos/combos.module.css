@@ -1,182 +1,513 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
   width: 100%;
   min-width: 0;
-  padding-bottom: 40px;
-  color: var(--text);
+  padding-bottom: 48px;
+  color: var(--text-2);
+  /* Matches the shell scroller padding (p-6 / lg:p-8) so the sticky toolbar
+     sits flush with the scrollport edge instead of 8px below it. */
+  --combos-stick-offset: 32px;
 }
 
-.intro,
-.sectionHeader,
-.adapterHeader {
+.page :is(button, a, input, select):focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* Page intro ------------------------------------------------------------ */
+
+.intro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  min-width: 0;
+}
+
+.title {
+  color: var(--text);
+  font-size: clamp(28px, 3.4vw, 40px);
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  line-height: 1.1;
+}
+
+.sub {
+  margin-top: 8px;
+  color: var(--text-2);
+  font-size: 16px;
+  max-width: 60ch;
+}
+
+/* Summary skeleton ------------------------------------------------------ */
+/* The live cards are WidgetGrid widgets rendered by components/ComboStats,
+   which owns their sizing and colours. */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  min-width: 0;
+}
+
+.statSkeleton {
+  min-height: 160px;
+  border-radius: var(--r4);
+}
+
+.cardSkeleton {
+  min-height: 200px;
+  border-radius: var(--r3);
+}
+
+/* Sticky section jump chips + visibility pills. */
+.toolbar {
+  position: sticky;
+  top: calc(-1 * var(--combos-stick-offset));
+  z-index: 30;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
+  padding: 12px 0;
+  background: var(--canvas);
 }
 
-.description,
-.sectionDescription {
+.chips {
+  display: flex;
+  gap: 8px;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.chips::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--r-full);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 150ms;
+}
+
+.chip:hover {
+  background: var(--surface-hover);
+}
+
+.chip b {
+  color: var(--text-3);
+  font-weight: 500;
+}
+
+.tabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: var(--r-full);
+  background: var(--surface-2);
+}
+
+.tab {
+  height: 34px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--r-full);
+  background: transparent;
+  color: var(--text-3);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 150ms, color 150ms;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab[aria-pressed="true"] {
+  background: var(--canvas);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+/* Section panel --------------------------------------------------------- */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: var(--r4);
+  background: var(--canvas);
+  scroll-margin-top: 72px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.sectionTitle small {
+  color: var(--text-3);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.sectionIcon {
+  flex: none;
+  font-size: 18px;
+  color: var(--text-2);
+}
+
+.description {
   color: var(--text-2);
   font-size: 12px;
   line-height: 1.6;
 }
 
-.panel {
-  min-width: 0;
-  padding: 20px;
-}
-
-.sectionHeader {
-  margin-bottom: 16px;
-}
-
-.sectionDescription {
+.sectionHeader .description {
   margin-top: 8px;
 }
 
-.rows {
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Section toolbar: search, select-all and bulk actions. */
+.listToolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.toolbarSearch {
+  flex: 1 1 240px;
+  min-width: 0;
+  max-width: 360px;
+}
+
+/* Pill search field: the shared Input is a small square-corner form control,
+   which reads as a form next to the pill toolbar. */
+.toolbarSearch input {
+  min-height: 36px;
+  padding-left: 38px;
+  border-color: var(--line);
+  border-radius: var(--r-full);
+  background: var(--surface);
+  font-size: 13px;
+}
+
+.toolbarSearch input:focus {
+  border-color: var(--text-3);
+  outline: 0;
+  box-shadow: none;
+}
+
+.selectAll {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-full);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 150ms, border-color 150ms, color 150ms;
+}
+
+.selectAll:hover {
+  border-color: var(--line-2);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.selectAll:has(input:checked),
+.selectAll:has(input:indeterminate) {
+  border-color: var(--text-3);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.bulkActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.bulkStrategy {
+  position: relative;
+  display: inline-flex;
+}
+
+.bulkStrategyButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-full);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 150ms, border-color 150ms;
+}
+
+.bulkStrategyButton:hover:not(:disabled) {
+  border-color: var(--text-3);
+  background: var(--surface-2);
+}
+
+.bulkStrategyButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.bulkStrategyMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  width: 240px;
+  max-width: min(240px, calc(100vw - 32px));
+  padding: 6px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r2);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+}
+
+.bulkStrategyItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bulkStrategyItem:hover {
+  background: var(--surface-2);
+}
+
+.bulkStrategyItemLabel {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.bulkStrategyItemHint {
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+/* Combo + adapter card grid -------------------------------------------- */
+
+.grid,
+.adapterGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(290px, 100%), 1fr));
+  gap: 12px;
   min-width: 0;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.selectionToolbar {
+.grid {
+  align-items: stretch;
+}
+
+/* The expanded pool editor makes one adapter card taller than its neighbour;
+   start alignment keeps that growth local to the card. */
+.adapterGrid {
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+  align-items: start;
+}
+
+.cardItem {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
+  width: 100%;
   min-width: 0;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--line);
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r3);
+  transition: background-color 150ms, border-color 150ms;
 }
 
-.selectionLabel {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 34px;
-  color: var(--text-2);
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.bulkActions,
-.rowControls,
-.comboActions,
-.adapterActions,
-.priorityActions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.bulkActions,
-.adapterActions {
-  flex-wrap: wrap;
-}
-
-.strategySelect {
-  width: 200px;
-  max-width: 100%;
-}
-
-.strategySelect select {
-  min-height: 34px;
-  padding: 6px 36px 6px 10px;
-  border: 1px solid var(--line-2);
-  border-radius: var(--r1);
-  background: var(--surface-2);
-  color: var(--text);
-  font-size: 12px;
-}
-
-.comboRow,
-.adapterRow {
-  min-width: 0;
-  padding: 16px 0;
-  border-bottom: 1px solid var(--line);
-}
-
-.comboRow:last-child,
-.adapterRow:last-child {
-  border-bottom: 0;
-  padding-bottom: 0;
-}
-
-.comboRow {
-  transition: background-color 150ms;
-}
-
-.comboRow:hover,
-.comboRow:focus-within {
+.card:hover,
+.card:focus-within {
   background: color-mix(in srgb, var(--text) 3%, transparent);
 }
 
-.comboRow.selected {
-  background: color-mix(in srgb, var(--text) 6%, transparent);
+/* Public combos read as live cards, like providers' connected cards. */
+.cardPublic {
+  background: var(--surface-card);
+  border-color: transparent;
 }
 
-.rowContent {
+.cardPublic:hover,
+.cardPublic:focus-within {
+  background: color-mix(in srgb, var(--text) 5%, var(--surface-card));
+}
+
+.cardSelected {
+  border-color: var(--accent-line);
+  box-shadow: 0 0 0 1px var(--accent-line);
+}
+
+.cardOff {
+  opacity: 0.65;
+}
+
+.cardHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.cardHead > input[type="checkbox"] {
+  margin-top: 7px;
+}
+
+/* Combos use the product mark itself — no tile, border or background. */
+.cardLogo {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.cardTile {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 16px;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--on-color);
+}
+
+.cardTile[data-cap="vision"] {
+  background: var(--brand-mint);
+}
+
+.cardTile[data-cap="audioInput"] {
+  background: var(--brand-peach);
 }
 
 .identity {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  min-width: 0;
   flex: 1;
-}
-
-.identity > svg {
-  margin-top: 3px;
-}
-
-.nameLine {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
   min-width: 0;
 }
 
-.comboName,
-.adapterName {
-  min-width: 0;
-  max-width: 100%;
+.adapterLabel {
+  display: block;
   color: var(--text);
   font-size: 14px;
-  font-weight: 500;
-  line-height: 1.5;
+  font-weight: 600;
+  line-height: 1.35;
 }
 
-.comboName {
+.modelName {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.publicName {
+  display: block;
   overflow: hidden;
+  color: var(--text);
   font-family: var(--font-mono);
+  font-size: 13.5px;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.modelList {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  min-width: 0;
-  margin-top: 8px;
+.modelName:hover .publicName {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
-/* Table cells keep members on one line so every row is the same height. */
+.internalName {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--text-3);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .memberLine {
   display: flex;
   align-items: center;
@@ -204,17 +535,39 @@
   white-space: nowrap;
 }
 
+.modelChipText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+}
+
 .chainSeparator {
   flex-shrink: 0;
   color: var(--text-2);
 }
 
-.metadata {
+.memberMore {
+  flex-shrink: 0;
+  color: var(--text-3);
+  font-size: 11px;
+  cursor: default;
+}
+
+.cardMeta {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  min-width: 0;
+}
+
+.metadata {
+  display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 4px 10px;
-  margin-top: 6px;
   color: var(--text-2);
   font-family: var(--font-mono);
   font-size: 11px;
@@ -240,6 +593,26 @@
   outline-offset: 2px;
 }
 
+.updated {
+  color: var(--text-3);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.judgeRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.judgeLabel {
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 500;
+}
+
 .judgeButton {
   display: inline-flex;
   align-items: center;
@@ -247,13 +620,14 @@
   min-width: 0;
   max-width: 100%;
   min-height: 28px;
-  padding: 4px 8px;
+  padding: 4px 10px;
   border: 1px solid var(--line-2);
-  border-radius: var(--r1);
+  border-radius: var(--r-full);
   background: var(--surface-2);
   color: var(--text);
   font-family: var(--font-mono);
   font-size: 11px;
+  cursor: pointer;
 }
 
 .judgeButton > span {
@@ -262,18 +636,36 @@
   white-space: nowrap;
 }
 
+.cardFoot {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.cardFootMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .iconAction {
   composes: iconButton from "../../../../shared/components/DashboardControls.module.css";
-}
-
-.resetJudge {
-  composes: iconButton from "../../../../shared/components/DashboardControls.module.css";
-}
-
-.comboActions,
-.priorityActions {
-  flex-shrink: 0;
-  gap: 2px;
 }
 
 .dangerAction,
@@ -281,31 +673,103 @@
   color: var(--danger);
 }
 
-.success {
-  color: var(--pos);
+/* Strategy pill + anchored menus ---------------------------------------- */
+
+.strategyCell {
+  position: relative;
+  display: inline-flex;
 }
 
-.deleteButton,
-.dialog button[data-variant="danger"] {
-  background: color-mix(in srgb, var(--danger) 3%, var(--surface));
-  border-color: color-mix(in srgb, var(--danger) 25%, transparent);
+.strategyBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-full);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.strategyBadge:hover {
+  border-color: var(--text-3);
+}
+
+.actionMenu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 60;
+  min-width: 176px;
+  padding: 6px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r2);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+}
+
+.actionMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font-size: 12px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.actionMenuItem:hover {
+  background: var(--surface-2);
+}
+
+.actionMenuItem span {
+  flex: 1;
+}
+
+.actionMenuItemDanger {
   color: var(--danger);
 }
 
-.dialog button[data-variant="primary"] {
-  background: var(--text);
-  color: var(--bg);
+.visibilityCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.dialog button[data-variant="primary"]:hover:not(:disabled) {
-  background: var(--text-2);
+.visibilityPublic {
+  color: var(--pos);
+  font-size: 11px;
+  font-weight: 500;
 }
 
-.empty,
-.modalEmpty {
-  padding: 24px 0;
+.visibilityPrivate {
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+.kebabWrap {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+.empty {
+  padding: 40px 16px;
+  border: 1px dashed var(--line-2);
+  border-radius: var(--r4);
   color: var(--text-2);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.6;
   text-align: center;
 }
@@ -317,49 +781,72 @@
   font-weight: 500;
 }
 
-.tableWrap {
-  min-width: 0;
-  margin-top: 12px;
+/* Vision adapter pool editor ------------------------------------------- */
+
+.adapterCard {
+  gap: 14px;
 }
 
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-  text-align: left;
+.adapterFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.roundRobin {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-2);
   font-size: 12px;
 }
 
-.table th {
-  color: var(--text-2);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
+.poolEditor {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+  background: color-mix(in srgb, var(--text) 3%, transparent);
 }
 
-.table :is(th, td) {
-  padding: 8px;
+.poolList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.poolRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 0;
   border-bottom: 1px solid var(--line);
 }
 
-.table :is(th, td):first-child,
-.table :is(th, td):nth-child(3),
-.table :is(th, td):last-child {
-  text-align: center;
-}
-
-.table tbody tr:last-child td {
+.poolRow:last-child {
   border-bottom: 0;
 }
 
-.table tbody tr:hover {
-  background: color-mix(in srgb, var(--text) 3%, transparent);
+.poolIndex {
+  flex: none;
+  width: 26px;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
 }
 
 .poolModel {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
+  flex: 1;
   gap: 6px;
   min-width: 0;
 }
@@ -373,6 +860,15 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.poolOrder {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Combo form model list ------------------------------------------------ */
 
 .modelItem {
   display: flex;
@@ -413,6 +909,26 @@
   cursor: text;
 }
 
+.modelEditor {
+  min-height: 34px;
+  padding: 4px 8px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r1);
+  background: var(--surface);
+  outline: 0;
+}
+
+.modelEditor:focus {
+  border-color: var(--text-3);
+}
+
+.priorityActions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
+}
+
 .fieldLabel {
   margin-bottom: 6px;
   color: var(--text-2);
@@ -423,19 +939,105 @@
   text-transform: uppercase;
 }
 
-.dialog {
-  composes: dialog from "../../../../shared/components/DashboardControls.module.css";
+.modalEmpty {
+  padding: 24px 0;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: center;
 }
 
+.modalEmpty p {
+  margin: 0;
+}
+
+/* Dialog surface ------------------------------------------------------- */
+
+.dialog {
+  composes: dialog from "../../../../shared/components/DashboardControls.module.css";
+  border-radius: 24px;
+}
+
+.dialog input {
+  min-height: 44px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.dialog button[data-variant="danger"] {
+  background: color-mix(in srgb, var(--danger) 3%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 25%, transparent);
+  color: var(--danger);
+}
+
+.dialog button[data-variant="primary"] {
+  background: var(--text);
+  color: var(--bg);
+}
+
+.dialog button[data-variant="primary"]:hover:not(:disabled) {
+  background: var(--text-2);
+}
+
+/* Controls ------------------------------------------------------------- */
+
 .page input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--text);
+  display: inline-grid;
+  flex: none;
+  place-content: center;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+  background: var(--surface);
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: background-color 150ms, border-color 150ms;
+}
+
+.page input[type="checkbox"]:hover {
+  border-color: var(--text-3);
+}
+
+.page input[type="checkbox"]:checked,
+.page input[type="checkbox"]:indeterminate {
+  border-color: var(--text);
+  background-color: var(--text);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 12px 12px;
+}
+
+/* SVG marks instead of pseudo-elements: inputs are replaced elements, so
+   ::after is not reliable in every browser. The mark flips with the theme so
+   the checked fill (--text) always keeps contrast. */
+.page input[type="checkbox"]:checked {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23fffaf0' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round' d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E");
+}
+
+.page input[type="checkbox"]:indeterminate {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23fffaf0' stroke-width='2.4' stroke-linecap='round' d='M4 8h8'/%3E%3C/svg%3E");
+}
+
+:global(.dark) .page input[type="checkbox"]:checked {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23141414' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round' d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E");
+}
+
+:global(.dark) .page input[type="checkbox"]:indeterminate {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23141414' stroke-width='2.4' stroke-linecap='round' d='M4 8h8'/%3E%3C/svg%3E");
+}
+
+.page input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
 }
 
 .page [role="switch"] {
-  background: var(--surface-hover);
+  width: 46px;
+  height: 28px;
+  background: var(--surface-inset);
 }
 
 .page [role="switch"][aria-checked="true"] {
@@ -443,107 +1045,147 @@
 }
 
 .page [role="switch"] > span {
-  background: var(--text-2);
+  width: 22px;
+  height: 22px;
+  margin-top: 3px;
+  background: #ffffff;
+  translate: 3px 0;
 }
 
 .page [role="switch"][aria-checked="true"] > span {
   background: var(--bg);
+  translate: 21px 0;
 }
 
-.page :is(button, a, input, select, [tabindex]):focus-visible {
-  outline: 2px solid var(--text-2);
-  outline-offset: 3px;
-}
-
-@media (max-width: 1199px) {
-  .rowContent {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
+@media (max-width: 1023px) {
+  .page {
+    --combos-stick-offset: 24px;
   }
 
-  .rowControls {
-    justify-content: flex-end;
+  .section {
+    padding: 20px;
+  }
+
+  .grid,
+  .adapterGrid {
+    grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
   }
 }
 
 @media (max-width: 639px) {
-  .intro > div,
-  .bulkActions,
-  .strategySelect {
+  .page {
+    gap: 12px;
+  }
+
+  .stats {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar {
+    gap: 8px;
+  }
+
+  .chips,
+  .tabs {
     width: 100%;
   }
 
-  .bulkActions > button {
+  .tabs {
+    justify-content: space-between;
+  }
+
+  .tab {
     flex: 1;
+    min-width: 0;
+    padding-inline: 10px;
   }
 
-  .rowControls {
-    flex-wrap: wrap;
+  .section {
+    padding: 16px;
+    border-radius: 20px;
   }
 
-  .comboActions {
-    justify-content: flex-end;
+  .listToolbar {
+    gap: 8px;
+  }
+
+  .toolbarSearch,
+  .selectAll,
+  .bulkActions,
+  .bulkActions > button,
+  .bulkStrategy {
     width: 100%;
+    max-width: none;
   }
 
-  .selectionLabel,
-  .page button:not([role="switch"]),
-  .strategySelect select {
+  .bulkStrategy {
+    display: flex;
+  }
+
+  .bulkStrategyButton {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .bulkStrategyMenu {
+    width: 100%;
+    max-width: none;
+  }
+
+  .bulkActions {
+    margin-left: 0;
+  }
+
+  .chip,
+  .tab,
+  .selectAll,
+  .strategyBadge,
+  .judgeButton,
+  .iconAction,
+  .bulkStrategyButton {
     min-height: 44px;
   }
 
-  .strategySelect select {
-    font-size: 16px;
+  .card {
+    padding: 14px;
   }
 
-  .page [role="switch"]::before {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 44px;
-    height: 44px;
-    transform: translate(-50%, -50%);
-    content: "";
+  .cardHead > input[type="checkbox"] {
+    margin-top: 6px;
+    width: 20px;
+    height: 20px;
   }
 
-  .table thead {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
+  .cardTile {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
   }
 
-  .table tbody,
-  .table tr {
-    display: block;
+  .publicName {
+    font-size: 14px;
   }
 
-  .table tbody tr {
-    display: grid;
-    grid-template-columns: 24px minmax(0, 1fr) 44px;
-    gap: 4px 8px;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--line);
+  .modelChipText {
+    max-width: 160px;
   }
 
-  .table tbody tr:last-child {
-    border-bottom: 0;
+  .cardFoot,
+  .adapterFoot {
+    align-items: stretch;
   }
 
-  .table td {
-    min-width: 0;
-    padding: 0;
-    border: 0;
+  .cardActions {
+    flex: 1;
+    justify-content: flex-end;
   }
 
-  .table td:nth-child(2) {
-    grid-column: 2 / -1;
+  .poolRow {
+    flex-wrap: wrap;
   }
 
-  .table td:nth-child(3) {
-    grid-column: 2;
-    text-align: right;
+  .poolModel {
+    flex-basis: calc(100% - 36px);
   }
 
   .modelItem {
@@ -575,349 +1217,5 @@
 
   .page button:active {
     transform: none;
-  }
-}
-
-/* ── Custom Model-ID table ──────────────────────────────────────────────── */
-
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.toolbarSearch {
-  flex: 1 1 220px;
-  min-width: 0;
-}
-
-.modelTableWrap {
-  overflow-x: auto;
-  min-width: 0;
-  max-width: 100%;
-}
-
-.modelTable {
-  width: 100%;
-  border-collapse: collapse;
-  /* auto: the Members chips must size their column, fixed clipping hides them */
-  table-layout: auto;
-  text-align: left;
-  font-size: 12px;
-}
-
-/* Keep the identifier column the widest and every row the same height, so the
-   table scans like the Health table instead of growing with member count. */
-.modelTable th:nth-child(2),
-.modelTable td:nth-child(2) {
-  min-width: 200px;
-}
-
-.modelTable th:nth-child(3),
-.modelTable td:nth-child(3) {
-  max-width: 340px;
-}
-
-.modelTable th:nth-child(6),
-.modelTable td:nth-child(6) {
-  white-space: nowrap;
-}
-
-.modelTable td {
-  height: 52px;
-}
-
-.modelTable th {
-  color: var(--text-2);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 500;
-  text-transform: uppercase;
-  white-space: nowrap;
-  padding: 10px 12px;
-  background: var(--surface-2);
-  border-bottom: 1px solid var(--line-2);
-}
-
-.modelTable td {
-  padding: 12px;
-  border-bottom: 1px solid var(--line);
-  vertical-align: middle;
-}
-
-.modelTable tbody tr:last-child td {
-  border-bottom: 0;
-}
-
-.adapterIdentity {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  min-width: 0;
-}
-
-.adapterLabel {
-  display: block;
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.expandedRow > td {
-  background: var(--surface-2);
-  padding: 8px 12px 12px;
-}
-
-.expandedRow .tableWrap {
-  margin-top: 0;
-}
-
-.publicName {
-  display: block;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 260px;
-}
-
-.modelName {
-  display: block;
-  background: none;
-  border: 0;
-  padding: 0;
-  text-align: left;
-  cursor: pointer;
-  max-width: 100%;
-}
-
-.modelName:hover .publicName {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.internalName {
-  display: block;
-  margin-top: 2px;
-  color: var(--text-3);
-  font-size: 11px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 260px;
-}
-
-.modelChipText {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 240px;
-}
-
-.memberMore {
-  flex-shrink: 0;
-  color: var(--text-3);
-  font-size: 11px;
-  cursor: default;
-}
-
-.updatedCell {
-  color: var(--text-2);
-}
-
-.actionsCell {
-  text-align: right;
-  white-space: nowrap;
-  width: 1%;
-}
-
-.rowActions {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  justify-content: flex-end;
-}
-
-.kebabWrap {
-  position: relative;
-  display: inline-flex;
-}
-
-.strategyCell {
-  position: relative;
-  display: inline-flex;
-}
-
-.strategyBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  border: 1px solid var(--line-2);
-  border-radius: var(--r1);
-  background: var(--surface-2);
-  color: var(--text);
-  font-size: 11px;
-  font-weight: 500;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.strategyBadge:hover {
-  border-color: var(--text-3);
-}
-
-.actionMenu {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  z-index: 60;
-  min-width: 168px;
-  padding: 4px;
-  border: 1px solid var(--line-2);
-  border-radius: var(--r1);
-  background: var(--surface);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
-}
-
-.actionMenuRight {
-  left: auto;
-  right: 0;
-}
-
-.actionMenuItem {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 7px 8px;
-  border: 0;
-  border-radius: 6px;
-  background: none;
-  color: var(--text);
-  font-size: 12px;
-  text-align: left;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.actionMenuItem:hover {
-  background: var(--surface-2);
-}
-
-.actionMenuItem span {
-  flex: 1;
-}
-
-.actionMenuItemDanger {
-  color: var(--danger);
-}
-
-.visibilityCell {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.visibilityPublic {
-  color: var(--pos);
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.visibilityPrivate {
-  color: var(--text-3);
-  font-size: 11px;
-}
-
-.summaryStrip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
-.summaryItem {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--r1);
-  background: var(--surface-2);
-}
-
-.summaryLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-2);
-  font-size: 11px;
-}
-
-.summaryValue {
-  color: var(--text);
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-  flex-shrink: 0;
-}
-
-.dotPublic { color: var(--pos); }
-.dotPrivate { color: var(--text-3); }
-
-@media (max-width: 640px) {
-  /* Match the Health table: stay a real table and scroll horizontally instead
-     of collapsing each row into a card, so columns stay comparable on a phone. */
-  .modelTableWrap {
-    margin-inline: -16px;
-    padding-inline: 16px;
-  }
-  .modelTable {
-    min-width: 640px;
-  }
-  /* The desktop min/max widths make the two big columns eat the phone width;
-     tighten them so more of the row is visible before scrolling. */
-  .modelTable th:nth-child(2),
-  .modelTable td:nth-child(2) {
-    min-width: 150px;
-  }
-  .modelTable th:nth-child(3),
-  .modelTable td:nth-child(3) {
-    max-width: 200px;
-  }
-  .modelTable th,
-  .modelTable td {
-    white-space: nowrap;
-    padding: 10px 8px;
-  }
-  .publicName,
-  .internalName {
-    max-width: 150px;
-  }
-  .modelChipText {
-    max-width: 150px;
-  }
-  .rowActions {
-    gap: 4px;
-  }
-  .summaryStrip {
-    gap: 6px;
-  }
-  .summaryItem {
-    padding: 6px 10px;
   }
 }

@@ -9,7 +9,8 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
-import { SegmentedControl } from "@/shared/components";
+import Icon from "@/shared/components/Icon";
+import PillTabs from "./PillTabs";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/shared/components/ui/chart";
 import styles from "../usage.module.css";
 import {
@@ -49,15 +50,18 @@ export default function TopModelsChart({ byModel }) {
   const chartConfig = { [viewMode]: { label, color: "var(--text)" } };
 
   return (
-    <section className={`ui-card ${styles.section}`} aria-labelledby="usage-model-heading">
+    <section className={`${styles.section}`} aria-labelledby="usage-model-heading">
       <div className={styles.sectionHeader}>
-        <h2 id="usage-model-heading" className="ui-eyebrow">Top Models</h2>
-        <SegmentedControl
+        <h2 id="usage-model-heading" className={styles.sectionTitle}>
+          <Icon className={styles.sectionIcon}>layers</Icon>
+          Top models
+        </h2>
+        <PillTabs
           options={VIEW_MODES}
           value={viewMode}
           onChange={setViewMode}
-          size="sm"
-          aria-label="Model breakdown metric"
+          ariaLabel="Model breakdown metric"
+          compact
         />
       </div>
 

@@ -21,21 +21,24 @@ export default function ProviderDistributionCard({ stats }) {
   const providers = useMemo(() => {
     const raw = stats?.byProvider || {};
     const totalReqs = stats?.totalRequests || 1;
-    const list = Object.entries(raw).map(([name, data], index) => {
-      const requests = data.requests || 0;
-      const share = totalReqs > 0 ? (requests / totalReqs) * 100 : 0;
-      return {
-        name,
-        requests,
-        tokens: (data.promptTokens || 0) + (data.completionTokens || 0),
-        cost: data.cost || 0,
-        share: share.toFixed(1),
-        shareNum: share,
-        color: PROVIDER_COLORS[index % PROVIDER_COLORS.length],
-      };
+    // Usage rows key by provider id; `label` is the resolved display name (a
+    // deleted custom node degrades to "Custom provider"). Group by that label so
+    // two ids never surface as separate rows with the same or a raw-id name.
+    const grouped = new Map();
+    for (const [id, data] of Object.entries(raw)) {
+      const name = data?.label || id;
+      const entry = grouped.get(name) || { name, requests: 0, tokens: 0, cost: 0 };
+      entry.requests += data?.requests || 0;
+      entry.tokens += (data?.promptTokens || 0) + (data?.completionTokens || 0);
+      entry.cost += data?.cost || 0;
+      grouped.set(name, entry);
+    }
+    const list = [...grouped.values()].map((entry) => {
+      const share = totalReqs > 0 ? (entry.requests / totalReqs) * 100 : 0;
+      return { ...entry, share: share.toFixed(1), shareNum: share };
     });
     list.sort((a, b) => b.requests - a.requests);
-    return list;
+    return list.map((entry, index) => ({ ...entry, color: PROVIDER_COLORS[index % PROVIDER_COLORS.length] }));
   }, [stats]);
 
   return (

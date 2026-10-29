@@ -18,6 +18,7 @@ export default function Modal({
   showTrafficLights = true,
   className,
   trapFocus = false,
+  bare = false,
 }) {
   const titleId = useId();
   const dialogRef = useRef(null);
@@ -80,60 +81,65 @@ export default function Modal({
         tabIndex={trapFocus ? -1 : undefined}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={title ? titleId : undefined}
+        aria-labelledby={title && !bare ? titleId : undefined}
+        aria-label={bare && title ? title : undefined}
         className={cn(
           "relative w-full bg-[var(--surface)]",
           "border border-[var(--line-2)]",
           "rounded-[var(--r4)] shadow-[var(--shadow-pop)]",
           "fade-in text-[var(--text)]",
-          sizes[size],
+          bare ? "flex flex-col" : sizes[size],
           className
         )}
       >
-        {/* Header */}
-        {(title || showTrafficLights) && (
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--line)]">
-            <div className="flex items-center">
-              {/* Traffic lights — desktop only */}
-              {showTrafficLights && (
-                <div className="hidden md:flex items-center gap-2 mr-4">
-                  <Tooltip text="Close" position="top" color="#FF5F56">
-                    <button
-                      onClick={onClose}
-                      aria-label="Close"
-                      title="Close"
-                      className="w-3 h-3 rounded-full bg-[#FF5F56]/80 hover:brightness-110 transition-all cursor-pointer flex items-center justify-center group/dot"
-                    >
-                      <span className="text-[8px] font-bold text-white opacity-0 group-hover/dot:opacity-100 transition-opacity leading-none">✕</span>
-                    </button>
-                  </Tooltip>
-                  <div className="w-3 h-3 rounded-full bg-[#FFBD2E]/50 cursor-not-allowed" />
-                  <div className="w-3 h-3 rounded-full bg-[#27C93F]/50 cursor-not-allowed" />
+        {bare ? children : (
+          <>
+            {/* Header */}
+            {(title || showTrafficLights) && (
+              <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--line)]">
+                <div className="flex items-center">
+                  {/* Traffic lights — desktop only */}
+                  {showTrafficLights && (
+                    <div className="hidden md:flex items-center gap-2 mr-4">
+                      <Tooltip text="Close" position="top" color="#FF5F56">
+                        <button
+                          onClick={onClose}
+                          aria-label="Close"
+                          title="Close"
+                          className="w-3 h-3 rounded-full bg-[#FF5F56]/80 hover:brightness-110 transition-all cursor-pointer flex items-center justify-center group/dot"
+                        >
+                          <span className="text-[8px] font-bold text-white opacity-0 group-hover/dot:opacity-100 transition-opacity leading-none">✕</span>
+                        </button>
+                      </Tooltip>
+                      <div className="w-3 h-3 rounded-full bg-[#FFBD2E]/50 cursor-not-allowed" />
+                      <div className="w-3 h-3 rounded-full bg-[#27C93F]/50 cursor-not-allowed" />
+                    </div>
+                  )}
+                  {title && (
+                    <h2 id={titleId} className="text-sm sm:text-base font-semibold text-[var(--text)] tracking-tight">{title}</h2>
+                  )}
                 </div>
-              )}
-              {title && (
-                <h2 id={titleId} className="text-sm sm:text-base font-semibold text-[var(--text)] tracking-tight">{title}</h2>
-              )}
-            </div>
-            {/* X button — mobile only */}
-            <button
-              onClick={onClose}
-              aria-label="Close"
-              className="md:hidden p-1 rounded-[var(--r1)] text-[var(--text-3)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] transition-colors cursor-pointer"
-            >
-              <Icon name="close" className="text-[18px]" />
-            </button>
-          </div>
-        )}
+                {/* X button — mobile only */}
+                <button
+                  onClick={onClose}
+                  aria-label="Close"
+                  className="md:hidden p-1 rounded-[var(--r1)] text-[var(--text-3)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] transition-colors cursor-pointer"
+                >
+                  <Icon name="close" className="text-[18px]" />
+                </button>
+              </div>
+            )}
 
-        {/* Body */}
-        <div className="p-5 sm:p-6 max-h-[calc(85vh-100px)] overflow-y-auto custom-scrollbar">{children}</div>
+            {/* Body */}
+            <div className="p-5 sm:p-6 max-h-[calc(85vh-100px)] overflow-y-auto custom-scrollbar">{children}</div>
 
-        {/* Footer */}
-        {footer && (
-          <div className="flex items-center justify-end gap-2.5 px-5 py-3.5 border-t border-[var(--line)] bg-[var(--surface-2)]/30 rounded-b-[var(--r4)]">
-            {footer}
-          </div>
+            {/* Footer */}
+            {footer && (
+              <div className="flex items-center justify-end gap-2.5 px-5 py-3.5 border-t border-[var(--line)] bg-[var(--surface-2)]/30 rounded-b-[var(--r4)]">
+                {footer}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

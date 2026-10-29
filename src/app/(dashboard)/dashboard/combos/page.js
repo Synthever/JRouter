@@ -1,13 +1,14 @@
 "use client";
-import Icon from "@/shared/components/Icon";
 
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
-import { Card, Button, Modal, Input, Skeleton, ModelSelectModal, ConfirmModal, CapacityBadges, Select, Toggle, SegmentedControl } from "@/shared/components";
+import Icon from "@/shared/components/Icon";
+import AppLogo from "@/shared/components/AppLogo";
+import { Button, Modal, Input, Skeleton, ModelSelectModal, ConfirmModal, CapacityBadges, Toggle } from "@/shared/components";
 import StatusBadge from "@/shared/components/StatusBadge";
 import ComboSettingsModal from "@/shared/components/ComboSettingsModal";
 import ComboLimitsModal from "@/shared/components/ComboLimitsModal";
@@ -15,6 +16,7 @@ import controls from "@/shared/components/DashboardControls.module.css";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import { useModelCaps } from "@/shared/hooks/useModelCaps";
 import { aggregateComboCapabilities } from "open-sse/providers/capabilities.js";
+import ComboStats from "./components/ComboStats";
 import styles from "./combos.module.css";
 
 // Validate combo name: only a-z, A-Z, 0-9, -, _
@@ -59,6 +61,26 @@ const STRATEGY_OPTIONS = [
   { value: "fusion", label: "Fusion — panel + judge" },
 ];
 
+const STRATEGY_MENU = [
+  { value: "fallback", label: "Fallback", hint: "Try members in order" },
+  { value: "round-robin", label: "Round Robin", hint: "Rotate across members" },
+  { value: "fusion", label: "Fusion", hint: "Panel answers + judge" },
+];
+
+const STRATEGY_LABEL = {
+  fallback: "Fallback",
+  "round-robin": "Round Robin",
+  fusion: "Fusion",
+};
+
+const VISIBILITY_OPTIONS = [
+  { value: "", label: "All" },
+  { value: "public", label: "Public" },
+  { value: "private", label: "Private" },
+];
+
+const MEMBER_PREVIEW_COUNT = 2;
+
 export default function CombosPage() {
   const [combos, setCombos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -74,7 +96,8 @@ export default function CombosPage() {
   const [presetLoading, setPresetLoading] = useState(null); // "cursor" | "claude" | null
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkBusy, setBulkBusy] = useState(false);
-  const [activeTab, setActiveTab] = useState("models");
+  const [bulkStrategyOpen, setBulkStrategyOpen] = useState(false);
+  const bulkStrategyRef = useRef(null);
   const [search, setSearch] = useState("");
   const [visibilityFilter, setVisibilityFilter] = useState("");
   const { copied, copy } = useCopyToClipboard();
@@ -88,6 +111,21 @@ export default function CombosPage() {
     const alive = new Set(combos.map((c) => c.id));
     setSelectedIds((prev) => prev.filter((id) => alive.has(id)));
   }, [combos]);
+
+  // Close the bulk strategy menu on outside click or Escape.
+  useEffect(() => {
+    if (!bulkStrategyOpen) return;
+    const close = (event) => {
+      if (!bulkStrategyRef.current?.contains(event.target)) setBulkStrategyOpen(false);
+    };
+    const escape = (event) => { if (event.key === "Escape") setBulkStrategyOpen(false); };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [bulkStrategyOpen]);
 
   const selectedCombos = combos.filter((c) => selectedIds.includes(c.id));
   const allSelected = combos.length > 0 && selectedIds.length === combos.length;
@@ -107,17 +145,49 @@ export default function CombosPage() {
     );
   });
 
+  // Card grid resolves combo members' capabilities through this lookup so a
+  // nested combo reports its aggregate limits instead of the raw model's.
+  const comboByName = Object.fromEntries(combos.map((combo) => [combo.name, combo.models]));
+  const memberCount = combos.reduce((total, combo) => total + combo.models.length, 0);
+  const strategyCounts = { fallback: 0, "round-robin": 0, fusion: 0 };
+  for (const combo of combos) {
+    const key = comboStrategies[combo.name]?.fallbackStrategy || "fallback";
+    if (strategyCounts[key] != null) strategyCounts[key] += 1;
+  }
+  const topStrategy = combos.length
+    ? Object.keys(strategyCounts).sort((a, b) => strategyCounts[b] - strategyCounts[a])[0]
+    : null;
+  const strategyNote = combos.length
+    ? `${strategyCounts.fallback} fallback · ${strategyCounts["round-robin"]} round robin · ${strategyCounts.fusion} fusion`
+    : "No combos yet";
+  const enabledAdapterCount = CAPACITY_ADAPTER_CAPS.filter((cap) => capacityAdapter[cap.key]?.enabled).length;
+
+  const jumpToSection = (key) => {
+    if (typeof document === "undefined") return;
+    const target = document.getElementById(`s-${key}`);
+    if (!target) return;
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  };
+
   const toggleSelect = (id) => {
+    setBulkStrategyOpen(false);
     setSelectedIds((prev) => (
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     ));
   };
 
   const toggleSelectAll = () => {
+    setBulkStrategyOpen(false);
     setSelectedIds(allSelected ? [] : combos.map((c) => c.id));
   };
 
-  const clearSelection = () => setSelectedIds([]);
+  const clearSelection = () => {
+    setBulkStrategyOpen(false);
+    setSelectedIds([]);
+  };
 
   const handleGeneratePresets = async (source) => {
     const label = source === "cursor" ? "Cursor Default" : "Claude Default";
@@ -401,12 +471,19 @@ export default function CombosPage() {
   if (loading) {
     return (
       <div className={`dashboard-surface ${styles.page}`} aria-busy="true" aria-label="Loading combos">
-        {[0, 1].map((section) => (
-          <Card key={section} className={`ui-card ${styles.panel}`}>
-            <Skeleton className="mb-4 h-4 w-40" />
-            <Skeleton className="h-20 w-full" />
-          </Card>
-        ))}
+        <div className={styles.stats}>
+          {[0, 1, 2].map((card) => (
+            <Skeleton key={card} className={styles.statSkeleton} />
+          ))}
+        </div>
+        <div className={styles.section}>
+          <Skeleton className="mb-5 h-4 w-40" />
+          <div className={styles.grid}>
+            {[0, 1, 2, 3].map((card) => (
+              <Skeleton key={card} className={styles.cardSkeleton} />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -414,13 +491,12 @@ export default function CombosPage() {
   return (
     <div className={`dashboard-surface ${styles.page}`}>
       <header className={styles.intro}>
-        <div className="min-w-0">
-          <p className={styles.description}>
-            Group models under one name, then pick a strategy per combo
-          </p>
+        <div>
+          <h1 className={styles.title}>Combos</h1>
+          <p className={styles.sub}>Give one model id several upstreams, then choose how requests travel between them.</p>
         </div>
         {/* Preset generators stay dormant (hidden) — only the visible create
-            CTA moved to the table header so there is a single Create button. */}
+            CTA moved to the section header so there is a single Create button. */}
         <div className="hidden">
           <Button
             variant="secondary"
@@ -447,68 +523,61 @@ export default function CombosPage() {
         </div>
       </header>
 
-      <SegmentedControl
-        options={[
-          { value: "models", label: "Models" },
-          { value: "adapter", label: "Vision Adapter" },
-        ]}
-        value={activeTab}
-        onChange={setActiveTab}
-        aria-label="Combos view"
+      <ComboStats
+        totalCombos={combos.length}
+        publicCount={publicCount}
+        privateCount={combos.length - publicCount}
+        routedModelCount={routedModelCount}
+        memberCount={memberCount}
+        chainCount={combos.length}
+        topStrategyLabel={topStrategy ? STRATEGY_LABEL[topStrategy] : "None"}
+        strategyNote={strategyNote}
       />
 
-      {activeTab === "adapter" ? (
-        <section className={`ui-card ${styles.panel}`} aria-labelledby="capacity-adapter-heading">
-          <div className={styles.sectionHeader}>
-            <div>
-              <h2 id="capacity-adapter-heading" className="ui-eyebrow flex items-center gap-2">
-                <Icon className="text-[16px]">visibility</Icon> Vision Adapter
-              </h2>
-              <p className={styles.sectionDescription}>
-                Your model doesn&apos;t read image/audio? It switches to a model in the pool below.
-              </p>
-            </div>
-          </div>
-          <CapacityAdapterSection
-            capacityAdapter={capacityAdapter}
-            onChange={handleSetCapacityAdapter}
-            activeProviders={activeProviders}
-            getCaps={getCaps}
-          />
-        </section>
-      ) : (
-      <section className={`ui-card ${styles.panel}`} aria-labelledby="combo-list-heading">
+      <div className={styles.toolbar}>
+        <nav className={styles.chips} aria-label="Jump to a combos section">
+          <button type="button" className={styles.chip} onClick={() => jumpToSection("combos")}>
+            Combos
+            <b>{combos.length}</b>
+          </button>
+          <button type="button" className={styles.chip} onClick={() => jumpToSection("adapter")}>
+            Vision adapter
+            <b>{enabledAdapterCount}</b>
+          </button>
+        </nav>
+        <div className={styles.tabs} role="group" aria-label="Filter combos by visibility">
+          {VISIBILITY_OPTIONS.map((option) => (
+            <button
+              key={option.value || "all"}
+              type="button"
+              className={styles.tab}
+              aria-pressed={visibilityFilter === option.value}
+              onClick={() => setVisibilityFilter(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <section id="s-combos" className={styles.section} aria-labelledby="combo-list-heading">
         <div className={styles.sectionHeader}>
           <div>
-            <h2 id="combo-list-heading" className="ui-eyebrow flex items-center gap-2">
-              <Icon className="text-[16px]">layers</Icon> Combos
+            <h2 id="combo-list-heading" className={styles.sectionTitle}>
+              <Icon className={styles.sectionIcon}>layers</Icon>
+              Combos
+              <small>{combos.length}</small>
             </h2>
+            <p className={styles.description}>Each combo routes to its members in the order and strategy you set.</p>
           </div>
-          <Button variant="contrast" size="sm" icon="add" onClick={() => setShowCreateModal(true)}>
-            Create
-          </Button>
-        </div>
-
-        <div className={styles.summaryStrip}>
-          <div className={styles.summaryItem}>
-            <span className={styles.summaryLabel}>Combos</span>
-            <span className={`${styles.summaryValue} u-tnum`}>{combos.length}</span>
-          </div>
-          <div className={styles.summaryItem}>
-            <span className={styles.summaryLabel}><span className={`${styles.dot} ${styles.dotPublic}`} aria-hidden="true" />Public</span>
-            <span className={`${styles.summaryValue} u-tnum`}>{publicCount}</span>
-          </div>
-          <div className={styles.summaryItem}>
-            <span className={styles.summaryLabel}><span className={`${styles.dot} ${styles.dotPrivate}`} aria-hidden="true" />Private</span>
-            <span className={`${styles.summaryValue} u-tnum`}>{combos.length - publicCount}</span>
-          </div>
-          <div className={styles.summaryItem}>
-            <span className={styles.summaryLabel}>Models routed</span>
-            <span className={`${styles.summaryValue} u-tnum`}>{routedModelCount}</span>
+          <div className={styles.actions}>
+            <Button variant="contrast" icon="add" onClick={() => setShowCreateModal(true)}>
+              Create
+            </Button>
           </div>
         </div>
 
-        <div className={styles.toolbar}>
+        <div className={styles.listToolbar}>
           <Input
             aria-label="Search combos"
             placeholder="Search model id, combo name or member…"
@@ -517,20 +586,70 @@ export default function CombosPage() {
             onChange={(event) => setSearch(event.target.value)}
             className={styles.toolbarSearch}
           />
-          <Select
-            aria-label="Visibility"
-            value={visibilityFilter}
-            options={[
-              { value: "", label: "All visibility" },
-              { value: "public", label: "Public" },
-              { value: "private", label: "Private" },
-            ]}
-            onChange={(event) => setVisibilityFilter(event.target.value)}
-          />
+          <label className={styles.selectAll}>
+            <input
+              type="checkbox"
+              checked={allSelected}
+              ref={(el) => {
+                if (el) el.indeterminate = someSelected && !allSelected;
+              }}
+              onChange={toggleSelectAll}
+              aria-label="Select all combos"
+            />
+            <span>
+              {someSelected
+                ? `${selectedIds.length} selected`
+                : `Select all (${combos.length})`}
+            </span>
+          </label>
           {someSelected && (
-            <Button size="sm" variant="danger" icon="delete" loading={bulkBusy} onClick={handleBulkDelete}>
-              Delete ({selectedIds.length})
-            </Button>
+            <div className={styles.bulkActions}>
+              <div className={styles.bulkStrategy} ref={bulkStrategyRef}>
+                <button
+                  type="button"
+                  className={styles.bulkStrategyButton}
+                  aria-haspopup="menu"
+                  aria-expanded={bulkStrategyOpen}
+                  disabled={bulkBusy}
+                  onClick={() => setBulkStrategyOpen((open) => !open)}
+                >
+                  <Icon className="text-[15px]">route</Icon>
+                  <span>Set strategy</span>
+                  <Icon className="text-[15px]">{bulkStrategyOpen ? "expand_less" : "expand_more"}</Icon>
+                </button>
+                {bulkStrategyOpen && (
+                  <div className={styles.bulkStrategyMenu} role="menu" aria-label="Set strategy for selected combos">
+                    {STRATEGY_MENU.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        role="menuitem"
+                        className={styles.bulkStrategyItem}
+                        onClick={() => {
+                          setBulkStrategyOpen(false);
+                          handleBulkSetStrategy(option.value);
+                        }}
+                      >
+                        <span className={styles.bulkStrategyItemLabel}>{option.label}</span>
+                        <span className={styles.bulkStrategyItemHint}>{option.hint}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <Button
+                variant="danger"
+                icon="delete"
+                disabled={bulkBusy}
+                loading={bulkBusy}
+                onClick={handleBulkDelete}
+              >
+                Delete ({selectedIds.length})
+              </Button>
+              <Button variant="ghost" onClick={clearSelection} disabled={bulkBusy}>
+                Clear
+              </Button>
+            </div>
           )}
         </div>
 
@@ -544,118 +663,51 @@ export default function CombosPage() {
             </p>
           </div>
         ) : (
-        <div>
-          {/* Selection toolbar */}
-          <div className={styles.selectionToolbar}>
-            <label className={styles.selectionLabel}>
-              <input
-                type="checkbox"
-                checked={allSelected}
-                ref={(el) => {
-                  if (el) el.indeterminate = someSelected && !allSelected;
-                }}
-                onChange={toggleSelectAll}
-                aria-label="Select all combos"
+          <ul className={styles.grid}>
+            {visibleCombos.map((combo) => (
+              <ComboCard
+                key={combo.id}
+                combo={combo}
+                getCaps={getCaps}
+                comboByName={comboByName}
+                activeProviders={activeProviders}
+                copied={copied}
+                onCopy={copy}
+                onEdit={() => setEditingCombo(combo)}
+                onSettings={() => setSettingsCombo(combo)}
+                onEditLimits={() => setLimitsCombo(combo)}
+                onDelete={() => handleDelete(combo.id)}
+                strategy={comboStrategies[combo.name] || {}}
+                onSetStrategy={(patch) => handleSetComboStrategy(combo.name, patch)}
+                selected={selectedIds.includes(combo.id)}
+                onToggleSelect={() => toggleSelect(combo.id)}
+                onToggleVisibility={handleToggleVisibility}
               />
-              <span>
-                {someSelected
-                  ? `${selectedIds.length} selected`
-                  : `Select all (${combos.length})`}
-              </span>
-            </label>
-
-            <div className={styles.bulkActions}>
-              {someSelected && (
-                <>
-                  <div className={styles.strategySelect}>
-                    <Select
-                      options={STRATEGY_OPTIONS}
-                      value=""
-                      placeholder="Set strategy…"
-                      aria-label="Set strategy for selected combos"
-                      disabled={bulkBusy}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        if (v) handleBulkSetStrategy(v);
-                      }}
-                      selectClassName="py-1.5 text-xs"
-                    />
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    icon="delete"
-                    disabled={bulkBusy}
-                    loading={bulkBusy}
-                    onClick={handleBulkDelete}
-                    className={`${styles.deleteButton} whitespace-nowrap`}
-                  >
-                    Delete ({selectedIds.length})
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={clearSelection}
-                    disabled={bulkBusy}
-                  >
-                    Clear
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className={styles.modelTableWrap}>
-            <table className={styles.modelTable} aria-label="Combos">
-              <thead>
-                <tr>
-                  <th scope="col">
-                    <input
-                      type="checkbox"
-                      checked={allSelected}
-                      ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
-                      onChange={toggleSelectAll}
-                      aria-label="Select all combos"
-                    />
-                  </th>
-                  <th scope="col">Model ID</th>
-                  <th scope="col">Members</th>
-                  <th scope="col">Strategy</th>
-                  <th scope="col">Visibility</th>
-                  <th scope="col">Updated</th>
-                  <th scope="col">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(() => {
-                  const comboByName = Object.fromEntries(combos.map((c) => [c.name, c.models]));
-                  return visibleCombos.map((combo) => (
-                    <ComboTableRow
-                      key={combo.id}
-                      combo={combo}
-                      getCaps={getCaps}
-                      comboByName={comboByName}
-                      copied={copied}
-                      onCopy={copy}
-                      onEdit={() => setEditingCombo(combo)}
-                      onSettings={() => setSettingsCombo(combo)}
-                      onEditLimits={() => setLimitsCombo(combo)}
-                      onDelete={() => handleDelete(combo.id)}
-                      strategy={comboStrategies[combo.name] || {}}
-                      onSetStrategy={(patch) => handleSetComboStrategy(combo.name, patch)}
-                      selected={selectedIds.includes(combo.id)}
-                      onToggleSelect={() => toggleSelect(combo.id)}
-                      onToggleVisibility={handleToggleVisibility}
-                    />
-                  ));
-                })()}
-              </tbody>
-            </table>
-          </div>
-        </div>
+            ))}
+          </ul>
         )}
       </section>
-      )}
+
+      <section id="s-adapter" className={styles.section} aria-labelledby="capacity-adapter-heading">
+        <div className={styles.sectionHeader}>
+          <div>
+            <h2 id="capacity-adapter-heading" className={styles.sectionTitle}>
+              <Icon className={styles.sectionIcon}>visibility</Icon>
+              Vision adapter
+              <small>{enabledAdapterCount} active</small>
+            </h2>
+            <p className={styles.description}>
+              When a model can&apos;t read images or audio, the request switches to a model in these pools instead of failing.
+            </p>
+          </div>
+        </div>
+        <CapacityAdapterSection
+          capacityAdapter={capacityAdapter}
+          onChange={handleSetCapacityAdapter}
+          activeProviders={activeProviders}
+          getCaps={getCaps}
+        />
+      </section>
 
       {/* Create Modal - Use key to force remount and reset state */}
       {showCreateModal && (
@@ -730,190 +782,10 @@ const fmtK = (n) => {
   return `${Math.round(n / 1000)}k`;
 };
 
-function ComboRow({ combo, getCaps, comboByName = {}, activeProviders = [], copied, onCopy, onEdit, onSettings, onEditLimits, onDelete, strategy = {}, onSetStrategy, selected = false, onToggleSelect }) {
-  const [showJudgeSelect, setShowJudgeSelect] = useState(false);
-  const current = strategy.fallbackStrategy || "fallback";
-  const judge = strategy.judgeModel || "";
-  const isFusion = current === "fusion";
-  // The synced catalog is server-only, so resolving here would fall back to the
-  // generic patterns and under-report the limits. getCaps carries the server's
-  // answer for /api/models.
-  const comboCaps = aggregateComboCapabilities(combo.models, comboByName, getCaps);
-
-  return (
-    <li className={`${styles.comboRow} ${selected ? styles.selected : ""}`}>
-      <div className={styles.rowContent}>
-        <div className={styles.identity}>
-          <label className="flex shrink-0 items-center pt-1 sm:pt-0 cursor-pointer" title="Select combo">
-            <input
-              type="checkbox"
-              checked={selected}
-              onChange={onToggleSelect}
-              onClick={(e) => e.stopPropagation()}
-              aria-label={`Select ${combo.name}`}
-            />
-          </label>
-          <Icon className="shrink-0 text-text-muted text-[16px]">layers</Icon>
-          <div className="min-w-0 flex-1">
-            <div className={styles.nameLine}>
-              <code className={styles.comboName} title={combo.name}>{combo.name}</code>
-              <StatusBadge dot={false}>{combo.models.length} {combo.models.length === 1 ? "model" : "models"}</StatusBadge>
-              {combo.promptInjectionEnabled && <span className="text-xs text-text-muted" title="Custom system prompt enabled">Prompt Injection</span>}
-            </div>
-            <div className={styles.modelList} aria-label="Model routing order">
-              {combo.models.length === 0 ? (
-                <span className="text-xs text-text-muted italic">No models</span>
-              ) : (
-                combo.models.slice(0, 3).map((model, index) => (
-                  <code key={index} className={styles.modelChip} title={model}>
-                    {index > 0 && <span className={styles.chainSeparator} aria-hidden="true">{isFusion ? "+" : "→"}</span>}
-                    <span>{model}</span>
-                    <CapacityBadges caps={
-                      comboByName[model]
-                        ? aggregateComboCapabilities(comboByName[model], comboByName, getCaps)
-                        : getCaps?.(model)
-                    } colorOverride="text-text-muted" size={14} />
-                  </code>
-                ))
-              )}
-              {combo.models.length > 3 && (
-                <span className="text-[11px] text-text-muted">+{combo.models.length - 3} more</span>
-              )}
-            </div>
-            {comboCaps && (
-              // Clicking the summary opens the manual limits for these models;
-              // the automatic numbers stay the default.
-              <button
-                type="button"
-                className={`${styles.metadata} ${styles.metadataButton}`}
-                onClick={() => onEditLimits?.()}
-                title="Set the context window and max output by hand"
-                aria-label={`Edit context and output limits for ${combo.name}`}
-              >
-                <span>ctx {fmtK(comboCaps.contextWindow)}</span>
-                <span className="opacity-40">·</span>
-                <span>max {fmtK(comboCaps.maxOutput)}</span>
-                <Icon className="text-[12px] opacity-60">tune</Icon>
-              </button>
-            )}
-            {/* Fusion: judge picker (Auto = first model) */}
-            {isFusion && (
-              <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
-                <span className="text-xs font-medium text-text-muted">Judge</span>
-                <button
-                  type="button"
-                  onClick={() => setShowJudgeSelect(true)}
-                  className={styles.judgeButton}
-                  title="Pick the model that fuses panel answers"
-                >
-                  <Icon className="shrink-0 text-[14px]">gavel</Icon>
-                  <span>{judge || `Auto - ${combo.models[0] || "first model"}`}</span>
-                </button>
-                {judge && (
-                  <button
-                    type="button"
-                    onClick={() => onSetStrategy({ judgeModel: "" })}
-                    className={`${styles.resetJudge} rounded p-1 text-text-muted hover:bg-surface-2 transition-colors`}
-                    title="Reset judge to Auto"
-                    aria-label="Reset judge to automatic"
-                  >
-                    <Icon className="text-[13px]">close</Icon>
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className={styles.rowControls}>
-          {/* Strategy selector — always visible */}
-          <div className={styles.strategySelect}>
-            <Select
-              options={STRATEGY_OPTIONS}
-              value={current}
-              aria-label={`Routing strategy for ${combo.name}`}
-              onChange={(e) => onSetStrategy({ fallbackStrategy: e.target.value })}
-              selectClassName="py-1.5 text-xs"
-            />
-          </div>
-
-          <div className={styles.comboActions}>
-            <button
-              type="button"
-              onClick={onSettings}
-              className={styles.iconAction}
-              title="Combo Settings"
-              aria-label={`Combo Settings for ${combo.name}`}
-            >
-              <Icon className="text-[16px]">settings</Icon>
-            </button>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onCopy(combo.name, `combo-${combo.id}`); }}
-              className={styles.iconAction}
-              title="Copy combo name"
-              aria-label={`Copy ${combo.name}`}
-            >
-              <Icon className={`text-[16px] ${copied === `combo-${combo.id}` ? styles.success : ""}`}>
-                {copied === `combo-${combo.id}` ? "check" : "content_copy"}
-              </Icon>
-            </button>
-            <button
-              type="button"
-              onClick={onEdit}
-              className={styles.iconAction}
-              title="Edit"
-              aria-label={`Edit ${combo.name}`}
-            >
-              <Icon className="text-[16px]">edit</Icon>
-            </button>
-            <button
-              type="button"
-              onClick={onDelete}
-              className={`${styles.iconAction} ${styles.dangerAction}`}
-              title="Delete"
-              aria-label={`Delete ${combo.name}`}
-            >
-              <Icon className="text-[16px]">delete</Icon>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Judge model picker (single-select; combo members make natural judges too) */}
-      {showJudgeSelect && (
-        <ModelSelectModal
-          className={controls.modelPicker}
-          portal
-          isOpen={showJudgeSelect}
-          onClose={() => setShowJudgeSelect(false)}
-          onSelect={(m) => { onSetStrategy({ judgeModel: m?.value || "" }); setShowJudgeSelect(false); }}
-          activeProviders={activeProviders}
-          title="Select Judge Model"
-          addedModelValues={judge ? [judge] : []}
-          closeOnSelect={true}
-        />
-      )}
-    </li>
-  );
-}
-
-// One row of the Custom Model-ID table. Renders table cells (not a div tree) so
-// the mobile stacked-card CSS keeps a valid table underneath.
-// One row of the Custom Model-ID table. Renders table cells (not a div tree) so
-// the whole row stays scannable like the Health table: friendly identifier first,
-// technical id beneath, one badge per concept, and a single actions menu.
-const STRATEGY_LABEL = {
-  fallback: "Fallback",
-  "round-robin": "Round Robin",
-  fusion: "Fusion",
-};
-
-const MEMBER_PREVIEW_COUNT = 2;
-
-function ComboTableRow({
-  combo, getCaps, comboByName = {}, copied, onCopy, onEdit, onSettings,
+// One combo as a card in the combos grid: identity and routing order first,
+// then the strategy and visibility controls, mirroring provider cards.
+function ComboCard({
+  combo, getCaps, comboByName = {}, activeProviders = [], copied, onCopy, onEdit, onSettings,
   onEditLimits, onDelete, strategy = {}, onSetStrategy, selected = false,
   onToggleSelect, onToggleVisibility,
 }) {
@@ -948,10 +820,10 @@ function ComboTableRow({
     };
   }, [openMenu]);
 
-  // The table wrapper scrolls horizontally, which would clip an absolutely
-  // positioned menu. Render the menu in a portal anchored to the trigger; the
-  // real height is measured after mount so the last rows flip above instead of
-  // opening off-screen.
+  // The card grid scrolls with the page, so an absolutely positioned menu would
+  // clip against the card. Render the menu in a portal anchored to the trigger;
+  // the real height is measured after mount so the last cards flip above the
+  // trigger instead of opening off-screen.
   const openAnchoredMenu = (kind) => {
     if (openMenu === kind) { setOpenMenu(null); return; }
     const anchor = (kind === "strategy" ? strategyRef.current : actionsRef.current)?.getBoundingClientRect();
@@ -976,110 +848,69 @@ function ComboTableRow({
     if (top !== menuPos.top) setMenuPos((previous) => (previous ? { ...previous, top } : previous));
   }, [openMenu, menuPos]);
 
+  // The menu lives in a portal with fixed coordinates, so it has to follow its
+  // trigger while the page scrolls instead of staying where it was opened.
+  useEffect(() => {
+    if (!openMenu) return;
+    let frame = 0;
+    const reposition = () => {
+      frame = 0;
+      const anchor = (openMenu === "strategy" ? strategyRef.current : actionsRef.current)?.getBoundingClientRect();
+      if (!anchor || anchor.bottom < 0 || anchor.top > window.innerHeight) {
+        setOpenMenu(null);
+        return;
+      }
+      const width = openMenu === "strategy" ? 180 : 176;
+      const height = menuRef.current?.getBoundingClientRect().height || 0;
+      const left = Math.max(8, Math.min(
+        openMenu === "strategy" ? anchor.left : anchor.right - width,
+        window.innerWidth - width - 8
+      ));
+      const fitsBelow = anchor.bottom + 4 + height <= window.innerHeight - 8;
+      const top = fitsBelow ? anchor.bottom + 4 : Math.max(8, anchor.top - 4 - height);
+      setMenuPos((previous) => (
+        previous && previous.top === top && previous.left === left
+          ? previous
+          : { top, left, width, anchorTop: anchor.top, anchorBottom: anchor.bottom }
+      ));
+    };
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(reposition); };
+    window.addEventListener("scroll", schedule, true);
+    window.addEventListener("resize", schedule);
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedule, true);
+      window.removeEventListener("resize", schedule);
+    };
+  }, [openMenu]);
+
   return (
-    <tr className={selected ? styles.selected : undefined}>
-      <td>
-        <input
-          type="checkbox"
-          checked={selected}
-          onChange={onToggleSelect}
-          aria-label={`Select ${publicId}`}
-        />
-      </td>
-      <td>
-        <button
-          type="button"
-          className={styles.modelName}
-          onClick={() => onCopy(publicId, copyKey)}
-          title={`Copy ${publicId}`}
-        >
-          <span className={styles.publicName}>{publicId}</span>
-          {combo.publicName && combo.publicName !== combo.name ? (
-            <span className={styles.internalName}>{combo.name}</span>
-          ) : null}
-        </button>
-        {comboCaps && <CapacityBadges caps={comboCaps} colorOverride="text-text-muted" size={13} />}
-      </td>
-      <td>
-        <div className={styles.memberLine}>
-          {previewMembers.map((model, index) => (
-            <code key={`${model}-${index}`} className={styles.modelChip} title={model}>
-              {index > 0 && <span className={styles.chainSeparator} aria-hidden="true">{isFusion ? "+" : "→"}</span>}
-              <span className={styles.modelChipText}>{model}</span>
-            </code>
-          ))}
-          {hiddenMembers > 0 && (
-            <span className={styles.memberMore} title={combo.models.slice(MEMBER_PREVIEW_COUNT).join("\n")}>
-              +{hiddenMembers} more
-            </span>
-          )}
-        </div>
-      </td>
-      <td>
-        <div className={styles.strategyCell} ref={strategyRef}>
-          <button
-            type="button"
-            className={styles.strategyBadge}
-            aria-label={`Routing strategy for ${publicId}: ${STRATEGY_LABEL[current] || current}`}
-            aria-expanded={openMenu === "strategy"}
-            onClick={() => openAnchoredMenu("strategy")}
-          >
-            <span>{STRATEGY_LABEL[current] || current}</span>
-            <Icon className="text-[14px]">expand_more</Icon>
-          </button>
-          {openMenu === "strategy" && menuPos && createPortal(
-            <div
-              ref={menuRef}
-              className={styles.actionMenu}
-              style={{ position: "fixed", top: menuPos.top, left: menuPos.left, width: menuPos.width }}
-              role="menu"
-            >
-              {STRATEGY_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  role="menuitemradio"
-                  aria-checked={current === option.value}
-                  className={styles.actionMenuItem}
-                  onClick={() => { onSetStrategy({ fallbackStrategy: option.value }); setOpenMenu(null); }}
-                >
-                  <span>{STRATEGY_LABEL[option.value]}</span>
-                  {current === option.value && <Icon className="text-[14px]">check</Icon>}
-                </button>
-              ))}
-              {isFusion && (
-                <button
-                  type="button"
-                  role="menuitem"
-                  className={styles.actionMenuItem}
-                  onClick={() => { setOpenMenu(null); setShowJudgeSelect(true); }}
-                >
-                  <span>Judge: {judge || "Auto"}</span>
-                  <Icon className="text-[14px]">gavel</Icon>
-                </button>
-              )}
-            </div>,
-            document.body
-          )}
-        </div>
-      </td>
-      <td>
-        <div className={styles.visibilityCell}>
-          <Toggle
-            size="sm"
-            checked={isPublic}
-            onChange={() => onToggleVisibility(combo)}
-            aria-label={`Visibility for ${publicId}`}
+    <li className={styles.cardItem}>
+      <article
+        className={`${styles.card} ${isPublic ? styles.cardPublic : ""} ${selected ? styles.cardSelected : ""}`}
+        aria-label={publicId}
+      >
+        <div className={styles.cardHead}>
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={onToggleSelect}
+            aria-label={`Select ${publicId}`}
           />
-          <span className={isPublic ? styles.visibilityPublic : styles.visibilityPrivate}>
-            {isPublic ? "Public" : "Private"}
-          </span>
-        </div>
-      </td>
-      <td className={`u-tnum ${styles.updatedCell}`}>{combo.updatedAt ? new Date(combo.updatedAt).toLocaleDateString() : "—"}</td>
-      <td className={styles.actionsCell}>
-        <div className={styles.rowActions}>
-          <Button variant="outline" size="sm" onClick={onEdit} aria-label={`Edit ${publicId}`}>Edit</Button>
+          <AppLogo size={32} className={styles.cardLogo} />
+          <div className={styles.identity}>
+            <button
+              type="button"
+              className={styles.modelName}
+              onClick={() => onCopy(publicId, copyKey)}
+              title={`Copy ${publicId}`}
+            >
+              <span className={styles.publicName}>{publicId}</span>
+              {combo.publicName && combo.publicName !== combo.name ? (
+                <span className={styles.internalName}>{combo.name}</span>
+              ) : null}
+            </button>
+          </div>
           <div className={styles.kebabWrap} ref={actionsRef}>
             <button
               type="button"
@@ -1119,60 +950,172 @@ function ComboTableRow({
             )}
           </div>
         </div>
-      </td>
-      {/* A <tr> may only contain <td>: the judge modal rides in a hidden cell. */}
-      {isFusion && showJudgeSelect && (
-        <td hidden>
+
+        <div className={styles.memberLine} aria-label="Model routing order">
+          {previewMembers.map((model, index) => (
+            <code key={`${model}-${index}`} className={styles.modelChip} title={model}>
+              {index > 0 && <span className={styles.chainSeparator} aria-hidden="true">{isFusion ? "+" : "→"}</span>}
+              <span className={styles.modelChipText}>{model}</span>
+            </code>
+          ))}
+          {hiddenMembers > 0 && (
+            <span className={styles.memberMore} title={combo.models.slice(MEMBER_PREVIEW_COUNT).join("\n")}>
+              +{hiddenMembers} more
+            </span>
+          )}
+        </div>
+
+        <div className={styles.cardMeta}>
+          {comboCaps ? (
+            // Clicking the summary opens the manual limits for these models;
+            // the automatic numbers stay the default.
+            <button
+              type="button"
+              className={`${styles.metadata} ${styles.metadataButton}`}
+              onClick={() => onEditLimits?.()}
+              title="Set the context window and max output by hand"
+              aria-label={`Edit context and output limits for ${combo.name}`}
+            >
+              <span>ctx {fmtK(comboCaps.contextWindow)}</span>
+              <span className="opacity-40">·</span>
+              <span>max {fmtK(comboCaps.maxOutput)}</span>
+              <Icon className="text-[12px] opacity-60">edit</Icon>
+            </button>
+          ) : <span />}
+          <span className={styles.updated}>
+            {combo.updatedAt ? `Updated ${new Date(combo.updatedAt).toLocaleDateString()}` : "Never updated"}
+          </span>
+        </div>
+
+        {/* Fusion: judge picker (Auto = first model) */}
+        {isFusion && (
+          <div className={styles.judgeRow}>
+            <span className={styles.judgeLabel}>Judge</span>
+            <button
+              type="button"
+              onClick={() => setShowJudgeSelect(true)}
+              className={styles.judgeButton}
+              title="Pick the model that fuses panel answers"
+            >
+              <Icon className="shrink-0 text-[14px]">gavel</Icon>
+              <span>{judge || `Auto - ${combo.models[0] || "first model"}`}</span>
+            </button>
+            {judge && (
+              <button
+                type="button"
+                onClick={() => onSetStrategy({ judgeModel: "" })}
+                className={styles.iconAction}
+                title="Reset judge to Auto"
+                aria-label="Reset judge to automatic"
+              >
+                <Icon className="text-[13px]">close</Icon>
+              </button>
+            )}
+          </div>
+        )}
+
+        <div className={styles.cardFoot}>
+          <div className={styles.cardFootMeta}>
+            <div className={styles.strategyCell} ref={strategyRef}>
+              <button
+                type="button"
+                className={styles.strategyBadge}
+                aria-label={`Routing strategy for ${publicId}: ${STRATEGY_LABEL[current] || current}`}
+                aria-expanded={openMenu === "strategy"}
+                onClick={() => openAnchoredMenu("strategy")}
+              >
+                <span>{STRATEGY_LABEL[current] || current}</span>
+                <Icon className="text-[14px]">expand_more</Icon>
+              </button>
+              {openMenu === "strategy" && menuPos && createPortal(
+                <div
+                  ref={menuRef}
+                  className={styles.actionMenu}
+                  style={{ position: "fixed", top: menuPos.top, left: menuPos.left, width: menuPos.width }}
+                  role="menu"
+                >
+                  {STRATEGY_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={current === option.value}
+                      className={styles.actionMenuItem}
+                      onClick={() => { onSetStrategy({ fallbackStrategy: option.value }); setOpenMenu(null); }}
+                    >
+                      <span>{STRATEGY_LABEL[option.value]}</span>
+                      {current === option.value && <Icon className="text-[14px]">check</Icon>}
+                    </button>
+                  ))}
+                  {isFusion && (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={styles.actionMenuItem}
+                      onClick={() => { setOpenMenu(null); setShowJudgeSelect(true); }}
+                    >
+                      <span>Judge: {judge || "Auto"}</span>
+                      <Icon className="text-[14px]">gavel</Icon>
+                    </button>
+                  )}
+                </div>,
+                document.body
+              )}
+            </div>
+            <div className={styles.visibilityCell}>
+              <Toggle
+                size="sm"
+                checked={isPublic}
+                onChange={() => onToggleVisibility(combo)}
+                aria-label={`Visibility for ${publicId}`}
+              />
+              <span className={isPublic ? styles.visibilityPublic : styles.visibilityPrivate}>
+                {isPublic ? "Public" : "Private"}
+              </span>
+            </div>
+          </div>
+          <div className={styles.cardActions}>
+            <Button variant="outline" size="sm" onClick={onEdit} aria-label={`Edit ${publicId}`}>Edit</Button>
+          </div>
+        </div>
+
+        {isFusion && showJudgeSelect && (
           <ModelSelectModal
             className={controls.modelPicker}
             portal
             isOpen={showJudgeSelect}
             onClose={() => setShowJudgeSelect(false)}
             onSelect={(m) => { onSetStrategy({ judgeModel: m?.value || "" }); setShowJudgeSelect(false); }}
-            activeProviders={[]}
+            activeProviders={activeProviders}
             title="Select Judge Model"
             addedModelValues={judge ? [judge] : []}
             closeOnSelect={true}
           />
-        </td>
-      )}
-    </tr>
+        )}
+      </article>
+    </li>
   );
 }
 
 function CapacityAdapterSection({ capacityAdapter, onChange, activeProviders, getCaps }) {
-  // The model picker is a portal modal; keeping it out of the <tbody> keeps the
-  // table markup valid (a stray <tr> there leaks the pool rows into the outer
-  // table body).
+  // The model picker is a portal modal; keeping the dialog out of the card grid
+  // lets each pool card own its own expanded editor.
   const [pickerCap, setPickerCap] = useState(null);
 
   return (
     <>
-      <div className={styles.modelTableWrap}>
-        <table className={styles.modelTable} aria-label="Vision adapter pools">
-          <thead>
-            <tr>
-              <th scope="col">Adapter</th>
-              <th scope="col">Model pool</th>
-              <th scope="col">Round-robin</th>
-              <th scope="col">Status</th>
-              <th scope="col">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {CAPACITY_ADAPTER_CAPS.map((cap) => (
-              <CapacityAdapterRow
-                key={cap.key}
-                cap={cap}
-                entry={capacityAdapter[cap.key] || EMPTY_CAP_ENTRY}
-                onChange={(entry) => onChange({ ...capacityAdapter, [cap.key]: entry })}
-                getCaps={getCaps}
-                onOpenPicker={() => setPickerCap(cap)}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <ul className={styles.adapterGrid}>
+        {CAPACITY_ADAPTER_CAPS.map((cap) => (
+          <AdapterCard
+            key={cap.key}
+            cap={cap}
+            entry={capacityAdapter[cap.key] || EMPTY_CAP_ENTRY}
+            onChange={(entry) => onChange({ ...capacityAdapter, [cap.key]: entry })}
+            getCaps={getCaps}
+            onOpenPicker={() => setPickerCap(cap)}
+          />
+        ))}
+      </ul>
 
       {pickerCap && (
         <ModelSelectModal
@@ -1207,7 +1150,7 @@ function CapacityAdapterSection({ capacityAdapter, onChange, activeProviders, ge
   );
 }
 
-function CapacityAdapterRow({ cap, entry, onChange, getCaps, onOpenPicker }) {
+function AdapterCard({ cap, entry, onChange, getCaps, onOpenPicker }) {
   const [expanded, setExpanded] = useState(false);
   const { enabled, roundRobin, models } = entry;
 
@@ -1230,46 +1173,16 @@ function CapacityAdapterRow({ cap, entry, onChange, getCaps, onOpenPicker }) {
   const hiddenModels = Math.max(0, models.length - 2);
 
   return (
-    <>
-      <tr>
-        <td>
-          <div className={styles.adapterIdentity}>
-            <Icon className="shrink-0 text-text-muted text-[16px]">{cap.icon}</Icon>
-            <div className="min-w-0">
-              <span className={styles.adapterLabel}>{cap.label}</span>
-              <span className={styles.internalName}>{cap.desc}</span>
-            </div>
+    <li className={styles.cardItem}>
+      <article className={`${styles.card} ${styles.adapterCard} ${enabled ? "" : styles.cardOff}`}>
+        <div className={styles.cardHead}>
+          <span className={styles.cardTile} data-cap={cap.key} aria-hidden="true">
+            <Icon className="text-[20px]">{cap.icon}</Icon>
+          </span>
+          <div className={styles.identity}>
+            <span className={styles.adapterLabel}>{cap.label}</span>
+            <span className={styles.internalName}>{cap.desc}</span>
           </div>
-        </td>
-        <td>
-          {models.length === 0 ? (
-            <span className={styles.memberMore}>Empty — falls back to {DEFAULT_FALLBACK_MODEL}</span>
-          ) : (
-            <div className={styles.memberLine}>
-              {previewModels.map((model, index) => (
-                <code key={`${model}-${index}`} className={styles.modelChip} title={model}>
-                  {index > 0 && <span className={styles.chainSeparator} aria-hidden="true">→</span>}
-                  <span className={styles.modelChipText}>{model}</span>
-                </code>
-              ))}
-              {hiddenModels > 0 && (
-                <span className={styles.memberMore} title={models.slice(2).join("\n")}>
-                  +{hiddenModels} more
-                </span>
-              )}
-            </div>
-          )}
-        </td>
-        <td>
-          <Toggle
-            size="sm"
-            checked={roundRobin}
-            onChange={(v) => patch({ roundRobin: v })}
-            disabled={!enabled}
-            aria-label={`Round-robin ${cap.label} adapter`}
-          />
-        </td>
-        <td>
           <div className={styles.visibilityCell}>
             <Toggle
               size="sm"
@@ -1281,9 +1194,40 @@ function CapacityAdapterRow({ cap, entry, onChange, getCaps, onOpenPicker }) {
               {enabled ? "Active" : "Disabled"}
             </span>
           </div>
-        </td>
-        <td className={styles.actionsCell}>
-          <div className={styles.rowActions}>
+        </div>
+
+        <div className={styles.memberLine}>
+          {models.length === 0 ? (
+            <span className={styles.memberMore}>Empty — falls back to {DEFAULT_FALLBACK_MODEL}</span>
+          ) : (
+            <>
+              {previewModels.map((model, index) => (
+                <code key={`${model}-${index}`} className={styles.modelChip} title={model}>
+                  {index > 0 && <span className={styles.chainSeparator} aria-hidden="true">→</span>}
+                  <span className={styles.modelChipText}>{model}</span>
+                </code>
+              ))}
+              {hiddenModels > 0 && (
+                <span className={styles.memberMore} title={models.slice(2).join("\n")}>
+                  +{hiddenModels} more
+                </span>
+              )}
+            </>
+          )}
+        </div>
+
+        <div className={styles.adapterFoot}>
+          <div className={styles.roundRobin}>
+            <Toggle
+              size="sm"
+              checked={roundRobin}
+              onChange={(v) => patch({ roundRobin: v })}
+              disabled={!enabled}
+              aria-label={`Round-robin ${cap.label} adapter`}
+            />
+            <span>Round-robin</span>
+          </div>
+          <div className={styles.cardActions}>
             <Button
               variant="outline"
               size="sm"
@@ -1305,89 +1249,67 @@ function CapacityAdapterRow({ cap, entry, onChange, getCaps, onOpenPicker }) {
               Add
             </Button>
           </div>
-        </td>
-      </tr>
+        </div>
 
-      {/* Pool editor: the routing order matters, so it stays its own table. */}
-      {expanded && (
-        <tr className={styles.expandedRow}>
-          <td colSpan={5}>
+        {/* Pool editor: the routing order matters, so it stays an ordered list. */}
+        {expanded && (
+          <div className={styles.poolEditor}>
             {models.length === 0 ? (
               <p className={styles.memberMore}>
                 No models in pool (will fallback to {DEFAULT_FALLBACK_MODEL})
               </p>
             ) : (
-              <div className={styles.tableWrap}>
-                <table className={styles.table} aria-label={`${cap.label} model pool`}>
-                  <thead>
-                    <tr>
-                      <th scope="col" className="w-8 text-center">#</th>
-                      <th scope="col">Model</th>
-                      <th scope="col" className="w-24 text-center">Order</th>
-                      <th scope="col" className="w-9 text-right"><span className="sr-only">Actions</span></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {models.map((model, index) => (
-                      <tr key={`${model}-${index}`}>
-                        <td className="text-center text-text-muted text-[11px] font-sans">
-                          #{index + 1}
-                        </td>
-                        <td className="text-text-main">
-                          <div className={styles.poolModel}>
-                            <span className={styles.modelValue} title={model}>{model}</span>
-                            <CapacityBadges caps={getCaps?.(model)} colorOverride="text-text-muted" size={14} />
-                            {model === DEFAULT_FALLBACK_MODEL && (
-                              <StatusBadge dot={false}>Free default</StatusBadge>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-3 py-2 text-center">
-                          <div className="inline-flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleMove(index, -1)}
-                              disabled={!enabled || index === 0}
-                              className={styles.iconAction}
-                              title="Move up"
-                              aria-label={`Move ${model} up`}
-                            >
-                              <Icon className="text-[16px] leading-none">arrow_upward</Icon>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleMove(index, 1)}
-                              disabled={!enabled || index === models.length - 1}
-                              className={styles.iconAction}
-                              title="Move down"
-                              aria-label={`Move ${model} down`}
-                            >
-                              <Icon className="text-[16px] leading-none">arrow_downward</Icon>
-                            </button>
-                          </div>
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          <button
-                            type="button"
-                            onClick={() => handleRemove(index)}
-                            disabled={!enabled}
-                            className={`${styles.iconAction} ${styles.dangerAction}`}
-                            title="Remove model"
-                            aria-label={`Remove ${model}`}
-                          >
-                            <Icon className="text-[16px] leading-none">close</Icon>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ol className={styles.poolList} aria-label={`${cap.label} model pool`}>
+                {models.map((model, index) => (
+                  <li key={`${model}-${index}`} className={styles.poolRow}>
+                    <span className={styles.poolIndex}>#{index + 1}</span>
+                    <div className={styles.poolModel}>
+                      <span className={styles.modelValue} title={model}>{model}</span>
+                      <CapacityBadges caps={getCaps?.(model)} colorOverride="text-text-muted" size={14} />
+                      {model === DEFAULT_FALLBACK_MODEL && (
+                        <StatusBadge dot={false}>Free default</StatusBadge>
+                      )}
+                    </div>
+                    <div className={styles.poolOrder}>
+                      <button
+                        type="button"
+                        onClick={() => handleMove(index, -1)}
+                        disabled={!enabled || index === 0}
+                        className={styles.iconAction}
+                        title="Move up"
+                        aria-label={`Move ${model} up`}
+                      >
+                        <Icon className="text-[16px] leading-none">arrow_upward</Icon>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMove(index, 1)}
+                        disabled={!enabled || index === models.length - 1}
+                        className={styles.iconAction}
+                        title="Move down"
+                        aria-label={`Move ${model} down`}
+                      >
+                        <Icon className="text-[16px] leading-none">arrow_downward</Icon>
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemove(index)}
+                      disabled={!enabled}
+                      className={`${styles.iconAction} ${styles.dangerAction}`}
+                      title="Remove model"
+                      aria-label={`Remove ${model}`}
+                    >
+                      <Icon className="text-[16px] leading-none">close</Icon>
+                    </button>
+                  </li>
+                ))}
+              </ol>
             )}
-          </td>
-        </tr>
-      )}
-    </>
+          </div>
+        )}
+      </article>
+    </li>
   );
 }
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import PropTypes from "prop-types";
-import { Card, Button, Input } from "@/shared/components";
+import { Button, Input } from "@/shared/components";
 import Icon from "@/shared/components/Icon";
 import StatusBadge from "@/shared/components/StatusBadge";
 import styles from "../providers.module.css";
@@ -90,24 +90,30 @@ export default function CustomConfigCard({ providerId }) {
   if (Object.keys(builtin).length === 0 && !hasOverride) return null;
 
   return (
-    <Card className={`ui-card ${styles.panel}`}>
+    <section className={styles.panel}>
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
-        className="flex w-full items-center justify-between text-left"
+        className={styles.panelToggle}
       >
-        <div className="flex items-center gap-2">
-          <span className="ui-eyebrow"><Icon className="text-[16px]">tune</Icon>Custom Headers</span>
+        <span className={styles.panelHeadCopy}>
+          <span className={styles.panelTitle}>
+            <Icon className={styles.panelIcon} size={18}>tune</Icon>
+            Custom headers
+          </span>
+          <span className={styles.panelDesc}>Per-provider request header overrides.</span>
+        </span>
+        <span className={styles.panelToggleMeta}>
           {hasOverride && (
             <StatusBadge variant="success">Active</StatusBadge>
           )}
-        </div>
-        <Icon className="text-[16px] text-text-muted">{expanded ? "expand_less" : "expand_more"}</Icon>
+          <Icon size={16}>{expanded ? "expand_less" : "expand_more"}</Icon>
+        </span>
       </button>
 
       {expanded && (
-        <div className="mt-3 border-t border-border pt-3">
+        <div className="mt-4 border-t border-[var(--line)] pt-4">
           <div className="flex flex-col gap-2">
             {rows.map((row, i) => {
               const overridden = row.name.trim() in builtin && row.value !== builtin[row.name.trim()];
@@ -175,7 +181,7 @@ export default function CustomConfigCard({ providerId }) {
           </div>
         </div>
       )}
-    </Card>
+    </section>
   );
 }
 

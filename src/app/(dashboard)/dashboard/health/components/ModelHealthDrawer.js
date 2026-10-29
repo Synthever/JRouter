@@ -10,7 +10,7 @@ import HealthSettings from "./HealthSettings";
 import { latency, percent, readJson, relativeTime } from "./format";
 import styles from "../health.module.css";
 
-export default function ModelHealthDrawer({ selected, onClose, onTest, testing, refreshVersion, onSaved }) {
+export default function ModelHealthDrawer({ selected, onClose, onTest, testing, refreshVersion, onSaved, modelCount = 1 }) {
   const [range, setRange] = useState("3d");
   const [page, setPage] = useState(1);
   const [data, setData] = useState(null);
@@ -51,7 +51,7 @@ export default function ModelHealthDrawer({ selected, onClose, onTest, testing, 
         <p className={styles.muted}>{model.failures > 0 ? `${model.failures} consecutive failures. Status changes at the configured failure threshold.` : model.successes > 0 && model.status !== "HEALTHY" ? `Recovering: ${model.successes} / ${model.config.recoveryThreshold} successful checks.` : "Metrics use completed active checks from the last 24 hours."}{model.stale ? " Scheduled results are stale; health is unknown." : ""}</p>
         <HealthAvailabilityTimeline history={data.history} range={range} loading={loading} onRangeChange={(value) => { setLoading(true); setRange(value); }} />
         <HealthCheckHistory recent={data.recent} loading={loading} onPageChange={(value) => { setLoading(true); setPage(value); }} />
-        <HealthSettings key={model.id} model={model} onSaved={onSaved} />
+        <HealthSettings key={model.id} model={model} onSaved={onSaved} modelCount={modelCount} />
       </>}
     </div>
   </Drawer></div>;

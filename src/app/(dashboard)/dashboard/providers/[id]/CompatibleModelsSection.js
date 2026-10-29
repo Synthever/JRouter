@@ -15,57 +15,50 @@ function CompatibleModelRow({ modelId, fullModel, copied, onCopy, onDeleteAlias,
 
   return (
     <div className={styles.modelRow}>
-      <Icon className="text-base text-text-muted"
+      <Icon className={styles.chipIcon} size={16}
         style={iconColor ? { color: iconColor } : undefined}>
         {testStatus === "ok" ? "check_circle" : testStatus === "error" ? "cancel" : "smart_toy"}
       </Icon>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{modelId}</p>
-        <div className="flex min-w-0 flex-wrap items-center gap-1 mt-1">
-          <code className="min-w-0 text-xs text-text-muted font-mono break-all">{fullModel}</code>
-          <div className="relative group/btn">
-            <button
-              onClick={() => onCopy(fullModel, `model-${modelId}`)}
-              className={styles.iconButton}
-              aria-label={`Copy ${fullModel}`}
-              title={`Copy ${fullModel}`}
-            >
-              <Icon className="text-sm">
-                {copied === `model-${modelId}` ? "check" : "content_copy"}
-              </Icon>
-            </button>
-            <span className="pointer-events-none absolute top-5 left-1/2 -translate-x-1/2 text-[10px] text-text-muted whitespace-nowrap opacity-0 group-hover/btn:opacity-100 transition-opacity">
-              {copied === `model-${modelId}` ? "Copied!" : "Copy"}
-            </span>
-          </div>
-          {onTest && (
-            <div className="relative group/btn">
-              <button
-                onClick={onTest}
-                disabled={isTesting}
-                className={styles.iconButton}
-                aria-label={`Test ${modelId}`}
-                title={`Test ${modelId}`}
-              >
-                <Icon className="text-sm" style={isTesting ? { animation: "spin 1s linear infinite" } : undefined}>
-                  {isTesting ? "progress_activity" : "science"}
-                </Icon>
-              </button>
-              <span className="pointer-events-none absolute top-5 left-1/2 -translate-x-1/2 text-[10px] text-text-muted whitespace-nowrap opacity-0 group-hover/btn:opacity-100 transition-opacity">
-                {isTesting ? "Testing..." : "Test"}
-              </span>
-            </div>
-          )}
-        </div>
+      <div className={styles.modelRowBody}>
+        <p className={styles.modelRowName}>{modelId}</p>
+        <code className={styles.modelRowCode}>{fullModel}</code>
       </div>
-      <button
-        onClick={onDeleteAlias}
-        className={`${styles.iconButton} ${styles.error}`}
-        aria-label={`Remove ${modelId}`}
-        title="Remove model"
-      >
-        <Icon className="text-sm">delete</Icon>
-      </button>
+      <div className={styles.chipActions}>
+        <button
+          type="button"
+          onClick={() => onCopy(fullModel, `model-${modelId}`)}
+          className={styles.chipAction}
+          aria-label={`Copy ${fullModel}`}
+          title={copied === `model-${modelId}` ? "Copied!" : "Copy model id"}
+        >
+          <Icon size={15}>
+            {copied === `model-${modelId}` ? "check" : "content_copy"}
+          </Icon>
+        </button>
+        {onTest && (
+          <button
+            type="button"
+            onClick={onTest}
+            disabled={isTesting}
+            className={styles.chipAction}
+            aria-label={`Test ${modelId}`}
+            title={isTesting ? "Testing…" : "Test model"}
+          >
+            <Icon size={15} style={isTesting ? { animation: "spin 1s linear infinite" } : undefined}>
+              {isTesting ? "progress_activity" : "science"}
+            </Icon>
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onDeleteAlias}
+          className={`${styles.chipAction} ${styles.chipActionDanger}`}
+          aria-label={`Remove ${modelId}`}
+          title="Remove model"
+        >
+          <Icon size={15}>delete</Icon>
+        </button>
+      </div>
     </div>
   );
 }
@@ -160,12 +153,8 @@ export default function CompatibleModelsSection({ providerStorageAlias, provider
   const canImport = connections.some((conn) => conn.isActive !== false);
 
   return (
-    <div className="flex flex-col gap-4">
-      <p className={styles.description}>
-        Add {isAnthropic ? "Anthropic" : "OpenAI"}-compatible models manually or import them from the /models endpoint.
-      </p>
-
-      <div className="flex items-end gap-2 flex-wrap">
+    <div className="flex flex-col">
+      <div className={styles.addModelRow}>
         <Input
             className="flex-[1_1_200px] min-w-0"
             label="Model ID"
@@ -176,10 +165,10 @@ export default function CompatibleModelsSection({ providerStorageAlias, provider
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
             placeholder={isAnthropic ? "claude-3-opus-20240229" : "gpt-4o"}
           />
-        <Button size="sm" variant="contrast" icon="add" onClick={handleAdd} disabled={!newModel.trim() || adding}>
+        <Button size="sm" variant="contrast" icon="add" onClick={handleAdd} disabled={!newModel.trim() || adding} className={styles.ctaSm}>
           {adding ? "Adding..." : "Add"}
         </Button>
-        <Button size="sm" variant="secondary" icon="download" onClick={handleImport} disabled={!canImport || importing}>
+        <Button size="sm" variant="secondary" icon="download" onClick={handleImport} disabled={!canImport || importing} className={styles.ctaSm}>
           {importing ? "Importing..." : "Import from /models"}
         </Button>
       </div>

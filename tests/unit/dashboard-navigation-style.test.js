@@ -9,7 +9,10 @@ describe("dashboard navigation styling contract", () => {
     const sidebar = read("src/shared/components/Sidebar.js");
     const css = read("src/app/globals.css");
 
-    expect(header).toContain('className="dashboard-header shrink-0 z-20"');
+    // The header owns the avatar/bell popovers, so it must stack above the
+    // sticky page toolbars (z-30) that scroll beneath it; z-20 let those bars
+    // paint over an open dropdown.
+    expect(header).toContain('className="dashboard-header shrink-0 relative z-40"');
     expect(sidebar).toContain('className="dashboard-sidebar');
     expect(css).toContain(".dashboard-header .dashboard-header__action");
     expect(css).toContain(".dashboard-sidebar__item.is-active");

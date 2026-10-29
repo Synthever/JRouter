@@ -11,15 +11,31 @@ export async function getHealthConfig(modelId) {
   return configFromRow(db.get("SELECT * FROM modelHealthConfigs WHERE modelId = ?", [modelId]));
 }
 
-export async function saveHealthConfig(modelId, config) {
-  const db = await getAdapter();
-  const now = Date.now();
-  db.run(`INSERT INTO modelHealthConfigs(modelId, enabled, intervalSeconds, timeoutSeconds, failureThreshold, recoveryThreshold, includeInRouting, createdAt, updatedAt, nextCheckAt)
+const SAVE_CONFIG_SQL = `INSERT INTO modelHealthConfigs(modelId, enabled, intervalSeconds, timeoutSeconds, failureThreshold, recoveryThreshold, includeInRouting, createdAt, updatedAt, nextCheckAt)
     VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(modelId) DO UPDATE SET enabled=excluded.enabled, intervalSeconds=excluded.intervalSeconds,
     timeoutSeconds=excluded.timeoutSeconds, failureThreshold=excluded.failureThreshold, recoveryThreshold=excluded.recoveryThreshold,
-    includeInRouting=excluded.includeInRouting, updatedAt=excluded.updatedAt, nextCheckAt=excluded.nextCheckAt`,
-  [modelId, +config.enabled, config.intervalSeconds, config.timeoutSeconds, config.failureThreshold, config.recoveryThreshold, +config.includeInRouting, now, now, now]);
+    includeInRouting=excluded.includeInRouting, updatedAt=excluded.updatedAt, nextCheckAt=excluded.nextCheckAt`;
+
+function configParams(modelId, config, now) {
+  return [modelId, +config.enabled, config.intervalSeconds, config.timeoutSeconds, config.failureThreshold, config.recoveryThreshold, +config.includeInRouting, now, now, now];
+}
+
+export async function saveHealthConfig(modelId, config) {
+  const db = await getAdapter();
+  db.run(SAVE_CONFIG_SQL, configParams(modelId, config, Date.now()));
   return getHealthConfig(modelId);
+}
+
+/** Upserts the same config for many models in one transaction. */
+export async function saveHealthConfigs(modelIds, config) {
+  const ids = Array.isArray(modelIds) ? modelIds.filter((id) => typeof id === "string" && id.length > 0) : [];
+  if (!ids.length) return 0;
+  const db = await getAdapter();
+  const now = Date.now();
+  db.transaction(() => {
+    for (const modelId of ids) db.run(SAVE_CONFIG_SQL, configParams(modelId, config, now));
+  });
+  return ids.length;
 }
 
 export async function claimLease(id, ttlMs = 90000, owner = randomUUID(), now = Date.now()) {

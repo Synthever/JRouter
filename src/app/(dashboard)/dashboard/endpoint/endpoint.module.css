@@ -655,6 +655,439 @@
   min-width: 0;
 }
 
+/* Configure API key dialog ---------------------------------------------- */
+/* Mirrors docs/templates/endpoint/main.html (#cfg): a fixed header, jump nav
+   and footer around one scroll area. Every scroll region in here hides its
+   scrollbar on purpose — the dialog should read as a single page, not as three
+   nested panes with competing scrollbars. */
+
+.configureDialog {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 960px;
+  max-height: min(840px, calc(100dvh - 32px));
+  padding: 0;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.configureHeader {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 20px 12px 32px;
+}
+
+.configureTitle {
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.configureClose {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.configureClose:hover {
+  background: var(--surface-2);
+}
+
+.configureNav {
+  display: flex;
+  flex: none;
+  gap: 8px;
+  padding: 0 32px 14px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+  scrollbar-width: none;
+}
+
+.configureNav::-webkit-scrollbar {
+  display: none;
+}
+
+.configureTab {
+  flex: none;
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 99px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.configureTab:hover {
+  background: var(--surface-inset);
+}
+
+.configureBody {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  padding: 4px 32px 24px;
+  overflow-y: auto;
+  scrollbar-width: none;
+  overscroll-behavior: contain;
+}
+
+.configureBody::-webkit-scrollbar {
+  display: none;
+}
+
+.dialogSection {
+  padding: 24px 0;
+  border-top: 1px solid var(--line);
+}
+
+.dialogSection:first-child {
+  border-top: 0;
+}
+
+.sectionTitle {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.sectionHint {
+  margin-top: 2px;
+  color: var(--text-3);
+}
+
+.fieldGroup {
+  min-width: 0;
+}
+
+.fieldLabel {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin: 16px 0 6px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.fieldRequired {
+  color: var(--brand-pink);
+  font-style: normal;
+}
+
+.fieldInput,
+.fieldSelect {
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.fieldInput::placeholder {
+  color: var(--text-3);
+}
+
+.fieldInput:focus,
+.fieldSelect:focus {
+  border-color: var(--text);
+  outline: 0;
+}
+
+.fieldHint {
+  margin-top: 6px;
+  color: var(--text-3);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.fieldGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 16px;
+}
+
+.choiceGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.optionCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: border-color 150ms, background-color 150ms;
+}
+
+.optionCard:hover {
+  background: var(--surface-2);
+}
+
+.optionCard:has(input:checked) {
+  border-color: var(--text);
+  background: var(--surface-2);
+}
+
+.optionCard input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 3px 0 0;
+  accent-color: var(--text);
+}
+
+.optionTitle {
+  display: block;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.optionHint {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-3);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.usageLine {
+  margin-top: 14px;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.modelsBlock {
+  margin-top: 20px;
+}
+
+.modelsHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modelsTitle {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.modelsTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.modelTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  height: 30px;
+  padding: 0 6px 0 12px;
+  border: 0;
+  border-radius: 99px;
+  background: var(--brand-lavender);
+  color: var(--on-color);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modelTagLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modelTagIcon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+
+.modelTag:hover .modelTagIcon {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.pickerToggle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pickerToggle:hover {
+  background: var(--surface-2);
+}
+
+.pickerPanel {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+
+.pickerPanel :global([data-model-scroll]) {
+  max-height: 260px;
+  padding-right: 4px;
+  scrollbar-width: none;
+}
+
+.pickerPanel :global([data-model-scroll])::-webkit-scrollbar {
+  display: none;
+}
+
+.endpointWarning {
+  margin-top: 12px;
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.configureFooter {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 32px;
+  border-top: 1px solid var(--line);
+}
+
+.configureError {
+  margin-right: auto;
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.configureStatus {
+  padding: 24px 0;
+  color: var(--text-3);
+  font-size: 13px;
+}
+
+.primaryButton,
+.ghostButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 20px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.primaryButton {
+  background: var(--text);
+  color: var(--bg);
+}
+
+.ghostButton {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--line);
+}
+
+.ghostButton:hover {
+  background: var(--surface-2);
+}
+
+.primaryButton:disabled,
+.ghostButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+@media (max-width: 700px) {
+  .configureHeader {
+    padding-left: 20px;
+  }
+
+  .configureNav {
+    padding: 0 20px 14px;
+  }
+
+  .configureBody {
+    padding: 4px 20px 20px;
+  }
+
+  .configureFooter {
+    padding: 14px 20px;
+  }
+
+  .fieldGrid,
+  .choiceGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .configureError {
+    flex-basis: 100%;
+  }
+
+  /* iOS zooms any focused input under 16px. */
+  .fieldInput,
+  .fieldSelect,
+  .pickerPanel :global(input) {
+    font-size: 16px;
+  }
+}
+
 /* Alerts (security warning, status) ------------------------------------- */
 
 .alert {

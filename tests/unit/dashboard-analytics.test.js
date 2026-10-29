@@ -269,6 +269,23 @@ describe("dashboard ranked analytics panels", () => {
     expect(html).toContain("source-0: 4.8%");
   });
 
+  it("renders resolved provider labels and merges ids that share one label", () => {
+    const html = renderCard("ProviderDistributionCard", { stats: {
+      totalRequests: 10,
+      byProvider: {
+        "openai-compatible-chat-deleted": { label: "Custom provider", requests: 4 },
+        "openai-compatible-chat-other": { label: "Custom provider", requests: 1 },
+        river: { label: "River", requests: 5 },
+      },
+    } });
+
+    expect(html).toContain("2 upstream sources");
+    expect(html).toContain("Custom provider");
+    expect(html).toContain("River");
+    expect(html).not.toContain("openai-compatible-chat-deleted");
+    expect(html).not.toContain("openai-compatible-chat-other");
+  });
+
   it.each([
     ["TopModelsCard", "No model usage records found in this time range.", "/dashboard/combos"],
     ["ProviderDistributionCard", "No provider traffic logged for this period.", "/dashboard/providers"],

@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Button, Input, Modal } from "@/shared/components";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Modal } from "@/shared/components";
+import Icon from "@/shared/components/Icon";
 import { useNotificationStore } from "@/store/notificationStore";
 import { DEFAULT_KEY_POLICY, API_KEY_ENDPOINTS } from "@/shared/constants/apiKeyPolicy.js";
-import { SettingsSection, QuotaSettings, RequestSettings, RateLimitSettings, ModelRestrictions, EndpointPermissions, KeyRoleSection } from "./ApiKeySettingsSections";
+import { CONFIGURE_SECTIONS, GeneralSection, QuotaSettings, RequestSettings, RateLimitSettings, ModelRestrictions, EndpointPermissions, KeyRoleSection } from "./ApiKeySettingsSections";
+import styles from "../endpoint.module.css";
 
 const numericFields = ["maxTokensQuota", "maxCostUsd", "tokenMultiplier", "maxOutputTokens", "rateLimitRpm", "rateLimitTpm"];
 function localDateTime(value) {
@@ -17,6 +19,7 @@ function toForm(key) {
   for (const field of numericFields) form[field] = String(form[field] ?? "");
   return form;
 }
+const scrollBehavior = () => (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth");
 
 export default function ConfigureApiKeyDialog({ keyId, onClose, onSaved }) {
   const [form, setForm] = useState(null);
@@ -25,6 +28,7 @@ export default function ConfigureApiKeyDialog({ keyId, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
   const [activeProviders, setActiveProviders] = useState([]);
   const [modelAliases, setModelAliases] = useState({});
+  const bodyRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,11 +51,19 @@ export default function ConfigureApiKeyDialog({ keyId, onClose, onSaved }) {
 
   const close = useCallback(() => { if (!saving) onClose(); }, [saving, onClose]);
   function change(field, value) { setForm((previous) => ({ ...previous, [field]: value })); }
+  function jumpTo(id) {
+    const body = bodyRef.current;
+    const target = body?.querySelector(`#${id}`);
+    if (!body || !target) return;
+    body.scrollTo({ top: Math.max(target.offsetTop - 4, 0), behavior: scrollBehavior() });
+  }
   async function save(event) {
     event.preventDefault();
     if (saving || !form) return;
     setSaving(true); setError("");
     try {
+      if (!form.name.trim()) throw new Error("Key name is required.");
+      if (!(Number(form.tokenMultiplier) > 0)) throw new Error("Token / billing multiplier must be greater than 0.");
       const settings = Object.fromEntries([...Object.keys(DEFAULT_KEY_POLICY), "name"].map((field) => [field, form[field]]));
       settings.role = form.role;
       for (const field of numericFields) settings[field] = form[field].trim() === "" ? null : Number(form[field]);
@@ -71,26 +83,43 @@ export default function ConfigureApiKeyDialog({ keyId, onClose, onSaved }) {
   }
 
   return (
-    <Modal isOpen onClose={close} title="Configure API Key" size="full" trapFocus closeOnOverlay={!saving} footer={<>
-      <Button variant="ghost" onClick={close} disabled={saving}>Cancel</Button>
-      <Button variant="contrast" type="submit" form="api-key-settings" loading={saving} disabled={!form || saving}>Save Settings</Button>
-    </>}>
-      {error && <div role="alert" className="mb-5 rounded-[var(--r1)] border border-[var(--danger)]/30 bg-[var(--danger)]/5 p-3 text-xs text-[var(--danger)]">{error}</div>}
-      {!form ? <p className="text-xs text-[var(--text-2)]" role="status">{error ? "Close this dialog and try Configure again." : "Loading key settings…"}</p> : <form id="api-key-settings" onSubmit={save} className="space-y-5">
-        <fieldset disabled={saving} className="space-y-5 min-w-0">
-          <SettingsSection title="General Information">
-            <Input label="Key Name" value={form.name} onChange={(event) => change("name", event.target.value)} required maxLength={120} />
-            <Input label="Description" value={form.description} onChange={(event) => change("description", event.target.value)} placeholder="Internal description (optional)" maxLength={500} />
-            <p className="text-xs text-[var(--text-2)] break-all">{keyInfo.keyPrefix} · Used {Number(keyInfo.quotaTokens || 0).toLocaleString()} accounted tokens / ${Number(keyInfo.quotaCost || 0).toFixed(4)} this period</p>
-          </SettingsSection>
-          <QuotaSettings form={form} onChange={change} />
-          <RequestSettings form={form} onChange={change} />
-          <RateLimitSettings form={form} onChange={change} />
-          <KeyRoleSection value={form.role} onChange={(value) => change("role", value)} />
-          <ModelRestrictions form={form} onChange={change} activeProviders={activeProviders} modelAliases={modelAliases} />
-          <EndpointPermissions values={form.allowedEndpoints} onChange={(values) => change("allowedEndpoints", values)} />
-        </fieldset>
-      </form>}
+    <Modal bare isOpen onClose={close} title="Configure API key" trapFocus closeOnOverlay={!saving} className={styles.configureDialog}>
+      <form id="api-key-settings" onSubmit={save} noValidate className="flex min-h-0 flex-1 flex-col">
+        <div className={styles.configureHeader}>
+          <h2 className={styles.configureTitle}>Configure API key</h2>
+          <button type="button" onClick={close} className={styles.configureClose} aria-label="Close" disabled={saving}>
+            <Icon className="text-[18px]">close</Icon>
+          </button>
+        </div>
+
+        <nav className={styles.configureNav} aria-label="Sections">
+          {CONFIGURE_SECTIONS.map((section) => (
+            <button key={section.id} type="button" className={styles.configureTab} onClick={() => jumpTo(section.id)}>{section.label}</button>
+          ))}
+        </nav>
+
+        <div className={styles.configureBody} ref={bodyRef}>
+          {!form ? (
+            <p className={styles.configureStatus} role="status">{error ? "This key could not be loaded. Close this dialog and try Configure again." : "Loading key settings…"}</p>
+          ) : (
+            <fieldset disabled={saving} className="min-w-0 border-0 p-0">
+              <GeneralSection form={form} onChange={change} keyInfo={keyInfo} />
+              <QuotaSettings form={form} onChange={change} />
+              <RequestSettings form={form} onChange={change} />
+              <RateLimitSettings form={form} onChange={change} />
+              <KeyRoleSection value={form.role} onChange={(value) => change("role", value)} />
+              <ModelRestrictions form={form} onChange={change} activeProviders={activeProviders} modelAliases={modelAliases} />
+              <EndpointPermissions values={form.allowedEndpoints} onChange={(values) => change("allowedEndpoints", values)} />
+            </fieldset>
+          )}
+        </div>
+
+        <div className={styles.configureFooter}>
+          <span className={styles.configureError} role="alert">{error}</span>
+          <button type="button" className={styles.ghostButton} onClick={close} disabled={saving}>Cancel</button>
+          <button type="submit" className={styles.primaryButton} disabled={!form || saving}>{saving ? "Saving…" : "Save settings"}</button>
+        </div>
+      </form>
     </Modal>
   );
 }

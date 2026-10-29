@@ -1,82 +1,78 @@
 import Icon from "@/shared/components/Icon";
 import PropTypes from "prop-types";
 import { CapacityBadges } from "@/shared/components";
+import styles from "../providers.module.css";
 
 export default function ModelRow({ model, fullModel, alias, copied, onCopy, testStatus, isCustom, isFree, onDeleteAlias, onTest, isTesting, onDisable, caps, thinkingSuffix }) {
   const displayModel = thinkingSuffix ? `${fullModel}(${thinkingSuffix})` : fullModel;
-  const borderColor = testStatus === "ok"
-    ? "border-green-500/40"
+  const stateClass = testStatus === "ok"
+    ? styles.modelChipOk
     : testStatus === "error"
-    ? "border-red-500/40"
-    : "border-border";
-
-  const iconColor = testStatus === "ok"
-    ? "#22c55e"
+    ? styles.modelChipError
+    : "";
+  const iconClass = testStatus === "ok"
+    ? styles.chipIconOk
     : testStatus === "error"
-    ? "#ef4444"
-    : undefined;
+    ? styles.chipIconError
+    : "";
+  const copiedNow = copied === `model-${model.id}`;
 
   return (
-    <div className={`group w-full sm:w-auto min-w-0 max-w-full rounded-lg border px-3 py-2 ${borderColor} hover:bg-sidebar/50`}>
-      <div className="flex min-w-0 items-start gap-2 sm:items-center">
-        <Icon
-          className="shrink-0 text-base mt-0.5 sm:mt-0"
-          style={iconColor ? { color: iconColor } : undefined}
-        >
+    <div className={`${styles.modelChip} ${stateClass}`}>
+      <div className={styles.chipHead}>
+        <Icon className={`${styles.chipIcon} ${iconClass}`} size={16}>
           {testStatus === "ok" ? "check_circle" : testStatus === "error" ? "cancel" : "smart_toy"}
         </Icon>
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <code className="w-fit max-w-full break-all rounded bg-sidebar px-1.5 py-0.5 font-mono text-xs text-text-muted sm:max-w-[360px] sm:truncate">{displayModel}</code>
-          <span className="flex min-w-0 items-center text-[9px] gap-1 pl-1">
-            {model.name && <span className="break-all sm:truncate text-[9px] italic text-text-muted/70">{model.name}</span>}
-            <CapacityBadges caps={caps} colorOverride="text-text-muted/70" size={12} />
+        <div className={styles.chipBody}>
+          <code className={styles.chipCode}>{displayModel}</code>
+          <span className={styles.chipMeta}>
+            {model.name && <span>{model.name}</span>}
+            <CapacityBadges caps={caps} colorOverride="text-[var(--text-3)]" size={12} />
           </span>
         </div>
-        <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
+        <div className={styles.chipActions}>
           {onTest && (
-            <div className="relative shrink-0 group/btn">
-              <button
-                onClick={onTest}
-                disabled={isTesting}
-                className={`rounded p-0.5 text-text-muted transition-opacity hover:bg-sidebar hover:text-primary ${isTesting ? "opacity-100" : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"}`}
-              >
-                <Icon className="text-sm" style={isTesting ? { animation: "spin 1s linear infinite" } : undefined}>
-                  {isTesting ? "progress_activity" : "science"}
-                </Icon>
-              </button>
-              <span className="pointer-events-none absolute mt-1 top-5 left-1/2 -translate-x-1/2 text-[10px] text-text-muted whitespace-nowrap opacity-0 group-hover/btn:opacity-100 transition-opacity">
-                {isTesting ? "Testing..." : "Test"}
-              </span>
-            </div>
-          )}
-          <div className="relative shrink-0 group/btn">
             <button
-              onClick={() => onCopy(displayModel, `model-${model.id}`)}
-              className="rounded p-0.5 text-text-muted hover:bg-sidebar hover:text-primary"
+              type="button"
+              onClick={onTest}
+              disabled={isTesting}
+              className={styles.chipAction}
+              aria-label={`Test ${model.id}`}
+              title={isTesting ? "Testing…" : "Test model"}
             >
-              <Icon className="text-sm">
-                {copied === `model-${model.id}` ? "check" : "content_copy"}
+              <Icon size={15} style={isTesting ? { animation: "spin 1s linear infinite" } : undefined}>
+                {isTesting ? "progress_activity" : "science"}
               </Icon>
             </button>
-            <span className="pointer-events-none absolute mt-1 top-5 left-1/2 -translate-x-1/2 text-[10px] text-text-muted whitespace-nowrap opacity-0 group-hover/btn:opacity-100 transition-opacity">
-              {copied === `model-${model.id}` ? "Copied!" : "Copy"}
-            </span>
-          </div>
+          )}
+          <button
+            type="button"
+            onClick={() => onCopy(displayModel, `model-${model.id}`)}
+            className={styles.chipAction}
+            aria-label={`Copy ${displayModel}`}
+            title={copiedNow ? "Copied!" : "Copy model id"}
+          >
+            <Icon size={15}>{copiedNow ? "check" : "content_copy"}</Icon>
+          </button>
           {isCustom ? (
             <button
+              type="button"
               onClick={onDeleteAlias}
-              className="rounded p-0.5 text-text-muted opacity-100 transition-opacity hover:bg-red-500/10 hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100"
+              className={`${styles.chipAction} ${styles.chipActionDanger}`}
+              aria-label={`Remove ${model.id}`}
               title="Remove custom model"
             >
-              <Icon className="text-sm">close</Icon>
+              <Icon size={15}>close</Icon>
             </button>
           ) : onDisable ? (
             <button
+              type="button"
               onClick={onDisable}
-              className="rounded p-0.5 text-text-muted opacity-100 transition-opacity hover:bg-red-500/10 hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100"
+              className={`${styles.chipAction} ${styles.chipActionDanger}`}
+              aria-label={`Disable ${model.id}`}
               title="Disable this model"
             >
-              <Icon className="text-sm">close</Icon>
+              <Icon size={15}>close</Icon>
             </button>
           ) : null}
         </div>

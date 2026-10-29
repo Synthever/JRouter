@@ -11,9 +11,11 @@ function isLLMProvider(id) {
   if (!p?.serviceKinds) return true;
   return p.serviceKinds.includes("llm");
 }
-import { Select, SegmentedControl, Skeleton } from "@/shared/components";
+import { Skeleton } from "@/shared/components";
 import StatusBadge from "@/shared/components/StatusBadge";
-import OverviewCards from "@/app/(dashboard)/dashboard/usage/components/OverviewCards";
+import UsageKpiGrid from "@/app/(dashboard)/dashboard/usage/components/UsageKpiGrid";
+import UsageMenu from "@/app/(dashboard)/dashboard/usage/components/UsageMenu";
+import PillTabs from "@/app/(dashboard)/dashboard/usage/components/PillTabs";
 import UsageTable, { fmt, fmtTime } from "@/app/(dashboard)/dashboard/usage/components/UsageTable";
 import dynamic from "next/dynamic";
 import styles from "@/app/(dashboard)/dashboard/usage/usage.module.css";
@@ -45,9 +47,12 @@ function TimeAgo({ timestamp }) {
 
 function RecentRequests({ requests = [] }) {
   return (
-    <section className={`ui-card ${styles.section} ${styles.recentRequests}`} aria-labelledby="usage-recent-heading">
+    <section className={`${styles.section} ${styles.recentRequests}`} aria-labelledby="usage-recent-heading">
       <div className={styles.sectionHeader}>
-        <h2 id="usage-recent-heading" className="ui-eyebrow">Recent Requests</h2>
+        <h2 id="usage-recent-heading" className={styles.sectionTitle}>
+          <Icon className={styles.sectionIcon}>history</Icon>
+          Recent requests
+        </h2>
       </div>
 
       {!requests.length ? (
@@ -208,15 +213,6 @@ const TABLE_OPTIONS = [
   { value: "endpoint", label: "Usage by Endpoint" },
 ];
 
-const PERIODS = [
-  { value: "today", label: "Today" },
-  { value: "24h", label: "24h" },
-  { value: "7d", label: "7D" },
-  { value: "30d", label: "30D" },
-  { value: "60d", label: "60D" },
-  { value: "all", label: "All" },
-];
-
 const VIEW_MODES = [
   { value: "costs", label: "Costs" },
   { value: "tokens", label: "Tokens" },
@@ -227,7 +223,7 @@ const MUTED_CELL = `${styles.num} ${styles.muted}`;
 const SUBTLE_CELL = `${styles.num} ${styles.subtle} whitespace-nowrap`;
 const PROVIDER_CELL = "align-middle";
 
-export default function UsageStats({ period: periodProp, setPeriod: setPeriodProp, hidePeriodSelector = false } = {}) {
+export default function UsageStats({ period: periodProp } = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -240,11 +236,9 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
   const [tableView, setTableView] = useState("model");
   const [viewMode, setViewMode] = useState("costs");
   const [providers, setProviders] = useState([]);
-  const [periodLocal, setPeriodLocal] = useState("today");
   const isInitialLoad = useRef(true);
   const hasLoadedStats = useRef(false);
-  const period = periodProp ?? periodLocal;
-  const setPeriod = setPeriodProp ?? setPeriodLocal;
+  const period = periodProp ?? "today";
 
   // Fetch connected providers once, deduplicate by provider type
   // Always include noAuth free providers (e.g. opencode) regardless of connections
@@ -486,7 +480,7 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
   if (!stats && !loading) {
     return (
       <div className={styles.page}>
-        <section className={`ui-card ${styles.section}`}>
+        <section className={`${styles.section}`}>
           <div className={styles.inset}>
             <Icon className="text-[20px] text-[var(--danger)]">error</Icon>
             <p>Failed to load usage statistics.</p>
@@ -499,45 +493,15 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
 
   return (
     <div className={styles.page}>
-      {/* Period selector (hidden when controlled by parent) */}
-      {(!hidePeriodSelector || fetching) && (
-        <div className={`${styles.controls} w-full sm:w-auto sm:self-end`}>
-          {!hidePeriodSelector && (
-            <SegmentedControl
-              options={PERIODS}
-              value={period}
-              onChange={setPeriod}
-              size="sm"
-              aria-label="Usage period"
-              className="max-w-full"
-            />
-          )}
-          {fetching && (
-            <Icon
-              className="animate-spin text-[16px] text-[var(--text-3)]"
-              aria-label="Refreshing usage statistics"
-            >
-              progress_activity
-            </Icon>
-          )}
-        </div>
-      )}
-
-      {/* Overview cards */}
+      {/* KPI bento */}
       {loading ? (
-        <div className="grid-stats min-w-0">
+        <div className={styles.statsSkeleton}>
           {[0, 1, 2, 3, 4].map((i) => (
-            <div key={i} className={`ui-card ${styles.metric}`}>
-              <Skeleton className="mb-3 h-3 w-24" />
-              <Skeleton className="h-7 w-28" />
-            </div>
+            <Skeleton key={i} className={styles.statSkeleton} />
           ))}
         </div>
       ) : (
-        <section aria-labelledby="usage-overview-heading">
-          <h2 id="usage-overview-heading" className="sr-only">Overview metrics</h2>
-          <OverviewCards stats={stats} period={period} />
-        </section>
+        <UsageKpiGrid stats={stats} period={period} fetching={fetching} loading={loading} />
       )}
 
       {/* Provider topology + Recent Requests */}
@@ -570,29 +534,30 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
       )}
 
       {/* Table with dropdown selector */}
-      <section className={`ui-card ${styles.section}`} aria-labelledby="usage-breakdown-heading">
+      <section className={`${styles.section}`} aria-labelledby="usage-breakdown-heading">
         <div className={styles.sectionHeader}>
           <div className="min-w-0">
-            <h2 id="usage-breakdown-heading" className="ui-eyebrow flex items-center gap-2">
-              <Icon className="text-[16px]">table_rows</Icon> Breakdown
+            <h2 id="usage-breakdown-heading" className={styles.sectionTitle}>
+              <Icon className={styles.sectionIcon}>table_rows</Icon>
+              Breakdown
             </h2>
             <p className={styles.sectionDescription}>Grouped usage with expandable detail rows</p>
           </div>
           <div className={`${styles.controls} w-full sm:w-auto`}>
-            <Select
+            <UsageMenu
               options={TABLE_OPTIONS}
               value={tableView}
-              onChange={(e) => setTableView(e.target.value)}
-              aria-label="Usage breakdown dimension"
+              onChange={setTableView}
+              ariaLabel="Usage breakdown dimension"
+              variant="pill"
               className={styles.dimension}
-              selectClassName="py-1.5 text-xs"
             />
-            <SegmentedControl
+            <PillTabs
               options={VIEW_MODES}
               value={viewMode}
               onChange={setViewMode}
-              size="sm"
-              aria-label="Value mode"
+              ariaLabel="Value mode"
+              compact
             />
           </div>
         </div>

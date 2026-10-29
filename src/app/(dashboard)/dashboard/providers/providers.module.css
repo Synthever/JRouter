@@ -344,10 +344,14 @@
   cursor: pointer;
 }
 
-/* Shared panel surface for the provider detail route and its modals. */
+/* Shared panel surface for the provider detail route and its modals.
+   Mirrors the endpoint/keys surface: hairline border, 24px radius, 28px pad. */
 .panel {
   min-width: 0;
-  padding: 20px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: var(--r4);
+  background: var(--surface);
 }
 
 .modelRow {
@@ -355,18 +359,49 @@
   align-items: center;
   gap: 12px;
   min-width: 0;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--line);
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
   transition: background-color 150ms;
 }
 
-.modelRow:last-child {
-  border-bottom: 0;
+.modelRow:first-child {
+  border-top: 0;
 }
 
 .modelRow:hover,
 .modelRow:focus-within {
   background: color-mix(in srgb, var(--text) 3%, transparent);
+}
+
+.modelRowBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.modelRowName {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.modelRowCode {
+  min-width: 0;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.addModelRow {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 8px;
 }
 
 .iconButton {
@@ -480,9 +515,10 @@
 
 .detailTitle {
   color: var(--text);
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 1.4;
+  font-size: clamp(28px, 3.4vw, 40px);
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  line-height: 1.1;
   overflow-wrap: anywhere;
 }
 
@@ -490,13 +526,996 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin-bottom: 16px;
+  width: fit-content;
   color: var(--text-2);
   font-size: 12px;
 }
 
 .detailLink:hover {
   color: var(--text);
+}
+
+/* Provider detail surface -------------------------------------------------
+   The detail route reuses the endpoint shell: display intro, adjustable
+   summary widgets and hairline panels with generous padding. */
+
+.detailPage {
+  gap: 16px;
+  padding-bottom: 48px;
+  container-type: inline-size;
+}
+
+.detailHead {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.detailIntro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+  min-width: 0;
+}
+
+.detailIdentity {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
+
+.detailLogo {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+}
+
+.detailLogoFallback {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.detailCopy {
+  min-width: 0;
+}
+
+.detailTitleRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  min-width: 0;
+}
+
+.detailSub {
+  margin-top: 4px;
+  color: var(--text-2);
+  font-size: 16px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.detailMetaLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.detailMetaLink:hover {
+  color: var(--text);
+}
+
+.detailActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Notices ---------------------------------------------------------------- */
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.noticeWarn {
+  background: var(--brand-peach);
+  color: var(--on-color);
+  font-weight: 500;
+}
+
+.noticeInfo {
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+
+.noticeIcon {
+  flex: none;
+  margin-top: 2px;
+}
+
+.noticeCopy {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.noticeLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.noticeLink:hover {
+  background: var(--canvas);
+}
+
+/* Panel chrome ----------------------------------------------------------- */
+
+.panelHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.panelHeadCopy {
+  min-width: 0;
+}
+
+.panelTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.panelIcon {
+  flex: none;
+  color: var(--text-2);
+}
+
+.panelDesc {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-3);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.panelActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* Icon buttons sit in the same 36px rhythm as the secondary CTAs. */
+.panelActions .iconButton {
+  height: 36px;
+  border-radius: 10px;
+}
+
+.panelToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.panelToggleMeta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  color: var(--text-3);
+}
+
+.page .cta {
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.page .ctaSm {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+/* Connection settings strip --------------------------------------------- */
+
+.settingsStrip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px 24px;
+  margin-bottom: 20px;
+  padding: 16px 20px;
+  border-radius: 16px;
+  background: var(--surface-2);
+}
+
+.setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.settingCopy {
+  min-width: 0;
+}
+
+.settingLabel {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.settingHint {
+  margin-top: 2px;
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.settingControl {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
+.poolField {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.poolInput {
+  width: 60px;
+  height: 36px;
+  padding: 0 8px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.poolInput:focus {
+  border-color: var(--text);
+  outline: 0;
+}
+
+/* Connection list -------------------------------------------------------- */
+
+.summaryBox {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.summaryBox b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.summaryWarn {
+  color: var(--danger);
+  font-weight: 500;
+}
+
+.selectBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.selectLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-3);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--text);
+  cursor: pointer;
+}
+
+.selectCount {
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.connList {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-height: 560px;
+  padding-right: 4px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.connItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  border-top: 1px solid var(--line);
+}
+
+.connItem:first-child {
+  border-top: 0;
+}
+
+.connRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  padding: 16px 0;
+}
+
+.connRowOff .connTile,
+.connRowOff .connBody {
+  opacity: 0.55;
+}
+
+.connMain {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.connPriority {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+}
+
+.connArrow {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+}
+
+.connArrow:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.connArrow:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.connTile {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+
+.connBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.connName {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.connSub {
+  color: var(--text-3);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.connBadges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.connBadgeText {
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.connError {
+  display: block;
+  max-width: 100%;
+  color: var(--danger);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.connProxy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.connProxyCode {
+  display: inline-block;
+  max-width: 100%;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  vertical-align: bottom;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.connActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
+.connButtons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.connButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 44px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-3);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  transition: color 150ms, background-color 150ms;
+}
+
+.connButton:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.connEmpty {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 0 4px;
+}
+
+.connEmptyIcon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  color: var(--text-3);
+}
+
+.connEmptyTitle {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.connEmptyHint {
+  margin-top: 2px;
+  color: var(--text-3);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Dropdown menu (connection proxy picker) -------------------------------- */
+
+.menu {
+  position: fixed;
+  z-index: 60;
+  min-width: 180px;
+  max-width: 78vw;
+  padding: 6px;
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+  overflow-y: auto;
+}
+
+.menuItem {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menuItem:hover {
+  background: var(--surface-2);
+}
+
+.menuItemActive {
+  font-weight: 600;
+}
+
+/* Bulk proxy picker rows in the "Apply proxy" dialog. */
+.proxyOption {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms;
+}
+
+.proxyOption:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.proxyOption:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.proxyOptionIcon {
+  flex: none;
+  color: var(--text-3);
+}
+
+.proxyOptionLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.proxyOptionNote {
+  margin-left: auto;
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+/* Model chips ------------------------------------------------------------ */
+
+.modelGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.modelChip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  transition: background-color 150ms, border-color 150ms;
+}
+
+/* Chips size to their content once the panel is wide enough for a row. */
+@media (min-width: 640px) {
+  .modelChip {
+    width: auto;
+    min-width: 240px;
+    max-width: 360px;
+  }
+}
+
+.modelChip:hover {
+  background: var(--surface-2);
+}
+
+.modelChipOk {
+  border-color: color-mix(in srgb, var(--pos) 45%, transparent);
+}
+
+.modelChipError {
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+}
+
+.chipHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.chipIcon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--text-3);
+}
+
+.chipIconOk {
+  color: var(--pos);
+}
+
+.chipIconError {
+  color: var(--danger);
+}
+
+.chipBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.chipCode {
+  width: fit-content;
+  max-width: 100%;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+
+.chipMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+.chipActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+
+.chipAction {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: color 150ms, background-color 150ms;
+}
+
+.chipAction:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.chipActionDanger:hover {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+
+.addModelChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 44px;
+  padding: 0 16px;
+  border: 1px dashed var(--line-2);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 150ms, background-color 150ms, color 150ms;
+}
+
+.addModelChip:hover {
+  border-color: var(--text-3);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+/* On desktop the dashed tile sits in the row at chip height instead of
+   spanning the whole panel. */
+@media (min-width: 640px) {
+  .addModelChip {
+    width: auto;
+    height: auto;
+    min-width: 180px;
+    align-self: stretch;
+  }
+}
+
+.modelGroup {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.modelGroupLabel {
+  margin-bottom: 8px;
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.modelPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px dashed var(--line-2);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-3);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.modelPill:hover {
+  border-color: var(--text-3);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.selectField {
+  height: 36px;
+  padding: 0 30px 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.selectField:focus {
+  border-color: var(--text);
+  outline: 0;
+}
+
+/* Compatible endpoint details ------------------------------------------- */
+
+.kvList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kvRow {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  min-width: 0;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.kvKey {
+  flex: none;
+  width: 96px;
+  color: var(--text-3);
+  font-size: 13px;
+}
+
+.kvValue {
+  min-width: 0;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.inlineError {
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.inlineWarnLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--brand-peach);
+  color: var(--on-color);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+@container (max-width: 640px) {
+  .detailLogo {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+  }
+
+  .detailIdentity {
+    gap: 12px;
+  }
+
+  .panel {
+    padding: 20px;
+  }
+
+  .panelActions {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .panelActions > button {
+    flex: 1 1 auto;
+  }
+
+  .settingsStrip {
+    padding: 14px 16px;
+  }
+
+  .setting {
+    flex-wrap: wrap;
+  }
+
+  .connRow {
+    flex-wrap: wrap;
+  }
+
+  .connMain {
+    flex-basis: 100%;
+  }
+
+  .connActions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .connItem {
+    align-items: flex-start;
+  }
+
+  .kvRow {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .kvKey {
+    width: auto;
+  }
+
+  .detailPage button:not([role="switch"]):not(.connArrow) {
+    min-height: 44px;
+  }
+
+  .chipAction {
+    width: 36px;
+    height: 36px;
+  }
 }
 
 .page button[data-variant="danger"] {

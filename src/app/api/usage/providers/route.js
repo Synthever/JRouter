@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDistinctProviders } from "@/lib/requestDetailsDb";
 import { getProviderNodes } from "@/lib/localDb";
-import { AI_PROVIDERS, getProviderByAlias } from "@/shared/constants/providers";
+import { providerDisplayLabel } from "@/lib/db/helpers/providerLabel.js";
 
 /**
  * GET /api/usage/providers
@@ -20,14 +20,9 @@ export async function GET() {
     }
 
     const providers = providerIds.map(providerId => {
-      let name = providerId;
-      if (nodeMap[providerId]) {
-        name = nodeMap[providerId];
-      } else {
-        const providerConfig = getProviderByAlias(providerId) || AI_PROVIDERS[providerId];
-        if (providerConfig?.name) name = providerConfig.name;
-      }
-      return { id: providerId, name };
+      // `id` stays the raw stored value (filters key on it); `name` is the display
+      // label, so deleted custom nodes read "Custom provider" instead of a uuid.
+      return { id: providerId, name: providerDisplayLabel(providerId, nodeMap) };
     });
 
     return NextResponse.json({ providers });

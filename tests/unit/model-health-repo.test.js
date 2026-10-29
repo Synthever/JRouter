@@ -84,4 +84,20 @@ describe("health persistence and leases", () => {
     expect(await repo.recordCheck({ modelId: "oa/gpt", providerId: "openai", success: true }, lease)).toBeNull();
     expect((await repo.getRecentChecks("oa/gpt")).total).toBe(0);
   });
+  it("upserts one config across many models and rolls the batch back on failure", async () => {
+    await repo.saveHealthConfig("oa/keep", { ...DEFAULT_CONFIG, intervalSeconds: 60 });
+    const bulk = { ...DEFAULT_CONFIG, enabled: true, intervalSeconds: 600, includeInRouting: true };
+    expect(await repo.saveHealthConfigs(["oa/a", "oa/b"], bulk)).toBe(2);
+    expect(await repo.getHealthConfig("oa/a")).toMatchObject({ enabled: true, intervalSeconds: 600, includeInRouting: true });
+    expect(await repo.getHealthConfig("oa/b")).toMatchObject({ enabled: true, intervalSeconds: 600 });
+    expect(await repo.getHealthConfig("oa/keep")).toMatchObject({ enabled: false, intervalSeconds: 60 });
+    expect(await repo.saveHealthConfigs([], bulk)).toBe(0);
+
+    const originalRun = state.db.run;
+    let calls = 0;
+    state.db.run = (sql, params) => { if (++calls === 2) throw new Error("boom"); return originalRun(sql, params); };
+    await expect(repo.saveHealthConfigs(["oa/c", "oa/d"], bulk)).rejects.toThrow("boom");
+    state.db.run = originalRun;
+    expect(state.db.get("SELECT COUNT(*) AS n FROM modelHealthConfigs WHERE modelId IN ('oa/c','oa/d')").n).toBe(0);
+  });
 });

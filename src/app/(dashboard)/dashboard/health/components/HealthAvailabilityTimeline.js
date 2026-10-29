@@ -14,7 +14,7 @@ export default function HealthAvailabilityTimeline({ history, range, onRangeChan
   const bucket = hovered != null ? history?.buckets[hovered] : null;
   return <section className={styles.timeline} aria-busy={loading}>
     <div className={styles.toolbar}>
-      <div><h2 className={styles.sectionTitle}>{title} over the last {rangeLabels[range]}</h2>
+      <div><p className={styles.timelinePeriod}>Availability over the last {rangeLabels[range]}</p>
         <p className={styles.muted}>{history ? `${dateTime(history.from)} – ${dateTime(history.to)}` : "Loading health history..."}</p></div>
       <div className={styles.actions}><span className={styles.timelineValue}>{percent(history?.availability)}</span><SegmentedControl options={ranges} value={range} onChange={onRangeChange} size="sm" aria-label={`${title} range`} /></div>
     </div>

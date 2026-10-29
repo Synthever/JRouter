@@ -1387,7 +1387,7 @@
   "⚠️ Enable DNS to edit model mappings": "⚠️ 启用 DNS 以编辑模型映射",
   "⚠️ Local plugins run as subprocess via": "⚠️ 本地插件通过子进程运行",
   "⚠️ MITM intercepts HTTPS traffic of IDE tools (Antigravity, GitHub Copilot, Kiro) via local CA to redirect requests to your providers. May violate ToS → account ban. Use at your own risk.": "⚠️ MITM 通过本地 CA 拦截 IDE 工具（Antigravity、GitHub Copilot、Kiro）的 HTTPS 流量，将请求重定向到您的提供商。可能违反 ToS → 账户封禁风险。使用风险自负。",
-  "⚠️ Risk Notice: This provider uses a subscription/OAuth session not officially licensed for proxy/router use. Account may be restricted or banned. Use at your own risk.": "⚠️ 风险提示：此提供商使用的订阅/OAuth 会话未获官方授权用于代理/路由器使用。账户可能被限制或封禁。使用风险自负。",
+  "Risk Notice: This provider uses a subscription/OAuth session not officially licensed for proxy/router use. Account may be restricted or banned. Use at your own risk.": "⚠️ 风险提示：此提供商使用的订阅/OAuth 会话未获官方授权用于代理/路由器使用。账户可能被限制或封禁。使用风险自负。",
   "✓ Confirm Add": "✓ 确认添加",
   "📝 Configure providers in dashboard or use environment variables": "📝 在仪表盘中配置提供商或使用环境变量",
   "🔐 OAuth required. Add now and authenticate after Apply; tool list will be discovered after first connect.": "🔐 需要 OAuth。立即添加并在应用后认证；工具列表将在首次连接后自动发现。",

@@ -90,6 +90,7 @@ export default function LatestRequestsTable({ initialRequests = [] }) {
     return logs.filter((l) =>
       (l.model && l.model.toLowerCase().includes(q)) ||
       (l.provider && l.provider.toLowerCase().includes(q)) ||
+      (l.providerLabel && l.providerLabel.toLowerCase().includes(q)) ||
       (l.status && String(l.status).toLowerCase().includes(q))
     );
   }, [logs, filter]);
@@ -203,7 +204,7 @@ export default function LatestRequestsTable({ initialRequests = [] }) {
                     </div>
                     <div className="mt-1">
                       <span className={styles.providerBadge}>
-                        {log.provider || "gateway"}
+                        {log.providerLabel || log.provider || "gateway"}
                       </span>
                     </div>
                   </div>
@@ -279,7 +280,7 @@ export default function LatestRequestsTable({ initialRequests = [] }) {
                       {/* Provider */}
                       <td className="py-2.5 px-3 whitespace-nowrap">
                         <span className={styles.providerBadge}>
-                          {log.provider || "gateway"}
+                          {log.providerLabel || log.provider || "gateway"}
                         </span>
                       </td>
 

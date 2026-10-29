@@ -1,0 +1,236 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+.section [data-widget-id] {
+  --text: var(--on-color);
+  --text-2: #272320;
+  --text-3: #3a3430;
+  --pos: #14532d;
+  --surface-2: rgb(255 250 240 / 35%);
+  --surface-inset: rgb(10 10 10 / 10%);
+  --wg-accent: var(--on-color);
+  --line: transparent;
+  --line-2: rgb(10 10 10 / 30%);
+  --wg-padding: 22px 28px 26px;
+  --wg-title-size: 15px;
+  --wg-title-weight: 600;
+  container-type: inline-size;
+}
+
+.section [data-widget-id="requests"] {
+  --surface: var(--brand-pink);
+}
+
+.section [data-widget-id="requests"] .value {
+  color: #ffffff;
+}
+
+.section [data-widget-id="tokens"] {
+  --surface: var(--brand-lavender);
+}
+
+.section [data-widget-id="cost"] {
+  --surface: var(--brand-peach);
+}
+
+.section [data-widget-id="throughput"] {
+  --surface: var(--brand-ochre);
+}
+
+/* Teal is a dark surface, so the whole text scale flips to white. */
+.section [data-widget-id="latency"] {
+  --surface: var(--brand-teal);
+  --text: #ffffff;
+  --text-2: #ffffff;
+  --text-3: #e8eee9;
+  --surface-2: rgb(255 255 255 / 16%);
+  --surface-inset: rgb(255 255 255 / 18%);
+  --line-2: rgb(255 255 255 / 40%);
+  --wg-accent: #ffffff;
+}
+
+.metric {
+  display: flex;
+  height: 100%;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.value {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: clamp(26px, 15cqi, 64px);
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.unit {
+  margin-left: 6px;
+  color: var(--text-2);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.note,
+.context {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.context {
+  font-size: 12px;
+}
+
+.active {
+  color: var(--pos);
+}
+
+.tokenLabels {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 8px;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.tokenBar {
+  display: flex;
+  width: 100%;
+  height: 8px;
+  border-radius: 99px;
+  gap: 3px;
+  overflow: hidden;
+  background: var(--surface-inset);
+}
+
+.tokenBar span:nth-child(1) {
+  background: var(--text-2);
+}
+
+.tokenBar span:nth-child(2) {
+  background: color-mix(in srgb, var(--text) 55%, transparent);
+}
+
+.tokenBar span:nth-child(3) {
+  background: #ffffff;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.footer p {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+.refreshing {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--pos);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+.reset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--r1);
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  cursor: pointer;
+  transition: color 150ms, background-color 150ms;
+}
+
+.reset:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.reset:focus-visible {
+  outline: 2px solid var(--text-2);
+  outline-offset: 2px;
+}
+
+@container (max-width: 575.99px) {
+  .note {
+    font-size: 13px;
+  }
+
+  .reset {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 639px) {
+  .section [data-widget-id] {
+    --wg-padding: 12px 16px 22px;
+    --wg-title-size: 13px;
+  }
+
+  .note,
+  .tokenLabels {
+    font-size: 12px;
+  }
+
+  .unit {
+    font-size: 12px;
+  }
+
+  .context {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reset {
+    transition: none;
+  }
+
+  .refreshing {
+    animation: none;
+  }
+}

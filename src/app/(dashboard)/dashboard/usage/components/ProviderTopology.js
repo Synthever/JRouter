@@ -39,10 +39,15 @@ function ProviderNode({ data }) {
   const [imgError, setImgError] = useState(false);
   return (
     <div
-      className="flex items-center gap-2.5 px-4 py-2.5 rounded-lg border-2 transition-all duration-300 bg-bg"
+      className="flex items-center gap-2.5 rounded-full border px-3.5 py-2 backdrop-blur-[2px] transition-all duration-300"
       style={{
-        borderColor: active ? color : "var(--color-border)",
-        boxShadow: active ? `0 0 16px ${color}40` : "none",
+        borderColor: active ? color : "var(--line-2)",
+        background: active
+          ? `color-mix(in srgb, ${color} 10%, var(--canvas))`
+          : "color-mix(in srgb, var(--canvas) 84%, transparent)",
+        boxShadow: active
+          ? `0 0 0 3px color-mix(in srgb, ${color} 16%, transparent), 0 12px 26px -18px ${color}`
+          : "0 1px 2px rgba(20, 18, 14, 0.04)",
         minWidth: "150px",
       }}
     >
@@ -53,14 +58,14 @@ function ProviderNode({ data }) {
 
       {/* Provider icon */}
       <div
-        className="w-8 h-8 rounded-md flex items-center justify-center shrink-0"
-        style={{ backgroundColor: `${color}15` }}
+        className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+        style={{ backgroundColor: `${color}1a` }}
       >
         {imageUrl && !imgError ? (
           <img
             src={imageUrl}
             alt={label}
-            className="w-6 h-6 rounded-sm object-contain"
+            className="w-5 h-5 rounded-full object-contain"
             loading="lazy"
             decoding="async"
             onError={() => {
@@ -76,8 +81,8 @@ function ProviderNode({ data }) {
 
       {/* Provider name */}
       <span
-        className="text-base font-medium truncate"
-        style={{ color: active ? color : "var(--color-text)" }}
+        className="text-[13px] font-medium truncate"
+        style={{ color: "var(--text)" }}
       >
         {label}
       </span>
@@ -101,31 +106,39 @@ ProviderNode.propTypes = {
 function RouterNode({ data }) {
   const powering = (data.activeCount || 0) > 0;
   return (
-    <div
-      className={`relative z-[1] flex items-center justify-center px-5 py-3 rounded-xl border min-w-[130px] ${
-        powering
-          ? "topology-router-core border-[var(--pos)] bg-[var(--surface-2)]"
-          : "border-[var(--line-2)] bg-[var(--surface-2)]"
-      }`}
-    >
-      <Handle type="source" position={Position.Top} id="top" className="!bg-transparent !border-0 !w-0 !h-0" />
-      <Handle type="source" position={Position.Bottom} id="bottom" className="!bg-transparent !border-0 !w-0 !h-0" />
-      <Handle type="source" position={Position.Left} id="left" className="!bg-transparent !border-0 !w-0 !h-0" />
-      <Handle type="source" position={Position.Right} id="right" className="!bg-transparent !border-0 !w-0 !h-0" />
+    <div className="relative">
+      {powering && <span aria-hidden className="topology-router-halo" />}
+      <div
+        className={`relative z-[1] flex items-center justify-center gap-2 rounded-full border px-4 py-2.5 ${
+          powering ? "topology-router-core" : ""
+        }`}
+        style={{
+          borderColor: powering ? "var(--pos)" : "var(--line-2)",
+          background: "color-mix(in srgb, var(--canvas) 90%, transparent)",
+          boxShadow: powering
+            ? "0 0 0 4px color-mix(in srgb, var(--pos) 12%, transparent), 0 16px 34px -24px var(--pos)"
+            : "0 1px 2px rgba(20, 18, 14, 0.05)",
+          minWidth: "130px",
+        }}
+      >
+        <Handle type="source" position={Position.Top} id="top" className="!bg-transparent !border-0 !w-0 !h-0" />
+        <Handle type="source" position={Position.Bottom} id="bottom" className="!bg-transparent !border-0 !w-0 !h-0" />
+        <Handle type="source" position={Position.Left} id="left" className="!bg-transparent !border-0 !w-0 !h-0" />
+        <Handle type="source" position={Position.Right} id="right" className="!bg-transparent !border-0 !w-0 !h-0" />
 
-      <AppLogo
-        size={24}
-        alt="JRouter"
-        className="mr-2"
-      />
-      <span className={`text-sm font-bold ${powering ? "text-[var(--pos)]" : "text-[var(--text)]"}`}>
-        JRouter
-      </span>
-      {data.activeCount > 0 && (
-        <span className="ml-2 px-1.5 py-0.5 rounded-full bg-[var(--pos)] text-[var(--bg)] text-xs font-bold u-tnum">
-          {data.activeCount}
+        <AppLogo
+          size={22}
+          alt="JRouter"
+        />
+        <span className={`text-sm font-semibold ${powering ? "text-[var(--pos)]" : "text-[var(--text)]"}`}>
+          JRouter
         </span>
-      )}
+        {data.activeCount > 0 && (
+          <span className="px-1.5 py-0.5 rounded-full bg-[var(--pos)] text-[var(--bg)] text-xs font-bold u-tnum">
+            {data.activeCount}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -293,9 +306,14 @@ function buildLayout(providers, activeSet, lastSet, errorSet) {
 
   const edgeStyle = (active, last, error) => {
     if (error) return { stroke: "#ef4444", strokeWidth: 2.5, opacity: 0.9 };
-    if (active) return { stroke: "#22d3ee", strokeWidth: 3.5, opacity: 1 };
+    if (active) return { stroke: "var(--pos)", strokeWidth: 3.5, opacity: 1 };
     if (last) return { stroke: "#f59e0b", strokeWidth: 2, opacity: 0.7 };
-    return { stroke: "var(--color-border)", strokeWidth: 1, opacity: 0.3 };
+    return {
+      stroke: "var(--line-2)",
+      strokeWidth: 1.2,
+      opacity: 0.6,
+      strokeDasharray: "3 7",
+    };
   };
 
   providers.forEach((p, i) => {
@@ -437,15 +455,26 @@ export default function ProviderTopology({ providers = [], activeRequests = [], 
   }, [nodes.length]);
 
   return (
-    <section className={`ui-card ${styles.section}`} aria-labelledby="usage-topology-heading">
+    <section className={`${styles.section}`} aria-labelledby="usage-topology-heading">
       <div className={styles.sectionHeader}>
         <div className="min-w-0">
-          <h2 id="usage-topology-heading" className="ui-eyebrow flex items-center gap-2">
-            <Icon className="text-[16px]">hub</Icon> Live Routing
+          <h2 id="usage-topology-heading" className={styles.sectionTitle}>
+            <Icon className={styles.sectionIcon}>hub</Icon>
+            Live routing
           </h2>
           <p className={styles.sectionDescription}>
             Active requests flowing through your connected providers
           </p>
+        </div>
+        <div className={styles.topologyStatus}>
+          <span
+            className={`${styles.liveDot} ${activeSet.size > 0 ? styles.liveDotActive : ""}`}
+            aria-hidden
+          />
+          <strong>{activeSet.size > 0 ? `${activeSet.size} live` : "Idle"}</strong>
+          <span className={styles.topologyCount}>
+            {providers.length} {providers.length === 1 ? "provider" : "providers"}
+          </span>
         </div>
       </div>
       <div
@@ -453,7 +482,11 @@ export default function ProviderTopology({ providers = [], activeRequests = [], 
         className={`${styles.topology} h-[320px] w-full min-w-0 sm:h-[420px]`}
       >
         {providers.length === 0 ? (
-          <div className={styles.inset + " h-full"}>No providers connected</div>
+          <div className={`${styles.topologyEmpty} h-full`}>
+            <Icon className={styles.sectionIcon}>hub</Icon>
+            <strong>No providers connected</strong>
+            <span>Connect a provider to watch requests route live.</span>
+          </div>
         ) : (
           <ReactFlow
             key={providersKey}
@@ -480,6 +513,27 @@ export default function ProviderTopology({ providers = [], activeRequests = [], 
           </ReactFlow>
         )}
       </div>
+
+      {providers.length > 0 && (
+        <div className={styles.topologyLegend}>
+          <span className={styles.legendItem}>
+            <span className={styles.legendDot} style={{ background: "var(--pos)" }} />
+            Active
+          </span>
+          <span className={styles.legendItem}>
+            <span className={styles.legendDot} style={{ background: "#f59e0b" }} />
+            Recent
+          </span>
+          <span className={styles.legendItem}>
+            <span className={styles.legendDot} style={{ background: "#ef4444" }} />
+            Error
+          </span>
+          <span className={styles.legendItem}>
+            <span className={styles.legendDot} style={{ background: "var(--line-2)" }} />
+            Idle
+          </span>
+        </div>
+      )}
     </section>
   );
 }

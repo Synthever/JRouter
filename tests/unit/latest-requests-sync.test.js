@@ -54,7 +54,7 @@ describe("Latest Requests data contract", () => {
     const { response, entries } = await latest();
     expect(entries).toEqual([{
       id: expect.any(Number), timestamp: "2026-10-05T10:00:00.000Z",
-      provider: "codex", model: "gpt-6.1-sol-xhigh", status: "ok",
+      provider: "codex", providerLabel: "OpenAI Codex", model: "gpt-6.1-sol-xhigh", status: "ok",
       promptTokens: 1234, completionTokens: 56, ttftMs: 321, durationMs: 4567,
     }]);
     expect(response.headers.get("cache-control")).toContain("no-store");

@@ -18,6 +18,8 @@ import {
   getConnectionLabel,
   maskQuotaEmail,
   getConnectionQuotaRemaining,
+  getRemainingPercentage,
+  formatResetTime,
   sortVisibleConnections,
   buildLoadingState,
   filterQuotaStateByConnections,
@@ -43,8 +45,8 @@ import {
   ACCOUNT_FILTER_OPTIONS,
   QUOTA_SORT_OPTIONS,
 } from "./utils";
-import Card from "@/shared/components/Card";
-import { Button, ConfirmModal, EditConnectionModal, Modal, Skeleton } from "@/shared/components";
+import { Button, ConfirmModal, EditConnectionModal, Modal, SegmentedControl, Skeleton } from "@/shared/components";
+import QuotaStats from "@/app/(dashboard)/dashboard/quota/components/QuotaStats";
 import AutoPingScheduleModal from "@/app/(dashboard)/dashboard/providers/[id]/AutoPingScheduleModal";
 import { getScheduleSlotLabels } from "@/shared/services/quotaPingSchedule";
 import { USAGE_SUPPORTED_PROVIDERS, AI_PROVIDERS } from "@/shared/constants/providers";
@@ -203,6 +205,7 @@ export default function ProviderLimits() {
   const [quotaVisibility, setQuotaVisibility] = useState({});
   const [expiringFirst, setExpiringFirst] = useState(false);
   const [providerMenuOpen, setProviderMenuOpen] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [defaultDetailsExpanded, setDefaultDetailsExpanded] = useState(true);
   const [accountDetailsExpanded, setAccountDetailsExpanded] = useState({});
   const [bulkToggling, setBulkToggling] = useState(false);
@@ -862,14 +865,45 @@ export default function ProviderLimits() {
     accountFilter,
   );
   const connectionsPageSummary = getConnectionsPaginationSummary(pagination);
+
+  // Summary tiles read from the quota state the page already holds: quotas are
+  // fetched per visible page, so the low-quota count is reported as "checked".
+  const quotaOverview = useMemo(() => {
+    let checked = 0;
+    let low = 0;
+    let nextResetAt = null;
+    let nextResetConnection = null;
+    for (const [connectionId, entry] of Object.entries(quotaData || {})) {
+      const quotas = Array.isArray(entry?.quotas) ? entry.quotas : [];
+      if (!quotas.length) continue;
+      checked += 1;
+      const percentages = quotas.map((quota) => getRemainingPercentage(quota)).filter((value) => Number.isFinite(value));
+      if (percentages.length && Math.min(...percentages) <= 20) low += 1;
+      for (const quota of quotas) {
+        if (!quota?.resetAt) continue;
+        const time = new Date(quota.resetAt).getTime();
+        if (!Number.isFinite(time) || time <= Date.now()) continue;
+        if (nextResetAt == null || time < nextResetAt) {
+          nextResetAt = time;
+          nextResetConnection = connections.find((connection) => connection.id === connectionId) || null;
+        }
+      }
+    }
+    return { checked, low, nextResetAt, nextResetConnection };
+  }, [quotaData, connections]);
+
+  const nextResetOwner = quotaOverview.nextResetConnection;
+  const nextResetNote = nextResetOwner
+    ? [providerLabel(nextResetOwner.provider), maskQuotaEmail(getConnectionLabel(nextResetOwner))].filter(Boolean).join(" · ")
+    : "No reset scheduled";
   const isCustomPageSize = !ACCOUNT_PAGE_SIZE_OPTIONS.includes(pageSize);
   const pageSizeLabel = getPageSizeLabel(pageSize, isCustomPageSize);
 
   if (!connectionsLoading && !hasEligibleConnections) {
     return (
-      <div className={`dashboard-surface ${styles.page}`}>
-        <Card className={`ui-card ${styles.section}`}>
-          <h2 className="ui-eyebrow flex items-center gap-2"><Icon className="text-[16px]">data_usage</Icon> Quota sources</h2>
+      <div className={styles.content}>
+        <section className={styles.section} aria-labelledby="quota-sources-heading">
+          <h2 id="quota-sources-heading" className="ui-eyebrow flex items-center gap-2"><Icon className="text-[16px]">data_usage</Icon> Quota sources</h2>
           <div className={styles.empty}>
             <h3 className={styles.emptyTitle}>
               No Providers Connected
@@ -879,22 +913,29 @@ export default function ProviderLimits() {
               usage.
             </p>
           </div>
-        </Card>
+        </section>
       </div>
     );
   }
 
   return (
-    <div className={`dashboard-surface ${styles.page}`}>
-      {/* Header Controls */}
-      <header className={styles.header}>
-        <p className={styles.description}>Remaining capacity, account limits and reset times across your providers.</p>
-        <div className={styles.controls}>
+    <div className={styles.content}>
+      <QuotaStats
+        totalAccounts={totals.providerFilteredConnections || connections.length}
+        accountsNote={connectionsPageSummary}
+        lowCount={quotaOverview.low}
+        checkedCount={quotaOverview.checked}
+        nextResetLabel={quotaOverview.nextResetAt ? formatResetTime(new Date(quotaOverview.nextResetAt)) : "—"}
+        nextResetNote={nextResetNote}
+      />
+
+      <div className={styles.toolbar} role="toolbar" aria-label="Quota filters and actions">
+        <div className={styles.toolbarGroup}>
           <div className="relative">
             <button
               type="button"
               onClick={() => setProviderMenuOpen((prev) => !prev)}
-              className={styles.control}
+              className={styles.pill}
               aria-label={`Filter quota providers: ${selectedProviderLabel}`}
               aria-haspopup="menu"
               aria-expanded={providerMenuOpen}
@@ -994,30 +1035,25 @@ export default function ProviderLimits() {
               </>
             )}
           </div>
-          <select
+          <SegmentedControl
             value={accountFilter}
-            onChange={(event) => {
-              const nextValue = event.target.value;
+            onChange={(nextValue) => {
               if (shouldResetPage(accountFilter, nextValue)) {
                 setPage(1);
               }
               setAccountFilter(nextValue);
             }}
-            className={styles.control}
+            options={ACCOUNT_FILTER_OPTIONS}
+            size="sm"
+            className={styles.segmented}
             aria-label="Filter accounts by status"
-          >
-            {ACCOUNT_FILTER_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          />
 
           {providerFilter === "codex" && (
             <select
               value={quotaSortMode}
               onChange={(event) => setQuotaSortMode(event.target.value)}
-              className={styles.control}
+              className={styles.selectPill}
               aria-label="Sort Codex quotas by remaining"
             >
               {QUOTA_SORT_OPTIONS.map((option) => (
@@ -1032,7 +1068,7 @@ export default function ProviderLimits() {
             type="button"
             onClick={() => setExpiringFirst((prev) => !prev)}
             aria-pressed={expiringFirst}
-            className={styles.control}
+            className={styles.pill}
             aria-label="Sort accounts by earliest quota reset time"
             title="Sort accounts by earliest quota reset time"
           >
@@ -1042,59 +1078,81 @@ export default function ProviderLimits() {
             <span className="hidden sm:inline">Expiring first</span>
           </button>
 
-          {/* Bulk: disable depleted */}
-          <button
-            type="button"
-            onClick={handleDisableDepleted}
-            disabled={bulkToggling}
-            className={`${styles.control} ${styles.danger}`}
-            aria-label="Disable connections with depleted quota on the current page"
-            title="Disable connections with depleted quota on the current page"
-          >
-            <Icon className="text-[14px]">block</Icon>
-            <span className="hidden sm:inline">Turn off Empty</span>
-          </button>
+        </div>
 
-          {/* Bulk: enable available */}
-          <button
-            type="button"
-            onClick={handleEnableAvailable}
-            disabled={bulkToggling}
-            className={styles.control}
-            aria-label="Enable connections that still have quota on the current page"
-            title="Enable connections that still have quota on the current page"
-          >
-            <Icon className="text-[14px]">
-              check_circle
-            </Icon>
-            <span className="hidden sm:inline">Turn on Available</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSetAllDetailsExpanded(true)}
-            disabled={connectionsLoading || sortedConnections.length === 0}
-            className={styles.control}
-            aria-controls="quota-account-list"
-          >
-            <Icon className="text-[14px]">expand_more</Icon>
-            <span>Extend all</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSetAllDetailsExpanded(false)}
-            disabled={connectionsLoading || sortedConnections.length === 0}
-            className={styles.control}
-            aria-controls="quota-account-list"
-          >
-            <Icon className="text-[14px]">expand_less</Icon>
-            <span>Shorten all</span>
-          </button>
+        <div className={styles.toolbarGroup}>
+          <div className={styles.moreWrap}>
+            <button
+              type="button"
+              onClick={() => setMoreMenuOpen((open) => !open)}
+              className={styles.pill}
+              aria-haspopup="menu"
+              aria-expanded={moreMenuOpen}
+              aria-label="Bulk account actions"
+              title="Bulk account actions"
+            >
+              <Icon className="text-[15px]">more_vert</Icon>
+              <span>More</span>
+              <Icon className="text-[14px]">{moreMenuOpen ? "expand_less" : "expand_more"}</Icon>
+            </button>
+            {moreMenuOpen && (
+              <>
+                <button
+                  type="button"
+                  className="fixed inset-0 z-40 bg-transparent"
+                  aria-label="Close bulk actions menu"
+                  onClick={() => setMoreMenuOpen(false)}
+                />
+                <div className={styles.moreMenu} role="menu" aria-label="Bulk account actions">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className={`${styles.moreItem} ${styles.moreItemDanger}`}
+                    disabled={bulkToggling}
+                    onClick={() => { setMoreMenuOpen(false); handleDisableDepleted(); }}
+                  >
+                    <Icon className="text-[16px]">block</Icon>
+                    <span>Turn off Empty</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className={styles.moreItem}
+                    disabled={bulkToggling}
+                    onClick={() => { setMoreMenuOpen(false); handleEnableAvailable(); }}
+                  >
+                    <Icon className="text-[16px]">check_circle</Icon>
+                    <span>Turn on Available</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className={styles.moreItem}
+                    disabled={connectionsLoading || sortedConnections.length === 0}
+                    onClick={() => { setMoreMenuOpen(false); handleSetAllDetailsExpanded(true); }}
+                  >
+                    <Icon className="text-[16px]">expand_more</Icon>
+                    <span>Extend all</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className={styles.moreItem}
+                    disabled={connectionsLoading || sortedConnections.length === 0}
+                    onClick={() => { setMoreMenuOpen(false); handleSetAllDetailsExpanded(false); }}
+                  >
+                    <Icon className="text-[16px]">expand_less</Icon>
+                    <span>Shorten all</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
 
           {/* Auto-refresh toggle */}
           <button
             onClick={() => setAutoRefresh((prev) => !prev)}
-            className={styles.control}
+            className={styles.pill}
             aria-pressed={autoRefresh}
             aria-label={autoRefresh ? "Disable auto-refresh" : "Enable auto-refresh"}
             title={autoRefresh ? "Disable auto-refresh" : "Enable auto-refresh"}
@@ -1129,7 +1187,7 @@ export default function ProviderLimits() {
             </Icon>
           </button>
         </div>
-      </header>
+      </div>
 
       {expiringFirst && (
         <div className={styles.notice}>
@@ -1138,7 +1196,7 @@ export default function ProviderLimits() {
         </div>
       )}
 
-      <section className={`ui-card ${styles.section}`} aria-labelledby="quota-sources-heading" aria-busy={connectionsLoading}>
+      <section className={styles.section} aria-labelledby="quota-sources-heading" aria-busy={connectionsLoading}>
         <div className={styles.sectionHeader}>
           <h2 id="quota-sources-heading" className="ui-eyebrow flex items-center gap-2"><Icon className="text-[16px]">data_usage</Icon> Quota sources</h2>
           <span className={styles.metadata}>{connectionsPageSummary}</span>
@@ -1448,7 +1506,6 @@ export default function ProviderLimits() {
           );
         })}
         </div>
-      </section>
 
       <div className={styles.pagination}>
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1572,6 +1629,7 @@ export default function ProviderLimits() {
             </div>
           </div>
         </div>
+      </section>
 
       <ConfirmModal
         className={styles.dialog}

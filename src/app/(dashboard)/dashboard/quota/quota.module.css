@@ -1,10 +1,181 @@
 .page {
   composes: page from "../usage/usage.module.css";
   composes: formScope from "../../../../shared/components/DashboardControls.module.css";
+  /* Matches the shell scroller padding (p-6 / lg:p-8) so the sticky toolbar
+     parks flush with the scrollport edge instead of 32px below it. */
+  --quota-stick-offset: 32px;
+}
+
+/* Page intro ------------------------------------------------------------ */
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.title {
+  color: var(--text);
+  font-size: clamp(28px, 3.4vw, 40px);
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  line-height: 1.1;
+}
+
+.sub {
+  color: var(--text-2);
+  font-size: 16px;
+  max-width: 60ch;
+}
+
+/* Content column -------------------------------------------------------- */
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+  color: var(--text);
+}
+
+.statsSkeleton {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.statSkeleton {
+  min-height: 168px;
+  border-radius: 24px;
+}
+
+/* Sticky toolbar -------------------------------------------------------- */
+
+.toolbar {
+  position: sticky;
+  top: calc(-1 * var(--quota-stick-offset));
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 0;
+  background: var(--bg);
+}
+
+.toolbarGroup {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pill,
+.selectPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: var(--canvas);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 150ms, border-color 150ms;
+}
+
+.selectPill {
+  padding-right: 10px;
+}
+
+.pill:hover:not(:disabled),
+.selectPill:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.pill[aria-pressed="true"] {
+  background: var(--surface-2);
+  border-color: var(--line-2);
+}
+
+.pill:disabled,
+.selectPill:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* The shared segmented control is 28px tall inside a 4px inset shell. */
+.segmented {
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: var(--canvas);
+}
+
+.moreWrap {
+  position: relative;
+}
+
+.moreMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 50;
+  min-width: 232px;
+  padding: 6px;
+  border: 1px solid var(--line-2);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+}
+
+.moreItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 10px;
+  border-radius: var(--r1);
+  color: var(--text-2);
+  font-size: 13px;
+  text-align: left;
+}
+
+.moreItem:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.moreItem:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.moreItemDanger {
+  color: var(--danger);
+}
+
+.moreItemDanger:hover:not(:disabled) {
+  color: var(--danger);
 }
 
 .section {
-  composes: section from "../usage/usage.module.css";
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--surface);
 }
 
 .header {
@@ -295,7 +466,8 @@
 
 .pagination {
   justify-content: space-between;
-  padding-top: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
   border-top: 1px solid var(--line);
   color: var(--text-2);
   font-size: 11px;
@@ -379,6 +551,24 @@
 @media (max-width: 639px) {
   .controls {
     width: 100%;
+  }
+
+  .pill,
+  .selectPill,
+  .moreItem {
+    min-height: 44px;
+  }
+
+  .segmented button {
+    min-height: 44px;
+  }
+
+  .section {
+    padding: 20px;
+  }
+
+  .statsSkeleton {
+    grid-template-columns: 1fr;
   }
 
   .page .control,

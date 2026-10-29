@@ -413,6 +413,7 @@ const info = { name: k.name, id: k.id, createdAt: k.createdAt };
       const t = parseJson(r.tokens, {}) || {};
       return {
         timestamp: r.timestamp, model: r.model, provider: r.provider || "",
+        providerLabel: providerDisplayLabel(r.provider, providerNodeNameMap),
         promptTokens: t.prompt_tokens || t.input_tokens || 0,
         completionTokens: t.completion_tokens || t.output_tokens || 0,
         cachedTokens: t.cached_tokens || t.cache_read_input_tokens || 0,
@@ -504,7 +505,7 @@ const info = { name: k.name, id: k.id, createdAt: k.createdAt };
       if (dr.dateKey && (!stats.periodEnd || dr.dateKey > stats.periodEnd)) stats.periodEnd = dr.dateKey;
 
       for (const [prov, p] of Object.entries(day.byProvider || {})) {
-        if (!stats.byProvider[prov]) stats.byProvider[prov] = { requests: 0, promptTokens: 0, completionTokens: 0, cachedTokens: 0, cost: 0 };
+        if (!stats.byProvider[prov]) stats.byProvider[prov] = { requests: 0, promptTokens: 0, completionTokens: 0, cachedTokens: 0, cost: 0, label: providerDisplayLabel(prov, providerNodeNameMap) };
         stats.byProvider[prov].requests += p.requests || 0;
         stats.byProvider[prov].promptTokens += p.promptTokens || 0;
         stats.byProvider[prov].completionTokens += p.completionTokens || 0;
@@ -651,7 +652,7 @@ const info = { name: k.name, id: k.id, createdAt: k.createdAt };
       if (r.timestamp && (!stats.periodStart || r.timestamp < stats.periodStart)) stats.periodStart = r.timestamp;
       if (r.timestamp && (!stats.periodEnd || r.timestamp > stats.periodEnd)) stats.periodEnd = r.timestamp;
 
-      if (!stats.byProvider[r.provider]) stats.byProvider[r.provider] = { requests: 0, promptTokens: 0, completionTokens: 0, cachedTokens: 0, cost: 0 };
+      if (!stats.byProvider[r.provider]) stats.byProvider[r.provider] = { requests: 0, promptTokens: 0, completionTokens: 0, cachedTokens: 0, cost: 0, label: providerDisplayName };
       stats.byProvider[r.provider].requests++;
       stats.byProvider[r.provider].promptTokens += promptTokens;
       stats.byProvider[r.provider].completionTokens += completionTokens;
@@ -862,6 +863,11 @@ export async function getRecentLogs(limit = 200, { format = "text" } = {}) {
     if (!rows.length) return [];
 
     if (format === "json") {
+      const providerNodeNameMap = {};
+      try {
+        const { getProviderNodes } = await import("./nodesRepo.js");
+        for (const n of await getProviderNodes()) if (n.id && n.name) providerNodeNameMap[n.id] = n.name;
+      } catch {}
       return rows.map((r) => {
         const tokens = parseJson(r.tokens, {}) || {};
         const latency = parseJson(r.meta, {})?.latency;
@@ -870,6 +876,7 @@ export async function getRecentLogs(limit = 200, { format = "text" } = {}) {
           timestamp: r.timestamp,
           model: r.model,
           provider: r.provider,
+          providerLabel: providerDisplayLabel(r.provider, providerNodeNameMap),
           status: r.status || "ok",
           promptTokens: r.promptTokens ?? tokens.prompt_tokens ?? tokens.input_tokens ?? 0,
           completionTokens: r.completionTokens ?? tokens.completion_tokens ?? tokens.output_tokens ?? 0,

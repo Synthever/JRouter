@@ -311,7 +311,7 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
   };
 
   return (
-    <header className="dashboard-header shrink-0 z-20">
+    <header className="dashboard-header shrink-0 relative z-40">
       <div className="dashboard-header__left">
         {showMenuButton && (
           <button

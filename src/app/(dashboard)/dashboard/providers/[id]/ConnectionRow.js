@@ -184,44 +184,45 @@ export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst
     return null;
   };
 
+  const isOff = connection.isActive === false;
+
   return (
-    <div className={`group flex min-w-0 flex-col gap-3 rounded-lg p-2 transition-colors hover:bg-black/[0.02] dark:hover:bg-white/[0.02] sm:flex-row sm:items-center sm:justify-between ${connection.isActive === false ? "opacity-60" : ""}`}>
-      <div className="flex min-w-0 flex-1 items-start gap-2 sm:items-center sm:gap-3">
-        {/* Priority arrows */}
-        <div className="flex shrink-0 flex-col">
+    <div className={`${styles.connRow} ${isOff ? styles.connRowOff : ""}`}>
+      <div className={styles.connMain}>
+        <div className={styles.connPriority}>
           <button
             aria-label={`Move ${displayName} up`}
             onClick={onMoveUp}
             disabled={isFirst}
-            className={`p-0.5 rounded ${isFirst ? "text-text-muted/30 cursor-not-allowed" : "hover:bg-surface-2 text-text-muted hover:text-text-main"}`}
+            className={styles.connArrow}
           >
-            <Icon className="text-sm">keyboard_arrow_up</Icon>
+            <Icon size={14}>keyboard_arrow_up</Icon>
           </button>
           <button
             aria-label={`Move ${displayName} down`}
             onClick={onMoveDown}
             disabled={isLast}
-            className={`p-0.5 rounded ${isLast ? "text-text-muted/30 cursor-not-allowed" : "hover:bg-surface-2 text-text-muted hover:text-text-main"}`}
+            className={styles.connArrow}
           >
-            <Icon className="text-sm">keyboard_arrow_down</Icon>
+            <Icon size={14}>keyboard_arrow_down</Icon>
           </button>
         </div>
-        <Icon className="shrink-0 text-base text-text-muted">
-          {authIcon}
-        </Icon>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{displayName}</p>
+        <span className={styles.connTile} aria-hidden="true">
+          <Icon size={18}>{authIcon}</Icon>
+        </span>
+        <div className={styles.connBody}>
+          <p className={styles.connName} title={displayName}>{displayName}</p>
           {secondaryDisplayName && (
-            <p className="text-xs text-text-muted truncate">{secondaryDisplayName}</p>
+            <p className={styles.connSub} title={secondaryDisplayName}>{secondaryDisplayName}</p>
           )}
-          <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2">
+          <div className={styles.connBadges}>
             <StatusBadge variant={getStatusVariant()} className={getStatusVariant() === "error" ? styles.errorBadge : undefined}>
-              {connection.isActive === false ? "disabled" : (effectiveStatus || "Unknown")}
+              {isOff ? "disabled" : (effectiveStatus || "Unknown")}
             </StatusBadge>
-            {connection.demotedAt && connection.isActive !== false && (
+            {connection.demotedAt && !isOff && (
               <span
                 title={`Failed recently — serving at the back of the rotation until its next success (since ${new Date(connection.demotedAt).toLocaleTimeString()})`}
-                className="px-1.5 py-0.5 rounded-[var(--r1)] bg-transparent border border-[var(--line)] text-[10px] font-mono text-[var(--text-2)]"
+                className={styles.connBadgeText}
               >
                 ⬇ demoted
               </span>
@@ -234,66 +235,61 @@ export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst
                 Proxy
               </StatusBadge>
             )}
-            {isCooldown && connection.isActive !== false && <CooldownTimer until={modelLockUntil} />}
-            {connection.lastError && connection.isActive !== false && (
-              <span className={`max-w-full truncate text-xs sm:max-w-[300px] ${styles.error}`} title={connection.lastError}>
-                {connection.lastError}
-              </span>
-            )}
-            <span className="text-xs text-text-muted">#{connection.priority}</span>
-            {connection.globalPriority && (
-              <span className="text-xs text-text-muted">Auto: {connection.globalPriority}</span>
-            )}
+            {isCooldown && !isOff && <CooldownTimer until={modelLockUntil} />}
             {getOneByOneLabel() && (
               <StatusBadge variant={getOneByOneVariant() === "primary" ? "default" : getOneByOneVariant()} dot={false}>
                 {getOneByOneLabel()}
               </StatusBadge>
             )}
+            <span className={styles.connBadgeText}>#{connection.priority}</span>
+            {connection.globalPriority && (
+              <span className={styles.connBadgeText}>Auto: {connection.globalPriority}</span>
+            )}
           </div>
+          {connection.lastError && !isOff && (
+            <span className={styles.connError} title={connection.lastError}>
+              {connection.lastError}
+            </span>
+          )}
           {hasAnyProxy && (
-            <div className="mt-1 flex items-center gap-2 flex-wrap">
-              <span className="max-w-full truncate text-[11px] text-text-muted sm:max-w-[420px]" title={proxyDisplayText}>
-                {proxyDisplayText}
-              </span>
+            <div className={styles.connProxy}>
+              <span title={proxyDisplayText}>{proxyDisplayText}</span>
               {maskedProxyUrl && (
-                <code className="max-w-full truncate rounded bg-black/5 px-1 py-0.5 font-mono text-[10px] text-text-muted dark:bg-white/5 sm:max-w-[260px]">
-                  {maskedProxyUrl}
-                </code>
+                <code className={styles.connProxyCode}>{maskedProxyUrl}</code>
               )}
               {noProxyText && (
-                <span className="max-w-full truncate text-[11px] text-text-muted sm:max-w-[320px]" title={noProxyText}>
-                  no_proxy: {noProxyText}
-                </span>
+                <span title={noProxyText}>no_proxy: {noProxyText}</span>
               )}
             </div>
           )}
         </div>
       </div>
-      <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
-        <div className="grid flex-1 grid-cols-3 gap-1 sm:flex sm:flex-none">
-          {/* Proxy button with inline dropdown */}
+      <div className={styles.connActions}>
+        <div className={styles.connButtons}>
           {(proxyPools || []).length > 0 && (
             <div>
               <button
                 ref={proxyBtnRef}
                 onClick={toggleProxyDropdown}
-                className={`flex w-full flex-col items-center rounded px-2 py-1 transition-colors hover:bg-surface-2 ${hasAnyProxy ? "text-text-main" : "text-text-muted hover:text-text-main"}`}
+                className={styles.connButton}
                 disabled={updatingProxy}
+                aria-label={`Proxy for ${displayName}`}
+                title={hasAnyProxy ? "Change proxy pool" : "Bind a proxy pool"}
               >
-                <Icon className="text-[18px]">
+                <Icon size={16}>
                   {updatingProxy ? "progress_activity" : "lan"}
                 </Icon>
-                <span className="text-[10px] leading-tight">Proxy</span>
+                <span>Proxy</span>
               </button>
               {showProxyDropdown && createPortal(
                 <div
                   ref={proxyDropdownRef}
                   style={proxyDropdownStyle}
-                  className="z-50 max-w-[78vw] min-w-[160px] overflow-y-auto rounded-lg border border-border bg-bg py-1 shadow-lg"
+                  className={styles.menu}
                 >
                   <button
                     onClick={() => handleSelectProxy("__none__")}
-                    className={`w-full text-left px-3 py-1.5 text-sm hover:bg-black/5 dark:hover:bg-white/5 ${!boundProxyPoolId ? "text-primary font-medium" : "text-text-main"}`}
+                    className={`${styles.menuItem} ${!boundProxyPoolId ? styles.menuItemActive : ""}`}
                   >
                     None
                   </button>
@@ -301,7 +297,7 @@ export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst
                     <button
                       key={pool.id}
                       onClick={() => handleSelectProxy(pool.id)}
-                      className={`w-full text-left px-3 py-1.5 text-sm hover:bg-black/5 dark:hover:bg-white/5 ${boundProxyPoolId === pool.id ? "text-primary font-medium" : "text-text-main"}`}
+                      className={`${styles.menuItem} ${boundProxyPoolId === pool.id ? styles.menuItemActive : ""}`}
                     >
                       {pool.name}
                     </button>
@@ -315,26 +311,27 @@ export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst
             <Tooltip text={autoPingTooltip}>
               <button
                 onClick={autoPing.onConfigure}
-                className={`flex w-full flex-col items-center rounded px-2 py-1 transition-colors hover:bg-surface-2 ${autoPing.isActive ? "text-text-main" : "text-text-muted hover:text-text-main"}`}
+                className={styles.connButton}
+                aria-label={`Auto-ping for ${displayName}`}
               >
-                <Icon className="text-[18px]">bolt</Icon>
-                <span className="text-[10px] leading-tight">Auto-ping</span>
+                <Icon size={16}>bolt</Icon>
+                <span>Auto-ping</span>
               </button>
             </Tooltip>
           )}
           <button onClick={onEdit} className={styles.iconButton} aria-label={`Edit ${displayName}`} title={`Edit ${displayName}`}>
-            <Icon className="text-[18px]">edit</Icon>
+            <Icon size={16}>edit</Icon>
           </button>
           <button onClick={onDelete} className={`${styles.iconButton} ${styles.error}`} aria-label={`Delete ${displayName}`} title={`Delete ${displayName}`}>
-            <Icon className="text-[18px]">delete</Icon>
+            <Icon size={16}>delete</Icon>
           </button>
         </div>
         <Toggle
           size="sm"
           checked={connection.isActive ?? true}
-          aria-label={`${connection.isActive === false ? "Enable" : "Disable"} ${displayName}`}
+          aria-label={`${isOff ? "Enable" : "Disable"} ${displayName}`}
           onChange={onToggleActive}
-          title={(connection.isActive ?? true) ? "Disable connection" : "Enable connection"}
+          title={isOff ? "Enable connection" : "Disable connection"}
         />
       </div>
     </div>

@@ -36,6 +36,7 @@ export default {
       combined: true,
       header: "Authorization",
       scheme: "bearer",
+      hooks: ["codebuddyHeaders"],
     },
     usage: {
       url: "https://www.workbuddy.ai/v2/billing/meter/get-user-resource",

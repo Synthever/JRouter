@@ -40,6 +40,17 @@ function applyAuth(headers, desc, credentials) {
 
 // Provider-specific header quirks kept as small hooks (not pure auth).
 const HEADER_HOOKS = {
+  // CodeBuddy's gateway runs a per-request channel check: a request without the
+  // official plugin's ids is rejected with code 11128 "request illegal". The
+  // plugin mints one request id and reuses it for the request/message pair,
+  // with a separate conversation id.
+  codebuddyHeaders: (h) => {
+    const requestId = randomUUID();
+    h["X-Request-ID"] = requestId;
+    h["X-Conversation-ID"] = randomUUID();
+    h["X-Conversation-Request-ID"] = requestId;
+    h["X-Conversation-Message-ID"] = requestId;
+  },
   // Stable device_id from OAuth connection (CLIProxyAPI KimiTokenStorage.DeviceID)
   kimiHeaders: (h, c) => Object.assign(h, buildKimiHeaders(c?.providerSpecificData?.deviceId)),
   // MiniMax Code (mcode): the placeholder x-api-key rides every request next

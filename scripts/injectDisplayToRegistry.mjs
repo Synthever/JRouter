@@ -13,7 +13,7 @@ const REGISTRY_DIR = path.join(ROOT, "open-sse/providers/registry");
 // ── 1. Build DISPLAY map từ providersDisplay.js (parse thủ công để không cần import) ──
 // Đọc file, eval trong sandbox đơn giản
 const displaySrc = fs.readFileSync(path.join(ROOT, "src/shared/constants/providersDisplay.js"), "utf8");
-const RISK_NOTICE = "⚠️ Risk Notice: This provider uses a subscription/OAuth session not officially licensed for proxy/router use. Account may be restricted or banned. Use at your own risk.";
+const RISK_NOTICE = "Risk Notice: This provider uses a subscription/OAuth session not officially licensed for proxy/router use. Account may be restricted or banned. Use at your own risk.";
 // strip export keywords + inject RISK_NOTICE as param so no redeclaration
 const displayBody = displaySrc
   .replace(/^export const /gm, "const ")

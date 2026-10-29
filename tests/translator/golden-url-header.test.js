@@ -24,6 +24,7 @@ const SPECIALIZED = new Set([
 ]);
 
 // Sanitize header: khử token + field thời gian động (kimi X-Msh-Device-Id) để snapshot ổn định.
+const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 function sanitize(headers) {
   const out = {};
   for (const [k, v] of Object.entries(headers)) {
@@ -31,6 +32,8 @@ function sanitize(headers) {
       ? v.replace(/Bearer .+/, "Bearer <TOK>")
           .replace(/sk-test-APIKEY|tok-test-ACCESS/g, "<CRED>")
           .replace(/kimi-\d{10,}/g, "kimi-<TS>")
+          // per-request ids (CodeBuddy channel check) are random per call
+          .replace(UUID_RE, "<UUID>")
       : v;
   }
   return out;

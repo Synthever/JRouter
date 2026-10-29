@@ -113,3 +113,54 @@ describe("providers dashboard layout contract", () => {
   });
 });
 
+describe("provider detail theme contract", () => {
+  const detailPath = `${providersPath}/[id]`;
+
+  it("renders the display intro, provider stats strip and themed panels", () => {
+    const detail = read(`${detailPath}/page.js`);
+    const stats = read(`${detailPath}/ProviderDetailStats.js`);
+    expect(detail).toContain("styles.detailIntro");
+    expect(detail).toContain("styles.panelHead");
+    expect(detail).toContain("<ProviderDetailStats");
+    expect(stats).toContain('aria-label="Provider summary"');
+    expect(stats).toContain(
+      'const LAYOUT_STORAGE_KEY = "jrouter.providers.detailStats.v1";',
+    );
+    expect(stats).toContain("rowHeight={168}");
+    expect(stats).toContain("narrowColumns={1}");
+    expect(stats).toContain('aria-label="Reset layout"');
+  });
+
+  it("scales the detail intro and panels like the endpoint surface", () => {
+    const css = read(`${providersPath}/providers.module.css`);
+    expect(css).toMatch(
+      /\.detailTitle\s*\{[^}]*font-size: clamp\(28px, 3\.4vw, 40px\);/s,
+    );
+    expect(css).toMatch(/\.panel\s*\{[^}]*padding: 28px;/s);
+    expect(css).toMatch(/\.panel\s*\{[^}]*border-radius: var\(--r4\);/s);
+    expect(css).toMatch(/\.panelTitle\s*\{[^}]*font-size: 18px;/s);
+    expect(css).toMatch(/\.panelDesc\s*\{[^}]*font-size: 14px;/s);
+    expect(css).toContain("@container");
+  });
+
+  it("gives connection and model rows the new-theme geometry", () => {
+    const row = read(`${detailPath}/ConnectionRow.js`);
+    const model = read(`${detailPath}/ModelRow.js`);
+    expect(row).toContain("styles.connRow");
+    expect(row).toContain("styles.connTile");
+    expect(row).toContain("styles.connActions");
+    expect(model).toContain("styles.modelChip");
+    expect(model).not.toMatch(/border-green-500|border-red-500/);
+  });
+
+  it("keeps the provider stats widgets adjustable like the other surfaces", () => {
+    const stats = read(`${detailPath}/ProviderDetailStats.js`);
+    expect(stats).toContain('from "@/shared/components/ui/bento-grid"');
+    expect(stats).toMatch(/id: "connections", title: "Connections", defaultSpan: 2/);
+    expect(stats).toMatch(/id: "models", title: "Models", defaultSpan: 2/);
+    expect(stats).toMatch(/id: "routing", title: "Routing", defaultSpan: 2/);
+    expect(stats).toContain("normalizeLayout(JSON.parse(saved), ITEMS)");
+    expect(stats).toContain("onLayoutCommit={saveLayout}");
+  });
+});
+

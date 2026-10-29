@@ -4,17 +4,263 @@
   gap: 16px;
   width: 100%;
   min-width: 0;
-  padding-bottom: 40px;
-  color: var(--text);
+  padding-bottom: 48px;
+  color: var(--text-2);
+  /* Matches the shell scroller padding (p-6 / lg:p-8) so the sticky toolbar
+     sits flush with the scrollport edge. */
+  --usage-stick-offset: 32px;
 }
 
-.header,
-.sectionHeader {
+.page :is(button, a, input, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* Page intro ------------------------------------------------------------ */
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.title {
+  color: var(--text);
+  font-size: clamp(28px, 3.4vw, 40px);
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  line-height: 1.1;
+}
+
+.sub {
+  color: var(--text-2);
+  font-size: 16px;
+  max-width: 60ch;
+}
+
+/* Sticky toolbar: view pills + period segments. */
+.toolbar {
+  position: sticky;
+  top: calc(-1 * var(--usage-stick-offset));
+  z-index: 30;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
+  padding: 12px 0;
+  background: var(--canvas);
+}
+
+.periodControl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.periods {
+  max-width: 100%;
+}
+
+.periods button {
+  font-family: inherit;
+}
+
+.periods span {
+  box-shadow: none;
+}
+
+/* Pill tabs ------------------------------------------------------------- */
+
+.pillTabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: var(--r-full);
+  background: var(--surface-2);
+}
+
+.pillTab {
+  height: 34px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--r-full);
+  background: transparent;
+  color: var(--text-3);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 150ms, color 150ms;
+}
+
+.pillTab:hover {
+  color: var(--text);
+}
+
+.pillTab[aria-pressed="true"] {
+  background: var(--canvas);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.pillTabsCompact .pillTab {
+  height: 30px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+
+/* Themed dropdown ------------------------------------------------------- */
+
+.menuControl {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.menuPill {
+  position: relative;
+  display: inline-flex;
+}
+
+.menuButton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r2);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 150ms, background-color 150ms;
+}
+
+.menuButton:hover {
+  border-color: var(--text-3);
+  background: var(--surface-2);
+}
+
+.menuPill .menuButton {
+  width: auto;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: var(--r-full);
+  font-size: 12px;
+}
+
+.menuValue {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menuList {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  z-index: 60;
+  max-height: 280px;
+  padding: 6px;
+  overflow-y: auto;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r2);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+}
+
+.menuPill .menuList {
+  right: auto;
+  width: 240px;
+  max-width: min(240px, calc(100vw - 32px));
+}
+
+.menuOption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menuOption:hover {
+  background: var(--surface-2);
+}
+
+.dimension {
+  width: 200px;
+  max-width: 100%;
+}
+
+.dimension .menuButton {
+  width: 100%;
+}
+
+/* Section panels -------------------------------------------------------- */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: var(--r4);
+  background: var(--canvas);
+  scroll-margin-top: 72px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.sectionHeader {
+  margin-bottom: 20px;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.sectionTitle small {
+  color: var(--text-3);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.sectionIcon {
+  flex: none;
+  font-size: 18px;
+  color: var(--text-2);
 }
 
 .description,
@@ -31,60 +277,13 @@
 .controls {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   min-width: 0;
 }
 
-.section {
-  min-width: 0;
-  padding: 20px;
-}
+/* Layout grids ---------------------------------------------------------- */
 
-/* Compact sizing for the shared Select used as the breakdown dimension control. */
-.dimension {
-  width: 200px;
-  max-width: 100%;
-}
-
-.dimension select {
-  min-height: 32px;
-  padding: 6px 32px 6px 10px;
-  border: 1px solid var(--line-2);
-  border-radius: var(--r1);
-  background: var(--surface-2);
-  color: var(--text);
-  font-size: 12px;
-}
-
-/* Matches the shared Input control so the provider filter sits flush with its siblings. */
-.filterSelect {
-  width: 100%;
-  min-width: 0;
-  min-height: 34px;
-  padding: 8px 12px;
-  border: 1px solid var(--line-2);
-  border-radius: var(--r1);
-  background: var(--surface-2);
-  color: var(--text);
-  font-size: 13px;
-}
-
-.filterSelect:focus-visible {
-  outline: 2px solid var(--text-2);
-  outline-offset: 2px;
-}
-
-@media (max-width: 639px) {
-  .filterSelect {
-    font-size: 16px;
-  }
-}
-
-.sectionHeader {
-  margin-bottom: 16px;
-}
-
-.gridMetrics,
 .gridSplit,
 .gridHalves {
   min-width: 0;
@@ -106,39 +305,21 @@
   grid-column: 1 / -1;
 }
 
-.metric {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 16px;
-}
+/* Summary skeleton ------------------------------------------------------ */
 
-.metricHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.metricValue {
+.statsSkeleton {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
   min-width: 0;
-  overflow: hidden;
-  color: var(--text);
-  font-family: var(--font-mono);
-  font-size: 24px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.metricMeta {
-  margin-top: 4px;
-  color: var(--text-3);
-  font-family: var(--font-mono);
-  font-size: 11px;
+.statSkeleton {
+  min-height: 200px;
+  border-radius: var(--r4);
 }
+
+/* Tables ---------------------------------------------------------------- */
 
 .tableWrap {
   min-width: 0;
@@ -166,6 +347,15 @@
 
 .recentRequestsTable {
   table-layout: fixed;
+}
+
+/* Keep the column labels visible while the request rows scroll under them. */
+.recentRequestsTable thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface-2);
+  box-shadow: inset 0 -1px 0 var(--line-2);
 }
 
 .recentRequestsTable th,
@@ -205,19 +395,20 @@
 }
 
 .table th {
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--line);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line-2);
+  background: var(--surface-2);
   color: var(--text-2);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 500;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
 .table td {
-  padding: 8px 12px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--line);
   color: var(--text);
 }
@@ -276,6 +467,8 @@
   text-align: center;
 }
 
+/* Insets and empty states ---------------------------------------------- */
+
 .inset {
   display: flex;
   flex-direction: column;
@@ -319,17 +512,107 @@
   height: 220px;
 }
 
-/* React Flow canvas matches the inset surface used by the Dashboard's empty states. */
+/* React Flow canvas inherits the panel background: no nested container. */
 .topology {
+  position: relative;
   overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: var(--r2);
-  background: var(--surface-inset);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.topology :global(.react-flow) {
+  background: transparent;
 }
 
 .topology :global(.react-flow__attribution) {
   display: none;
 }
+
+.topologyStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-full);
+  background: var(--canvas);
+  white-space: nowrap;
+}
+
+.topologyStatus strong {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.liveDot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-3);
+}
+
+.liveDotActive {
+  background: var(--pos);
+  animation: usage-live-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes usage-live-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--pos) 20%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 7px color-mix(in srgb, var(--pos) 4%, transparent);
+  }
+}
+
+.topologyCount {
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.topologyLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-top: 14px;
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legendDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.topologyEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--text-3);
+  font-size: 12px;
+  text-align: center;
+}
+
+.topologyEmpty strong {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Detail drawer blocks -------------------------------------------------- */
 
 .codeBlock {
   max-width: 100%;
@@ -422,11 +705,6 @@
   overflow-wrap: anywhere;
 }
 
-.page :is(button, a, input, select, [tabindex]):focus-visible {
-  outline: 2px solid var(--text-2);
-  outline-offset: 2px;
-}
-
 @media (min-width: 640px) {
   .detailGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -453,21 +731,87 @@
   }
 }
 
+@media (max-width: 1023px) {
+  .page {
+    --usage-stick-offset: 24px;
+  }
+}
+
 @media (max-width: 639px) {
-  /* Stack control rows full-width so segmented controls scroll instead of clipping. */
-  .controls {
-    width: 100%;
-    flex-wrap: wrap;
+  .page {
+    gap: 12px;
   }
 
+  .statsSkeleton {
+    grid-template-columns: 1fr;
+  }
+
+  .section {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .toolbar {
+    gap: 8px;
+  }
+
+  .toolbar > * {
+    width: 100%;
+  }
+
+  .periods {
+    flex: 1;
+    width: 100%;
+  }
+
+  .periods button {
+    flex: 1;
+    min-width: 0;
+    padding-inline: 7px;
+    min-height: 44px;
+  }
+
+  .pillTab {
+    min-height: 44px;
+  }
+
+  .pillTabs {
+    width: 100%;
+  }
+
+  .pillTab {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .controls,
   .controls > * {
-    flex: 1 1 100%;
+    width: 100%;
     max-width: 100%;
   }
 
-  .header > div:first-child,
-  .sectionHeader > div:first-child {
-    min-width: 0;
+  .dimension {
+    width: 100%;
+  }
+
+  .menuButton {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .menuPill .menuButton {
+    width: 100%;
+    font-size: 13px;
+  }
+
+  .menuPill {
+    display: flex;
+    width: 100%;
+  }
+
+  .menuPill .menuList {
+    width: 100%;
+    max-width: none;
   }
 }
 

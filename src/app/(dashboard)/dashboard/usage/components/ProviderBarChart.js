@@ -9,7 +9,8 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
-import { SegmentedControl } from "@/shared/components";
+import Icon from "@/shared/components/Icon";
+import PillTabs from "./PillTabs";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/shared/components/ui/chart";
 import styles from "../usage.module.css";
 import {
@@ -30,12 +31,17 @@ export default function ProviderBarChart({ byProvider }) {
 
   const chartData = useMemo(() => {
     if (!byProvider) return [];
-    return Object.entries(byProvider)
-      .map(([id, data]) => ({
-        name: id,
-        tokens: (data.promptTokens || 0) + (data.completionTokens || 0),
-        requests: data.requests || 0,
-      }))
+    // Group by the resolved label: byProvider is keyed by provider id, and a
+    // deleted custom node's id must never be the axis tick.
+    const grouped = new Map();
+    for (const [id, data] of Object.entries(byProvider)) {
+      const name = data?.label || id;
+      const entry = grouped.get(name) || { name, tokens: 0, requests: 0 };
+      entry.tokens += (data?.promptTokens || 0) + (data?.completionTokens || 0);
+      entry.requests += data?.requests || 0;
+      grouped.set(name, entry);
+    }
+    return [...grouped.values()]
       .filter((d) => d[viewMode] > 0)
         .sort((a, b) => b[viewMode] - a[viewMode])
         .map((row, index) => ({ ...row, fill: getBarColor(index) }));
@@ -46,15 +52,18 @@ export default function ProviderBarChart({ byProvider }) {
       const chartConfig = { [viewMode]: { label, color: "var(--text)" } };
 
   return (
-    <section className={`ui-card ${styles.section}`} aria-labelledby="usage-provider-heading">
+    <section className={`${styles.section}`} aria-labelledby="usage-provider-heading">
       <div className={styles.sectionHeader}>
-        <h2 id="usage-provider-heading" className="ui-eyebrow">By Provider</h2>
-        <SegmentedControl
+        <h2 id="usage-provider-heading" className={styles.sectionTitle}>
+          <Icon className={styles.sectionIcon}>bar_chart</Icon>
+          By provider
+        </h2>
+        <PillTabs
           options={VIEW_MODES}
           value={viewMode}
           onChange={setViewMode}
-          size="sm"
-          aria-label="Provider breakdown metric"
+          ariaLabel="Provider breakdown metric"
+          compact
         />
       </div>
 
