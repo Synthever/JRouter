@@ -174,6 +174,8 @@
 }
 
 .notice {
+  padding: 12px 14px;
+  border: 1px solid transparent;
   border-radius: var(--r2);
   font-size: 12px;
   line-height: 1.6;
@@ -360,6 +362,7 @@
 }
 
 .metricNote {
+  min-height: 2.9em;
   margin: 10px 0 0;
   font-size: 13px;
   font-weight: 500;
@@ -392,7 +395,7 @@
 
 .toolbar {
   position: sticky;
-  top: calc(-1 * 24px);
+  top: calc(-1 * var(--usage-stick-offset));
   z-index: 30;
   display: flex;
   align-items: center;
@@ -531,6 +534,7 @@
 .gridList {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-auto-rows: 1fr;
   gap: 12px;
   min-width: 0;
   margin: 0;
@@ -538,8 +542,14 @@
   list-style: none;
 }
 
+.gridList > li {
+  display: flex;
+  min-width: 0;
+}
+
 .toolCard {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 14px;
   height: 100%;
@@ -559,6 +569,10 @@
 .toolCard:focus-visible {
   outline: 2px solid var(--text);
   outline-offset: 2px;
+}
+
+.toolCardSkeleton {
+  min-height: 132px;
 }
 
 .toolHead {
@@ -597,10 +611,13 @@
 }
 
 .toolName {
+  overflow: hidden;
   color: var(--text);
   font-size: 14px;
   font-weight: 600;
   line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .toolDescription {
@@ -627,12 +644,13 @@
   align-items: center;
   height: 22px;
   padding: 0 8px;
+  border: 1px solid var(--line);
   border-radius: var(--r-full);
   background: var(--surface-2);
-  color: var(--text-3);
+  color: var(--text-2);
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -660,7 +678,7 @@
   line-height: 1.5;
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1279px) {
   .metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -695,7 +713,7 @@
   }
 
   .tab {
-    height: 40px;
+    height: 44px;
   }
 }
 

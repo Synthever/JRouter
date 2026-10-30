@@ -16,10 +16,10 @@ import styles from "./cli-tools.module.css";
 const ALL_STATUSES_URL = "/api/cli-tools/all-statuses";
 
 const METRICS = [
-  { key: "connected", tone: "toneTeal", label: "Connected", note: "routing through JRouter" },
-  { key: "needsSetup", tone: "toneOchre", label: "Needs setup", note: "installed, still pointing elsewhere" },
-  { key: "notInstalled", tone: "toneLavender", label: "Not installed", note: "not found on this machine" },
-  { key: "guide", tone: "tonePeach", label: "Guides", note: "manual setup, this app cannot write it" },
+  { key: "connected", tone: "toneTeal", note: "routing through JRouter" },
+  { key: "needsSetup", tone: "toneOchre", note: "installed, still pointing elsewhere" },
+  { key: "notInstalled", tone: "toneLavender", note: "not found on this machine" },
+  { key: "guide", tone: "tonePeach", note: "manual setup, this app cannot write it" },
 ];
 
 export default function CLIToolsPageClient() {
@@ -45,7 +45,7 @@ export default function CLIToolsPageClient() {
         const data = await res.json();
         if (mounted) setStatuses(data || {});
       } catch (error) {
-        console.log("Error fetching tool statuses:", error);
+        console.error("Error fetching tool statuses:", error);
         if (mounted) setStatusError(true);
       } finally {
         if (mounted) setLoading(false);
@@ -64,7 +64,8 @@ export default function CLIToolsPageClient() {
         .filter((group) => group.entries.length > 0),
     [groups, query, filter],
   );
-  const gateway = origin ? `${origin}/v1` : "";
+  const gateway = origin || "";
+  const gatewayUrl = gateway ? `${gateway}/v1` : "";
 
   return (
     <div className={styles.page}>
@@ -77,17 +78,20 @@ export default function CLIToolsPageClient() {
           </p>
         </div>
         <div className={styles.gateway}>
-          <span className={styles.gatewayValue} title={gateway}>{gateway || "—"}</span>
+          <span className={styles.gatewayValue} title={gatewayUrl}>{gateway || "—"}</span>
           <span className={styles.gatewayHint}>/v1</span>
           <button
             type="button"
             className={styles.gatewayCopy}
-            onClick={() => copy(gateway, "gateway")}
-            disabled={!gateway}
+            onClick={() => copy(gatewayUrl, "gateway")}
+            disabled={!gatewayUrl}
             aria-label="Copy gateway URL"
           >
             <Icon className="text-[16px]">{copied === "gateway" ? "check" : "content_copy"}</Icon>
           </button>
+          <span className="sr-only" aria-live="polite">
+            {copied === "gateway" ? "Gateway URL copied" : ""}
+          </span>
         </div>
       </header>
 
@@ -111,7 +115,6 @@ export default function CLIToolsPageClient() {
         <div className={styles.search}>
           <Icon className={styles.searchIcon} aria-hidden="true">search</Icon>
           <input
-            id="cli-tool-search"
             type="search"
             className={styles.searchInput}
             placeholder="Search tools…"
@@ -137,27 +140,28 @@ export default function CLIToolsPageClient() {
 
       {statusError ? (
         <div className={`${styles.notice} ${styles.warning}`}>
-          Tool statuses could not be read. Every card is listed below without a status.
+          Tool statuses could not be read. Every card is listed below as Unknown.
         </div>
       ) : null}
 
       {!loading && visibleGroups.length === 0 ? (
-        <div className={styles.empty}>
+        <div className={styles.empty} role="status">
           <p className={styles.emptyTitle}>No tools match</p>
           <p className={styles.emptyHint}>Try another search or clear the status filter.</p>
         </div>
       ) : null}
 
       {loading ? (
-        <section className={styles.section} aria-busy="true" aria-label="Loading CLI tools">
-          <ul className={styles.gridList}>
+        <section className={styles.section} aria-busy="true" role="status">
+          <span className="sr-only">Loading CLI tools</span>
+          <ul className={styles.gridList} role="list">
             {Array.from({ length: 6 }, (_, index) => (
               <li key={index}>
-                <div className={styles.toolCard}>
+                <div className={`${styles.toolCard} ${styles.toolCardSkeleton}`}>
                   <span className={styles.toolHead}>
                     <span className={styles.toolLogo} />
                     <span className={styles.toolIdentity}>
-                      <span className={styles.toolName}>Loading…</span>
+                      <span className={styles.toolName} aria-hidden="true">Loading…</span>
                     </span>
                   </span>
                 </div>
@@ -178,7 +182,7 @@ export default function CLIToolsPageClient() {
                 <p className={styles.sectionDescription}>{group.description}</p>
               </div>
             </div>
-            <ul className={styles.gridList}>
+            <ul className={styles.gridList} role="list">
               {group.entries.map((entry) => (
                 <li key={entry.id}>
                   <ToolCard tool={entry.tool} status={entry.status} href={entry.href} />
