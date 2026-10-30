@@ -75,6 +75,7 @@ export default function PlaygroundHistoryModal({ isOpen, onClose, sessions, acti
             className={`${styles.historyRow} ${session.id === activeId ? styles.historyRowActive : ""}`}
             onClick={() => onSelect(session.id)}
             onKeyDown={(event) => {
+              if (event.target !== event.currentTarget) return;
               if (event.key === "Enter" || event.key === " ") {
                 event.preventDefault();
                 onSelect(session.id);

@@ -179,4 +179,13 @@ describe("playground dialogs", () => {
     expect(source).toContain("renderPython");
     expect(source).toContain("onCopy");
   });
+
+  it("ignores row key presses that originate on a row action button", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundHistoryModal.js`);
+    // Enter/Space on the nested Duplicate/Delete buttons must not bubble into the row's
+    // select handler, or the page closes the dialog and neither action is keyboard-usable.
+    expect(source).toContain("if (event.target !== event.currentTarget) return;");
+    expect(source).toMatch(/onKeyDown=\{\(event\) => \{\s*if \(event\.target !== event\.currentTarget\) return;/);
+    expect(source).toContain("event.key === \"Enter\"");
+  });
 });
