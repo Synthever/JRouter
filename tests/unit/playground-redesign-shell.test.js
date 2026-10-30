@@ -215,3 +215,19 @@ describe("playground stylesheet", () => {
     expect(landscape).toContain("max-height: min(200px, 20dvh)");
   });
 });
+
+describe("playground dialogs and markdown", () => {
+  it("styles the history and export dialogs", () => {
+    const css = read(`${PLAYGROUND}/playground-dialogs.module.css`);
+    for (const name of ["historyDialog", "historyRow", "activeBadge", "exportTabs", "exportCode", "exportActions"]) {
+      expect(css).toContain(`.${name}`);
+    }
+    expect(css).toContain("width: min(660px");
+  });
+
+  it("keeps the assistant type scale", () => {
+    const css = read(`${PLAYGROUND}/playground-markdown.module.css`);
+    expect(css).toContain("font-size: 15px");
+    expect(css).toContain("border-radius: 14px");
+  });
+});
