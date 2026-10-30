@@ -59,6 +59,17 @@ describe("playground message row", () => {
     const source = read(`${PLAYGROUND}/PlaygroundMessage.js`);
     expect(source).toContain("isLast ?");
   });
+
+  it("gates the error-block retry to the last reply", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundMessage.js`);
+    // handleRetry truncates the session at the retried question, so an older errored
+    // reply must not offer Retry or it would silently drop every later turn.
+    const errorBlock = source.slice(source.indexOf('message.status === "error" ? ('));
+    const retryButton = errorBlock.indexOf("styles.retryButton");
+    expect(retryButton).toBeGreaterThan(-1);
+    expect(errorBlock.slice(0, retryButton)).toContain("{isLast ? (");
+    expect(errorBlock).toContain('role="alert"');
+  });
 });
 
 describe("playground message row review fixes", () => {

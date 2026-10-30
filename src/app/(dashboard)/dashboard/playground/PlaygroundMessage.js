@@ -115,10 +115,12 @@ export default function PlaygroundMessage({
         <div className={styles.error} role="alert">
           <p className={styles.errorHead}><Icon>error</Icon> Request failed</p>
           <p className={styles.errorBody}>{message.error || "Request failed."}</p>
-          <button type="button" className={styles.retryButton} onClick={() => onRetry(message.id)}>
-            <Icon>refresh</Icon>
-            Retry
-          </button>
+          {isLast ? (
+            <button type="button" className={styles.retryButton} onClick={() => onRetry(message.id)}>
+              <Icon>refresh</Icon>
+              Retry
+            </button>
+          ) : null}
         </div>
       ) : (
         <>
