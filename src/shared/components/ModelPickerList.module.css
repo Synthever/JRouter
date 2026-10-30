@@ -200,6 +200,12 @@
 .railBody {
   display: grid;
   grid-template-columns: 210px minmax(0, 1fr);
+  /* The panes own their scrolling. The row track must be bounded by this flex
+     item's block size: an auto grid track stretches to content, and then neither
+     .rail nor .rows has a height to scroll in (which is what pins the Playground
+     popover past its max-height). */
+  grid-template-rows: minmax(0, 1fr);
+  flex: 1;
   min-height: 0;
   margin-top: 12px;
   border-top: 1px solid var(--line);
@@ -209,6 +215,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-height: 0;
   overflow-y: auto;
   padding: 12px;
   border-right: 1px solid var(--line);
@@ -368,7 +375,12 @@
 }
 
 @container (max-width: 620px) {
-  .railBody { grid-template-columns: 1fr; }
+  .railBody {
+    grid-template-columns: 1fr;
+    /* Narrow layout stacks: the tab strip keeps its content height, the rows
+       pane takes the rest and scrolls. */
+    grid-template-rows: auto minmax(0, 1fr);
+  }
 
   .rail {
     flex-direction: row;

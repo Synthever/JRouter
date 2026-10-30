@@ -3,6 +3,14 @@ import { readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
 
+// Slice out a single CSS rule body so a contract is asserted against the rule that
+// owns it, not against any later rule that happens to repeat the same declaration.
+const rule = (css, selector) => {
+  const start = css.indexOf(`${selector} {`);
+  expect(start).toBeGreaterThan(-1);
+  return css.slice(start, css.indexOf("}", start));
+};
+
 describe("shared model picker rail variant", () => {
   it("is opt-in and keeps chips as the default", () => {
     const source = read("src/shared/components/ModelPickerList.js");
@@ -49,5 +57,45 @@ describe("shared model picker rail variant", () => {
     expect(source).toContain("onToggleFavorite ? (");
     expect(source).toContain("favorites = []");
     expect(source).toContain("onToggleFavorite(row.model.value)");
+  });
+
+  it("revalidates the parked tab against the computed entries", () => {
+    const source = read("src/shared/components/ModelPickerList.js");
+    // Favorites and Combos are conditional entries, so the parked key must be
+    // resolved against the entry list rather than against a hard-coded allow-list.
+    expect(source).toContain("entries.some((entry) => entry.key === railKey)");
+    expect(source).toContain("if (rail.activeKey !== railKey) setRailKey(rail.activeKey);");
+    expect(source).toContain("aria-selected={rail.activeKey === entry.key}");
+    // The old effect exempted the conditional tabs, which is exactly what let the
+    // rail stay parked on a tab that had already been removed from the rail.
+    expect(source).not.toContain('railKey === "favorites" || railKey === "combos"');
+    expect(source).not.toContain("shownGroups.some(([providerId]) => providerId === railKey)");
+  });
+
+  it("scrolls the keyboard cursor into view", () => {
+    const source = read("src/shared/components/ModelPickerList.js");
+    expect(source).toContain('[data-cursor="true"]');
+    expect(source).toContain('scrollIntoView({ block: "nearest" })');
+  });
+
+  it("keeps the keyboard cursor on a real row", () => {
+    const source = read("src/shared/components/ModelPickerList.js");
+    expect(source).toContain("Math.max(0, Math.min(rail.rows.length - 1, index + 1))");
+  });
+
+  it("counts providers, not rail tabs", () => {
+    const source = read("src/shared/components/ModelPickerList.js");
+    // Favorites and Combos are tabs without a providerId; they are not providers.
+    expect(source).toContain("entries.filter((entry) => entry.providerId).length");
+    expect(source).not.toContain("rail.entries.length - 1");
+  });
+
+  it("bounds the rail height so the panes scroll inside the popover", () => {
+    const css = read("src/shared/components/ModelPickerList.module.css");
+    expect(rule(css, ".railWrap")).toContain("min-height: 0");
+    expect(rule(css, ".railBody")).toContain("min-height: 0");
+    expect(rule(css, ".railBody")).toContain("flex: 1");
+    expect(rule(css, ".rail")).toContain("min-height: 0");
+    expect(css).toContain("@container (max-width: 620px)");
   });
 });

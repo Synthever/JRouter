@@ -34,13 +34,7 @@ export default function ModelPickerList({
   const [railKey, setRailKey] = useState("all");
   const [cursor, setCursor] = useState(0);
   const searchRef = useRef(null);
-
-  // Search can remove the provider the rail is parked on; fall back to All models.
-  useEffect(() => {
-    if (railKey === "all" || railKey === "favorites" || railKey === "combos") return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- one corrective write when a new search drops the parked provider
-    if (!shownGroups.some(([providerId]) => providerId === railKey)) setRailKey("all");
-  }, [railKey, shownGroups]);
+  const rowsRef = useRef(null);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- cursor must restart at the top whenever the query or tab changes
@@ -77,26 +71,52 @@ export default function ModelPickerList({
       entries.push({ key: providerId, name: group.name, count: count(providerId), providerId });
     }
 
-    const rows = railKey === "all"
+    // Favorites and Combos are conditional entries, so the parked key can stop
+    // existing under it (a new query filters it out, the last favourite is
+    // un-starred, combos disappear). Resolve it against the computed entries
+    // instead of a hard-coded key allow-list.
+    const activeKey = entries.some((entry) => entry.key === railKey) ? railKey : "all";
+    const rows = activeKey === "all"
       ? allRows
-      : railKey === "combos"
+      : activeKey === "combos"
         ? comboRows
-        : railKey === "favorites"
+        : activeKey === "favorites"
           ? allRows.filter((row) => favoritesSet.has(row.model.value))
-          : allRows.filter((row) => row.group.providerId === railKey);
+          : allRows.filter((row) => row.group.providerId === activeKey);
 
-    return { entries, rows, favoritesSet };
+    return {
+      entries,
+      rows,
+      favoritesSet,
+      activeKey,
+      // Favorites and Combos are tabs, not providers: only entries carrying a
+      // providerId count towards the "Providers (n)" heading.
+      providerCount: entries.filter((entry) => entry.providerId).length,
+    };
   }, [combos, shownGroups, favorites, railKey]);
+
+  // A tab can vanish (search filter, last favourite un-starred, combos gone).
+  // Adjust the parked key during render — React's "adjust state when a prop
+  // changes" pattern — so no committed paint ever shows a dead tab (nothing
+  // aria-selected, "Models (0)") and a vanished tab cannot pop back later.
+  if (rail.activeKey !== railKey) setRailKey(rail.activeKey);
+
+  // Keep the keyboard cursor visible: ArrowDown can walk the highlight below the
+  // fold, and Enter must never pick a row the user cannot see.
+  useEffect(() => {
+    const row = rowsRef.current?.querySelector('[data-cursor="true"]');
+    if (typeof row?.scrollIntoView === "function") row.scrollIntoView({ block: "nearest" });
+  }, [cursor]);
 
   if (variant === "rail") {
     const chosen = (value) => selectedModel === value || addedModelValues.includes(value);
     const selectRow = (row) => onSelect(row.model, row.group);
-    const activeEntry = rail.entries.find((entry) => entry.key === railKey);
+    const activeEntry = rail.entries.find((entry) => entry.key === rail.activeKey);
 
     const onKeyDown = (event) => {
       if (event.key === "ArrowDown") {
         event.preventDefault();
-        setCursor((index) => Math.min(rail.rows.length - 1, index + 1));
+        setCursor((index) => Math.max(0, Math.min(rail.rows.length - 1, index + 1)));
       } else if (event.key === "ArrowUp") {
         event.preventDefault();
         setCursor((index) => Math.max(0, index - 1));
@@ -128,13 +148,13 @@ export default function ModelPickerList({
 
         <div className={styles.railBody}>
           <div className={styles.rail} data-picker-rail role="tablist" aria-label="Providers">
-            <p className={styles.railHead}>Providers ({rail.entries.length - 1})</p>
+            <p className={styles.railHead}>Providers ({rail.providerCount})</p>
             {rail.entries.map((entry) => (
               <button
                 key={entry.key}
                 type="button"
                 role="tab"
-                aria-selected={railKey === entry.key}
+                aria-selected={rail.activeKey === entry.key}
                 className={styles.railItem}
                 onClick={() => setRailKey(entry.key)}
               >
@@ -147,7 +167,7 @@ export default function ModelPickerList({
             ))}
           </div>
 
-          <div className={styles.rows} role="listbox" aria-label="Models">
+          <div className={styles.rows} role="listbox" aria-label="Models" ref={rowsRef}>
             <p className={styles.rowsHead}>
               {activeEntry ? activeEntry.name : "Models"} ({rail.rows.length})
             </p>
