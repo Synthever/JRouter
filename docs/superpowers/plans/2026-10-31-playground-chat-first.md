@@ -5045,8 +5045,8 @@ export default function PlaygroundPageClient() {
   });
 
   // Follow-ups run only for the turn that just finished and produced text.
-  const finishTurn = useCallback(({ sessionId, assistantId, status, content, messages }) => {
-    if (status !== "done" || !content || !content.trim() || !settings.helper) return;
+  const finishTurn = useCallback(({ sessionId, assistantId, status, content, messages, stopped }) => {
+    if (stopped || status !== "done" || !content || !content.trim() || !settings.helper) return;
     // A turn can finish after the reader moved on; never start a helper call for it.
     if (sessionId !== activeIdRef.current) return;
     requestFollowUps(sessionId, assistantId, messages);
@@ -5154,7 +5154,8 @@ export default function PlaygroundPageClient() {
   }, [settingsOpen]);
 
   const messages = activeSession?.messages || [];
-  const lastId = messages[messages.length - 1]?.id;
+  const lastAssistant = [...messages].reverse().find((message) => message.role === "assistant");
+  const lastId = lastAssistant?.id;
   const canSend = !isStreaming && !!activeSession?.model && input.trim().length > 0;
 
   const handleSend = () => {
@@ -5170,7 +5171,7 @@ export default function PlaygroundPageClient() {
     setInput("");
     if (firstTurn) applyTitle(sessionId, localTitle(text));
     run({ sessionId, question: text, history: activeSession.messages, model: activeSession.model });
-    if (settings.helper) requestTitle(sessionId, text);
+    if (firstTurn && settings.helper) requestTitle(sessionId, text);
   };
 
   const handleFollowUp = (question) => {
