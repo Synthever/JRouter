@@ -124,3 +124,35 @@ describe("playground composer", () => {
     expect(popover).toContain("onToggleFavorite={onToggleFavorite}");
   });
 });
+
+describe("playground settings popover", () => {
+  it("carries the four template presets", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundSettingsPopover.js`);
+    for (const name of ["Default", "Senior dev", "JSON output", "Concise"]) {
+      expect(source).toContain(`"${name}"`);
+    }
+  });
+
+  it("exposes the sampling controls", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundSettingsPopover.js`);
+    expect(source).toContain("min=\"0\"");
+    expect(source).toContain("max=\"2\"");
+    expect(source).toContain("step=\"0.05\"");
+    for (const value of [1024, 2048, 4096, 8192]) {
+      expect(source).toContain(String(value));
+    }
+    expect(source).toContain("Top P");
+  });
+
+  it("labels the helper as billed extra calls", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundSettingsPopover.js`);
+    expect(source).toContain('role="switch"');
+    expect(source).toContain("Extra billed calls");
+  });
+
+  it("requires a second click to clear", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundSettingsPopover.js`);
+    expect(source).toContain("Click again to clear");
+    expect(source).toContain("clearArmed");
+  });
+});
