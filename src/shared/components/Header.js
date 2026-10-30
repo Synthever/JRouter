@@ -9,6 +9,7 @@ import ProviderIcon from "@/shared/components/ProviderIcon";
 import Icon from "@/shared/components/Icon";
 import HeaderMenu from "@/shared/components/HeaderMenu";
 import { useHeaderSearchStore } from "@/store/headerSearchStore";
+import { useHeaderTitleStore } from "@/store/headerTitleStore";
 import { OAUTH_PROVIDERS, APIKEY_PROVIDERS } from "@/shared/constants/config";
 import { MEDIA_PROVIDER_KINDS, AI_PROVIDERS } from "@/shared/constants/providers";
 import { getProviderIconSrc } from "@/shared/utils/providerIcon";
@@ -176,13 +177,20 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
   const bellRef = useRef(null);
   const searchInputRef = useRef(null);
   const contextualSearch = useHeaderSearchStore((s) => s.visible);
+  const storeCrumbs = useHeaderTitleStore((state) => state.crumbs);
   const notifications = useNotificationStore((s) => s.notifications);
   const removeNotification = useNotificationStore((s) => s.removeNotification);
 
   // Memoize page info to prevent unnecessary recalculations
   const pageInfo = useMemo(() => getPageInfo(pathname), [pathname]);
   const { title, icon, breadcrumbs } = pageInfo;
-  const crumbs = breadcrumbs.length > 0 ? breadcrumbs : title ? [{ label: title, icon }] : [];
+  const crumbs = storeCrumbs.length > 0
+    ? storeCrumbs
+    : breadcrumbs.length > 0
+      ? breadcrumbs
+      : title
+        ? [{ label: title, icon }]
+        : [];
 
   const navigateTo = useCallback((href) => {
     setSearchOpen(false);
