@@ -124,3 +124,22 @@ describe("static tables", () => {
     expect(TYPE_LABELS).toEqual({ env: "Env vars", custom: "Config file", guide: "Guide", mitm: "MITM" });
   });
 });
+
+import { CLI_TOOLS, MITM_TOOLS } from "@/shared/constants/cliTools";
+
+describe("catalog groups", () => {
+  it("declares a valid group on every CLI tool", () => {
+    const invalid = Object.entries(CLI_TOOLS)
+      .filter(([, tool]) => tool.group !== "cli" && tool.group !== "ide")
+      .map(([id]) => id);
+    expect(invalid).toEqual([]);
+  });
+
+  it("keeps the approved group counts", () => {
+    const cli = Object.values(CLI_TOOLS).filter((tool) => tool.group === "cli");
+    const ide = Object.values(CLI_TOOLS).filter((tool) => tool.group === "ide");
+    expect(cli).toHaveLength(20);
+    expect(ide).toHaveLength(6);
+    expect(Object.keys(MITM_TOOLS)).toHaveLength(2);
+  });
+});

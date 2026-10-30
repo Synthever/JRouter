@@ -86,6 +86,7 @@ export const CLI_TOOLS = {
     color: "#D97757",
     description: "Anthropic Claude Code CLI",
     configType: "env",
+    group: "cli",
     envVars: {
       baseUrl: "ANTHROPIC_BASE_URL",
       model: "ANTHROPIC_MODEL",
@@ -110,6 +111,7 @@ export const CLI_TOOLS = {
     color: "#FF6B35",
     description: "Open Claw AI Assistant",
     configType: "custom",
+    group: "cli",
   },
   codex: {
     id: "codex",
@@ -118,6 +120,7 @@ export const CLI_TOOLS = {
     color: "#10A37F",
     description: "OpenAI Codex CLI",
     configType: "custom",
+    group: "cli",
   },
   copilot: {
     id: "copilot",
@@ -126,6 +129,7 @@ export const CLI_TOOLS = {
     color: "#1F6FEB",
     description: "GitHub Copilot in VS Code via JRouter",
     configType: "guide",
+    group: "ide",
     docsUrl: "https://marketplace.visualstudio.com/items?itemName=hotrungnhan.9router-for-github-copilot",
     guideSteps: [
       {
@@ -154,6 +158,7 @@ export const CLI_TOOLS = {
     color: "#E87040",
     description: "OpenCode AI Terminal Assistant",
     configType: "custom",
+    group: "cli",
   },
   cowork: {
     id: "cowork",
@@ -162,6 +167,7 @@ export const CLI_TOOLS = {
     color: "#D97757",
     description: "Claude Desktop Cowork (third-party inference)",
     configType: "custom",
+    group: "cli",
   },
   hermes: {
     id: "hermes",
@@ -170,6 +176,7 @@ export const CLI_TOOLS = {
     color: "#8B5CF6",
     description: "Nous Research self-improving AI agent",
     configType: "custom",
+    group: "cli",
     // Model slots Hermes supports besides the default ("model:" block).
     // "default" is not listed — the card renders it as the main model picker.
     // Mirrors the "auxiliary" defaults in hermes_cli/config_defaults.py (Hermes 0.21.5):
@@ -202,6 +209,7 @@ export const CLI_TOOLS = {
     color: "#00D4FF",
     description: "Factory Droid AI Assistant",
     configType: "custom",
+    group: "cli",
   },
   cursor: {
     id: "cursor",
@@ -210,6 +218,7 @@ export const CLI_TOOLS = {
     color: "#000000",
     description: "Cursor AI Code Editor",
     configType: "guide",
+    group: "ide",
     requiresExternalUrl: true,
     notes: [
       { type: "warning", text: "Requires Cursor Pro account to use this feature." },
@@ -231,6 +240,7 @@ export const CLI_TOOLS = {
     color: "#5B9BD5",
     description: "Cline AI Coding Assistant",
     configType: "custom",
+    group: "ide",
   },
   kilo: {
     id: "kilo",
@@ -239,6 +249,7 @@ export const CLI_TOOLS = {
     color: "#FF6B6B",
     description: "Kilo Code AI Assistant",
     configType: "custom",
+    group: "ide",
   },
   roo: {
     id: "roo",
@@ -247,6 +258,7 @@ export const CLI_TOOLS = {
     color: "#FF6B6B",
     description: "Roo AI Assistant",
     configType: "guide",
+    group: "ide",
     guideSteps: [
       { step: 1, title: "Open Settings", desc: "Go to Roo Settings panel" },
       { step: 2, title: "Select Provider", desc: "Choose API Provider → Ollama" },
@@ -262,6 +274,7 @@ export const CLI_TOOLS = {
     color: "#7C3AED",
     description: "Continue AI Assistant",
     configType: "guide",
+    group: "ide",
     guideSteps: [
       { step: 1, title: "Open Config", desc: "Open Continue configuration file" },
       { step: 2, title: "API Key", type: "apiKeySelector" },
@@ -287,6 +300,7 @@ export const CLI_TOOLS = {
     description: "Sourcegraph Amp coding assistant CLI",
     docsUrl: "/docs?section=cli-tools&tool=amp",
     configType: "guide",
+    group: "cli",
     defaultCommand: "amp",
     modelAliases: ["g25p", "g25f", "cs45", "g54"],
     notes: [
@@ -318,6 +332,7 @@ amp --model "{{model}}"
     description: "Alibaba Qwen Code CLI — supports OpenAI, Anthropic & Gemini providers via JRouter",
     docsUrl: "https://qwenlm.github.io/qwen-code-docs/en/users/configuration/model-providers/",
     configType: "guide",
+    group: "cli",
     defaultCommand: "qwen",
     notes: [
       { type: "info", text: "Qwen Code supports multiple provider types (openai, anthropic, gemini) via modelProviders in settings.json. JRouter works as an OpenAI-compatible endpoint." },
@@ -367,6 +382,7 @@ amp --model "{{model}}"
     description: "DeepSeek Terminal Coding Agent (Rust TUI)",
     docsUrl: "https://github.com/DeepSeek-TUI/DeepSeek-TUI",
     configType: "custom",
+    group: "cli",
     defaultCommand: "deepseek",
     modelAliases: ["deepseek-v4-pro", "deepseek-v4-flash", "deepseek-chat", "deepseek-reasoner"],
     defaultModels: [
@@ -386,6 +402,7 @@ amp --model "{{model}}"
     color: "#FF6B35",
     description: "High-performance Rust-based coding agent harness",
     configType: "custom",
+    group: "cli",
     docsUrl: "https://github.com/1jehuang/jcode",
     notes: [
       {
@@ -415,6 +432,7 @@ amp --model "{{model}}"
     color: "#1DA1F2",
     description: "xAI Grok Build TUI coding agent",
     configType: "custom",
+    group: "cli",
     docsUrl: "https://x.ai/cli",
     defaultCommand: "grok",
     notes: [
@@ -439,6 +457,7 @@ amp --model "{{model}}"
     color: "#6366F1",
     description: "Cognition Devin CLI — local binary called by the Devin CLI provider via ACP/stdio",
     configType: "guide",
+    group: "cli",
     installUrl: "https://cli.devin.ai",
     notes: [
       { type: "info", text: "This is a local dependency, not a routed CLI. The Devin CLI provider spawns `devin acp --agent-type summarizer` and relays its output." },
@@ -466,6 +485,7 @@ devin --version`,
     description: "OpenDesign — claude.ai/design open-sourced! Agent-native design skills pack",
     docsUrl: "https://github.com/manalkaff/opendesign",
     configType: "guide",
+    group: "cli",
     notes: [
       { type: "info", text: "OpenDesign ships as a plugin/skills pack installed into Claude Code, Cursor, OpenAI Codex, Gemini CLI, or OpenCode. It inherits the host agent's model config, so once your host points at JRouter, /opendesign design sessions route through JRouter automatically — no extra env vars needed." },
       { type: "info", text: "Invoke with /opendesign <brief>. Covers decks, wireframes, interactive prototypes, design-system extraction, and brand systems, with a verifier subagent that checks output against the brief." },
@@ -504,6 +524,7 @@ gemini extensions install https://github.com/manalkaff/opendesign
     color: "#6366F1",
     description: "Pi coding agent — minimal, extensible agent harness (pi.dev)",
     configType: "custom",
+    group: "cli",
     docsUrl: "https://pi.dev",
     notes: [
       {
@@ -519,6 +540,7 @@ gemini extensions install https://github.com/manalkaff/opendesign
     color: "#EC4899",
     description: "Oh My Pi terminal AI agent with auto-discovery support",
     configType: "custom",
+    group: "cli",
     docsUrl: "https://github.com/can1357/oh-my-pi",
     notes: [
       {
@@ -534,6 +556,7 @@ gemini extensions install https://github.com/manalkaff/opendesign
     color: "#FB923C",
     description: "Charm Crush terminal AI coding agent",
     configType: "custom",
+    group: "cli",
     docsUrl: "https://github.com/charmbracelet/crush",
     notes: [
       {
@@ -549,6 +572,7 @@ gemini extensions install https://github.com/manalkaff/opendesign
     color: "#EAB308",
     description: "Antinomy HQ ForgeCode agent harness",
     configType: "custom",
+    group: "cli",
     docsUrl: "https://github.com/antinomyhq/forge",
     notes: [
       {
@@ -564,6 +588,7 @@ gemini extensions install https://github.com/manalkaff/opendesign
     color: "#EF4444",
     description: "Smelt terminal AI coding assistant",
     configType: "custom",
+    group: "cli",
     docsUrl: "https://github.com/leonardcser/smelt",
     notes: [
       {
@@ -579,6 +604,7 @@ gemini extensions install https://github.com/manalkaff/opendesign
     color: "#4F46E5",
     description: "CodeWhale terminal coding agent (successor to DeepSeek TUI)",
     configType: "custom",
+    group: "cli",
     docsUrl: "https://github.com/Hmbown/CodeWhale",
     notes: [
       {
