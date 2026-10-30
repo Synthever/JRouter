@@ -60,3 +60,34 @@ describe("playground message row", () => {
     expect(source).toContain("isLast ?");
   });
 });
+
+describe("playground message row review fixes", () => {
+  it("routes combos to the neutral tile instead of a provider logo", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundModelIcon.js`);
+    expect(source).toContain("!providerId || isCombo");
+    expect(source).toContain("<ProviderIcon");
+  });
+
+  it("renders the provider tag only when there is one", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundMessage.js`);
+    expect(source).toContain("message.isCombo || message.providerName ?");
+    expect(source).not.toContain('message.providerName || ""');
+  });
+
+  it("disables copy on a reply with nothing to copy", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundMessage.js`);
+    expect(source).toContain("disabled={!message.content && !message.reasoning}");
+    expect(source).toContain('{copied ? "Copied" : "Copy"}');
+  });
+
+  it("offers follow-ups only on a completed reply", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundMessage.js`);
+    expect(source).toContain('message.status === "done" && message.followUps?.length');
+  });
+
+  it("keys follow-up pills by question and position", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundMessage.js`);
+    expect(source).toContain("message.followUps.map((question, index)");
+    expect(source).toContain("key={`${question}-${index}`}");
+  });
+});

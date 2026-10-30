@@ -75,7 +75,9 @@ export default function PlaygroundMessage({
           />
         </span>
         <b className={styles.assistantName}>{message.modelName || "Assistant"}</b>
-        <span className={styles.assistantTag}>{message.isCombo ? "combo" : message.providerName || ""}</span>
+        {message.isCombo || message.providerName ? (
+          <span className={styles.assistantTag}>{message.isCombo ? "combo" : message.providerName}</span>
+        ) : null}
         <span className={styles.assistantStatus}>
           {isWaiting ? <span className={styles.dots} aria-hidden="true"><i /><i /><i /></span> : null}
           {status}
@@ -93,7 +95,12 @@ export default function PlaygroundMessage({
               <Icon>code</Icon>
               <span>{raw ? "Rendered" : "Raw"}</span>
             </button>
-            <button type="button" className={styles.actionButton} onClick={() => onCopy(message)}>
+            <button
+              type="button"
+              className={styles.actionButton}
+              onClick={() => onCopy(message)}
+              disabled={!message.content && !message.reasoning}
+            >
               <Icon>{copied ? "check" : "content_copy"}</Icon>
               <span>{copied ? "Copied" : "Copy"}</span>
             </button>
@@ -156,10 +163,15 @@ export default function PlaygroundMessage({
         </>
       )}
 
-      {isLast && !isStreaming && message.followUps?.length ? (
+      {isLast && !isStreaming && message.status === "done" && message.followUps?.length ? (
         <div className={styles.followUps}>
-          {message.followUps.map((question) => (
-            <button key={question} type="button" className={styles.followUp} onClick={() => onFollowUp(question)}>
+          {message.followUps.map((question, index) => (
+            <button
+              key={`${question}-${index}`}
+              type="button"
+              className={styles.followUp}
+              onClick={() => onFollowUp(question)}
+            >
               {question}
             </button>
           ))}

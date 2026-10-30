@@ -6,7 +6,7 @@ import ProviderIcon from "@/shared/components/ProviderIcon";
 import styles from "./playground.module.css";
 
 export default function PlaygroundModelIcon({ providerId, providerName, providerColor, isCombo, size = 18 }) {
-  if (!providerId) {
+  if (!providerId || isCombo) {
     return (
       <span className={styles.modelFallback} style={{ width: size, height: size }}>
         <Icon style={{ fontSize: Math.max(10, Math.round(size * 0.7)) }}>
