@@ -139,7 +139,7 @@ export default function CLIToolsPageClient() {
       </div>
 
       {statusError ? (
-        <div className={`${styles.notice} ${styles.warning}`}>
+        <div className={`${styles.notice} ${styles.noticeBanner} ${styles.warning}`}>
           Tool statuses could not be read. Every card is listed below as Unknown.
         </div>
       ) : null}
