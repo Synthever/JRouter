@@ -84,7 +84,7 @@ export default function PlaygroundHistoryModal({ isOpen, onClose, sessions, acti
           >
             <div className={styles.historyMetaWrap}>
               <b>
-                {session.title}
+                <span className={styles.historyTitle}>{session.title}</span>
                 {session.id === activeId ? <span className={styles.activeBadge}>Active</span> : null}
               </b>
               <div className={styles.historyMeta}>

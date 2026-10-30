@@ -117,18 +117,28 @@
 
 .historyMetaWrap { flex: 1; min-width: 0; }
 .historyMetaWrap b {
-  display: block;
-  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
   color: var(--text);
   font-size: 13.5px;
   font-weight: 600;
+}
+
+/* Row title truncates so the badge after it stays in view. Scoped to the row
+   because .historyTitle is also the dialog header block, which must wrap;
+   `flex` is reset because the header rule makes it a growing flex item. */
+.historyMetaWrap .historyTitle {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .activeBadge {
-  display: inline;
-  margin-left: 10px;
+  flex: none;
   padding: 1px 7px;
   border-radius: 6px;
   background: var(--text);
@@ -260,6 +270,7 @@
 .historyNew:focus-visible,
 .historyClose:focus-visible,
 .historyAction:focus-visible,
+.historyConfirm:focus-visible,
 .exportTabs button:focus-visible,
 .exportSecondary:focus-visible,
 .exportPrimary:focus-visible {
