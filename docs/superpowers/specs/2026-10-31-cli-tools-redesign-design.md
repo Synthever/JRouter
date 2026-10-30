@@ -135,7 +135,7 @@ Group assignment is stored on the constants as `group: "cli" | "ide"` on every `
 
 ### 6.5 Tool card
 
-Anatomy: 40px logo tile (or `tool.icon` in `tool.color`), name (14px/600, single line, ellipsis, `title` attribute), description (13px `--text-2`, two-line clamp), footer row with the config-type chip and the status badge. Type chips: `env` → `Env vars`, `custom` → `Config file`, `guide` → `Guide`, `mitm` → `MITM`. Badge variants: `Connected` success with dot, `Needs setup` warning with dot, `Not installed` default, `Guide` info, `Unknown` default without dot.
+Anatomy: 40px logo tile (or `tool.icon` in `tool.color`), name (14px/600, single line, ellipsis, `title` attribute), description (13px `--text-2`, two-line clamp), footer row with the config-type chip and the status badge. Type chips: `env` → `Env vars`, `custom` → `Config file`, `guide` → `Guide`, `mitm` → `MITM`. Badge variants: `Connected` success with dot, `Needs setup` warning with dot, `Not installed` default, `Guide` info, `Unknown` default without dot. MITM cards show the `MITM` type chip and no status badge — they are configured on the MITM page, so a status badge there would be noise.
 
 The whole card is one `<a>` with `height: 100%`, 16px padding, `--r3` radius and a hairline border; hover raises the border to `--line-2` and tints the background by 3% of `--text`. Focus ring: `outline: 2px solid var(--text)`, offset 2px.
 
@@ -157,7 +157,7 @@ One panel holds the whole form. It starts with a `FieldGroup` per logical block,
 
 ### 7.3 Action bar
 
-Rendered by each tool card so the handlers stay local. Layout: message slot (left, 13px, `--text-2`, success/warning tinted when it carries a result), then buttons right-aligned: `Manual config` (secondary, only where the card offers it today), `Reset` (secondary, only where the card offers it today), `Apply` (primary). `aria-busy` while applying. Below 640px the bar stacks: message above a full-width button row with 44px targets. The bar is the last child of `.page`; `.page` keeps `padding-bottom: 40px` so the bar never covers the final field.
+Rendered by each tool card, as the last child of `.panel`, so the handlers stay local. `.panel` drops its `overflow: hidden` (it is not a scroll container) so the bar can stick. Layout: message slot (left, 13px, `--text-2`, success/warning tinted when it carries a result), then buttons right-aligned: `Manual config` (secondary, only where the card offers it today), `Reset` (secondary, only where the card offers it today), `Apply` (primary). `aria-busy` while applying. Below 640px the bar stacks: message above a full-width button row with 44px targets. Bar geometry: `position: sticky; bottom: 0`, padding `12px 0`, `background: var(--canvas)`, `border-top: 1px solid var(--line)`, negative inline margins of `-24px` with `padding-inline: 24px` so the hairline spans the panel width. `.page` keeps `padding-bottom: 40px` so the bar never covers the final field.
 
 ## 8. Field System
 
