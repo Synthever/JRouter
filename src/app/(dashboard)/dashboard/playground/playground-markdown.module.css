@@ -25,7 +25,7 @@
   color: var(--text-2);
 }
 
-.rule { height: 1px; margin: 16px 0; border: 0; background: var(--line); }
+.rule { height: 1px; margin: 16px 0; border: 0; background: var(--line-2); }
 
 .inlineCode {
   padding: 1px 6px;
@@ -58,11 +58,14 @@
 }
 
 .codeLang {
+  overflow: hidden;
   color: color-mix(in srgb, var(--brand-mint) 75%, var(--on-teal));
   font-family: ui-monospace, Menlo, Consolas, monospace;
   font-size: 10.5px;
   letter-spacing: 0.08em;
+  text-overflow: ellipsis;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .copyButton {
@@ -70,6 +73,7 @@
   align-items: center;
   gap: 6px;
   height: 26px;
+  margin-left: auto;
   padding: 0 8px;
   border: 0;
   border-radius: 7px;
@@ -80,6 +84,12 @@
 }
 
 .copyButton:hover { background: var(--color-brand-800); }
+
+.copyButton:focus-visible {
+  outline: 2px solid var(--brand-mint);
+  outline-offset: 2px;
+}
+
 .copyButton[data-copied="true"] { color: color-mix(in srgb, var(--pos) 35%, var(--brand-mint)); }
 
 .codeBody {

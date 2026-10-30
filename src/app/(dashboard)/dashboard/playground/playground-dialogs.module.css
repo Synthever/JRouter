@@ -112,15 +112,12 @@
   cursor: pointer;
 }
 
-.historyRow:hover { background: var(--surface-card); }
+.historyRow:hover { background: var(--surface-strong); }
 .historyRowActive { background: var(--surface-card); border-color: var(--line-2); }
 
 .historyMetaWrap { flex: 1; min-width: 0; }
 .historyMetaWrap b {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
+  display: block;
   overflow: hidden;
   color: var(--text);
   font-size: 13.5px;
@@ -130,7 +127,8 @@
 }
 
 .activeBadge {
-  flex: none;
+  display: inline;
+  margin-left: 10px;
   padding: 1px 7px;
   border-radius: 6px;
   background: var(--text);
@@ -257,6 +255,17 @@
 
 .exportSecondary { border: 1px solid var(--line-2); background: var(--surface); color: var(--text); }
 .exportPrimary { border: 0; background: var(--text); color: var(--surface); }
+
+.historyRow:focus-visible,
+.historyNew:focus-visible,
+.historyClose:focus-visible,
+.historyAction:focus-visible,
+.exportTabs button:focus-visible,
+.exportSecondary:focus-visible,
+.exportPrimary:focus-visible {
+  outline: 2px solid var(--text-2);
+  outline-offset: 2px;
+}
 
 @media (max-width: 639px) {
   .historyHead { flex-wrap: wrap; }
