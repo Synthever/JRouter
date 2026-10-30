@@ -31,3 +31,32 @@ describe("playground transcript shell", () => {
     expect(source).toContain("onScroll");
   });
 });
+
+describe("playground message row", () => {
+  it("keeps the template message anatomy", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundMessage.js`);
+    expect(source).toContain("YOU");
+    expect(source).toContain("Thought for");
+    expect(source).toContain("Retry");
+    expect(source).toContain("Rendered");
+    expect(source).toContain("Raw");
+    expect(source).toContain("Delete reply");
+  });
+
+  it("renders user bubbles on the right and dividers between turns", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundMessage.js`);
+    expect(source).toContain("rowUser");
+    expect(source).toContain("divider");
+  });
+
+  it("keeps the real metric line", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundMessage.js`);
+    expect(source).toContain("buildMetaParts");
+    expect(source).toContain("metaSep");
+  });
+
+  it("only offers retry on the last reply", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundMessage.js`);
+    expect(source).toContain("isLast ?");
+  });
+});
