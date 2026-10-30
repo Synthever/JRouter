@@ -13,6 +13,8 @@ import {
   ClineToolCard, KiloToolCard, DeepSeekTuiToolCard,
   JcodeToolCard, GrokBuildToolCard, GenericCliToolCard,
 } from "../components";
+import CliToolHeader from "../components/ui/CliToolHeader";
+import { statusOf } from "../components/cliToolGroups";
 
 const CLOUD_URL = process.env.NEXT_PUBLIC_CLOUD_URL;
 
@@ -27,6 +29,21 @@ export default function ToolDetailClient({ toolId, machineId }) {
   const [tailscaleEnabled, setTailscaleEnabled] = useState(false);
   const [tailscaleUrl, setTailscaleUrl] = useState("");
   const [apiKeys, setApiKeys] = useState([]);
+  const [toolStatus, setToolStatus] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch(`/api/cli-tools/${toolId}-settings`);
+        const data = res.ok ? await res.json() : null;
+        if (active) setToolStatus(data);
+      } catch {
+        if (active) setToolStatus(null);
+      }
+    })();
+    return () => { active = false; };
+  }, [toolId]);
 
   useEffect(() => {
     let mounted = true;
@@ -133,8 +150,6 @@ export default function ToolDetailClient({ toolId, machineId }) {
     const hasActiveProviders = availableModels.length > 0;
     const commonProps = {
       tool,
-      isExpanded: true,
-      onToggle: () => {},
       baseUrl: getBaseUrl(),
       apiKeys,
       tunnelEnabled,
@@ -188,7 +203,10 @@ export default function ToolDetailClient({ toolId, machineId }) {
           <Icon className="text-[18px]">arrow_back</Icon>
           Back to CLI Tools
         </Link>
-        <p className={styles.description}>Tool not found or disabled.</p>
+        <div className={styles.empty}>
+          <p className={styles.emptyTitle}>Tool not found or disabled</p>
+          <p className={styles.emptyHint}>Pick another tool from the CLI Tools page.</p>
+        </div>
       </div>
     );
   }
@@ -199,13 +217,16 @@ export default function ToolDetailClient({ toolId, machineId }) {
         <Icon className="text-[18px]">arrow_back</Icon>
         Back to CLI Tools
       </Link>
-      <div className={styles.detailHeader}>
-        <h1 className={styles.title}>{tool.name}</h1>
-        <p className={styles.description}>{tool.description}</p>
-      </div>
-      <div className={styles.configuration}>
-        {loading ? <CardSkeleton /> : renderToolCard()}
-      </div>
+      {loading ? (
+        <CardSkeleton />
+      ) : (
+        <>
+          <CliToolHeader tool={tool} status={statusOf(tool, toolStatus)} baseUrl={getBaseUrl()} />
+          <section className={`${styles.panel} ${styles.configuration}`}>
+            {renderToolCard()}
+          </section>
+        </>
+      )}
     </div>
   );
 }

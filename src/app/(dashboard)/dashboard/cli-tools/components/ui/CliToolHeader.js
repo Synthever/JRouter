@@ -15,7 +15,7 @@ export default function CliToolHeader({ tool, status, baseUrl }) {
   // say so instead of handing over a URL this app can never reach.
   const needsExternal =
     Boolean(tool.requiresExternalUrl) &&
-    /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|$)/i.test(baseUrl || "");
+    /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?(?:\/|$)/i.test(baseUrl || "");
   return (
     <header className={styles.detailHeader}>
       <div className={styles.detailIdentity}>
