@@ -14,7 +14,7 @@ const cliTools = {
   claude: { name: "Claude Code", description: "Anthropic Claude Code CLI", configType: "env", group: "cli" },
   codex: { name: "OpenAI Codex CLI", description: "OpenAI Codex CLI", configType: "custom", group: "cli" },
   droid: { name: "Factory Droid", description: "Factory Droid AI Assistant", configType: "custom", group: "cli" },
-  gem: { name: "Gemini Helper", description: "Lightweight assistant", configType: "custom", group: "cli" },
+  gem: { name: "Orchid Helper", description: "Lightweight assistant", configType: "custom", group: "cli" },
   copilot: { name: "GitHub Copilot", description: "Copilot in VS Code", configType: "guide", group: "ide" },
   cursor: { name: "Cursor", description: "Cursor AI editor", configType: "guide", group: "ide" },
 };
