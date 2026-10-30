@@ -189,3 +189,29 @@ describe("playground dialogs", () => {
     expect(source).toContain("event.key === \"Enter\"");
   });
 });
+
+describe("playground stylesheet", () => {
+  it("uses the template radius and tokens", () => {
+    const css = read(`${PLAYGROUND}/playground.module.css`);
+    expect(css).toContain("border-radius: var(--r4)");
+    expect(css).toContain("var(--brand-lavender)");
+    expect(css).toContain("var(--surface-card)");
+  });
+
+  it("drops the old toolbar layout", () => {
+    const css = read(`${PLAYGROUND}/playground.module.css`);
+    expect(css).not.toContain(".toolbar");
+    expect(css).not.toContain(".modelTrigger");
+  });
+
+  it("keeps the composer flat and the mobile caps", () => {
+    const css = read(`${PLAYGROUND}/playground.module.css`);
+    expect(css).not.toContain(".composerWrap::before");
+    const composer = css.slice(css.indexOf(".composer {"), css.indexOf(".composer:focus-within"));
+    expect(composer).not.toContain("box-shadow");
+    const mobile = css.slice(css.lastIndexOf("@media (max-width: 639px)"));
+    expect(mobile).toContain("max-height: min(200px, 25dvh)");
+    const landscape = css.slice(css.indexOf("@media (max-width: 1023px) and (max-height: 500px)"));
+    expect(landscape).toContain("max-height: min(200px, 20dvh)");
+  });
+});
