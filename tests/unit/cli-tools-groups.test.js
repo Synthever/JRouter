@@ -14,6 +14,7 @@ const cliTools = {
   claude: { name: "Claude Code", description: "Anthropic Claude Code CLI", configType: "env", group: "cli" },
   codex: { name: "OpenAI Codex CLI", description: "OpenAI Codex CLI", configType: "custom", group: "cli" },
   droid: { name: "Factory Droid", description: "Factory Droid AI Assistant", configType: "custom", group: "cli" },
+  gem: { name: "Gemini Helper", description: "Lightweight assistant", configType: "custom", group: "cli" },
   copilot: { name: "GitHub Copilot", description: "Copilot in VS Code", configType: "guide", group: "ide" },
   cursor: { name: "Cursor", description: "Cursor AI editor", configType: "guide", group: "ide" },
 };
@@ -56,6 +57,7 @@ describe("statusOf", () => {
 
   it("reports unknown when no status was returned", () => {
     expect(statusOf(cliTools.claude, null).key).toBe("unknown");
+    expect(statusOf(cliTools.claude, { error: "getaddrinfo ENOTFOUND" }).key).toBe("unknown");
   });
 });
 
@@ -66,7 +68,17 @@ describe("countStatuses", () => {
       needsSetup: 1,
       notInstalled: 1,
       guide: 2,
-      unknown: 0,
+      unknown: 1,
+    });
+  });
+
+  it("treats every tool as unknown when no status payload was fetched at all", () => {
+    expect(countStatuses(cliTools, undefined)).toEqual({
+      connected: 0,
+      needsSetup: 0,
+      notInstalled: 0,
+      guide: 2,
+      unknown: 4,
     });
   });
 });
@@ -80,13 +92,17 @@ describe("filterEntries", () => {
     expect(filterEntries(entries, { query: "codex", status: "all" }).map((e) => e.id)).toEqual(["codex"]);
   });
 
+  it("isolates the id match from the name and description", () => {
+    expect(filterEntries(entries, { query: "gem", status: "all" }).map((e) => e.id)).toEqual(["gem"]);
+  });
+
   it("keeps only entries whose status key matches the filter", () => {
     expect(filterEntries(entries, { query: "", status: "needs-setup" }).map((e) => e.id)).toEqual(["codex"]);
     expect(filterEntries(entries, { query: "", status: "guide" }).map((e) => e.id)).toEqual(["copilot", "cursor"]);
   });
 
   it("treats a blank query and the all filter as no-op", () => {
-    expect(filterEntries(entries, { query: "   ", status: "all" })).toHaveLength(5);
+    expect(filterEntries(entries, { query: "   ", status: "all" })).toHaveLength(6);
   });
 });
 
@@ -94,7 +110,7 @@ describe("groupTools", () => {
   it("returns the three groups in fixed order with membership resolved", () => {
     const groups = groupTools(cliTools, mitmTools, statuses);
     expect(groups.map((g) => g.key)).toEqual(["cli", "ide", "mitm"]);
-    expect(groups[0].entries.map((e) => e.id)).toEqual(["claude", "codex", "droid"]);
+    expect(groups[0].entries.map((e) => e.id)).toEqual(["claude", "codex", "droid", "gem"]);
     expect(groups[1].entries.map((e) => e.id)).toEqual(["copilot", "cursor"]);
     expect(groups[2].entries.map((e) => e.id)).toEqual(["antigravity"]);
   });

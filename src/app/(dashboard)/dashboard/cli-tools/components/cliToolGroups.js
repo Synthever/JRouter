@@ -42,7 +42,6 @@ const COUNT_KEYS = {
   "needs-setup": "needsSetup",
   "not-installed": "notInstalled",
   guide: "guide",
-  mitm: "unknown",
   unknown: "unknown",
 };
 
@@ -54,7 +53,7 @@ export function statusOf(tool, status) {
   if (tool?.configType === "mitm") {
     return { key: "mitm", label: "MITM", variant: "default", dot: false };
   }
-  if (!status) {
+  if (!status || status.error) {
     return { key: "unknown", label: "Unknown", variant: "default", dot: false };
   }
   if (status.installed === false) {
@@ -70,7 +69,9 @@ export function statusOf(tool, status) {
 export function countStatuses(tools, statuses) {
   const counts = { connected: 0, needsSetup: 0, notInstalled: 0, guide: 0, unknown: 0 };
   for (const [id, tool] of Object.entries(tools || {})) {
-    counts[COUNT_KEYS[statusOf(tool, statuses?.[id]).key]] += 1;
+    const info = statusOf(tool, statuses?.[id]);
+    if (info.key === "mitm") continue;
+    counts[COUNT_KEYS[info.key]] += 1;
   }
   return counts;
 }

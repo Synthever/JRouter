@@ -4,6 +4,7 @@ const variants = {
   success: "badge-success",
   warning: "badge-warning",
   error: "badge-danger",
+  info: "badge-info",
   default: "badge-neutral",
 };
 
