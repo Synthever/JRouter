@@ -91,3 +91,36 @@ describe("playground message row review fixes", () => {
     expect(source).toContain("key={`${question}-${index}`}");
   });
 });
+
+describe("playground composer", () => {
+  it("hosts the model trigger and toggles in the composer", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundComposer.js`);
+    expect(source).toContain("data-model-trigger");
+    expect(source).toContain("History");
+    expect(source).toContain("Think");
+    expect(source).toContain("aria-pressed={think}");
+    expect(source).toContain("aria-expanded={settingsOpen}");
+  });
+
+  it("implements the six slash commands", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundComposer.js`);
+    for (const key of ["/new", "/clear", "/history", "/model", "/settings", "/export"]) {
+      expect(source).toContain(`key: "${key}"`);
+    }
+    expect(source).toContain("ArrowDown");
+    expect(source).toContain("ArrowUp");
+  });
+
+  it("keeps Enter to send and Shift+Enter for a newline", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundComposer.js`);
+    expect(source).toContain("!event.shiftKey");
+    expect(source).toContain("isComposing");
+  });
+
+  it("uses the shared rail picker", () => {
+    const popover = read(`${PLAYGROUND}/ModelPickerPopover.js`);
+    expect(popover).toContain('variant="rail"');
+    expect(popover).toContain("favorites={favorites}");
+    expect(popover).toContain("onToggleFavorite={onToggleFavorite}");
+  });
+});

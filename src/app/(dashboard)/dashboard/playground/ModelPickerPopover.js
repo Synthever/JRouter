@@ -2,13 +2,12 @@
 
 import PropTypes from "prop-types";
 import { useEffect, useLayoutEffect, useRef } from "react";
-import { useModelCatalog } from "@/shared/hooks/useModelCatalog";
 import ModelPickerList from "@/shared/components/ModelPickerList";
+import { useModelCatalog } from "@/shared/hooks/useModelCatalog";
 import styles from "./ModelPickerPopover.module.css";
 
-// Anchored model picker for the Playground toolbar. It is the exact catalog the
-// Modal-based "Add Model to Combo" picker uses (same hook, same list), just rendered
-// as a popover next to the trigger instead of a centered dialog.
+// Anchored above the composer trigger. The catalog is the same hook the Combos
+// dialogs use, so rail counts, aliases and custom models cannot drift.
 export default function ModelPickerPopover({
   isOpen,
   onClose,
@@ -16,7 +15,8 @@ export default function ModelPickerPopover({
   selectedModel,
   activeProviders = [],
   modelAliases = {},
-  role = "dialog",
+  favorites = [],
+  onToggleFavorite,
 }) {
   const ref = useRef(null);
   const { visibleGroups, filteredCombos, searchQuery, setSearchQuery } = useModelCatalog({
@@ -28,9 +28,9 @@ export default function ModelPickerPopover({
   useLayoutEffect(() => {
     if (!isOpen) return undefined;
     const popover = ref.current;
+    if (!popover) return undefined;
     const updateHeight = () => {
-      const top = popover.offsetParent.getBoundingClientRect().top + popover.offsetTop;
-      popover.style.setProperty("--picker-max-height", `${Math.max(0, window.innerHeight - top - 12)}px`);
+      popover.style.setProperty("--picker-max-height", `${Math.max(240, window.innerHeight - 260)}px`);
     };
     updateHeight();
     window.addEventListener("resize", updateHeight);
@@ -75,11 +75,10 @@ export default function ModelPickerPopover({
     });
   };
 
-  const providerCount = Object.keys(visibleGroups).length;
-
   return (
-    <div ref={ref} className={styles.popover} role={role} aria-label="Select a model">
+    <div ref={ref} className={styles.popover} role="dialog" aria-label="Select a model">
       <ModelPickerList
+        variant="rail"
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         combos={filteredCombos}
@@ -88,16 +87,9 @@ export default function ModelPickerPopover({
         onSelect={handleSelect}
         autoFocusSearch
         emptyLabel="No model matches that search"
+        favorites={favorites}
+        onToggleFavorite={onToggleFavorite}
       />
-
-      <p className={styles.footer}>
-        <span className={styles.footerText}>
-          {providerCount > 0
-            ? `${providerCount} provider${providerCount === 1 ? "" : "s"} connected`
-            : "No providers connected"}
-        </span>
-        <span className={styles.footerHint}>Esc</span>
-      </p>
     </div>
   );
 }
@@ -106,11 +98,9 @@ ModelPickerPopover.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   onSelect: PropTypes.func.isRequired,
-  selectedModel: PropTypes.shape({
-    value: PropTypes.string,
-    providerId: PropTypes.string,
-  }),
+  selectedModel: PropTypes.string,
   activeProviders: PropTypes.array,
   modelAliases: PropTypes.object,
-  role: PropTypes.string,
+  favorites: PropTypes.arrayOf(PropTypes.string),
+  onToggleFavorite: PropTypes.func,
 };
