@@ -75,3 +75,26 @@ describe("playground turn engine", () => {
     expect(source).toContain("onPatch(sessionId");
   });
 });
+
+describe("playground AI helper", () => {
+  it("uses non-streaming calls with tight token budgets", () => {
+    const source = read(`${PLAYGROUND}/usePlaygroundHints.js`);
+    expect(source).toContain("stream: false");
+    expect(source).toContain("24");
+    expect(source).toContain("160");
+    expect(source).toContain("/api/v1/chat/completions");
+  });
+
+  it("parses instead of trusting the model", () => {
+    const source = read(`${PLAYGROUND}/usePlaygroundHints.js`);
+    expect(source).toContain("sanitizeTitle");
+    expect(source).toContain("parseFollowUps");
+  });
+
+  it("is abortable and silent on failure", () => {
+    const source = read(`${PLAYGROUND}/usePlaygroundHints.js`);
+    expect(source).toContain("AbortController");
+    expect(source).toContain("cancelAll");
+    expect(source).toContain('error?.name !== "AbortError"');
+  });
+});
