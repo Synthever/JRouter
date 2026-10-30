@@ -21,7 +21,7 @@ const ensureV1 = (url) => {
 
 export default function CoworkToolCard({
   tool,
-  isExpanded,
+  isExpanded = true,
   onToggle,
   baseUrl,
   apiKeys,

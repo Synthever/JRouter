@@ -31,7 +31,7 @@ const CONTEXT_OPTIONS = [
 
 export default function ClaudeToolCard({
   tool,
-  isExpanded,
+  isExpanded = true,
   onToggle,
   activeProviders,
   modelMappings,

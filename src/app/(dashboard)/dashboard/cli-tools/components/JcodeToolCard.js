@@ -13,7 +13,7 @@ import { matchKnownEndpoint } from "./cliEndpointMatch";
 
 export default function JcodeToolCard({
   tool,
-  isExpanded,
+  isExpanded = true,
   onToggle,
   baseUrl,
   hasActiveProviders,

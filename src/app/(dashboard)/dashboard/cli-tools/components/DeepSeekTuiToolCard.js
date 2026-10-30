@@ -15,7 +15,7 @@ const ENDPOINT = "/api/cli-tools/deepseek-tui-settings";
 
 export default function DeepSeekTuiToolCard({
   tool,
-  isExpanded,
+  isExpanded = true,
   onToggle,
   baseUrl,
   hasActiveProviders,

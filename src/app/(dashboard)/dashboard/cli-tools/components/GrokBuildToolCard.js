@@ -65,7 +65,7 @@ function ModelField({ label, value, placeholder, onChange, onSelect, disabled, h
 
 export default function GrokBuildToolCard({
   tool,
-  isExpanded,
+  isExpanded = true,
   onToggle,
   hasActiveProviders,
   apiKeys,

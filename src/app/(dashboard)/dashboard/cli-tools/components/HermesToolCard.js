@@ -17,7 +17,7 @@ const HERMES_ROLES = CLI_TOOLS.hermes?.roles || [];
 
 export default function HermesToolCard({
   tool,
-  isExpanded,
+  isExpanded = true,
   onToggle,
   baseUrl,
   hasActiveProviders,

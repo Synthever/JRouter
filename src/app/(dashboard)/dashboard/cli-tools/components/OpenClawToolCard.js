@@ -13,7 +13,7 @@ import { matchKnownEndpoint } from "./cliEndpointMatch";
 
 export default function OpenClawToolCard({
   tool,
-  isExpanded,
+  isExpanded = true,
   onToggle,
   baseUrl,
   hasActiveProviders,

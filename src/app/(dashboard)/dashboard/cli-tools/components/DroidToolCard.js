@@ -15,7 +15,7 @@ const CLOUD_URL = process.env.NEXT_PUBLIC_CLOUD_URL;
 
 export default function DroidToolCard({
   tool,
-  isExpanded,
+  isExpanded = true,
   onToggle,
   baseUrl,
   hasActiveProviders,
