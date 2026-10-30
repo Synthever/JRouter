@@ -3872,6 +3872,7 @@ Replace the entire contents of `src/app/(dashboard)/dashboard/playground/playgro
 }
 
 .actionButton:hover { background: var(--surface-strong); color: var(--text); }
+.actionButton:disabled { opacity: 0.45; cursor: not-allowed; }
 .actionButton svg { font-size: 15px; }
 
 .thinking { margin-top: 12px; }
