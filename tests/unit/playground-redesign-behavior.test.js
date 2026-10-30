@@ -57,6 +57,18 @@ describe("playground turn engine", () => {
     expect(source).toContain("abortRef.current?.abort()");
   });
 
+  it("carries the stopped flag through to onFinish", () => {
+    const source = read(`${PLAYGROUND}/usePlaygroundChat.js`);
+    expect(source).toContain("onFinish?.({");
+    expect(source).toContain("stopped: extra.stopped === true");
+  });
+
+  it("treats a zero-millisecond first token as measured", () => {
+    const source = read(`${PLAYGROUND}/usePlaygroundChat.js`);
+    expect(source).toContain("firstTokenMs == null");
+    expect(source).not.toContain("if (!firstTokenMs)");
+  });
+
   it("pushes every update through the page callbacks", () => {
     const source = read(`${PLAYGROUND}/usePlaygroundChat.js`);
     expect(source).toContain("onAppend(sessionId");

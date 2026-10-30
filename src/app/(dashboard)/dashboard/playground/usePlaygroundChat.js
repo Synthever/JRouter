@@ -109,6 +109,7 @@ export default function usePlaygroundChat({ apiKey, settings, onAppend, onPatch,
         assistantId,
         status,
         content,
+        stopped: extra.stopped === true,
         messages: [...history, userMessage, { role: "assistant", content }],
       });
     };
@@ -180,7 +181,7 @@ export default function usePlaygroundChat({ apiKey, settings, onAppend, onPatch,
             reasoning += deltaReasoning;
           }
           if (deltaText) {
-            if (!firstTokenMs) firstTokenMs = Date.now() - startedAt;
+            if (firstTokenMs == null) firstTokenMs = Date.now() - startedAt;
             if (thinkingStartedAt && !thinkingEndedAt) thinkingEndedAt = Date.now();
             content += deltaText;
           }
