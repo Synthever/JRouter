@@ -308,21 +308,27 @@ export default function PlaygroundPageClient() {
       providerColor: model.providerColor || "",
       isCombo: model.isCombo === true,
     };
-    updateSession(activeSession.id, (session) => ({
-      ...session,
-      model: next,
+    updateSession(activeSession.id, (session) => {
       // One divider per model change, not one per pick: A→B→C with no turn between
-      // must not stack two adjacent dividers.
-      messages: changed
-        && session.messages.length > 0
-        && session.messages[session.messages.length - 1]?.role !== "divider"
-        ? [...session.messages, {
-          id: `divider_${Date.now()}`,
-          role: "divider",
-          content: `${DIVIDER_PREFIX}${next.name}`,
-        }]
-        : session.messages,
-    }));
+      // relabels the trailing divider instead of stacking a second one.
+      let messages = session.messages;
+      if (changed && session.messages.length > 0) {
+        const lastIndex = session.messages.length - 1;
+        const last = session.messages[lastIndex];
+        messages = last?.role === "divider"
+          ? session.messages.map((message, index) => (
+            index === lastIndex
+              ? { ...message, content: `${DIVIDER_PREFIX}${next.name}` }
+              : message
+          ))
+          : [...session.messages, {
+            id: `divider_${Date.now()}`,
+            role: "divider",
+            content: `${DIVIDER_PREFIX}${next.name}`,
+          }];
+      }
+      return { ...session, model: next, messages };
+    });
     setPickerOpen(false);
     inputRefFocus();
   };
