@@ -163,7 +163,7 @@ Default settings are explicit on purpose: the playground always sends `temperatu
 - **Delete** is two-step. Removing the last remaining conversation creates a fresh empty one.
 - **Clear** empties the active conversation and resets its title; two-step confirm.
 - **Model switch** appends the `Model switched to <name>` divider and stores the new model on the conversation.
-- **Auto title** replaces `New chat` after the first user message when the helper is on (§9); the local fallback is the first six words, capitalised.
+- **Auto title** replaces `New chat` with the first six words on the first user message, then the helper may refine it (§9).
 - Every mutation updates `updatedAt` and writes through to storage.
 
 ## 8. Turn Engine
@@ -186,7 +186,7 @@ Moved into `usePlaygroundChat` with the existing behaviour intact.
 
 Runs only when `settings.helper` is true, a conversation is active and no turn is streaming. Both calls use the same model and `Bearer` key, are aborted on switch / new / delete / clear / unmount, never block send or streaming, and fail silently (console warning only).
 
-**Auto title** — once per conversation, after the first user message. Non-stream request with a system instruction to return a 3–6 word title, `max_tokens: 24`, `temperature: 0.3`. The reply is trimmed of quotes/backticks, collapsed to one line and capped at 60 characters. Empty or failed → local fallback title.
+**Auto title** — the six-word local title is applied immediately on the first user message, so a conversation is never nameless. When the helper is on, one non-stream request then refines it with a system instruction to return a 3–6 word title, `max_tokens: 24`, `temperature: 0.3`. The reply is trimmed of quotes/backticks, collapsed to one line and capped at 60 characters. Empty or failed → the local title stays.
 
 **Follow-ups** — once per completed reply that is the latest message in its conversation, has text and is neither stopped nor errored. Non-stream request with the last six messages (each capped at 1200 characters) and a system instruction to return exactly three short follow-up questions as a JSON array of strings, `max_tokens: 160`, `temperature: 0.7`. Parsing is lenient: strip code fences, take the first `[...]` block, keep strings only, cap at three, drop empties. Failure yields no pills.
 
@@ -229,6 +229,7 @@ src/app/(dashboard)/dashboard/playground/
   PlaygroundTranscript.js        viewport, empty state, scroll pill, message list          ~120
   PlaygroundMessage.js           one message: actions, thinking, raw, follow-ups           ~230
   PlaygroundEmpty.js             SVG art + suggestions                                     ~60
+  PlaygroundModelIcon.js         provider logo or neutral model tile                        ~30
   PlaygroundComposer.js          textarea, toolbar, trigger, command palette, hint          ~240
   PlaygroundSettingsPopover.js   system prompt, presets, sampling, helper                  ~200
   PlaygroundHistoryModal.js      conversation list, search, duplicate, delete               ~180
