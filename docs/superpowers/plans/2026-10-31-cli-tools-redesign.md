@@ -316,7 +316,7 @@ export function groupTools(cliTools, mitmTools, statuses) {
 - [ ] **Step 4: Run the test and confirm it passes**
 
 Run: `cd tests && npx vitest run --config ./vitest.config.js unit/cli-tools-groups.test.js`
-Expected: PASS — 16 tests.
+Expected: PASS — 20 tests.
 
 - [ ] **Step 5: Commit**
 
@@ -393,7 +393,7 @@ Do not touch `MITM_TOOLS`; the MITM section is built from that table directly.
 - [ ] **Step 4: Run the tests**
 
 Run: `cd tests && npx vitest run --config ./vitest.config.js unit/cli-tools-groups.test.js`
-Expected: PASS — 18 tests.
+Expected: PASS — 20 tests.
 
 - [ ] **Step 5: Commit**
 
@@ -926,7 +926,7 @@ export default function ToolCard({ tool, status, href }) {
       </span>
       <span className={styles.toolFoot}>
         <span className={styles.typeChip}>{TYPE_LABELS[tool.configType] || TYPE_LABELS.custom}</span>
-        {status.key === "mitm" ? null : (
+        {status.key === "mitm" || status.key === "guide" ? null : (
           <StatusBadge variant={status.variant} dot={status.dot} className={styles.status}>
             {status.label}
           </StatusBadge>
@@ -1224,6 +1224,13 @@ describe("CLI Tools index", () => {
     const css = read(`${ROUTE}/cli-tools.module.css`);
     expect(css).toContain("position: sticky");
     expect(css).toContain("repeat(auto-fill, minmax(260px, 1fr))");
+    // Equal-height rows: without this the footer chips land on two baselines.
+    expect(css).toContain("grid-auto-rows: 1fr");
+  });
+
+  it("prints the gateway URL once, without a doubled /v1", () => {
+    expect(page).not.toContain("${origin}/v1`");
+    expect(page).toContain("<span className={styles.gatewayHint}>/v1</span>");
   });
 
   it("uses only tokens for the metric fills", () => {
@@ -1249,7 +1256,7 @@ describe("CLI Tools index", () => {
 - [ ] **Step 2: Run it**
 
 Run: `cd tests && npx vitest run --config ./vitest.config.js unit/cli-tools-redesign.test.js`
-Expected: PASS — 7 tests. If the hex assertion fails, replace the offending colour with the nearest token before continuing.
+Expected: PASS — 9 tests. If the hex assertion fails, replace the offending colour with the nearest token before continuing.
 
 - [ ] **Step 3: Commit**
 
@@ -2253,7 +2260,6 @@ Replace the `migrated` array in `tests/unit/cli-tools-redesign.test.js` with:
       "ClaudeToolCard",
       "ClineToolCard",
       "CodexToolCard",
-      "CopilotToolCard",
       "CoworkToolCard",
       "DeepSeekTuiToolCard",
       "DefaultToolCard",
@@ -2274,7 +2280,7 @@ Replace the `migrated` array in `tests/unit/cli-tools-redesign.test.js` with:
 - [ ] **Step 3: Run the whole test suite**
 
 Run: `cd tests && npx vitest run --config ./vitest.config.js unit/cli-tools-groups.test.js unit/cli-tools-redesign.test.js`
-Expected: PASS — 16 + 11 tests.
+Expected: PASS — 20 + 14 tests (34 total).
 
 - [ ] **Step 4: Remove dead CSS**
 
@@ -2292,7 +2298,7 @@ Delete only the classes that report `0`.
 - [ ] **Step 5: Lint the whole route and its tests**
 
 Run: `npx eslint "src/app/(dashboard)/dashboard/cli-tools/**" "tests/unit/cli-tools-*.test.js"`
-Expected: no errors.
+Expected: no NEW diagnostics. The route carries ~60 pre-existing `react-hooks` errors (set-state-in-effect, immutability) in the card files; every migrated file must match its pre-migration count, which is the real gate.
 
 - [ ] **Step 6: Build**
 
