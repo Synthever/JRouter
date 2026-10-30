@@ -1,18 +1,17 @@
 "use client";
 import Icon from "@/shared/components/Icon";
-import StatusBadge from "@/shared/components/StatusBadge";
 import styles from "../cli-tools.module.css";
 
 import { useState, useEffect, useRef } from "react";
-import { Card, Button, ModelSelectModal, ManualConfigModal, Tooltip } from "@/shared/components";
-import Image from "next/image";
+import { Button, ModelSelectModal, ManualConfigModal, Tooltip } from "@/shared/components";
 import BaseUrlSelect from "./BaseUrlSelect";
 import { rememberEndpoint } from "./cliEndpointPresets";
 import ApiKeySelect from "./ApiKeySelect";
-import { matchKnownEndpoint } from "./cliEndpointMatch";
 import { stripModelContextMarker } from "open-sse/utils/modelMarkers.js";
+import FieldGroup from "./ui/FieldGroup";
+import FieldRow from "./ui/FieldRow";
+import ActionBar from "./ui/ActionBar";
 
-const CLOUD_URL = process.env.NEXT_PUBLIC_CLOUD_URL;
 
 // Auto-compact window presets (CLAUDE_CODE_AUTO_COMPACT_WINDOW, valid 100K–1M).
 // UI shows the round number; the value written is nudged down 2K to stay safely
@@ -31,8 +30,6 @@ const CONTEXT_OPTIONS = [
 
 export default function ClaudeToolCard({
   tool,
-  isExpanded = true,
-  onToggle,
   activeProviders,
   modelMappings,
   onModelMappingChange,
@@ -84,16 +81,6 @@ export default function ClaudeToolCard({
 
   const currentBaseUrl = claudeStatus?.settings?.env?.ANTHROPIC_BASE_URL || "";
 
-  const getConfigStatus = () => {
-    if (!claudeStatus?.installed) return null;
-    const currentUrl = claudeStatus.settings?.env?.ANTHROPIC_BASE_URL;
-    if (!currentUrl) return "not_configured";
-    if (matchKnownEndpoint(currentUrl, { tunnelPublicUrl, tailscaleUrl, cloudUrl: cloudEnabled ? CLOUD_URL : null })) return "configured";
-    return "other";
-  };
-
-  const configStatus = getConfigStatus();
-
   useEffect(() => {
     if (apiKeys?.length > 0 && !selectedApiKey) {
       setSelectedApiKey(apiKeys[0].key);
@@ -119,11 +106,9 @@ export default function ClaudeToolCard({
   }, [claudeStatus?.settings?.env, tool.defaultModels]);
 
   useEffect(() => {
-    if (isExpanded) {
-      if (!claudeStatus) checkClaudeStatus();
-      fetchModelAliases();
-    }
-  }, [isExpanded]);
+    if (!claudeStatus) checkClaudeStatus();
+    fetchModelAliases();
+  }, []);
 
   useEffect(() => {
     fetch("/api/settings").then(r => r.json()).then(data => {
@@ -299,194 +284,148 @@ export default function ClaudeToolCard({
   };
 
   return (
-    <Card padding="none" className={styles.panel}>
-      <div className={styles.panelHeader} onClick={onToggle}>
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="size-8 flex items-center justify-center shrink-0">
-            <Image src="/providers/claude.png" alt={tool.name} width={32} height={32} className="size-8 object-contain rounded-lg" sizes="32px" onError={(e) => { e.target.style.display = "none"; }} loading="lazy" decoding="async" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <h3 className="font-medium text-sm">{tool.name}</h3>
-              {configStatus === "configured" && <StatusBadge variant="success" className={styles.status}>Connected</StatusBadge>}
-              {configStatus === "not_configured" && <StatusBadge variant="warning" className={styles.status}>Not configured</StatusBadge>}
-              {configStatus === "other" && <StatusBadge variant="default" dot={false} className={styles.status}>Other</StatusBadge>}
-            </div>
-            <p className="text-xs text-text-muted truncate">{tool.description}</p>
-          </div>
+    <div className={styles.panelBody}>
+      {checkingClaude && (
+        <div className="flex items-center gap-2 text-text-muted">
+          <Icon className="animate-spin">progress_activity</Icon>
+          <span>Checking Claude CLI...</span>
         </div>
-        <Icon className={`text-text-muted text-[20px] transition-transform ${isExpanded ? "rotate-180" : ""}`}>expand_more</Icon>
-      </div>
+      )}
 
-      {isExpanded && (
-        <div className={styles.body}>
-          {checkingClaude && (
-            <div className="flex items-center gap-2 text-text-muted">
-              <Icon className="animate-spin">progress_activity</Icon>
-              <span>Checking Claude CLI...</span>
-            </div>
-          )}
-
-          {!checkingClaude && claudeStatus && !claudeStatus.installed && (
-            <div className="flex flex-col gap-4">
-              <div className={`flex flex-col gap-3 p-4 border ${styles.notice} ${styles.warning}`}>
-                <div className="flex items-start gap-3">
-                  <Icon className="text-[var(--warn)]">warning</Icon>
-                  <div className="flex-1">
-                    <p className="font-medium text-[var(--warn)]">Claude CLI not detected locally</p>
-                    <p className="text-sm text-text-muted">Manual configuration is still available if JRouter is deployed on a remote server.</p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 sm:pl-9">
-                  <Button variant="secondary" size="sm" onClick={() => setShowManualConfigModal(true)}>
-                    <Icon className="text-[18px] mr-1">content_copy</Icon>
-                    Manual Config
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setShowInstallGuide(!showInstallGuide)}>
-                    <Icon className="text-[18px] mr-1">{showInstallGuide ? "expand_less" : "help"}</Icon>
-                    {showInstallGuide ? "Hide" : "How to Install"}
-                  </Button>
-                </div>
+      {!checkingClaude && claudeStatus && !claudeStatus.installed && (
+        <div className="flex flex-col gap-4">
+          <div className={`flex flex-col gap-3 p-4 border ${styles.notice} ${styles.warning}`}>
+            <div className="flex items-start gap-3">
+              <Icon className="text-[var(--warn)]">warning</Icon>
+              <div className="flex-1">
+                <p className="font-medium text-[var(--warn)]">Claude CLI not detected locally</p>
+                <p className="text-sm text-text-muted">Manual configuration is still available if JRouter is deployed on a remote server.</p>
               </div>
-              {showInstallGuide && (
-                <div className="p-4 bg-surface border border-border rounded-lg">
-                  <h4 className="font-medium mb-3">Installation Guide</h4>
-                  <div className="space-y-3 text-sm">
-                    <div>
-                      <p className="text-text-muted mb-1">macOS / Linux / Windows:</p>
-                      <code className="block px-3 py-2 bg-black/5 dark:bg-white/5 rounded font-mono text-xs">npm install -g @anthropic-ai/claude-code</code>
-                    </div>
-                    <p className="text-text-muted">After installation, run <code className="px-1 bg-black/5 dark:bg-white/5 rounded">claude</code> to verify.</p>
-                  </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 sm:pl-9">
+              <Button variant="secondary" size="sm" onClick={() => setShowManualConfigModal(true)}>
+                <Icon className="text-[18px] mr-1">content_copy</Icon>
+                Manual Config
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setShowInstallGuide(!showInstallGuide)}>
+                <Icon className="text-[18px] mr-1">{showInstallGuide ? "expand_less" : "help"}</Icon>
+                {showInstallGuide ? "Hide" : "How to Install"}
+              </Button>
+            </div>
+          </div>
+          {showInstallGuide && (
+            <div className="p-4 bg-surface border border-border rounded-lg">
+              <h4 className="font-medium mb-3">Installation Guide</h4>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <p className="text-text-muted mb-1">macOS / Linux / Windows:</p>
+                  <code className="block px-3 py-2 bg-black/5 dark:bg-white/5 rounded font-mono text-xs">npm install -g @anthropic-ai/claude-code</code>
                 </div>
-              )}
+                <p className="text-text-muted">After installation, run <code className="px-1 bg-black/5 dark:bg-white/5 rounded">claude</code> to verify.</p>
+              </div>
             </div>
           )}
+        </div>
+      )}
 
-          {!checkingClaude && claudeStatus?.installed && (
-            <>
-              <div className="flex flex-col gap-2">
-                {/* Endpoint (selector) */}
-                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr] sm:items-center sm:gap-2">
-                  <span className={`sm:text-right ${styles.fieldLabel}`}>Select Endpoint</span>
-                  <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
-                  <BaseUrlSelect
-                    value={customBaseUrl || getDisplayUrl()}
-                    onChange={setCustomBaseUrl}
-                    requiresExternalUrl={tool.requiresExternalUrl}
-                    tunnelEnabled={tunnelEnabled}
-                    tunnelPublicUrl={tunnelPublicUrl}
-                    tailscaleEnabled={tailscaleEnabled}
-                    tailscaleUrl={tailscaleUrl}
-                    currentUrl={currentBaseUrl}
-                  />
-                </div>
+      {!checkingClaude && claudeStatus?.installed && (
+        <>
+          <FieldGroup title="Endpoint">
+            <FieldRow label="Select Endpoint">
+              <BaseUrlSelect
+                value={customBaseUrl || getDisplayUrl()}
+                onChange={setCustomBaseUrl}
+                requiresExternalUrl={tool.requiresExternalUrl}
+                tunnelEnabled={tunnelEnabled}
+                tunnelPublicUrl={tunnelPublicUrl}
+                tailscaleEnabled={tailscaleEnabled}
+                tailscaleUrl={tailscaleUrl}
+                currentUrl={currentBaseUrl}
+              />
+            </FieldRow>
+            {claudeStatus?.settings?.env?.ANTHROPIC_BASE_URL && (
+              <FieldRow label="Current">
+                <span className={styles.currentValue}>{claudeStatus.settings.env.ANTHROPIC_BASE_URL}</span>
+              </FieldRow>
+            )}
+          </FieldGroup>
 
-                {/* Current configured */}
-                {claudeStatus?.settings?.env?.ANTHROPIC_BASE_URL && (
-                  <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr_auto] sm:items-center sm:gap-2">
-                    <span className={`sm:text-right ${styles.fieldLabel}`}>Current</span>
-                    <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
-                    <span className="min-w-0 truncate rounded bg-surface/40 px-2 py-2 text-xs text-text-muted sm:py-1.5">
-                      {claudeStatus.settings.env.ANTHROPIC_BASE_URL}
-                    </span>
-                  </div>
+          <FieldGroup title="Credentials">
+            <FieldRow label="API Key">
+              <ApiKeySelect value={selectedApiKey} onChange={setSelectedApiKey} apiKeys={apiKeys} cloudEnabled={cloudEnabled} />
+            </FieldRow>
+          </FieldGroup>
+
+          <FieldGroup title="Models">
+            {tool.defaultModels.map((model) => (
+              <FieldRow
+                key={model.alias}
+                label={model.name}
+                aside={(
+                  <button onClick={() => openModelSelector(model.alias)} disabled={!hasActiveProviders} className={`rounded border px-2.5 py-2 text-xs transition-colors sm:py-1.5 whitespace-nowrap shrink-0 ${hasActiveProviders ? "bg-surface border-border text-text-main hover:border-[var(--text-2)] cursor-pointer" : "opacity-50 cursor-not-allowed border-border"} ${styles.selectButton}`}>Select</button>
                 )}
-
-                {/* API Key */}
-                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr_auto] sm:items-center sm:gap-2">
-                  <span className={`sm:text-right ${styles.fieldLabel}`}>API Key</span>
-                  <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
-                  <ApiKeySelect value={selectedApiKey} onChange={setSelectedApiKey} apiKeys={apiKeys} cloudEnabled={cloudEnabled} />
+              >
+                <div className="relative w-full min-w-0">
+                  <input type="text" value={modelMappings[model.alias] || ""} onChange={(e) => onModelMappingChange(model.alias, e.target.value)} placeholder="provider/model-id" className="w-full min-w-0 pl-2 pr-7 py-2 bg-surface rounded border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 sm:py-1.5" />
+                  {modelMappings[model.alias] && <button onClick={() => onModelMappingChange(model.alias, "")} className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-text-muted hover:text-[var(--danger)] rounded transition-colors" title="Clear"><Icon className="text-[14px]">close</Icon></button>}
                 </div>
-
-                {/* Model Mappings */}
-                {tool.defaultModels.map((model) => (
-                  <div key={model.alias} className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr] sm:items-center sm:gap-2">
-                    <span className={`sm:text-right ${styles.fieldLabel}`}>{model.name}</span>
-                    <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="relative flex-1 min-w-0">
-                        <input type="text" value={modelMappings[model.alias] || ""} onChange={(e) => onModelMappingChange(model.alias, e.target.value)} placeholder="provider/model-id" className="w-full min-w-0 pl-2 pr-7 py-2 bg-surface rounded border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 sm:py-1.5" />
-                        {modelMappings[model.alias] && <button onClick={() => onModelMappingChange(model.alias, "")} className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-text-muted hover:text-[var(--danger)] rounded transition-colors" title="Clear"><Icon className="text-[14px]">close</Icon></button>}
-                      </div>
-                      <button onClick={() => openModelSelector(model.alias)} disabled={!hasActiveProviders} className={`rounded border px-2.5 py-2 text-xs transition-colors sm:py-1.5 whitespace-nowrap shrink-0 ${hasActiveProviders ? "bg-surface border-border text-text-main hover:border-[var(--text-2)] cursor-pointer" : "opacity-50 cursor-not-allowed border-border"} ${styles.selectButton}`}>Select</button>
-                    </div>
-                  </div>
+              </FieldRow>
+            ))}
+            <FieldRow label="Auto-compact">
+              <select value={autoCompactWindow} onChange={(e) => setAutoCompactWindow(e.target.value)} className="w-full min-w-0 px-2 py-2 bg-surface rounded border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 sm:py-1.5">
+                {CONTEXT_OPTIONS.map((opt) => (
+                  <option key={opt.label} value={opt.value}>{opt.label}</option>
                 ))}
+              </select>
+            </FieldRow>
+          </FieldGroup>
 
-                {/* Auto-compact window */}
-                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr] sm:items-center sm:gap-2">
-                  <span className={`sm:text-right ${styles.fieldLabel}`}>Auto-compact</span>
-                  <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
-                  <select value={autoCompactWindow} onChange={(e) => setAutoCompactWindow(e.target.value)} className="w-full min-w-0 px-2 py-2 bg-surface rounded border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 sm:py-1.5">
-                    {CONTEXT_OPTIONS.map((opt) => (
-                      <option key={opt.label} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
+          <FieldGroup title="Options">
+            <FieldRow label="1M context">
+              <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                <input type="checkbox" checked={oneMContext} onChange={(e) => handleOneMContextToggle(e.target.checked)} className="w-3.5 h-3.5 accent-primary cursor-pointer shrink-0" />
+                <span className="text-xs text-text-muted">Append [1m] to the model name</span>
+                <Tooltip text="Claude Code otherwise assumes a 200K window, which clamps the auto-compact window above. Applied to every mapped model — only enable it for models that really accept 1M.">
+                  <Icon className="text-text-muted text-[14px] cursor-help">info</Icon>
+                </Tooltip>
+              </label>
+            </FieldRow>
+            <FieldRow label="Filter naming">
+              <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                <input type="checkbox" checked={ccFilterNaming} onChange={handleCcFilterNamingToggle} className="w-3.5 h-3.5 accent-primary cursor-pointer shrink-0" />
+                <span className="text-xs text-text-muted">Filter naming requests</span>
+                <Tooltip text="Intercepts Claude Code's topic-naming requests and returns a fake response locally, saving API tokens.">
+                  <Icon className="text-text-muted text-[14px] cursor-help">info</Icon>
+                </Tooltip>
+              </label>
+            </FieldRow>
+            <FieldRow label="Web Search">
+              <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                <input type="checkbox" checked={exaMcpEnabled} onChange={(e) => setExaMcpEnabled(e.target.checked)} className="w-3.5 h-3.5 accent-primary cursor-pointer shrink-0" />
+                <span className="text-xs text-text-muted">Exa MCP</span>
+                <Tooltip text="Injects Exa MCP into ~/.claude.json so non-Claude models gain web search. Restart Claude Code after Apply.">
+                  <Icon className="text-text-muted text-[14px] cursor-help">info</Icon>
+                </Tooltip>
+              </label>
+            </FieldRow>
+          </FieldGroup>
 
-                {/* 1M context */}
-                <div className="flex flex-wrap items-center justify-between gap-1.5 sm:grid sm:grid-cols-[8rem_auto_1fr] sm:items-center sm:gap-2">
-                  <span className={`sm:text-right ${styles.fieldLabel}`}>1M context</span>
-                  <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
-                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                    <input type="checkbox" checked={oneMContext} onChange={(e) => handleOneMContextToggle(e.target.checked)} className="w-3.5 h-3.5 accent-primary cursor-pointer shrink-0" />
-                    <span className="text-xs text-text-muted">Append [1m] to the model name</span>
-                    <Tooltip text="Claude Code otherwise assumes a 200K window, which clamps the auto-compact window above. Applied to every mapped model — only enable it for models that really accept 1M.">
-                      <Icon className="text-text-muted text-[14px] cursor-help">info</Icon>
-                    </Tooltip>
-                  </label>
-                </div>
-
-                {/* CC Filter Naming */}
-                <div className="flex flex-wrap items-center justify-between gap-1.5 sm:grid sm:grid-cols-[8rem_auto_1fr] sm:items-center sm:gap-2">
-                  <span className={`sm:text-right ${styles.fieldLabel}`}>Filter naming</span>
-                  <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
-                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                    <input type="checkbox" checked={ccFilterNaming} onChange={handleCcFilterNamingToggle} className="w-3.5 h-3.5 accent-primary cursor-pointer shrink-0" />
-                    <span className="text-xs text-text-muted">Filter naming requests</span>
-                    <Tooltip text="Intercepts Claude Code's topic-naming requests and returns a fake response locally, saving API tokens.">
-                      <Icon className="text-text-muted text-[14px] cursor-help">info</Icon>
-                    </Tooltip>
-                  </label>
-                </div>
-
-                {/* Exa MCP — ~/.claude.json mcpServers (not settings.json) */}
-                <div className="flex flex-wrap items-center justify-between gap-1.5 sm:grid sm:grid-cols-[8rem_auto_1fr] sm:items-center sm:gap-2">
-                  <span className={`sm:text-right ${styles.fieldLabel}`}>Web Search</span>
-                  <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
-                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                    <input type="checkbox" checked={exaMcpEnabled} onChange={(e) => setExaMcpEnabled(e.target.checked)} className="w-3.5 h-3.5 accent-primary cursor-pointer shrink-0" />
-                    <span className="text-xs text-text-muted">Exa MCP</span>
-                    <Tooltip text="Injects Exa MCP into ~/.claude.json so non-Claude models gain web search. Restart Claude Code after Apply.">
-                      <Icon className="text-text-muted text-[14px] cursor-help">info</Icon>
-                    </Tooltip>
-                  </label>
-                </div>
-              </div>
-
-              {message && (
-                <div className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs ${message.type === "success" ? styles.positive : styles.danger}`}>
-                  <Icon className="text-[14px]">{message.type === "success" ? "check_circle" : "error"}</Icon>
-                  <span>{message.text}</span>
-                </div>
-              )}
-
-              <div className="flex flex-wrap items-center gap-2">
-                <Button variant="primary" size="sm" onClick={handleApplySettings} disabled={!hasActiveProviders} loading={applying}>
-                  <Icon className="text-[14px] mr-1">save</Icon>Apply
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleResetSettings} disabled={!claudeStatus?.hasJRouter} loading={restoring}>
-                  <Icon className="text-[14px] mr-1">restore</Icon>Reset
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => setShowManualConfigModal(true)}>
-                  <Icon className="text-[14px] mr-1">content_copy</Icon>Manual Config
-                </Button>
-              </div>
-            </>
-          )}
-        </div>
+          <ActionBar
+            message={message?.text}
+            tone={message ? (message.type === "success" ? "success" : "danger") : "neutral"}
+            busy={applying || restoring}
+          >
+            <Button variant="outline" size="sm" onClick={() => setShowManualConfigModal(true)}>
+              <Icon className="text-[14px] mr-1">content_copy</Icon>Manual Config
+            </Button>
+            <Button variant="secondary" size="sm" onClick={handleResetSettings} disabled={!claudeStatus?.hasJRouter} loading={restoring}>
+              <Icon className="text-[14px] mr-1">restore</Icon>Reset
+            </Button>
+            <Button variant="primary" size="sm" onClick={handleApplySettings} disabled={!hasActiveProviders} loading={applying}>
+              <Icon className="text-[14px] mr-1">save</Icon>Apply
+            </Button>
+          </ActionBar>
+        </>
       )}
 
       {modalOpen && (
@@ -499,6 +438,6 @@ export default function ClaudeToolCard({
         title="Claude CLI - Manual Configuration"
         configs={getManualConfigs()}
       />
-    </Card>
+    </div>
   );
 }

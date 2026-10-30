@@ -1,19 +1,19 @@
 "use client";
 import Icon from "@/shared/components/Icon";
-import StatusBadge from "@/shared/components/StatusBadge";
 import styles from "../cli-tools.module.css";
 
 import { useState, useEffect } from "react";
-import { Card, Button, ModelSelectModal, ManualConfigModal } from "@/shared/components";
-import Image from "next/image";
+import { Button, ModelSelectModal, ManualConfigModal } from "@/shared/components";
 import ProviderIcon from "@/shared/components/ProviderIcon";
 import BaseUrlSelect from "./BaseUrlSelect";
 import ApiKeySelect from "./ApiKeySelect";
-import { matchKnownEndpoint } from "./cliEndpointMatch";
 import { rememberEndpoint } from "./cliEndpointPresets";
 import { getCurrentCodexProviderSettings, deriveProfileNameFromModel } from "./codexConfig";
+import FieldGroup from "./ui/FieldGroup";
+import FieldRow from "./ui/FieldRow";
+import ActionBar from "./ui/ActionBar";
 
-export default function CodexToolCard({ tool, isExpanded = true, onToggle, baseUrl, apiKeys, activeProviders, cloudEnabled, initialStatus, tunnelEnabled, tunnelPublicUrl, tailscaleEnabled, tailscaleUrl }) {
+export default function CodexToolCard({ tool, baseUrl, apiKeys, activeProviders, cloudEnabled, initialStatus, tunnelEnabled, tunnelPublicUrl, tailscaleEnabled, tailscaleUrl }) {
   const [codexStatus, setCodexStatus] = useState(initialStatus || null);
   const [checkingCodex, setCheckingCodex] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -51,12 +51,10 @@ export default function CodexToolCard({ tool, isExpanded = true, onToggle, baseU
   }, [initialStatus]);
 
   useEffect(() => {
-    if (isExpanded) {
-      if (!codexStatus) checkCodexStatus();
-      fetchModelAliases();
-      fetchProfiles();
-    }
-  }, [isExpanded]);
+    if (!codexStatus) checkCodexStatus();
+    fetchModelAliases();
+    fetchProfiles();
+  }, []);
 
   const fetchModelAliases = async () => {
     try {
@@ -163,14 +161,6 @@ export default function CodexToolCard({ tool, isExpanded = true, onToggle, baseU
   }, [codexStatus?.config]);
 
   const currentBaseUrl = getCurrentCodexProviderSettings(codexStatus?.config).baseUrl;
-
-  const getConfigStatus = () => {
-    if (!codexStatus?.installed) return null;
-    if (!codexStatus.config) return "not_configured";
-    return matchKnownEndpoint(currentBaseUrl, { tunnelPublicUrl, tailscaleUrl }) ? "configured" : "other";
-  };
-
-  const configStatus = getConfigStatus();
 
   const getEffectiveBaseUrl = () => {
     const url = (customBaseUrl || `${baseUrl}/v1`).replace(/\/+$/, "");
@@ -290,321 +280,279 @@ default_subagent_model = "${effectiveSubagentModel}"
   };
 
   return (
-    <Card padding="none" className={styles.panel}>
-      <div className={styles.panelHeader} onClick={onToggle}>
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="size-8 flex items-center justify-center shrink-0">
-            <Image src="/providers/codex.png" alt={tool.name} width={32} height={32} className="size-8 object-contain rounded-lg" sizes="32px" onError={(e) => { e.target.style.display = "none"; }} loading="lazy" decoding="async" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <h3 className="font-medium text-sm">{tool.name}</h3>
-              {configStatus === "configured" && <StatusBadge variant="success" className={styles.status}>Connected</StatusBadge>}
-              {configStatus === "not_configured" && <StatusBadge variant="warning" className={styles.status}>Not configured</StatusBadge>}
-              {configStatus === "other" && <StatusBadge variant="default" dot={false} className={styles.status}>Other</StatusBadge>}
-            </div>
-            <p className="text-xs text-text-muted truncate">{tool.description}</p>
-          </div>
+    <div className={styles.panelBody}>
+      {checkingCodex && (
+        <div className="flex items-center gap-2 text-text-muted">
+          <Icon className="animate-spin">progress_activity</Icon>
+          <span>Checking Codex CLI...</span>
         </div>
-        <Icon className={`text-text-muted text-[20px] transition-transform ${isExpanded ? "rotate-180" : ""}`}>expand_more</Icon>
-      </div>
+      )}
 
-      {isExpanded && (
-        <div className={styles.body}>
-          {checkingCodex && (
-            <div className="flex items-center gap-2 text-text-muted">
-              <Icon className="animate-spin">progress_activity</Icon>
-              <span>Checking Codex CLI...</span>
+      {!checkingCodex && codexStatus && !codexStatus.installed && (
+        <div className="flex flex-col gap-4">
+          <div className={`flex flex-col gap-3 p-4 border ${styles.notice} ${styles.warning}`}>
+            <div className="flex items-start gap-3">
+              <Icon className="text-[var(--warn)]">warning</Icon>
+              <div className="flex-1">
+                <p className="font-medium text-[var(--warn)]">Codex CLI not detected locally</p>
+                <p className="text-sm text-text-muted">Manual configuration is still available if JRouter is deployed on a remote server.</p>
+              </div>
             </div>
-          )}
-
-          {!checkingCodex && codexStatus && !codexStatus.installed && (
-            <div className="flex flex-col gap-4">
-              <div className={`flex flex-col gap-3 p-4 border ${styles.notice} ${styles.warning}`}>
-                <div className="flex items-start gap-3">
-                  <Icon className="text-[var(--warn)]">warning</Icon>
-                  <div className="flex-1">
-                    <p className="font-medium text-[var(--warn)]">Codex CLI not detected locally</p>
-                    <p className="text-sm text-text-muted">Manual configuration is still available if JRouter is deployed on a remote server.</p>
-                  </div>
+            <div className="flex flex-wrap items-center gap-2 sm:pl-9">
+              <Button variant="secondary" size="sm" onClick={() => setShowManualConfigModal(true)}>
+                <Icon className="text-[18px] mr-1">content_copy</Icon>
+                Manual Config
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setShowInstallGuide(!showInstallGuide)}>
+                <Icon className="text-[18px] mr-1">{showInstallGuide ? "expand_less" : "help"}</Icon>
+                {showInstallGuide ? "Hide" : "How to Install"}
+              </Button>
+            </div>
+          </div>
+          {showInstallGuide && (
+            <div className="p-4 bg-surface border border-border rounded-lg">
+              <h4 className="font-medium mb-3">Installation Guide</h4>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <p className="text-text-muted mb-1">macOS / Linux / Windows:</p>
+                  <code className="block px-3 py-2 bg-black/5 dark:bg-white/5 rounded font-mono text-xs">npm install -g @openai/codex</code>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 sm:pl-9">
-                  <Button variant="secondary" size="sm" onClick={() => setShowManualConfigModal(true)}>
-                    <Icon className="text-[18px] mr-1">content_copy</Icon>
-                    Manual Config
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setShowInstallGuide(!showInstallGuide)}>
-                    <Icon className="text-[18px] mr-1">{showInstallGuide ? "expand_less" : "help"}</Icon>
-                    {showInstallGuide ? "Hide" : "How to Install"}
-                  </Button>
+                <p className="text-text-muted">After installation, run <code className="px-1 bg-black/5 dark:bg-white/5 rounded">codex</code> to verify.</p>
+                <div className="pt-2 border-t border-border">
+                  <p className="text-text-muted text-xs">
+                    Codex reads custom providers from <code className="px-1 bg-black/5 dark:bg-white/5 rounded">~/.codex/config.toml</code>.
+                    Click &quot;Apply&quot; to auto-configure.
+                  </p>
                 </div>
               </div>
-              {showInstallGuide && (
-                <div className="p-4 bg-surface border border-border rounded-lg">
-                  <h4 className="font-medium mb-3">Installation Guide</h4>
-                  <div className="space-y-3 text-sm">
-                    <div>
-                      <p className="text-text-muted mb-1">macOS / Linux / Windows:</p>
-                      <code className="block px-3 py-2 bg-black/5 dark:bg-white/5 rounded font-mono text-xs">npm install -g @openai/codex</code>
-                    </div>
-                    <p className="text-text-muted">After installation, run <code className="px-1 bg-black/5 dark:bg-white/5 rounded">codex</code> to verify.</p>
-                    <div className="pt-2 border-t border-border">
-                      <p className="text-text-muted text-xs">
-                        Codex reads custom providers from <code className="px-1 bg-black/5 dark:bg-white/5 rounded">~/.codex/config.toml</code>.
-                        Click &quot;Apply&quot; to auto-configure.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           )}
+        </div>
+      )}
 
-          {!checkingCodex && codexStatus?.installed && (
-            <>
-              <div className="flex flex-col gap-2">
-                {/* Endpoint (selector) */}
-                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr] sm:items-center sm:gap-2">
-                  <span className={`sm:text-right ${styles.fieldLabel}`}>Select Endpoint</span>
-                  <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
-                  <BaseUrlSelect
-                    value={customBaseUrl || getDisplayUrl()}
-                    onChange={setCustomBaseUrl}
-                    requiresExternalUrl={tool.requiresExternalUrl}
-                    tunnelEnabled={tunnelEnabled}
-                    tunnelPublicUrl={tunnelPublicUrl}
-                    tailscaleEnabled={tailscaleEnabled}
-                    tailscaleUrl={tailscaleUrl}
-                    currentUrl={currentBaseUrl}
-                  />
-                </div>
+      {!checkingCodex && codexStatus?.installed && (
+        <>
+          <FieldGroup title="Endpoint">
+            <FieldRow label="Select Endpoint">
+              <BaseUrlSelect
+                value={customBaseUrl || getDisplayUrl()}
+                onChange={setCustomBaseUrl}
+                requiresExternalUrl={tool.requiresExternalUrl}
+                tunnelEnabled={tunnelEnabled}
+                tunnelPublicUrl={tunnelPublicUrl}
+                tailscaleEnabled={tailscaleEnabled}
+                tailscaleUrl={tailscaleUrl}
+                currentUrl={currentBaseUrl}
+              />
+            </FieldRow>
+            {codexStatus?.config && currentBaseUrl ? (
+              <FieldRow label="Current">
+                <span className={styles.currentValue}>{currentBaseUrl}</span>
+              </FieldRow>
+            ) : null}
+          </FieldGroup>
 
-                {/* Current configured */}
-                {codexStatus?.config && (() => {
-                  return currentBaseUrl ? (
-                    <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr_auto] sm:items-center sm:gap-2">
-                      <span className={`sm:text-right ${styles.fieldLabel}`}>Current</span>
-                      <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
-                      <span className="min-w-0 truncate rounded bg-surface/40 px-2 py-2 text-xs text-text-muted sm:py-1.5">
-                        {currentBaseUrl}
-                      </span>
-                    </div>
-                  ) : null;
-                })()}
+          <FieldGroup title="Credentials">
+            <FieldRow label="API Key">
+              <ApiKeySelect value={selectedApiKey} onChange={setSelectedApiKey} apiKeys={apiKeys} cloudEnabled={cloudEnabled} />
+            </FieldRow>
+          </FieldGroup>
 
-                {/* API Key */}
-                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr_auto] sm:items-center sm:gap-2">
-                  <span className={`sm:text-right ${styles.fieldLabel}`}>API Key</span>
-                  <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
-                  <ApiKeySelect value={selectedApiKey} onChange={setSelectedApiKey} apiKeys={apiKeys} cloudEnabled={cloudEnabled} />
-                </div>
-
-                {/* Model */}
-                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr_auto] sm:items-center sm:gap-2">
-                  <span className={`sm:text-right ${styles.fieldLabel}`}>Model</span>
-                  <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
-                  <div className="relative w-full min-w-0">
-                    <input type="text" value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)} placeholder="provider/model-id" className="w-full min-w-0 pl-2 pr-7 py-2 bg-surface rounded border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 sm:py-1.5" />
-                    {selectedModel && <button onClick={() => setSelectedModel("")} className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-text-muted hover:text-[var(--danger)] rounded transition-colors" title="Clear"><Icon className="text-[14px]">close</Icon></button>}
-                  </div>
-                  <button onClick={() => setModalOpen(true)} disabled={!activeProviders?.length} className={`w-full sm:w-auto rounded border px-2 py-2 text-xs transition-colors sm:py-1.5 whitespace-nowrap sm:shrink-0 ${activeProviders?.length ? "bg-surface border-border text-text-main hover:border-[var(--text-2)] cursor-pointer" : "opacity-50 cursor-not-allowed border-border"} ${styles.selectButton}`}>Select Model</button>
-                </div>
-
-                {/* Subagent Model */}
-                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr_auto] sm:items-center sm:gap-2">
-                  <span className={`sm:text-right ${styles.fieldLabel}`}>Subagent Model</span>
-                  <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
-                  <div className="relative w-full min-w-0">
-                    <input
-                      type="text"
-                      value={subagentModel}
-                      onChange={(e) => setSubagentModel(e.target.value)}
-                      placeholder={selectedModel || "provider/model-id (defaults to main model)"}
-                      className="w-full min-w-0 pl-2 pr-7 py-2 bg-surface rounded border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 sm:py-1.5"
-                    />
-                    {subagentModel && (
-                      <button
-                        onClick={() => setSubagentModel("")}
-                        className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-text-muted hover:text-[var(--danger)] rounded transition-colors"
-                        title="Clear (will use main model)"
-                      >
-                        <Icon className="text-[14px]">close</Icon>
-                      </button>
-                    )}
-                  </div>
+          <FieldGroup title="Models">
+            <FieldRow
+              label="Model"
+              aside={(
+                <button onClick={() => setModalOpen(true)} disabled={!activeProviders?.length} className={`w-full sm:w-auto rounded border px-2 py-2 text-xs transition-colors sm:py-1.5 whitespace-nowrap sm:shrink-0 ${activeProviders?.length ? "bg-surface border-border text-text-main hover:border-[var(--text-2)] cursor-pointer" : "opacity-50 cursor-not-allowed border-border"} ${styles.selectButton}`}>Select Model</button>
+              )}
+            >
+              <div className="relative w-full min-w-0">
+                <input type="text" value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)} placeholder="provider/model-id" className="w-full min-w-0 pl-2 pr-7 py-2 bg-surface rounded border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 sm:py-1.5" />
+                {selectedModel && <button onClick={() => setSelectedModel("")} className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-text-muted hover:text-[var(--danger)] rounded transition-colors" title="Clear"><Icon className="text-[14px]">close</Icon></button>}
+              </div>
+            </FieldRow>
+            <FieldRow
+              label="Subagent Model"
+              aside={(
+                <button
+                  onClick={() => setSubagentModalOpen(true)}
+                  disabled={!activeProviders?.length}
+                  className={`w-full sm:w-auto rounded border px-2 py-2 text-xs transition-colors sm:py-1.5 whitespace-nowrap sm:shrink-0 ${activeProviders?.length ? "bg-surface border-border text-text-main hover:border-[var(--text-2)] cursor-pointer" : "opacity-50 cursor-not-allowed border-border"} ${styles.selectButton}`}
+                >
+                  Select Model
+                </button>
+              )}
+            >
+              <div className="relative w-full min-w-0">
+                <input
+                  type="text"
+                  value={subagentModel}
+                  onChange={(e) => setSubagentModel(e.target.value)}
+                  placeholder={selectedModel || "provider/model-id (defaults to main model)"}
+                  className="w-full min-w-0 pl-2 pr-7 py-2 bg-surface rounded border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 sm:py-1.5"
+                />
+                {subagentModel && (
                   <button
-                    onClick={() => setSubagentModalOpen(true)}
-                    disabled={!activeProviders?.length}
-                    className={`w-full sm:w-auto rounded border px-2 py-2 text-xs transition-colors sm:py-1.5 whitespace-nowrap sm:shrink-0 ${activeProviders?.length ? "bg-surface border-border text-text-main hover:border-[var(--text-2)] cursor-pointer" : "opacity-50 cursor-not-allowed border-border"} ${styles.selectButton}`}
+                    onClick={() => setSubagentModel("")}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-text-muted hover:text-[var(--danger)] rounded transition-colors"
+                    title="Clear (will use main model)"
                   >
-                    Select Model
+                    <Icon className="text-[14px]">close</Icon>
                   </button>
-                </div>
-              </div>
-
-              {message && (
-                <div className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs ${message.type === "success" ? styles.positive : styles.danger}`}>
-                  <Icon className="text-[14px]">{message.type === "success" ? "check_circle" : "error"}</Icon>
-                  <span>{message.text}</span>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 gap-2 sm:flex sm:items-center">
-                <Button variant="primary" size="sm" onClick={handleApplySettings} disabled={(!selectedApiKey && (cloudEnabled && apiKeys.length > 0)) || !selectedModel} loading={applying}>
-                  <Icon className="text-[14px] mr-1">save</Icon>Apply
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleResetSettings} disabled={restoring} loading={restoring}>
-                  <Icon className="text-[14px] mr-1">restore</Icon>Reset
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => setShowManualConfigModal(true)}>
-                  <Icon className="text-[14px] mr-1">content_copy</Icon>Manual Config
-                </Button>
-              </div>
-
-              {/* Additional Models */}
-              <div className="mt-4 pt-4 border-t border-border flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-text-main flex items-center gap-1.5">
-                      <Icon className="text-[16px] text-text-main">layers</Icon>
-                      Additional Models
-                    </span>
-                    {profiles.length > 0 && (
-                      <span className="badge-neutral">
-                        {profiles.length}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Quick Add Model bar */}
-                <div className="flex flex-col gap-1.5 p-2.5 bg-surface/40 border border-border rounded-lg">
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-[10rem_1fr_auto_auto] sm:items-center">
-                    <input
-                      type="text"
-                      value={aliasInput}
-                      onChange={(e) => setAliasInput(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))}
-                      placeholder="Alias (e.g. claude)"
-                      className="w-full min-w-0 px-2.5 py-1.5 bg-surface rounded border border-border text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary/50"
-                      onKeyDown={(e) => e.key === "Enter" && handleAddProfileWithAlias()}
-                    />
-                    <div className="relative w-full min-w-0">
-                      <input
-                        type="text"
-                        value={modelInput}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setModelInput(val);
-                          const provider = val.includes("/") ? val.split("/")[0] : val;
-                          setAliasInput(deriveProfileNameFromModel(provider, profiles.map((p) => p.name)));
-                        }}
-                        placeholder="provider/model-id"
-                        className="w-full min-w-0 pl-2.5 pr-7 py-1.5 bg-surface rounded border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary/50"
-                        onKeyDown={(e) => e.key === "Enter" && handleAddProfileWithAlias()}
-                      />
-                      {modelInput && (
-                        <button
-                          onClick={() => setModelInput("")}
-                          className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-text-muted hover:text-[var(--danger)] rounded transition-colors"
-                          title="Clear"
-                        >
-                          <Icon className="text-[14px]">close</Icon>
-                        </button>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => setProfileModalOpen(true)}
-                      disabled={!activeProviders?.length}
-                      className={`w-full sm:w-auto rounded border px-2.5 py-1.5 text-xs transition-colors whitespace-nowrap sm:shrink-0 ${
-                        activeProviders?.length
-                          ? "bg-surface border-border text-text-main hover:border-[var(--text-2)] cursor-pointer"
-                          : "opacity-50 cursor-not-allowed border-border"
-                      } ${styles.selectButton}`}
-                    >
-                      Select Model
-                    </button>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={handleAddProfileWithAlias}
-                      disabled={!aliasInput.trim() || !modelInput.trim() || creatingProfile}
-                      loading={creatingProfile}
-                      className=" whitespace-nowrap"
-                    >
-                      <Icon className="text-[15px] mr-1">add</Icon>
-                      Add
-                    </Button>
-                  </div>
-                </div>
-
-                {profiles.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center p-4 border border-dashed border-border rounded-lg text-center bg-surface/30">
-                    <Icon className="text-[20px] text-text-muted mb-1 opacity-60">
-                      terminal
-                    </Icon>
-                    <p className="text-xs text-text-muted">
-                      Only the main model is active. Add an alias above to configure more models for Codex CLI.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {profiles.map((p) => {
-                      const providerId = p.model.includes("/") ? p.model.split("/")[0] : p.name;
-                      const isCopied = copiedCommand === p.command;
-                      return (
-                        <div
-                          key={p.name}
-                          className="flex items-center justify-between gap-2 p-2.5 bg-surface/50 border border-border hover:border-border-hover rounded-lg transition-colors group"
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="size-6 flex items-center justify-center shrink-0 rounded bg-black/5 dark:bg-white/5 p-0.5">
-                              <ProviderIcon providerId={providerId} size={18} fallbackText={p.name.slice(0, 2).toUpperCase()} />
-                            </div>
-                            <div className="min-w-0 flex flex-col">
-                              <span className="font-medium text-xs text-text-main truncate">
-                                {p.name}
-                              </span>
-                              <span className="text-[11px] text-text-muted truncate font-mono">
-                                {p.model}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              onClick={() => handleCopyCommand(p.command)}
-                              className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] font-mono border transition-all ${
-                                isCopied
-                                  ? "bg-green-500/10 border-green-500/30 text-[var(--pos)]"
-                                  : "bg-surface border-border text-text-muted hover:text-text-main hover:border-[var(--text-2)] cursor-pointer"
-                              }`}
-                              title="Click to copy command"
-                            >
-                              <Icon className="text-[13px]">
-                                {isCopied ? "check" : "terminal"}
-                              </Icon>
-                              <span className="hidden md:inline">{p.command}</span>
-                              <span className="md:hidden">copy</span>
-                            </button>
-
-                            <button
-                              onClick={() => handleDeleteProfile(p.name)}
-                              disabled={deletingProfile === p.name}
-                              className="p-1 text-text-muted hover:text-[var(--danger)] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity rounded"
-                              title="Delete model"
-                            >
-                              <Icon className="text-[15px]">close</Icon>
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
                 )}
               </div>
-            </>
-          )}
-        </div>
+            </FieldRow>
+          </FieldGroup>
+
+          <FieldGroup
+            title={(
+              <span className="inline-flex items-center gap-2">
+                Profiles
+                {profiles.length > 0 && <span className="badge-neutral">{profiles.length}</span>}
+              </span>
+            )}
+          >
+            {/* Quick Add Model bar */}
+            <div className="flex flex-col gap-1.5 p-2.5 bg-surface/40 border border-border rounded-lg">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[10rem_1fr_auto_auto] sm:items-center">
+                <input
+                  type="text"
+                  value={aliasInput}
+                  onChange={(e) => setAliasInput(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))}
+                  placeholder="Alias (e.g. claude)"
+                  className="w-full min-w-0 px-2.5 py-1.5 bg-surface rounded border border-border text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary/50"
+                  onKeyDown={(e) => e.key === "Enter" && handleAddProfileWithAlias()}
+                />
+                <div className="relative w-full min-w-0">
+                  <input
+                    type="text"
+                    value={modelInput}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setModelInput(val);
+                      const provider = val.includes("/") ? val.split("/")[0] : val;
+                      setAliasInput(deriveProfileNameFromModel(provider, profiles.map((p) => p.name)));
+                    }}
+                    placeholder="provider/model-id"
+                    className="w-full min-w-0 pl-2.5 pr-7 py-1.5 bg-surface rounded border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary/50"
+                    onKeyDown={(e) => e.key === "Enter" && handleAddProfileWithAlias()}
+                  />
+                  {modelInput && (
+                    <button
+                      onClick={() => setModelInput("")}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-text-muted hover:text-[var(--danger)] rounded transition-colors"
+                      title="Clear"
+                    >
+                      <Icon className="text-[14px]">close</Icon>
+                    </button>
+                  )}
+                </div>
+                <button
+                  onClick={() => setProfileModalOpen(true)}
+                  disabled={!activeProviders?.length}
+                  className={`w-full sm:w-auto rounded border px-2.5 py-1.5 text-xs transition-colors whitespace-nowrap sm:shrink-0 ${
+                    activeProviders?.length
+                      ? "bg-surface border-border text-text-main hover:border-[var(--text-2)] cursor-pointer"
+                      : "opacity-50 cursor-not-allowed border-border"
+                  } ${styles.selectButton}`}
+                >
+                  Select Model
+                </button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleAddProfileWithAlias}
+                  disabled={!aliasInput.trim() || !modelInput.trim() || creatingProfile}
+                  loading={creatingProfile}
+                  className=" whitespace-nowrap"
+                >
+                  <Icon className="text-[15px] mr-1">add</Icon>
+                  Add
+                </Button>
+              </div>
+            </div>
+
+            {profiles.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-4 border border-dashed border-border rounded-lg text-center bg-surface/30">
+                <Icon className="text-[20px] text-text-muted mb-1 opacity-60">
+                  terminal
+                </Icon>
+                <p className="text-xs text-text-muted">
+                  Only the main model is active. Add an alias above to configure more models for Codex CLI.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {profiles.map((p) => {
+                  const providerId = p.model.includes("/") ? p.model.split("/")[0] : p.name;
+                  const isCopied = copiedCommand === p.command;
+                  return (
+                    <div
+                      key={p.name}
+                      className="flex items-center justify-between gap-2 p-2.5 bg-surface/50 border border-border hover:border-border-hover rounded-lg transition-colors group"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="size-6 flex items-center justify-center shrink-0 rounded bg-black/5 dark:bg-white/5 p-0.5">
+                          <ProviderIcon providerId={providerId} size={18} fallbackText={p.name.slice(0, 2).toUpperCase()} />
+                        </div>
+                        <div className="min-w-0 flex flex-col">
+                          <span className="font-medium text-xs text-text-main truncate">
+                            {p.name}
+                          </span>
+                          <span className="text-[11px] text-text-muted truncate font-mono">
+                            {p.model}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => handleCopyCommand(p.command)}
+                          className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] font-mono border transition-all ${
+                            isCopied
+                              ? "bg-green-500/10 border-green-500/30 text-[var(--pos)]"
+                              : "bg-surface border-border text-text-muted hover:text-text-main hover:border-[var(--text-2)] cursor-pointer"
+                          }`}
+                          title="Click to copy command"
+                        >
+                          <Icon className="text-[13px]">
+                            {isCopied ? "check" : "terminal"}
+                          </Icon>
+                          <span className="hidden md:inline">{p.command}</span>
+                          <span className="md:hidden">copy</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleDeleteProfile(p.name)}
+                          disabled={deletingProfile === p.name}
+                          className="p-1 text-text-muted hover:text-[var(--danger)] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity rounded"
+                          title="Delete model"
+                        >
+                          <Icon className="text-[15px]">close</Icon>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </FieldGroup>
+
+          <ActionBar
+            message={message?.text}
+            tone={message ? (message.type === "success" ? "success" : "danger") : "neutral"}
+            busy={applying || restoring}
+          >
+            <Button variant="outline" size="sm" onClick={() => setShowManualConfigModal(true)}>
+              <Icon className="text-[14px] mr-1">content_copy</Icon>Manual Config
+            </Button>
+            <Button variant="secondary" size="sm" onClick={handleResetSettings} disabled={restoring} loading={restoring}>
+              <Icon className="text-[14px] mr-1">restore</Icon>Reset
+            </Button>
+            <Button variant="primary" size="sm" onClick={handleApplySettings} disabled={(!selectedApiKey && (cloudEnabled && apiKeys.length > 0)) || !selectedModel} loading={applying}>
+              <Icon className="text-[14px] mr-1">save</Icon>Apply
+            </Button>
+          </ActionBar>
+        </>
       )}
 
       {modalOpen && (
@@ -652,6 +600,6 @@ default_subagent_model = "${effectiveSubagentModel}"
         title="Codex CLI - Manual Configuration"
         configs={getManualConfigs()}
       />
-    </Card>
+    </div>
   );
 }

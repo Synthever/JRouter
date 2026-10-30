@@ -1,17 +1,17 @@
 "use client";
 import Icon from "@/shared/components/Icon";
-import StatusBadge from "@/shared/components/StatusBadge";
 import styles from "../cli-tools.module.css";
 
 import { useState, useEffect, useRef } from "react";
-import { Card, Button, ModelSelectModal, ManualConfigModal } from "@/shared/components";
-import Image from "next/image";
+import { Button, ModelSelectModal, ManualConfigModal } from "@/shared/components";
 import BaseUrlSelect from "./BaseUrlSelect";
 import { rememberEndpoint } from "./cliEndpointPresets";
 import ApiKeySelect from "./ApiKeySelect";
-import { matchKnownEndpoint } from "./cliEndpointMatch";
+import FieldGroup from "./ui/FieldGroup";
+import FieldRow from "./ui/FieldRow";
+import ActionBar from "./ui/ActionBar";
 
-export default function OpenCodeToolCard({ tool, isExpanded = true, onToggle, baseUrl, apiKeys, activeProviders, cloudEnabled, initialStatus, tunnelEnabled, tunnelPublicUrl, tailscaleEnabled, tailscaleUrl }) {
+export default function OpenCodeToolCard({ tool, baseUrl, apiKeys, activeProviders, cloudEnabled, initialStatus, tunnelEnabled, tunnelPublicUrl, tailscaleEnabled, tailscaleUrl }) {
   const [status, setStatus] = useState(initialStatus || null);
   const [checking, setChecking] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -45,12 +45,9 @@ export default function OpenCodeToolCard({ tool, isExpanded = true, onToggle, ba
   }, [initialStatus]);
 
   useEffect(() => {
-    if (isExpanded) {
-      if (!status) checkStatus();
-      fetchModelAliases();
-    }
-  }, [isExpanded]);
-
+    if (!status) checkStatus();
+    fetchModelAliases();
+  }, []);
   // Sync models from existing config
   useEffect(() => {
     if (status?.opencode?.models) {
@@ -99,16 +96,6 @@ export default function OpenCodeToolCard({ tool, isExpanded = true, onToggle, ba
   };
 
   const currentBaseUrl = status?.config?.provider?.["jrouter"]?.options?.baseURL || "";
-
-  const getConfigStatus = () => {
-    if (!status?.installed) return null;
-    if (!status.config) return "not_configured";
-    if (!status.hasJRouter) return "not_configured";
-    const url = status.config?.provider?.["jrouter"]?.options?.baseURL || "";
-    return matchKnownEndpoint(url, { tunnelPublicUrl, tailscaleUrl }) ? "configured" : "other";
-  };
-
-  const configStatus = getConfigStatus();
 
   const getEffectiveBaseUrl = () => {
     const url = customBaseUrl || baseUrl;
@@ -225,239 +212,204 @@ export default function OpenCodeToolCard({ tool, isExpanded = true, onToggle, ba
   };
 
   return (
-    <Card padding="none" className={styles.panel}>
-      <div className={styles.panelHeader} onClick={onToggle}>
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="size-8 flex items-center justify-center shrink-0">
-            <Image src="/providers/opencode.png" alt={tool.name} width={32} height={32} className="size-8 object-contain rounded-lg" sizes="32px" onError={(e) => { e.target.style.display = "none"; }} loading="lazy" decoding="async" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <h3 className="font-medium text-sm">{tool.name}</h3>
-              {configStatus === "configured" && <StatusBadge variant="success" className={styles.status}>Connected</StatusBadge>}
-              {configStatus === "not_configured" && <StatusBadge variant="warning" className={styles.status}>Not configured</StatusBadge>}
-              {configStatus === "other" && <StatusBadge variant="default" dot={false} className={styles.status}>Other</StatusBadge>}
-            </div>
-            <p className="text-xs text-text-muted truncate">{tool.description}</p>
-          </div>
+    <div className={styles.panelBody}>
+      {checking && (
+        <div className="flex items-center gap-2 text-text-muted">
+          <Icon className="animate-spin">progress_activity</Icon>
+          <span>Checking OpenCode CLI...</span>
         </div>
-        <Icon className={`text-text-muted text-[20px] transition-transform ${isExpanded ? "rotate-180" : ""}`}>expand_more</Icon>
-      </div>
+      )}
 
-      {isExpanded && (
-        <div className={styles.body}>
-          {checking && (
-            <div className="flex items-center gap-2 text-text-muted">
-              <Icon className="animate-spin">progress_activity</Icon>
-              <span>Checking OpenCode CLI...</span>
-            </div>
-          )}
-
-          {!checking && status && !status.installed && (
-            <div className="flex flex-col gap-4">
-              <div className={`flex flex-col gap-3 p-4 border ${styles.notice} ${styles.warning}`}>
-                <div className="flex items-start gap-3">
-                  <Icon className="text-[var(--warn)]">warning</Icon>
-                  <div className="flex-1">
-                    <p className="font-medium text-[var(--warn)]">OpenCode CLI not detected locally</p>
-                    <p className="text-sm text-text-muted">Manual configuration is still available if JRouter is deployed on a remote server.</p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 sm:pl-9">
-                  <Button variant="secondary" size="sm" onClick={() => setShowManualConfigModal(true)}>
-                    <Icon className="text-[18px] mr-1">content_copy</Icon>
-                    Manual Config
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setShowInstallGuide(!showInstallGuide)}>
-                    <Icon className="text-[18px] mr-1">{showInstallGuide ? "expand_less" : "help"}</Icon>
-                    {showInstallGuide ? "Hide" : "How to Install"}
-                  </Button>
-                </div>
+      {!checking && status && !status.installed && (
+        <div className="flex flex-col gap-4">
+          <div className={`flex flex-col gap-3 p-4 border ${styles.notice} ${styles.warning}`}>
+            <div className="flex items-start gap-3">
+              <Icon className="text-[var(--warn)]">warning</Icon>
+              <div className="flex-1">
+                <p className="font-medium text-[var(--warn)]">OpenCode CLI not detected locally</p>
+                <p className="text-sm text-text-muted">Manual configuration is still available if JRouter is deployed on a remote server.</p>
               </div>
-              {showInstallGuide && (
-                <div className="p-4 bg-surface border border-border rounded-lg">
-                  <h4 className="font-medium mb-3">Installation Guide</h4>
-                  <div className="space-y-3 text-sm">
-                    <div>
-                      <p className="text-text-muted mb-1">macOS / Linux:</p>
-                      <code className="block px-3 py-2 bg-black/5 dark:bg-white/5 rounded font-mono text-xs">npm install -g opencode-ai</code>
-                    </div>
-                    <p className="text-text-muted">After installation, run <code className="px-1 bg-black/5 dark:bg-white/5 rounded">opencode</code> to verify.</p>
-                  </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 sm:pl-9">
+              <Button variant="secondary" size="sm" onClick={() => setShowManualConfigModal(true)}>
+                <Icon className="text-[18px] mr-1">content_copy</Icon>
+                Manual Config
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setShowInstallGuide(!showInstallGuide)}>
+                <Icon className="text-[18px] mr-1">{showInstallGuide ? "expand_less" : "help"}</Icon>
+                {showInstallGuide ? "Hide" : "How to Install"}
+              </Button>
+            </div>
+          </div>
+          {showInstallGuide && (
+            <div className="p-4 bg-surface border border-border rounded-lg">
+              <h4 className="font-medium mb-3">Installation Guide</h4>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <p className="text-text-muted mb-1">macOS / Linux:</p>
+                  <code className="block px-3 py-2 bg-black/5 dark:bg-white/5 rounded font-mono text-xs">npm install -g opencode-ai</code>
                 </div>
-              )}
+                <p className="text-text-muted">After installation, run <code className="px-1 bg-black/5 dark:bg-white/5 rounded">opencode</code> to verify.</p>
+              </div>
             </div>
           )}
+        </div>
+      )}
 
-          {!checking && status?.installed && (
-            <>
+      {!checking && status?.installed && (
+        <>
+          <FieldGroup title="Endpoint">
+            <FieldRow label="Select Endpoint">
+              <BaseUrlSelect
+                value={customBaseUrl || getDisplayUrl()}
+                onChange={setCustomBaseUrl}
+                requiresExternalUrl={tool.requiresExternalUrl}
+                tunnelEnabled={tunnelEnabled}
+                tunnelPublicUrl={tunnelPublicUrl}
+                tailscaleEnabled={tailscaleEnabled}
+                tailscaleUrl={tailscaleUrl}
+                currentUrl={currentBaseUrl}
+              />
+            </FieldRow>
+            {status?.config?.provider?.["jrouter"]?.options?.baseURL && (
+              <FieldRow label="Current">
+                <span className={styles.currentValue}>{status.config.provider["jrouter"].options.baseURL}</span>
+              </FieldRow>
+            )}
+          </FieldGroup>
+
+          <FieldGroup title="Credentials">
+            <FieldRow label="API Key">
+              <ApiKeySelect value={selectedApiKey} onChange={setSelectedApiKey} apiKeys={apiKeys} cloudEnabled={cloudEnabled} />
+            </FieldRow>
+          </FieldGroup>
+
+          <FieldGroup title="Models">
+            <FieldRow label="Models">
               <div className="flex flex-col gap-2">
-                {/* Current base URL */}
-                {/* Endpoint (selector) */}
-                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr] sm:items-center sm:gap-2">
-                  <span className={`sm:text-right ${styles.fieldLabel}`}>Select Endpoint</span>
-                  <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
-                  <BaseUrlSelect
-                    value={customBaseUrl || getDisplayUrl()}
-                    onChange={setCustomBaseUrl}
-                    requiresExternalUrl={tool.requiresExternalUrl}
-                    tunnelEnabled={tunnelEnabled}
-                    tunnelPublicUrl={tunnelPublicUrl}
-                    tailscaleEnabled={tailscaleEnabled}
-                    tailscaleUrl={tailscaleUrl}
-                    currentUrl={currentBaseUrl}
-                  />
-                </div>
-
-                {/* Current configured */}
-                {status?.config?.provider?.["jrouter"]?.options?.baseURL && (
-                  <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr_auto] sm:items-center sm:gap-2">
-                    <span className={`sm:text-right ${styles.fieldLabel}`}>Current</span>
-                    <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
-                    <span className="min-w-0 truncate rounded bg-surface/40 px-2 py-2 text-xs text-text-muted sm:py-1.5">
-                      {status.config.provider["jrouter"].options.baseURL}
-                    </span>
-                  </div>
-                )}
-
-                {/* API Key */}
-                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr_auto] sm:items-center sm:gap-2">
-                  <span className={`sm:text-right ${styles.fieldLabel}`}>API Key</span>
-                  <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
-                  <ApiKeySelect value={selectedApiKey} onChange={setSelectedApiKey} apiKeys={apiKeys} cloudEnabled={cloudEnabled} />
-                </div>
-
-                {/* Models */}
-                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr] sm:items-start sm:gap-2">
-                  <span className="w-32 shrink-0 text-sm font-semibold text-text-main text-right pt-1">Models</span>
-                  <Icon className="text-text-muted text-[14px] mt-1.5">arrow_forward</Icon>
-                  <div className="flex-1 flex flex-col gap-2">
-                    <div className="flex flex-wrap gap-1.5 min-h-[28px] px-2 py-1.5 bg-surface rounded border border-border">
-                      {selectedModels.length === 0 ? (
-                        <span className="text-xs text-text-muted">No models selected</span>
-                      ) : (
-                        selectedModels.map((model) => (
-                          <span
-                            key={model}
-                            onClick={async () => {
-                              if (model === activeModel) {
-                                try {
-                                  const res = await fetch("/api/cli-tools/opencode-settings", {
-                                    method: "PATCH",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ clearActiveModel: true }),
-                                  });
-                                  if (res.ok) {
-                                    setActiveModel("");
-                                    checkStatus();
-                                  }
-                                } catch (error) {
-                                  console.log("Error clearing active model:", error);
-                                }
-                              } else {
-                                setActiveModel(model);
+                <div className="flex flex-wrap gap-1.5 min-h-[28px] px-2 py-1.5 bg-surface rounded border border-border">
+                  {selectedModels.length === 0 ? (
+                    <span className="text-xs text-text-muted">No models selected</span>
+                  ) : (
+                    selectedModels.map((model) => (
+                      <span
+                        key={model}
+                        onClick={async () => {
+                          if (model === activeModel) {
+                            try {
+                              const res = await fetch("/api/cli-tools/opencode-settings", {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ clearActiveModel: true }),
+                              });
+                              if (res.ok) {
+                                setActiveModel("");
+                                checkStatus();
                               }
-                            }}
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs cursor-pointer transition-colors ${
-                              model === activeModel
-                                ? "bg-[var(--text)] text-[var(--bg)] border border-[var(--text)]"
-                                : "bg-black/5 dark:bg-white/5 text-text-muted border border-transparent hover:border-border"
-                            }`}
-                            title={model === activeModel ? "Click to clear active model" : "Click to set as active"}
-                          >
-                            {model === activeModel && <Icon className="text-[10px]">star</Icon>}
-                            {model}
-                            <button
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                try {
-                                  const res = await fetch(`/api/cli-tools/opencode-settings?model=${encodeURIComponent(model)}`, { method: "DELETE" });
-                                  if (res.ok) {
-                                    const newModels = selectedModels.filter((m) => m !== model);
-                                    setSelectedModels(newModels);
-                                    if (activeModel === model) {
-                                      setActiveModel("");
-                                    }
-                                    checkStatus();
-                                  }
-                                } catch (error) {
-                                  console.log("Error removing model:", error);
+                            } catch (error) {
+                              console.log("Error clearing active model:", error);
+                            }
+                          } else {
+                            setActiveModel(model);
+                          }
+                        }}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs cursor-pointer transition-colors ${
+                          model === activeModel
+                            ? "bg-[var(--text)] text-[var(--bg)] border border-[var(--text)]"
+                            : "bg-black/5 dark:bg-white/5 text-text-muted border border-transparent hover:border-border"
+                        }`}
+                        title={model === activeModel ? "Click to clear active model" : "Click to set as active"}
+                      >
+                        {model === activeModel && <Icon className="text-[10px]">star</Icon>}
+                        {model}
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              const res = await fetch(`/api/cli-tools/opencode-settings?model=${encodeURIComponent(model)}`, { method: "DELETE" });
+                              if (res.ok) {
+                                const newModels = selectedModels.filter((m) => m !== model);
+                                setSelectedModels(newModels);
+                                if (activeModel === model) {
+                                  setActiveModel("");
                                 }
-                              }}
-                              className="ml-0.5 hover:text-[var(--danger)]"
-                            >
-                              <Icon className="text-[12px]">close</Icon>
-                            </button>
-                          </span>
-                        ))
-                      )}
-                    </div>
-                    <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr_auto] sm:items-center sm:gap-2">
-                      <button onClick={() => setModalOpen(true)} disabled={!activeProviders?.length} className={`px-2 py-1 rounded border text-xs transition-colors ${activeProviders?.length ? "bg-surface border-border text-text-main hover:border-[var(--text-2)] cursor-pointer" : "opacity-50 cursor-not-allowed border-border"} ${styles.selectButton}`}>Add Model</button>
-                      <span className="text-xs text-text-muted">
-                        {selectedModels.length > 0 && activeModel ? (
-                          <>Active: <span className="text-text-main">{activeModel}</span></>
-                        ) : selectedModels.length > 0 ? (
-                          <span className="text-[var(--warn)]">Click a model to set/clear active</span>
-                        ) : (
-                          "Select models to add"
-                        )}
+                                checkStatus();
+                              }
+                            } catch (error) {
+                              console.log("Error removing model:", error);
+                            }
+                          }}
+                          className="ml-0.5 hover:text-[var(--danger)]"
+                        >
+                          <Icon className="text-[12px]">close</Icon>
+                        </button>
                       </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Subagent Model */}
-                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[8rem_auto_1fr_auto] sm:items-center sm:gap-2">
-                  <span className={`sm:text-right ${styles.fieldLabel}`}>Subagent Model</span>
-                  <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
-                  <input
-                    type="text"
-                    value={subagentModel}
-                    onChange={(e) => setSubagentModel(e.target.value)}
-                    placeholder={selectedModel || "provider/model-id (defaults to main model)"}
-                    className="w-full min-w-0 px-2 py-2 bg-surface rounded border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 sm:py-1.5"
-                  />
-                  <button
-                    onClick={() => setSubagentModalOpen(true)}
-                    disabled={!activeProviders?.length}
-                    className={`w-full sm:w-auto rounded border px-2 py-2 text-xs transition-colors sm:py-1.5 whitespace-nowrap sm:shrink-0 ${activeProviders?.length ? "bg-surface border-border text-text-main hover:border-[var(--text-2)] cursor-pointer" : "opacity-50 cursor-not-allowed border-border"} ${styles.selectButton}`}
-                  >
-                    Select Model
-                  </button>
-                  {subagentModel && (
-                    <button
-                      onClick={() => setSubagentModel("")}
-                      className="p-1 text-text-muted hover:text-[var(--danger)] rounded transition-colors"
-                      title="Clear (will use main model)"
-                    >
-                      <Icon className="text-[14px]">close</Icon>
-                    </button>
+                    ))
                   )}
                 </div>
-              </div>
-
-              {message && (
-                <div className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs ${message.type === "success" ? styles.positive : styles.danger}`}>
-                  <Icon className="text-[14px]">{message.type === "success" ? "check_circle" : "error"}</Icon>
-                  <span>{message.text}</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button onClick={() => setModalOpen(true)} disabled={!activeProviders?.length} className={`px-2 py-1 rounded border text-xs transition-colors ${activeProviders?.length ? "bg-surface border-border text-text-main hover:border-[var(--text-2)] cursor-pointer" : "opacity-50 cursor-not-allowed border-border"} ${styles.selectButton}`}>Add Model</button>
+                  <span className="text-xs text-text-muted">
+                    {selectedModels.length > 0 && activeModel ? (
+                      <>Active: <span className="text-text-main">{activeModel}</span></>
+                    ) : selectedModels.length > 0 ? (
+                      <span className="text-[var(--warn)]">Click a model to set/clear active</span>
+                    ) : (
+                      "Select models to add"
+                    )}
+                  </span>
                 </div>
-              )}
-
-              <div className="grid grid-cols-1 gap-2 sm:flex sm:items-center">
-                <Button variant="primary" size="sm" onClick={handleApply} disabled={selectedModels.length === 0} loading={applying}>
-                  <Icon className="text-[14px] mr-1">save</Icon>Apply
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleReset} disabled={!status.hasJRouter} loading={restoring}>
-                  <Icon className="text-[14px] mr-1">restore</Icon>Reset
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => setShowManualConfigModal(true)}>
-                  <Icon className="text-[14px] mr-1">content_copy</Icon>Manual Config
-                </Button>
               </div>
-            </>
-          )}
-        </div>
+            </FieldRow>
+            <FieldRow
+              label="Subagent Model"
+              aside={(
+                <button
+                  onClick={() => setSubagentModalOpen(true)}
+                  disabled={!activeProviders?.length}
+                  className={`w-full sm:w-auto rounded border px-2 py-2 text-xs transition-colors sm:py-1.5 whitespace-nowrap sm:shrink-0 ${activeProviders?.length ? "bg-surface border-border text-text-main hover:border-[var(--text-2)] cursor-pointer" : "opacity-50 cursor-not-allowed border-border"} ${styles.selectButton}`}
+                >
+                  Select Model
+                </button>
+              )}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <input
+                  type="text"
+                  value={subagentModel}
+                  onChange={(e) => setSubagentModel(e.target.value)}
+                  placeholder={selectedModel || "provider/model-id (defaults to main model)"}
+                  className="w-full min-w-0 px-2 py-2 bg-surface rounded border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 sm:py-1.5"
+                />
+                {subagentModel && (
+                  <button
+                    onClick={() => setSubagentModel("")}
+                    className="p-1 text-text-muted hover:text-[var(--danger)] rounded transition-colors"
+                    title="Clear (will use main model)"
+                  >
+                    <Icon className="text-[14px]">close</Icon>
+                  </button>
+                )}
+              </div>
+            </FieldRow>
+          </FieldGroup>
+
+          <ActionBar
+            message={message?.text}
+            tone={message ? (message.type === "success" ? "success" : "danger") : "neutral"}
+            busy={applying || restoring}
+          >
+            <Button variant="outline" size="sm" onClick={() => setShowManualConfigModal(true)}>
+              <Icon className="text-[14px] mr-1">content_copy</Icon>Manual Config
+            </Button>
+            <Button variant="secondary" size="sm" onClick={handleReset} disabled={!status.hasJRouter} loading={restoring}>
+              <Icon className="text-[14px] mr-1">restore</Icon>Reset
+            </Button>
+            <Button variant="primary" size="sm" onClick={handleApply} disabled={selectedModels.length === 0} loading={applying}>
+              <Icon className="text-[14px] mr-1">save</Icon>Apply
+            </Button>
+          </ActionBar>
+        </>
       )}
 
       {modalOpen && (
@@ -509,6 +461,6 @@ export default function OpenCodeToolCard({ tool, isExpanded = true, onToggle, ba
         title="OpenCode - Manual Configuration"
         configs={getManualConfigs()}
       />
-    </Card>
+    </div>
   );
 }
