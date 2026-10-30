@@ -298,7 +298,7 @@ export default function CoworkToolCard({
           </FieldGroup>
 
           <FieldGroup title="Plugins">
-            <FieldRow label="MCP" className="items-start">
+            <FieldRow label="MCP" className={styles.fieldTop}>
               <div className="flex flex-col gap-1">
                 {/* Preset plugins */}
                 {plugins.filter((p) => p.name !== "exa").map((p) => (
@@ -367,7 +367,7 @@ export default function CoworkToolCard({
               </div>
             </FieldRow>
 
-            <FieldRow label="Tools" className="items-start">
+            <FieldRow label="Tools" className={styles.fieldTop}>
               <div className="flex flex-col gap-1.5">
                 {(() => {
                   const exaEnabled = plugins.some((p) => p.name === "exa");
@@ -416,7 +416,7 @@ export default function CoworkToolCard({
             </FieldRow>
 
             {Array.isArray(status?.localStdioPlugins) && status.localStdioPlugins.filter((p) => p.name !== "browsermcp").length > 0 && (
-              <FieldRow label="Local Plugins" className="items-start">
+              <FieldRow label="Local Plugins" className={styles.fieldTop}>
                 <div className="flex flex-col gap-2">
                   <div className="flex flex-col gap-1.5 px-2 py-1.5 bg-surface rounded border border-border">
                     {status.localStdioPlugins.filter((p) => p.name !== "browsermcp").map((p) => {

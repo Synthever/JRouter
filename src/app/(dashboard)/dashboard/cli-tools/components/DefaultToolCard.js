@@ -6,7 +6,6 @@ import { useState } from "react";
 import { ModelSelectModal } from "@/shared/components";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import ApiKeySelect from "./ApiKeySelect";
-import ActionBar from "./ui/ActionBar";
 
 export default function DefaultToolCard({ toolId, tool, baseUrl, apiKeys, activeProviders = [], cloudEnabled = false, tunnelEnabled = false }) {
   const [copiedField, setCopiedField] = useState(null);
@@ -213,8 +212,6 @@ export default function DefaultToolCard({ toolId, tool, baseUrl, apiKeys, active
   return (
     <div className={styles.panelBody}>
       {renderGuideSteps()}
-
-      <ActionBar message={null} />
 
       {showModelModal && (
         <ModelSelectModal

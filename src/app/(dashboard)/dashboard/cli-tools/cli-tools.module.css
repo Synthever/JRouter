@@ -793,6 +793,10 @@
   padding: 6px 0;
 }
 
+.fieldTop {
+  align-items: start;
+}
+
 .fieldWithAside {
   grid-template-columns: 8rem auto minmax(0, 1fr) auto;
 }

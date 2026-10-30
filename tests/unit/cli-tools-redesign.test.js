@@ -103,7 +103,8 @@ describe("CLI Tools detail shell", () => {
     const css = read(`${ROUTE}/cli-tools.module.css`);
     const actionBar = css.slice(css.indexOf(".actionBar {"), css.indexOf(".actionMessage"));
     expect(actionBar).toContain("position: sticky");
-    const panel = css.slice(css.indexOf(".panel {"), css.indexOf(".panelBody {"));
+    const panelStart = css.indexOf(".panel {");
+    const panel = css.slice(panelStart, css.indexOf("}", panelStart) + 1);
     expect(panel).not.toContain("overflow: hidden");
   });
 

@@ -1,5 +1,6 @@
 "use client";
 import Icon from "@/shared/components/Icon";
+import styles from "../cli-tools/cli-tools.module.css";
 
 import { useState, useEffect } from "react";
 import { MITM_TOOLS } from "@/shared/constants/cliTools";
@@ -12,7 +13,6 @@ export default function MitmPageClient() {
   const [apiKeys, setApiKeys] = useState([]);
   const [modelAliases, setModelAliases] = useState({});
   const [cloudEnabled, setCloudEnabled] = useState(false);
-  const [expandedTool, setExpandedTool] = useState(null);
   const [mitmStatus, setMitmStatus] = useState({ running: false, certExists: false, dnsStatus: {}, hasCachedPassword: false });
 
   useEffect(() => {
@@ -85,32 +85,33 @@ export default function MitmPageClient() {
       </div>
 
       {/* MITM Server Card */}
-      <MitmServerCard
-        apiKeys={apiKeys}
-        cloudEnabled={cloudEnabled}
-        onStatusChange={setMitmStatus}
-      />
+      <section className={styles.panel}>
+        <MitmServerCard
+          apiKeys={apiKeys}
+          cloudEnabled={cloudEnabled}
+          onStatusChange={setMitmStatus}
+        />
+      </section>
 
       {/* Tool Cards */}
       <div className="grid gap-3 sm:gap-4">
         {mitmTools.map(([toolId, tool]) => (
-          <MitmToolCard
-            key={toolId}
-            tool={tool}
-            isExpanded={expandedTool === toolId}
-            onToggle={() => setExpandedTool(expandedTool === toolId ? null : toolId)}
-            serverRunning={mitmStatus.running}
-            dnsActive={mitmStatus.dnsStatus?.[toolId] || false}
-            hasCachedPassword={mitmStatus.hasCachedPassword || false}
-            needsSudoPassword={mitmStatus.needsSudoPassword !== false}
-            isWin={mitmStatus.isWin === true}
-            apiKeys={apiKeys}
-            activeProviders={getActiveProviders()}
-            hasActiveProviders={hasActiveProviders()}
-            modelAliases={modelAliases}
-            cloudEnabled={cloudEnabled}
-            onDnsChange={(data) => setMitmStatus(prev => ({ ...prev, dnsStatus: data.dnsStatus ?? prev.dnsStatus }))}
-          />
+          <section key={toolId} className={styles.panel}>
+            <MitmToolCard
+              tool={tool}
+              serverRunning={mitmStatus.running}
+              dnsActive={mitmStatus.dnsStatus?.[toolId] || false}
+              hasCachedPassword={mitmStatus.hasCachedPassword || false}
+              needsSudoPassword={mitmStatus.needsSudoPassword !== false}
+              isWin={mitmStatus.isWin === true}
+              apiKeys={apiKeys}
+              activeProviders={getActiveProviders()}
+              hasActiveProviders={hasActiveProviders()}
+              modelAliases={modelAliases}
+              cloudEnabled={cloudEnabled}
+              onDnsChange={(data) => setMitmStatus(prev => ({ ...prev, dnsStatus: data.dnsStatus ?? prev.dnsStatus }))}
+            />
+          </section>
         ))}
       </div>
     </div>

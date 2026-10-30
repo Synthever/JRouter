@@ -266,7 +266,7 @@ export default function GrokBuildToolCard({
           {tool.notes?.length > 0 && (
             <div className="mb-2 flex flex-col gap-2">
               {tool.notes.map((note, index) => (
-                <div key={index} className={`flex items-start gap-2 p-2 ${styles.notice} ${note.type === "warning" ? styles.warning : styles.neutral}`}>
+                <div key={index} className={`flex items-start gap-2 p-2 border ${styles.notice} ${note.type === "warning" ? styles.warning : styles.neutral}`}>
                   <Icon className="mt-0.5 text-[14px]">{note.type === "warning" ? "warning" : "info"}</Icon>
                   <span>{note.text}</span>
                 </div>
