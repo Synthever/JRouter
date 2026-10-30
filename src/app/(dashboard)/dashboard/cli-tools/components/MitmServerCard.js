@@ -2,7 +2,10 @@
 import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect, useCallback } from "react";
-import { Card, Button, Badge, Input } from "@/shared/components";
+import { Button, Badge, Input } from "@/shared/components";
+import FieldGroup from "./ui/FieldGroup";
+import FieldRow from "./ui/FieldRow";
+import ActionBar from "./ui/ActionBar";
 
 const DEFAULT_MITM_ROUTER_BASE = "http://localhost:20128";
 
@@ -134,136 +137,126 @@ export default function MitmServerCard({ apiKeys, cloudEnabled, onStatusChange }
 
   return (
     <>
-      <Card padding="sm" className="border-primary/20 bg-primary/5">
-        <div className="flex flex-col gap-3">
-          {/* Header */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <Icon className="text-primary text-[20px]">security</Icon>
-              <span className="font-semibold text-sm text-text-main">MITM Server</span>
-              {isRunning ? (
-                <Badge variant="success" size="sm">Running</Badge>
-              ) : (
-                <Badge variant="default" size="sm">Stopped</Badge>
-              )}
-            </div>
-            <div className="flex flex-wrap items-center gap-1 text-xs text-text-muted" data-i18n-skip="true">
-              {[
-                { label: "Cert", ok: status?.certExists },
-                { label: "Trusted", ok: status?.certTrusted },
-                { label: "Server", ok: isRunning },
-              ].map(({ label, ok }) => (
-                <span key={label} className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded ${ok ? "text-green-600" : "text-text-muted"}`}>
-                  <Icon className="text-[12px]">
-                    {ok ? "check_circle" : "cancel"}
-                  </Icon>
-                  {label}
-                </span>
-              ))}
-            </div>
+      <div className="flex flex-col gap-3">
+        {/* Header */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <Icon className="text-primary text-[20px]">security</Icon>
+            <span className="font-semibold text-sm text-text-main">MITM Server</span>
+            {isRunning ? (
+              <Badge variant="success" size="sm">Running</Badge>
+            ) : (
+              <Badge variant="default" size="sm">Stopped</Badge>
+            )}
           </div>
-
-          {/* Purpose & How it works */}
-          <div className="px-2 py-2 rounded-lg bg-surface/50 border border-border/50 flex flex-col gap-2">
-            <p className="text-[11px] text-text-muted leading-relaxed">
-              <span className="font-medium text-text-main">Purpose:</span> Use Antigravity IDE & GitHub Copilot → with ANY provider/model from JRouter
-            </p>
-            <p className="text-[11px] text-text-muted leading-relaxed">
-              <span className="font-medium text-text-main">How it works:</span> Antigravity/Copilot IDE request → DNS redirect to localhost:443 → MITM proxy intercepts → JRouter → response to Antigravity/Copilot
-            </p>
+          <div className="flex flex-wrap items-center gap-1 text-xs text-text-muted" data-i18n-skip="true">
+            {[
+              { label: "Cert", ok: status?.certExists },
+              { label: "Trusted", ok: status?.certTrusted },
+              { label: "Server", ok: isRunning },
+            ].map(({ label, ok }) => (
+              <span key={label} className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded ${ok ? "text-green-600" : "text-text-muted"}`}>
+                <Icon className="text-[12px]">
+                  {ok ? "check_circle" : "cancel"}
+                </Icon>
+                {label}
+              </span>
+            ))}
           </div>
+        </div>
 
-          {/* Base URL + API Key — same row pattern as Claude Code / cli-tools */}
-          <div className="flex flex-col gap-2">
-            <div className="grid gap-1 sm:grid-cols-[8rem_auto_1fr] sm:items-center sm:gap-2">
-              <span className="text-xs font-semibold text-text-main sm:text-right sm:text-sm">JRouter Base URL</span>
-              <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
+        {/* Purpose & How it works */}
+        <div className="px-2 py-2 rounded-lg bg-surface/50 border border-border/50 flex flex-col gap-2">
+          <p className="text-[11px] text-text-muted leading-relaxed">
+            <span className="font-medium text-text-main">Purpose:</span> Use Antigravity IDE & GitHub Copilot → with ANY provider/model from JRouter
+          </p>
+          <p className="text-[11px] text-text-muted leading-relaxed">
+            <span className="font-medium text-text-main">How it works:</span> Antigravity/Copilot IDE request → DNS redirect to localhost:443 → MITM proxy intercepts → JRouter → response to Antigravity/Copilot
+          </p>
+        </div>
+
+        {/* Base URL + API Key — same field rows as every other tool panel */}
+        <FieldGroup title="Connection">
+          <FieldRow label="JRouter Base URL">
+            <input
+              type="text"
+              value={mitmRouterBaseUrl}
+              onChange={(e) => setMitmRouterBaseUrl(e.target.value)}
+              placeholder={DEFAULT_MITM_ROUTER_BASE}
+              disabled={isRunning}
+              className="w-full min-w-0 px-2 py-1.5 bg-surface rounded border border-border text-xs text-text-main focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:opacity-50"
+            />
+          </FieldRow>
+          {!isRunning && (
+            <FieldRow label="API Key">
               <input
                 type="text"
-                value={mitmRouterBaseUrl}
-                onChange={(e) => setMitmRouterBaseUrl(e.target.value)}
-                placeholder={DEFAULT_MITM_ROUTER_BASE}
-                disabled={isRunning}
-                className="flex-1 min-w-0 px-2 py-1.5 bg-surface rounded border border-border text-xs text-text-main focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:opacity-50"
+                list="mitm-api-keys"
+                value={selectedApiKey}
+                onChange={(e) => setSelectedApiKey(e.target.value)}
+                placeholder={cloudEnabled ? "Enter or pick API key" : "sk_jrouter (default)"}
+                className="w-full min-w-0 px-2 py-1.5 bg-surface rounded border border-border text-xs text-text-main focus:outline-none focus:ring-1 focus:ring-primary/50"
               />
-            </div>
-            {!isRunning && (
-              <div className="grid gap-1 sm:grid-cols-[8rem_auto_1fr] sm:items-center sm:gap-2">
-                <span className="text-xs font-semibold text-text-main sm:text-right sm:text-sm">API Key</span>
-                <Icon className="hidden text-text-muted text-[14px] sm:inline">arrow_forward</Icon>
-                <input
-                  type="text"
-                  list="mitm-api-keys"
-                  value={selectedApiKey}
-                  onChange={(e) => setSelectedApiKey(e.target.value)}
-                  placeholder={cloudEnabled ? "Enter or pick API key" : "sk_jrouter (default)"}
-                  className="flex-1 min-w-0 px-2 py-1.5 bg-surface rounded border border-border text-xs text-text-main focus:outline-none focus:ring-1 focus:ring-primary/50"
-                />
-                {apiKeys?.length > 0 && (
-                  <datalist id="mitm-api-keys">
-                    {apiKeys.map((key) => (
-                      <option key={key.id} value={key.key}>{key.name || key.key}</option>
-                    ))}
-                  </datalist>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center" data-i18n-skip="true">
-            {status?.certExists && !status?.certTrusted && (
-              <button
-                onClick={() => handleAction("trust-cert")}
-                disabled={loading}
-                className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-xs font-medium text-yellow-600 transition-colors hover:bg-yellow-500/20 disabled:opacity-50 sm:w-auto sm:py-1.5"
-              >
-                <Icon className="text-[16px]">verified_user</Icon>
-                Trust Cert
-              </button>
-            )}
-            {isRunning ? (
-              <button
-                onClick={() => handleAction("stop")}
-                disabled={loading}
-                className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs font-medium text-red-500 transition-colors hover:bg-red-500/20 disabled:opacity-50 sm:w-auto sm:py-1.5"
-              >
-                <Icon className="text-[16px]">stop_circle</Icon>
-                Stop Server
-              </button>
-            ) : (
-              <button
-                onClick={() => handleAction("start")}
-                disabled={loading || !status || (serverIsWindows && !isAdmin)}
-                title={serverIsWindows && !isAdmin ? "Administrator required" : undefined}
-                className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-xs font-medium text-primary transition-colors hover:bg-primary/20 disabled:opacity-50 sm:w-auto sm:py-1.5"
-              >
-                <Icon className="text-[16px]">play_circle</Icon>
-                Start Server
-              </button>
-            )}
-            {isRunning && (
-              <p className="text-xs text-text-muted">Enable DNS per tool below to activate interception</p>
-            )}
-          </div>
-
-          {/* Action error */}
-          {actionError && (
-            <div className="flex items-start gap-2 px-2 py-1.5 rounded text-xs bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
-              <Icon className="text-[14px] mt-0.5 shrink-0">error</Icon>
-              <span>{actionError}</span>
-            </div>
+              {apiKeys?.length > 0 && (
+                <datalist id="mitm-api-keys">
+                  {apiKeys.map((key) => (
+                    <option key={key.id} value={key.key}>{key.name || key.key}</option>
+                  ))}
+                </datalist>
+              )}
+            </FieldRow>
           )}
+        </FieldGroup>
 
-          {/* Windows admin warning */}
-          {serverIsWindows && !isAdmin && (
-            <div className="flex items-center gap-2 px-2 py-1.5 rounded text-xs bg-red-500/10 text-red-600 border border-red-500/20">
-              <Icon className="text-[14px]">shield_lock</Icon>
-              <span>Administrator required — restart JRouter as Administrator to use MITM</span>
-            </div>
+        <ActionBar
+          message={actionError}
+          tone={actionError ? "danger" : "neutral"}
+          busy={loading}
+        >
+          {status?.certExists && !status?.certTrusted && (
+            <button
+              onClick={() => handleAction("trust-cert")}
+              disabled={loading}
+              className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-xs font-medium text-yellow-600 transition-colors hover:bg-yellow-500/20 disabled:opacity-50 sm:w-auto sm:py-1.5"
+            >
+              <Icon className="text-[16px]">verified_user</Icon>
+              Trust Cert
+            </button>
           )}
-        </div>
-      </Card>
+          {isRunning ? (
+            <button
+              onClick={() => handleAction("stop")}
+              disabled={loading}
+              className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs font-medium text-red-500 transition-colors hover:bg-red-500/20 disabled:opacity-50 sm:w-auto sm:py-1.5"
+            >
+              <Icon className="text-[16px]">stop_circle</Icon>
+              Stop Server
+            </button>
+          ) : (
+            <button
+              onClick={() => handleAction("start")}
+              disabled={loading || !status || (serverIsWindows && !isAdmin)}
+              title={serverIsWindows && !isAdmin ? "Administrator required" : undefined}
+              className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-xs font-medium text-primary transition-colors hover:bg-primary/20 disabled:opacity-50 sm:w-auto sm:py-1.5"
+            >
+              <Icon className="text-[16px]">play_circle</Icon>
+              Start Server
+            </button>
+          )}
+        </ActionBar>
+
+        {isRunning && (
+          <p className="text-xs text-text-muted">Enable DNS per tool below to activate interception</p>
+        )}
+
+        {/* Windows admin warning */}
+        {serverIsWindows && !isAdmin && (
+          <div className="flex items-center gap-2 px-2 py-1.5 rounded text-xs bg-red-500/10 text-red-600 border border-red-500/20">
+            <Icon className="text-[14px]">shield_lock</Icon>
+            <span>Administrator required — restart JRouter as Administrator to use MITM</span>
+          </div>
+        )}
+      </div>
 
       {/* Password Modal */}
       {showPasswordModal && (

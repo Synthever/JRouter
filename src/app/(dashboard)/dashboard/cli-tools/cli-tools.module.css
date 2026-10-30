@@ -4,18 +4,6 @@
   gap: 24px;
 }
 
-.title {
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.5;
-}
-
-.description {
-  composes: description from "../usage/usage.module.css";
-  overflow-wrap: anywhere;
-}
-
 .status {
   flex-shrink: 0;
   max-width: 100%;
@@ -167,33 +155,6 @@
   gap: 0;
 }
 
-.panelHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  min-width: 0;
-}
-
-.panelHeader > div {
-  min-width: 0;
-}
-
-.panelHeader p {
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-
-.body {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid var(--line);
-  min-width: 0;
-}
-
 .configuration {
   min-width: 0;
   color: var(--text);
@@ -297,12 +258,6 @@
   color: var(--warn);
 }
 
-.positive {
-  background: var(--pos-bg);
-  border-color: color-mix(in srgb, var(--pos) 25%, transparent);
-  color: var(--pos);
-}
-
 .danger {
   background: color-mix(in srgb, var(--danger) 8%, var(--surface));
   border-color: color-mix(in srgb, var(--danger) 25%, transparent);
@@ -334,12 +289,6 @@
 
 .modelPicker {
   composes: modelPicker from "../../../../shared/components/DashboardControls.module.css";
-}
-
-@media (min-width: 640px) {
-  .panelHeader {
-    align-items: center;
-  }
 }
 
 @media (max-width: 639px) {

@@ -78,6 +78,11 @@ describe("CLI Tools index", () => {
     expect(() => read(`${ROUTE}/components/ToolSummaryCard.js`)).toThrow();
     expect(() => read(`${ROUTE}/components/MitmLinkCard.js`)).toThrow();
   });
+
+  it("no longer ships the unreachable IDE cards", () => {
+    expect(() => read(`${ROUTE}/components/AntigravityToolCard.js`)).toThrow();
+    expect(() => read(`${ROUTE}/components/CopilotToolCard.js`)).toThrow();
+  });
 });
 
 describe("CLI Tools detail shell", () => {
@@ -98,14 +103,30 @@ describe("CLI Tools detail shell", () => {
     const css = read(`${ROUTE}/cli-tools.module.css`);
     const actionBar = css.slice(css.indexOf(".actionBar {"), css.indexOf(".actionMessage"));
     expect(actionBar).toContain("position: sticky");
-    const panel = css.slice(css.indexOf(".panel {"), css.indexOf(".panelHeader {"));
+    const panel = css.slice(css.indexOf(".panel {"), css.indexOf(".panelBody {"));
     expect(panel).not.toContain("overflow: hidden");
   });
 
   it("migrated cards render no panel header and no collapse chevron", () => {
     const migrated = [
+      "ClaudeToolCard",
+      "CodexToolCard",
+      "DroidToolCard",
+      "OpenCodeToolCard",
+      "OpenClawToolCard",
       "GenericCliToolCard",
+      "DeepSeekTuiToolCard",
+      "JcodeToolCard",
+      "GrokBuildToolCard",
+      "ClineToolCard",
+      "KiloToolCard",
+      "HermesToolCard",
+      "CoworkToolCard",
+      "DefaultToolCard",
+      "MitmToolCard",
+      "MitmServerCard",
     ];
+    expect(migrated).toHaveLength(16);
     for (const name of migrated) {
       const source = read(`${ROUTE}/components/${name}.js`);
       expect(source).not.toContain("styles.panelHeader");
