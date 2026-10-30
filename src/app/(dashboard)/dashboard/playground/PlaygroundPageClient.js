@@ -257,6 +257,9 @@ export default function PlaygroundPageClient() {
     const answered = messages[index];
     const value = answered.meta?.requestedModel || activeSession?.model?.value || "";
     if (!value) return;
+    // Drop the retried question and everything after it before the new turn appends,
+    // so the replacement turn does not duplicate the question or keep the stale answer.
+    updateSessionMessages(activeSession.id, () => messages.slice(0, questionIndex));
     run({
       sessionId: activeSession.id,
       question: messages[questionIndex].content,
@@ -308,7 +311,11 @@ export default function PlaygroundPageClient() {
     updateSession(activeSession.id, (session) => ({
       ...session,
       model: next,
-      messages: changed && session.messages.length > 0
+      // One divider per model change, not one per pick: A→B→C with no turn between
+      // must not stack two adjacent dividers.
+      messages: changed
+        && session.messages.length > 0
+        && session.messages[session.messages.length - 1]?.role !== "divider"
         ? [...session.messages, {
           id: `divider_${Date.now()}`,
           role: "divider",
@@ -352,6 +359,10 @@ export default function PlaygroundPageClient() {
   };
 
   const handleDuplicateSession = (session) => {
+    // Duplicating while a turn streams would leave the original stream writing into
+    // a session the reader is no longer looking at.
+    stop();
+    cancelAll();
     duplicateSession(session);
     resetTransient();
   };

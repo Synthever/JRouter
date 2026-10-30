@@ -264,4 +264,25 @@ describe("playground page composition", () => {
     expect(source).not.toContain("styles.header");
     expect(source).not.toContain("styles.eyebrow");
   });
+
+  it("anchors the last-reply flags to the last assistant message", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundPageClient.js`);
+    // A trailing model-switch divider must not become the "last" message, or the
+    // reply above it loses Retry and the follow-up pills.
+    expect(source).toContain("[...messages].reverse().find(");
+    expect(source).toMatch(/\.reverse\(\)\.find\(\(message\) => message\.role === "assistant"\)/);
+    expect(source).toContain("lastId = lastAssistant?.id");
+  });
+
+  it("returns from the finish gate when a turn was stopped", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundPageClient.js`);
+    const finishTurn = source.slice(source.indexOf("const finishTurn"), source.indexOf("const { isStreaming"));
+    expect(finishTurn).toContain("stopped");
+    expect(finishTurn).toMatch(/if \(stopped \|\|.*\) return;/);
+  });
+
+  it("asks for a title only on the first turn with the helper on", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundPageClient.js`);
+    expect(source).toContain("if (firstTurn && settings.helper) requestTitle(sessionId, text);");
+  });
 });
