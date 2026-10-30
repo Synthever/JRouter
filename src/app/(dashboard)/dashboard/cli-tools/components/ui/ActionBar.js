@@ -9,8 +9,9 @@ import styles from "../../cli-tools.module.css";
  */
 export default function ActionBar({ message, tone = "neutral", busy = false, children }) {
   return (
-    <div className={styles.actionBar} aria-busy={busy ? "true" : "false"}>
+    <div className={styles.actionBar} aria-busy={busy || undefined}>
       <p
+        role="status"
         className={cn(
           styles.actionMessage,
           tone === "success" && styles.actionSuccess,

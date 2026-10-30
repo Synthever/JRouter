@@ -35,7 +35,10 @@ describe("CLI Tools index", () => {
 
   it("keeps the toolbar pinned in CSS", () => {
     const css = read(`${ROUTE}/cli-tools.module.css`);
-    expect(css).toContain("position: sticky");
+    // Scope to the .toolbar rule: `position: sticky` also lives on .actionBar,
+    // so an unscoped assertion would stay green if the toolbar lost it.
+    const toolbar = css.slice(css.indexOf(".toolbar {"), css.indexOf(".search {"));
+    expect(toolbar).toContain("position: sticky");
   });
 
   it("keeps the card grid fluid with equal-height rows", () => {
@@ -47,6 +50,12 @@ describe("CLI Tools index", () => {
 
   it("prints the gateway URL once, without a doubled /v1", () => {
     expect(page).not.toContain("${origin}/v1`");
+    // The literal above guards nothing on its own (the variable is `gateway`),
+    // so pin the real wiring: the label shows the bare origin, the copy call
+    // writes the /v1 form, and nothing appends /v1 twice.
+    expect(page).toContain('title={gatewayUrl}>{gateway || "—"}');
+    expect(page).not.toMatch(/\/v1\s*\/v1/);
+    expect(page).toContain("copy(gatewayUrl");
     expect(page).toContain("<span className={styles.gatewayHint}>/v1</span>");
   });
 
@@ -56,11 +65,13 @@ describe("CLI Tools index", () => {
     expect(css).toContain("background: var(--brand-ochre)");
     expect(css).toContain("background: var(--brand-lavender)");
     expect(css).toContain("background: var(--brand-peach)");
+    expect(page).toContain("styles[metric.tone]");
   });
 
   it("keeps the stylesheet free of raw hex colours", () => {
     const css = read(`${ROUTE}/cli-tools.module.css`);
     expect(css.match(/#[0-9a-fA-F]{3,8}\b/g)).toBeNull();
+    expect(css).not.toMatch(/\b(rgba?|hsla?|oklch|lab|lch)\s*\(/);
   });
 
   it("no longer ships the old summary cards", () => {

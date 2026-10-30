@@ -4,12 +4,18 @@ import Image from "next/image";
 import Icon from "@/shared/components/Icon";
 import StatusBadge from "@/shared/components/StatusBadge";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
+import { cn } from "@/shared/utils/cn";
 import { TYPE_LABELS } from "../cliToolGroups";
 import styles from "../../cli-tools.module.css";
 
 /** Detail page header: identity once, status once, endpoint with copy. */
 export default function CliToolHeader({ tool, status, baseUrl }) {
   const { copied, copy } = useCopyToClipboard();
+  // A tool that needs an externally reachable URL cannot use a loopback one;
+  // say so instead of handing over a URL this app can never reach.
+  const needsExternal =
+    Boolean(tool.requiresExternalUrl) &&
+    /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|$)/i.test(baseUrl || "");
   return (
     <header className={styles.detailHeader}>
       <div className={styles.detailIdentity}>
@@ -21,7 +27,6 @@ export default function CliToolHeader({ tool, status, baseUrl }) {
               width={30}
               height={30}
               className={styles.detailLogoImage}
-              sizes="30px"
               priority
             />
           ) : (
@@ -35,15 +40,17 @@ export default function CliToolHeader({ tool, status, baseUrl }) {
         </span>
         <div className={styles.detailText}>
           <div className={styles.detailTitleRow}>
-            <h1 className={styles.title}>{tool.name}</h1>
+            <h1 className={styles.detailTitle}>{tool.name}</h1>
             <span className={styles.typeChip}>{TYPE_LABELS[tool.configType] || TYPE_LABELS.custom}</span>
             <StatusBadge variant={status.variant} dot={status.dot}>{status.label}</StatusBadge>
           </div>
-          <p className={styles.description}>{tool.description}</p>
+          <p className={styles.detailDescription}>{tool.description}</p>
         </div>
       </div>
-      <div className={styles.endpointChip}>
-        <span className={styles.endpointValue} title={baseUrl}>{baseUrl || "—"}</span>
+      <div className={cn(styles.endpointChip, needsExternal && styles.endpointWarning)}>
+        <span className={styles.endpointValue} title={baseUrl}>
+          {needsExternal ? "Loopback is not reachable from this app" : baseUrl || "—"}
+        </span>
         <button
           type="button"
           className={styles.endpointCopy}
@@ -53,6 +60,9 @@ export default function CliToolHeader({ tool, status, baseUrl }) {
         >
           <Icon className="text-[16px]">{copied === "endpoint" ? "check" : "content_copy"}</Icon>
         </button>
+        <span className="sr-only" aria-live="polite">
+          {copied === "endpoint" ? "Gateway URL copied" : ""}
+        </span>
       </div>
     </header>
   );

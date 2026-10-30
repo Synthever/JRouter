@@ -93,6 +93,20 @@
   min-width: 0;
 }
 
+.detailTitle {
+  color: var(--text);
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.detailDescription {
+  color: var(--text-2);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .endpointChip {
   display: inline-flex;
   align-items: center;
@@ -129,14 +143,28 @@
   cursor: pointer;
 }
 
-.endpointCopy:hover {
+.endpointCopy:hover:not(:disabled) {
   color: var(--text);
   background: var(--surface-hover);
 }
 
+.endpointWarning {
+  border-color: color-mix(in srgb, var(--warn) 35%, transparent);
+  background: color-mix(in srgb, var(--warn) 8%, var(--surface));
+  color: var(--warn);
+}
+
 .panel {
   composes: section from "../usage/usage.module.css";
+  /* The composed .section pads 28px; mirror it in one variable so the action
+     bar can pull its own gutter back to the panel edge. */
+  --panel-pad: 28px;
+  padding: var(--panel-pad);
   box-shadow: none;
+}
+
+.panelBody {
+  gap: 0;
 }
 
 .panelHeader {
@@ -316,7 +344,7 @@
 
 @media (max-width: 639px) {
   .panel {
-    padding: 16px;
+    --panel-pad: 16px;
   }
 
   .configuration :is(input:not([type="checkbox"]), select, textarea) {
@@ -869,13 +897,13 @@
   flex-direction: column;
   gap: 8px;
   min-width: 0;
-  padding: 16px 0;
-  border-top: 1px solid var(--line);
+  padding: 0 0 16px;
+  border-top: 0;
 }
 
-.fieldGroup:first-child {
-  padding-top: 0;
-  border-top: 0;
+.fieldGroup + .fieldGroup {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
 }
 
 .fieldGroupHeader {
@@ -931,8 +959,8 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
-  margin: 16px -24px -24px;
-  padding: 12px 24px;
+  margin: 16px calc(-1 * var(--panel-pad)) calc(-1 * var(--panel-pad));
+  padding: 12px var(--panel-pad);
   border-top: 1px solid var(--line);
   background: var(--canvas);
 }
@@ -963,11 +991,6 @@
 }
 
 @media (max-width: 639px) {
-  .actionBar {
-    margin: 16px -16px -16px;
-    padding: 12px 16px;
-  }
-
   .actionButtons {
     width: 100%;
   }
