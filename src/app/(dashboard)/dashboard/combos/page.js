@@ -1083,6 +1083,7 @@ function ComboCard({
           <ModelSelectModal
             className={controls.modelPicker}
             portal
+            variant="rail"
             isOpen={showJudgeSelect}
             onClose={() => setShowJudgeSelect(false)}
             onSelect={(m) => { onSetStrategy({ judgeModel: m?.value || "" }); setShowJudgeSelect(false); }}
@@ -1121,6 +1122,7 @@ function CapacityAdapterSection({ capacityAdapter, onChange, activeProviders, ge
         <ModelSelectModal
           className={controls.modelPicker}
           portal
+          variant="rail"
           isOpen={!!pickerCap}
           onClose={() => setPickerCap(null)}
           onSelect={(model) => {
@@ -1619,6 +1621,7 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, kindF
         <ModelSelectModal
           className={controls.modelPicker}
           portal
+          variant="rail"
           isOpen={showModelSelect}
           onClose={() => setShowModelSelect(false)}
           onSelect={handleAddModel}

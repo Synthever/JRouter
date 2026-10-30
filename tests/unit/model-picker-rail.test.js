@@ -98,4 +98,16 @@ describe("shared model picker rail variant", () => {
     expect(rule(css, ".rail")).toContain("min-height: 0");
     expect(css).toContain("@container (max-width: 620px)");
   });
+
+  it("forwards the variant from ModelSelectModal", () => {
+    const modal = read("src/shared/components/ModelSelectModal.js");
+    expect(modal).toContain('variant = "chips"');
+    expect(modal).toContain("variant={variant}");
+    expect(modal).toContain("variant: PropTypes.oneOf");
+  });
+
+  it("uses the rail picker on the Combos page", () => {
+    const page = read("src/app/(dashboard)/dashboard/combos/page.js");
+    expect(page.match(/variant="rail"/g)?.length).toBe(3);
+  });
 });

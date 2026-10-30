@@ -22,6 +22,7 @@ export default function ModelSelectModal({
   className = "p-4!",
   portal = false,
   notice = "Click to add, click again to remove. Changes are saved automatically.",
+  variant = "chips",
 }) {
   const { visibleGroups, filteredCombos, searchQuery, setSearchQuery } = useModelCatalog({
     isOpen,
@@ -77,6 +78,7 @@ export default function ModelSelectModal({
       ) : null}
 
       <ModelPickerList
+        variant={variant}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         combos={filteredCombos}
@@ -109,4 +111,5 @@ ModelSelectModal.propTypes = {
   className: PropTypes.string,
   portal: PropTypes.bool,
   notice: PropTypes.string,
+  variant: PropTypes.oneOf(["chips", "rail"]),
 };
