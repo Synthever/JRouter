@@ -231,3 +231,37 @@ describe("playground dialogs and markdown", () => {
     expect(css).toContain("border-radius: 14px");
   });
 });
+
+describe("playground page composition", () => {
+  it("drops the top toolbar and mounts the new surface", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundPageClient.js`);
+    expect(source).not.toContain("styles.toolbar");
+    expect(source).not.toContain("styles.modelTrigger");
+    for (const name of ["PlaygroundTranscript", "PlaygroundComposer", "PlaygroundHistoryModal", "PlaygroundExportModal", "PlaygroundSettingsPopover"]) {
+      expect(source).toContain(name);
+    }
+  });
+
+  it("wires sessions, helpers and the header title", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundPageClient.js`);
+    expect(source).toContain("usePlaygroundSessions");
+    expect(source).toContain("usePlaygroundChat");
+    expect(source).toContain("usePlaygroundHints");
+    expect(source).toContain("useHeaderTitleStore");
+    expect(source).toContain("SETTINGS_KEY");
+    expect(source).toContain("FAVORITES_KEY");
+  });
+
+  it("persists the active conversation model and dividers", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundPageClient.js`);
+    expect(source).toContain("Model switched to");
+    expect(source).toContain("localTitle");
+  });
+
+  it("keeps the old page-header strings out", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundPageClient.js`);
+    expect(source).not.toContain("Test and compare models through JRouter");
+    expect(source).not.toContain("styles.header");
+    expect(source).not.toContain("styles.eyebrow");
+  });
+});

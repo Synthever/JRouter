@@ -1,157 +1,33 @@
 "use client";
-import Icon from "@/shared/components/Icon";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, Tooltip } from "@/shared/components";
-import ProviderIcon from "@/shared/components/ProviderIcon";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
-import { useModelCatalog } from "@/shared/hooks/useModelCatalog";
-import PlaygroundMarkdown from "./PlaygroundMarkdown";
+import { useHeaderTitleStore } from "@/store/headerTitleStore";
+import { useNotificationStore } from "@/store/notificationStore";
 import ModelPickerPopover from "./ModelPickerPopover";
+import PlaygroundComposer from "./PlaygroundComposer";
+import PlaygroundEmpty from "./PlaygroundEmpty";
+import PlaygroundExportModal from "./PlaygroundExportModal";
+import PlaygroundHistoryModal from "./PlaygroundHistoryModal";
+import PlaygroundMessage from "./PlaygroundMessage";
+import PlaygroundSettingsPopover from "./PlaygroundSettingsPopover";
+import PlaygroundTranscript from "./PlaygroundTranscript";
+import usePlaygroundChat from "./usePlaygroundChat";
+import usePlaygroundHints from "./usePlaygroundHints";
+import usePlaygroundSessions from "./usePlaygroundSessions";
+import {
+  DEFAULT_SETTINGS,
+  FAVORITES_KEY,
+  SETTINGS_KEY,
+  buildExportBody,
+  localTitle,
+  normalizeSettings,
+  readStorage,
+  writeStorage,
+} from "./playgroundUtils";
 import styles from "./playground.module.css";
 
-// Chat goes through the same OpenAI-compatible JRouter endpoint every other client uses,
-// so combos, provider fallback, translation and usage tracking all apply unchanged.
-const CHAT_ENDPOINT = "/api/v1/chat/completions";
-const MAX_COMPOSER_HEIGHT = 200;
-const SUGGESTIONS = [
-  "Explain your capabilities",
-  "Write a short TypeScript example",
-  "Compare REST and GraphQL",
-];
-
-function createId() {
-  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
-  return `pg_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-}
-
-// Elapsed-time measurements happen in event handlers and stream callbacks, never
-// during render — reading the clock through one helper keeps that explicit.
-function now() {
-  return Date.now();
-}
-
-function formatLatency(ms) {
-  if (!Number.isFinite(ms) || ms <= 0) return "";
-  return ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(1)}s`;
-}
-
-function formatCount(value) {
-  return Number.isFinite(value) ? value.toLocaleString("en-US") : "";
-}
-
-function providerInitials(name) {
-  return (name || "?").slice(0, 2).toUpperCase();
-}
-
-// Upscale error payloads from the router, upstream providers and the network into one line.
-function errorMessageFrom(payload) {
-  const raw = payload?.error?.message ?? payload?.error ?? payload?.message ?? payload?.msg;
-  if (typeof raw === "string" && raw.trim()) return raw.trim();
-  if (raw && typeof raw === "object") {
-    try {
-      return JSON.stringify(raw);
-    } catch {
-      return "";
-    }
-  }
-  return "";
-}
-
-// Only non-empty, numeric values are sent, so untouched fields keep the provider default.
-function buildGenerationParams(settings) {
-  const params = {};
-  const temperature = Number.parseFloat(settings.temperature);
-  if (Number.isFinite(temperature)) params.temperature = temperature;
-  const maxTokens = Number.parseInt(settings.maxTokens, 10);
-  if (Number.isFinite(maxTokens) && maxTokens > 0) params.max_tokens = maxTokens;
-  const topP = Number.parseFloat(settings.topP);
-  if (Number.isFinite(topP)) params.top_p = topP;
-  return params;
-}
-
-function toRequestMessages(messages) {
-  return messages
-    .filter((message) => message.role === "user" || message.role === "assistant")
-    .map((message) => ({ role: message.role, content: message.content }));
-}
-
-// Reasoning fields some providers stream alongside (or instead of) the answer text.
-function reasoningDeltaFrom(delta) {
-  const raw = delta?.reasoning_content ?? delta?.reasoning;
-  return typeof raw === "string" ? raw : "";
-}
-
-// Latency · prompt tokens · completion tokens · finish reason · routed model.
-function buildMetaParts(meta) {
-  const parts = [];
-  const latency = formatLatency(meta.latencyMs);
-  if (latency) parts.push(latency);
-  const prompt = formatCount(meta.usage?.prompt_tokens);
-  if (prompt) parts.push(`${prompt} in`);
-  const completion = formatCount(meta.usage?.completion_tokens);
-  if (completion) {
-    parts.push(`${completion} out`);
-  } else {
-    const total = formatCount(meta.usage?.total_tokens);
-    if (total) parts.push(`${total} tokens`);
-  }
-  if (meta.finishReason) parts.push(meta.finishReason);
-  if (meta.responseModel && meta.responseModel !== meta.requestedModel) parts.push(meta.responseModel);
-  if (meta.stopped) parts.push("stopped");
-  return parts;
-}
-
-function ModelIcon({ model, providerId, providerName, providerColor, isCombo, size = 16 }) {
-  const connectionId = providerId && !isCombo ? providerId : "";
-  if (!connectionId) {
-    return (
-      <span className={styles.modelFallback} style={{ width: size, height: size }}>
-        <Icon style={{ fontSize: Math.max(10, Math.round(size * 0.7)) }}>{isCombo ? "layers" : "science"}</Icon>
-      </span>
-    );
-  }
-  return (
-    <ProviderIcon
-      providerId={connectionId}
-      alt={providerName || "model"}
-      size={size}
-      fallbackText={providerInitials(providerName)}
-      fallbackColor={providerColor}
-    />
-  );
-}
-
-// Nine-cell grid whose cells light up in sequence while the model works.
-function ActivityGlyph() {
-  return (
-    <span className={styles.activityGrid} aria-hidden="true">
-      {Array.from({ length: 9 }, (_, index) => <span key={index} />)}
-    </span>
-  );
-}
-
-// Waiting-for-first-token state. The running clock lives here so the 120ms ticks
-// re-render this row instead of the whole conversation.
-function ActivityState({ label, startedAt }) {
-  const [elapsedMs, setElapsedMs] = useState(0);
-
-  useEffect(() => {
-    const timer = setInterval(() => setElapsedMs(Date.now() - startedAt), 120);
-    return () => clearInterval(timer);
-  }, [startedAt]);
-
-  return (
-    <p className={styles.activity} role="status">
-      <ActivityGlyph />
-      <span className={styles.activityText}>{label}</span>
-      <span className={styles.activityDots} aria-hidden="true">
-        <span /><span /><span />
-      </span>
-      <span className={styles.activityElapsed}>{formatLatency(elapsedMs)}</span>
-    </p>
-  );
-}
+const DIVIDER_PREFIX = "Model switched to ";
 
 export default function PlaygroundPageClient() {
   const [providers, setProviders] = useState([]);
@@ -160,22 +36,84 @@ export default function PlaygroundPageClient() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
-  const [selectedModel, setSelectedModel] = useState(null);
-  const [messages, setMessages] = useState([]);
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [settingsHydrated, setSettingsHydrated] = useState(false);
+  const [favorites, setFavorites] = useState([]);
+  const [favoritesHydrated, setFavoritesHydrated] = useState(false);
+
   const [input, setInput] = useState("");
-  const [isStreaming, setIsStreaming] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [generation, setGeneration] = useState({ temperature: "", maxTokens: "", topP: "" });
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [thinkingOpen, setThinkingOpen] = useState({});
+  const [rawById, setRawById] = useState({});
 
-  const abortRef = useRef(null);
-  const inputRef = useRef(null);
-  const scrollRef = useRef(null);
-  const settingsRef = useRef(null);
-  const atBottomRef = useRef(true);
-  const streamingRef = useRef(false);
+  const textareaRef = useRef(null);
+  const activeIdRef = useRef("");
   const { copied, copy } = useCopyToClipboard();
+  const notify = useNotificationStore((state) => state.addNotification);
+  const setCrumbs = useHeaderTitleStore((state) => state.setCrumbs);
+  const clearCrumbs = useHeaderTitleStore((state) => state.clearCrumbs);
+
+  const {
+    sessions,
+    activeId,
+    activeSession,
+    setActiveId,
+    newSession,
+    duplicateSession,
+    deleteSession,
+    updateSession,
+  } = usePlaygroundSessions();
+
+  const updateSessionMessages = useCallback((sessionId, updater) => {
+    updateSession(sessionId, (session) => ({ ...session, messages: updater(session.messages) }));
+  }, [updateSession]);
+
+  const appendMessages = useCallback((sessionId, messages) => {
+    updateSessionMessages(sessionId, (current) => [...current, ...messages]);
+  }, [updateSessionMessages]);
+
+  const patchMessage = useCallback((sessionId, messageId, patch) => {
+    updateSessionMessages(sessionId, (current) => current.map((message) => (
+      message.id === messageId ? { ...message, ...patch } : message
+    )));
+  }, [updateSessionMessages]);
+
+  const applyTitle = useCallback((sessionId, title) => {
+    updateSession(sessionId, (session) => ({ ...session, title }));
+  }, [updateSession]);
+
+  const applyFollowUps = useCallback((sessionId, assistantId, questions) => {
+    updateSessionMessages(sessionId, (current) => current.map((message) => (
+      message.id === assistantId ? { ...message, followUps: questions } : message
+    )));
+  }, [updateSessionMessages]);
+
+  const { requestTitle, requestFollowUps, cancelAll } = usePlaygroundHints({
+    apiKey,
+    model: activeSession?.model || null,
+    helper: settings.helper,
+    onTitle: applyTitle,
+    onFollowUps: applyFollowUps,
+  });
+
+  // Follow-ups run only for the turn that just finished and produced text.
+  const finishTurn = useCallback(({ sessionId, assistantId, status, content, messages, stopped }) => {
+    if (stopped || status !== "done" || !content || !content.trim() || !settings.helper) return;
+    // A turn can finish after the reader moved on; never start a helper call for it.
+    if (sessionId !== activeIdRef.current) return;
+    requestFollowUps(sessionId, assistantId, messages);
+  }, [requestFollowUps, settings.helper]);
+
+  const { isStreaming, run, stop } = usePlaygroundChat({
+    apiKey,
+    settings,
+    onAppend: appendMessages,
+    onPatch: patchMessage,
+    onFinish: finishTurn,
+  });
 
   // Model picker sources: same connections/aliases data the Combo picker uses.
   useEffect(() => {
@@ -196,7 +134,7 @@ export default function PlaygroundPageClient() {
         setProviders(
           Array.isArray(providersData.connections)
             ? providersData.connections.filter((connection) => connection?.isActive !== false)
-            : []
+            : [],
         );
         setModelAliases(aliasesData.aliases && typeof aliasesData.aliases === "object" ? aliasesData.aliases : {});
         setApiKey((keysData.keys || []).find((key) => key.isActive !== false)?.key || "");
@@ -213,274 +151,101 @@ export default function PlaygroundPageClient() {
   }, []);
 
   useEffect(() => {
-    inputRef.current?.focus();
+    const stored = readStorage(SETTINGS_KEY, (value) => !!value && typeof value === "object");
+    // Hydrate once after mount: localStorage is unreadable during the server render,
+    // so lazy initializers would desync hydration.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time localStorage hydration
+    if (stored) setSettings(normalizeSettings(stored));
+    setSettingsHydrated(true);
+
+    const storedFavorites = readStorage(FAVORITES_KEY, Array.isArray);
+    if (storedFavorites) setFavorites(storedFavorites.filter((value) => typeof value === "string"));
+    setFavoritesHydrated(true);
   }, []);
 
-  // Keep the composer one line tall until the text wraps.
   useEffect(() => {
-    const element = inputRef.current;
-    if (!element) return;
-    element.style.height = "auto";
-    element.style.height = `${Math.min(element.scrollHeight, MAX_COMPOSER_HEIGHT)}px`;
-  }, [input]);
+    activeIdRef.current = activeId;
+  }, [activeId]);
 
-  const scrollToBottom = useCallback(() => {
-    const element = scrollRef.current;
-    if (element) element.scrollTop = element.scrollHeight;
-  }, []);
-
-  // Follow new output only while the reader is already at the bottom, so scrolling
-  // back through a long answer is not yanked away by incoming tokens.
   useEffect(() => {
-    if (atBottomRef.current) scrollToBottom();
-  }, [messages, scrollToBottom]);
+    if (settingsHydrated) writeStorage(SETTINGS_KEY, settings);
+  }, [settings, settingsHydrated]);
+
+  useEffect(() => {
+    if (favoritesHydrated) writeStorage(FAVORITES_KEY, favorites);
+  }, [favorites, favoritesHydrated]);
+
+  useEffect(() => {
+    textareaRef.current?.focus();
+    return () => cancelAll();
+  }, [cancelAll]);
+
+  function inputRefFocus() {
+    textareaRef.current?.focus();
+  }
+
+  const title = activeSession?.title || "New chat";
+  useEffect(() => {
+    setCrumbs([
+      { label: "Playground", href: "/dashboard/playground" },
+      { label: title },
+    ]);
+    return () => clearCrumbs();
+  }, [title, setCrumbs, clearCrumbs]);
 
   useEffect(() => {
     if (!settingsOpen) return undefined;
-    const handlePointerDown = (event) => {
-      if (settingsRef.current && !settingsRef.current.contains(event.target)) setSettingsOpen(false);
+    const onPointerDown = (event) => {
+      if (event.target.closest?.("[data-playground-settings]")) return;
+      if (event.target.closest?.('[aria-label="Playground settings"]')) return;
+      setSettingsOpen(false);
     };
-    const handleKeyDown = (event) => {
+    const onKeyDown = (event) => {
       if (event.key === "Escape") setSettingsOpen(false);
     };
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
     return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
     };
   }, [settingsOpen]);
 
-  useEffect(() => () => abortRef.current?.abort(), []);
+  const messages = activeSession?.messages || [];
+  const lastAssistant = [...messages].reverse().find((message) => message.role === "assistant");
+  const lastId = lastAssistant?.id;
+  const canSend = !isStreaming && !!activeSession?.model && input.trim().length > 0;
 
-  const canSend = !isStreaming && !!selectedModel && input.trim().length > 0;
-
-  const handleScroll = () => {
-    const element = scrollRef.current;
-    if (!element) return;
-    atBottomRef.current = element.scrollHeight - element.scrollTop - element.clientHeight < 80;
-  };
-
-  const handleNewChat = () => {
-    abortRef.current?.abort();
-    abortRef.current = null;
-    streamingRef.current = false;
-    setIsStreaming(false);
-    setMessages([]);
-    setInput("");
-    setThinkingOpen({});
-    setSettingsOpen(false);
-    setPickerOpen(false);
-    atBottomRef.current = true;
-    inputRef.current?.focus();
-  };
-
-  const handleSelectModel = (model) => {
-    if (!model?.value) return;
-    const label = model.name || model.value;
-    const previous = selectedModel;
-    const changed = previous?.value !== model.value;
-    setSelectedModel({
-      value: model.value,
-      name: label,
-      providerId: model.providerId || "",
-      providerName: model.providerName || "",
-      providerColor: model.providerColor || "",
-      isCombo: model.isCombo === true,
-    });
-    setPickerOpen(false);
-    // Keep the transcript so the same context can be replayed against another model.
-    setMessages((current) => (
-      changed && current.some((message) => message.role !== "divider")
-        ? [...current, {
-          id: createId(),
-          role: "divider",
-          from: previous?.name || previous?.value || "",
-          to: label,
-          content: `Model switched to ${label}`,
-        }]
-        : current
-    ));
-    inputRef.current?.focus();
-  };
-
-  const handleStop = () => {
-    abortRef.current?.abort();
-  };
-
-  const patchAssistant = useCallback((assistantId, patch) => {
-    setMessages((previous) => previous.map((message) => (
-      message.id === assistantId ? { ...message, ...patch } : message
-    )));
-  }, []);
-
-  // `base` is the transcript the new turn runs against. Retry passes the history
-  // truncated at the retried question instead of the whole conversation.
-  const runTurn = async (question, base, model, startedAt) => {
-    if (!question || !model || streamingRef.current) return;
-
-    const assistantId = createId();
-    const history = [...base, { id: createId(), role: "user", content: question }];
-
-    setMessages([
-      ...history,
-      {
-        id: assistantId,
-        role: "assistant",
-        content: "",
-        status: "streaming",
-        modelName: model.name,
-        providerId: model.providerId,
-        providerName: model.providerName,
-        isCombo: model.isCombo,
-        startedAt,
-        reasoning: "",
-        meta: null,
-      },
-    ]);
-    setInput("");
-    streamingRef.current = true;
-    setIsStreaming(true);
-    atBottomRef.current = true;
-
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    const patch = (values) => patchAssistant(assistantId, values);
-
-    let content = "";
-    let reasoning = "";
-    let usage = null;
-    let finishReason = "";
-    let responseModel = "";
-    let elapsedMs = null;
-
-    const finalize = (status, extra = {}) => {
-      patch({
-        content,
-        reasoning,
-        status,
-        elapsedMs,
-        meta: {
-          latencyMs: elapsedMs ?? Date.now() - startedAt,
-          usage,
-          finishReason,
-          responseModel,
-          requestedModel: model.value,
-          ...extra,
-        },
-      });
-    };
-
-    try {
-      const headers = { "Content-Type": "application/json", Accept: "text/event-stream" };
-      if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
-
-      const response = await fetch(CHAT_ENDPOINT, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          model: model.value,
-          messages: toRequestMessages(history),
-          stream: true,
-          ...buildGenerationParams(generation),
-        }),
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => null);
-        throw new Error(errorMessageFrom(payload) || `Request failed (${response.status})`);
-      }
-      if (!response.body) throw new Error("The response contained no body to read.");
-
-      // A buffered JSON body means the reply was not streamed after all.
-      if ((response.headers.get("content-type") || "").includes("application/json")) {
-        const payload = await response.json().catch(() => null);
-        const failure = errorMessageFrom(payload);
-        if (failure) throw new Error(failure);
-        const message = payload?.choices?.[0]?.message;
-        content = typeof message?.content === "string" ? message.content : "";
-        reasoning = reasoningDeltaFrom(message);
-        usage = payload?.usage || null;
-        finishReason = payload?.choices?.[0]?.finish_reason || "";
-        responseModel = typeof payload?.model === "string" ? payload.model : "";
-        finalize(content ? "done" : "empty");
-        return;
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split(/\r?\n/);
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed.startsWith("data:")) continue;
-          const payload = trimmed.slice(5).trim();
-          if (!payload || payload === "[DONE]") continue;
-
-          let chunk;
-          try {
-            chunk = JSON.parse(payload);
-          } catch {
-            continue;
-          }
-
-          if (chunk?.error) throw new Error(errorMessageFrom(chunk) || "Request failed.");
-
-          const choice = chunk?.choices?.[0];
-          const deltaText = typeof choice?.delta?.content === "string" ? choice.delta.content : "";
-          const deltaReasoning = reasoningDeltaFrom(choice?.delta);
-          if (deltaText || deltaReasoning) {
-            content += deltaText;
-            reasoning += deltaReasoning;
-            if (!elapsedMs) elapsedMs = now() - startedAt;
-            patch({ content, reasoning });
-          }
-          if (choice?.finish_reason) finishReason = choice.finish_reason;
-          if (chunk?.usage && typeof chunk.usage === "object") usage = chunk.usage;
-          if (typeof chunk?.model === "string" && chunk.model) responseModel = chunk.model;
-        }
-      }
-
-      finalize(content || reasoning ? "done" : "empty");
-    } catch (error) {
-      if (error?.name === "AbortError") {
-        finalize("done", { stopped: true });
-      } else {
-        patch({ content, reasoning, status: "error", error: error?.message || "Request failed." });
-        // Hand the prompt back so the user can edit and retry.
-        setInput((current) => current || question);
-      }
-    } finally {
-      if (abortRef.current === controller) abortRef.current = null;
-      streamingRef.current = false;
-      setIsStreaming(false);
-      inputRef.current?.focus();
-    }
-  };
-
-  const sendMessage = () => {
+  const handleSend = () => {
     const text = input.trim();
-    if (!text || !selectedModel || streamingRef.current) return;
-    return runTurn(text, messages, selectedModel, now());
+    if (!text || isStreaming) return;
+    if (!activeSession?.model) {
+      setPickerOpen(true);
+      notify({ type: "info", message: "Pick a model to send this message", duration: 3000 });
+      return;
+    }
+    const sessionId = activeSession.id;
+    const firstTurn = activeSession.title === "New chat";
+    setInput("");
+    if (firstTurn) applyTitle(sessionId, localTitle(text));
+    run({ sessionId, question: text, history: activeSession.messages, model: activeSession.model });
+    if (firstTurn && settings.helper) requestTitle(sessionId, text);
   };
 
-  // Replay the same question against the model that answered it.
+  const handleFollowUp = (question) => {
+    if (isStreaming || !activeSession?.model) return;
+    run({
+      sessionId: activeSession.id,
+      question,
+      history: activeSession.messages,
+      model: activeSession.model,
+    });
+  };
+
   const handleRetry = (assistantId) => {
-    if (streamingRef.current) return;
+    if (isStreaming) return;
     const index = messages.findIndex((message) => message.id === assistantId);
     if (index < 0) return;
-    const answered = messages[index];
-
     let questionIndex = -1;
     for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
       if (messages[cursor].role === "user") {
@@ -489,440 +254,272 @@ export default function PlaygroundPageClient() {
       }
     }
     if (questionIndex < 0) return;
-
-    const question = messages[questionIndex].content;
-    const base = messages.slice(0, questionIndex);
-    const model = {
-      value: answered.meta?.requestedModel || "",
-      name: answered.modelName || "",
-      providerId: answered.providerId || "",
-      providerName: answered.providerName || "",
-      providerColor: selectedModel?.providerColor || "",
-      isCombo: answered.isCombo === true,
-    };
-    if (!model.value) return;
-    runTurn(question, base, model, now());
+    const answered = messages[index];
+    const value = answered.meta?.requestedModel || activeSession?.model?.value || "";
+    if (!value) return;
+    run({
+      sessionId: activeSession.id,
+      question: messages[questionIndex].content,
+      history: messages.slice(0, questionIndex),
+      model: {
+        value,
+        name: answered.modelName || value,
+        providerId: answered.providerId || "",
+        providerName: answered.providerName || "",
+        providerColor: activeSession?.model?.providerColor || "",
+        isCombo: answered.isCombo === true,
+      },
+    });
   };
 
-  const copyMessage = (message) => {
+  const handleStop = () => stop();
+
+  const handleDeleteMessage = (messageId) => {
+    if (isStreaming) stop();
+    updateSessionMessages(activeId, (current) => current.filter((message) => message.id !== messageId));
+    notify({ type: "info", message: "Message deleted", duration: 2000 });
+  };
+
+  const handleCopy = (message) => {
     const text = message.content || message.reasoning || "";
-    if (!text) return;
-    copy(text, message.id);
+    if (text) copy(text, message.id);
   };
 
-  const handleKeyDown = (event) => {
-    if (event.key !== "Enter" || event.shiftKey) return;
-    if (event.nativeEvent?.isComposing) return;
-    event.preventDefault();
-    if (canSend) sendMessage();
+  const handleToggleThinking = (messageId) => {
+    setThinkingOpen((current) => ({ ...current, [messageId]: !current[messageId] }));
   };
 
-  const handleGenerationChange = (field) => (event) => {
-    setGeneration((previous) => ({ ...previous, [field]: event.target.value }));
+  const handleToggleRaw = (messageId) => {
+    setRawById((current) => ({ ...current, [messageId]: !current[messageId] }));
   };
 
-  const handleSuggestion = (suggestion) => {
-    setInput(suggestion);
-    inputRef.current?.focus();
+  const handleSelectModel = (model) => {
+    if (!model?.value || !activeSession) return;
+    const previous = activeSession.model;
+    const changed = previous?.value !== model.value;
+    const next = {
+      value: model.value,
+      name: model.name || model.value,
+      providerId: model.providerId || "",
+      providerName: model.providerName || "",
+      providerColor: model.providerColor || "",
+      isCombo: model.isCombo === true,
+    };
+    updateSession(activeSession.id, (session) => ({
+      ...session,
+      model: next,
+      messages: changed && session.messages.length > 0
+        ? [...session.messages, {
+          id: `divider_${Date.now()}`,
+          role: "divider",
+          content: `${DIVIDER_PREFIX}${next.name}`,
+        }]
+        : session.messages,
+    }));
+    setPickerOpen(false);
+    inputRefFocus();
   };
 
-  const toggleThinking = (messageId) => {
-    setThinkingOpen((previous) => ({ ...previous, [messageId]: !previous[messageId] }));
+  const resetTransient = () => {
+    setInput("");
+    setThinkingOpen({});
+    setRawById({});
+    setPickerOpen(false);
+    setSettingsOpen(false);
   };
 
-  const modelCatalog = useModelCatalog({ isOpen: pickerOpen, activeProviders: providers, modelAliases });
-  const hasCatalog = modelCatalog.filteredCombos.length
-    + Object.values(modelCatalog.visibleGroups).reduce((total, group) => total + group.models.length, 0) > 0;
-
-  const renderMessage = (message) => {
-    if (message.role === "divider") {
-      return <p key={message.id} className={styles.divider}>{message.content}</p>;
+  const handleNewChat = () => {
+    stop();
+    cancelAll();
+    if (!activeSession || activeSession.messages.length === 0) {
+      resetTransient();
+      inputRefFocus();
+      return;
     }
-
-    if (message.role === "user") {
-      return (
-        <div key={message.id} className={`${styles.row} ${styles.rowUser}`}>
-          <div className={styles.userBubble}>{message.content}</div>
-        </div>
-      );
-    }
-
-    const isThinkingVisible = thinkingOpen[message.id] === true;
-    const reasoningSeconds = message.meta?.latencyMs ? Math.max(1, Math.round(message.meta.latencyMs / 1000)) : 0;
-    const isStreamingMessage = message.status === "streaming";
-    const isWaiting = isStreamingMessage && !message.content && !message.reasoning;
-    const isAnswering = isStreamingMessage && !!message.content;
-    const metaParts = message.meta ? buildMetaParts(message.meta) : [];
-    const canRetry = message.status === "done" && messages[messages.length - 1]?.id === message.id;
-    const actionsVisible = !isStreamingMessage;
-
-    return (
-      <div key={message.id} className={styles.row}>
-        <div className={styles.assistantHead}>
-          <ModelIcon
-            providerId={message.providerId}
-            providerName={message.providerName}
-            isCombo={message.isCombo}
-            size={16}
-          />
-          <span className={styles.assistantName}>{message.modelName || "Assistant"}</span>
-          {message.providerName ? (
-            <span className={styles.assistantProvider}>{message.providerName}</span>
-          ) : null}
-        </div>
-
-        {message.status === "error" ? (
-          <div className={styles.error} role="alert">
-            <p className={styles.errorHead}>
-              <Icon>error</Icon> Request failed
-            </p>
-            <p className={styles.errorBody}>{message.error}</p>
-            <div className={styles.errorActions}>
-              <Button variant="secondary" size="sm" icon="refresh" onClick={() => handleRetry(message.id)}>
-                Retry
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <>
-            {message.reasoning ? (
-              <div className={styles.thinking}>
-                <button
-                  type="button"
-                  className={styles.thinkingToggle}
-                  onClick={() => toggleThinking(message.id)}
-                  aria-expanded={isThinkingVisible}
-                >
-                  <Icon>stars</Icon>
-                  {isStreamingMessage && !message.content
-                    ? "Thinking…"
-                    : reasoningSeconds > 0
-                      ? `Thought for ${reasoningSeconds}s`
-                      : "Thoughts"}
-                  <Icon className={styles.chevronSmall}>{isThinkingVisible ? "expand_less" : "expand_more"}</Icon>
-                </button>
-                {isThinkingVisible ? <div className={styles.thinkingBody}>{message.reasoning}</div> : null}
-              </div>
-            ) : null}
-
-            {isWaiting ? (
-              <ActivityState label="Generating" startedAt={message.startedAt} />
-            ) : null}
-
-            {message.content ? (
-              <div className={styles.assistantBody}>
-                <PlaygroundMarkdown content={message.content} />
-                {isAnswering ? <span className={styles.caret} aria-hidden="true">▍</span> : null}
-              </div>
-            ) : null}
-
-            {!message.content && !message.reasoning && !isStreamingMessage ? (
-              <p className={styles.note}>
-                {message.meta?.stopped ? "Stopped before any output." : "The model returned no text."}
-              </p>
-            ) : null}
-
-            {!message.content && message.reasoning && !isStreamingMessage ? (
-              <p className={styles.note}>This model returned reasoning only.</p>
-            ) : null}
-          </>
-        )}
-
-        {actionsVisible && !isWaiting ? (
-          <div className={styles.actions}>
-            <button
-              type="button"
-              className={styles.actionButton}
-              data-state={copied === message.id ? "copied" : undefined}
-              onClick={() => copyMessage(message)}
-              disabled={!message.content && !message.reasoning}
-            >
-              <Icon>{copied === message.id ? "check" : "content_copy"}</Icon>
-              {copied === message.id ? "Copied" : "Copy"}
-            </button>
-            {canRetry ? (
-              <button type="button" className={styles.actionButton} onClick={() => handleRetry(message.id)}>
-                <Icon>refresh</Icon>
-                Retry
-              </button>
-            ) : null}
-          </div>
-        ) : null}
-
-        {metaParts.length > 0 ? (
-          <p className={styles.meta}>
-            {metaParts.map((part, index) => (
-              <span key={part}>
-                {index > 0 ? <span className={styles.metaSep}>·</span> : null}
-                {part}
-              </span>
-            ))}
-          </p>
-        ) : null}
-      </div>
-    );
+    newSession(activeSession.model || null);
+    resetTransient();
+    inputRefFocus();
   };
 
-  const emptyHint = selectedModel
-    ? `Test ${selectedModel.name} through JRouter.`
-    : !loading && providers.length === 0
-      ? "No providers connected yet. Connect one from the Providers page to test models here."
+  const handleSelectSession = (id) => {
+    if (id !== activeId) {
+      stop();
+      cancelAll();
+      setActiveId(id);
+      resetTransient();
+    }
+    setHistoryOpen(false);
+  };
+
+  const handleDuplicateSession = (session) => {
+    duplicateSession(session);
+    resetTransient();
+  };
+
+  const handleDeleteSession = (id) => {
+    if (id === activeId) {
+      stop();
+      cancelAll();
+    }
+    deleteSession(id);
+  };
+
+  const handleClear = () => {
+    stop();
+    cancelAll();
+    updateSession(activeId, (session) => ({ ...session, messages: [], title: "New chat" }));
+    resetTransient();
+    setSettingsOpen(false);
+    notify({ type: "success", message: "Conversation cleared", duration: 2000 });
+  };
+
+  const handleSettingsChange = (patch) => {
+    setSettings((current) => normalizeSettings({ ...current, ...patch }));
+  };
+
+  const toggleFavorite = (value) => {
+    setFavorites((current) => (
+      current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
+    ));
+  };
+
+  const runCommand = (key) => {
+    setInput("");
+    if (key === "/new") handleNewChat();
+    else if (key === "/clear") handleClear();
+    else if (key === "/history") setHistoryOpen(true);
+    else if (key === "/model") setPickerOpen(true);
+    else if (key === "/settings") setSettingsOpen(true);
+    else if (key === "/export") setExportOpen(true);
+  };
+
+  const exportBody = useMemo(
+    () => buildExportBody(activeSession || { model: null, messages: [] }, settings),
+    [activeSession, settings],
+  );
+
+  const emptyHint = !loading && providers.length === 0
+    ? "No providers connected yet. Connect one from the Providers page to test models here."
+    : activeSession?.model
+      ? `Test ${activeSession.model.name} through JRouter.`
       : "Pick a model, then send your first message through JRouter.";
+
+  const renderMessage = (message) => (
+    <PlaygroundMessage
+      key={message.id}
+      message={message}
+      isLast={message.id === lastId}
+      isStreaming={message.status === "streaming"}
+      thinkingOpen={!!thinkingOpen[message.id]}
+      raw={!!rawById[message.id]}
+      copied={copied === message.id}
+      onCopy={handleCopy}
+      onDelete={handleDeleteMessage}
+      onRetry={handleRetry}
+      onToggleThinking={handleToggleThinking}
+      onToggleRaw={handleToggleRaw}
+      onFollowUp={handleFollowUp}
+    />
+  );
 
   return (
     <div className={styles.page}>
-      <div className={styles.workspace}>
-      <div className={`${styles.column} ${styles.toolbar}`}>
-        <div className={styles.modelTriggerWrap}>
-          <button
-            type="button"
-            data-model-trigger
-            className={styles.modelTrigger}
-            onClick={() => setPickerOpen((open) => !open)}
-            aria-haspopup="dialog"
-            aria-expanded={pickerOpen}
-          >
-            <ModelIcon
-              providerId={selectedModel?.providerId}
-              providerName={selectedModel?.providerName}
-              providerColor={selectedModel?.providerColor}
-              isCombo={selectedModel?.isCombo}
-              size={18}
+      <section className={styles.card} aria-label="Playground">
+        <PlaygroundTranscript
+          messages={messages}
+          isStreaming={isStreaming}
+          renderMessage={renderMessage}
+          loadError={loadError}
+          empty={(
+            <PlaygroundEmpty
+              hint={emptyHint}
+              showSuggestions={!!activeSession?.model && providers.length > 0}
+              onSuggestion={(suggestion) => {
+                setInput(suggestion);
+                inputRefFocus();
+              }}
             />
-            <span className={styles.modelTriggerText}>
-              <span className={styles.modelNameRow}>
-                <span className={styles.modelName}>
-                  {selectedModel ? selectedModel.name : loading ? "Loading models…" : "Select a model"}
-                </span>
-                {selectedModel?.isCombo ? <span className={styles.modelBadge}>combo</span> : null}
-              </span>
-              <span className={styles.modelProvider}>
-                {selectedModel
-                  ? selectedModel.providerName || selectedModel.value
-                  : !loading && providers.length === 0
-                    ? "No connected providers"
-                    : "Choose from connected providers"}
-              </span>
-            </span>
-            <Icon className={styles.chevron}>{pickerOpen ? "expand_less" : "expand_more"}</Icon>
-          </button>
+          )}
+        />
 
-          <ModelPickerPopover
-            isOpen={pickerOpen}
-            onClose={() => setPickerOpen(false)}
-            onSelect={handleSelectModel}
-            selectedModel={selectedModel?.value}
-            activeProviders={providers}
-            modelAliases={modelAliases}
-          />
-        </div>
-
-        <div className={styles.toolbarActions}>
-          <Tooltip text="New chat">
-            <button
-              type="button"
-              className={styles.iconButton}
-              onClick={handleNewChat}
-              disabled={messages.length === 0}
-              aria-label="New chat"
-            >
-              <Icon>add</Icon>
-            </button>
-          </Tooltip>
-
-          <span ref={settingsRef} className={styles.settingsAnchor}>
-            <Tooltip text="Generation settings">
-              <button
-                type="button"
-                className={styles.iconButton}
-                onClick={() => setSettingsOpen((open) => !open)}
-                aria-expanded={settingsOpen}
-                aria-label="Generation settings"
-              >
-                <Icon>settings</Icon>
-              </button>
-            </Tooltip>
-
-            {settingsOpen ? (
-              <div className={styles.settingsPopover} role="dialog" aria-label="Generation settings">
-                <div className={styles.settingsHead}>
-                  <span>Generation</span>
-                  <button
-                    type="button"
-                    className={styles.settingsClose}
-                    onClick={() => setSettingsOpen(false)}
-                    aria-label="Close settings"
-                  >
-                    <Icon>close</Icon>
-                  </button>
-                </div>
-
-                <label className={styles.settingsField}>
-                  <span className={styles.settingsLabel}>Temperature</span>
-                  <input
-                    type="number"
-                    min="0"
-                    max="2"
-                    step="0.1"
-                    placeholder="default"
-                    value={generation.temperature}
-                    onChange={handleGenerationChange("temperature")}
-                    className={styles.settingsInput}
-                  />
-                </label>
-
-                <label className={styles.settingsField}>
-                  <span className={styles.settingsLabel}>Max tokens</span>
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    placeholder="default"
-                    value={generation.maxTokens}
-                    onChange={handleGenerationChange("maxTokens")}
-                    className={styles.settingsInput}
-                  />
-                </label>
-
-                <label className={styles.settingsField}>
-                  <span className={styles.settingsLabel}>Top P</span>
-                  <input
-                    type="number"
-                    min="0"
-                    max="1"
-                    step="0.05"
-                    placeholder="default"
-                    value={generation.topP}
-                    onChange={handleGenerationChange("topP")}
-                    className={styles.settingsInput}
-                  />
-                </label>
-
-                <p className={styles.settingsHint}>
-                  Applied to the next request. Empty fields use the provider default.
-                </p>
-
-                {generation.temperature || generation.maxTokens || generation.topP ? (
-                  <button
-                    type="button"
-                    className={styles.settingsReset}
-                    onClick={() => setGeneration({ temperature: "", maxTokens: "", topP: "" })}
-                  >
-                    Reset to provider defaults
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
-          </span>
-        </div>
-      </div>
-
-      <div className={styles.scroll} ref={scrollRef} onScroll={handleScroll} role="region" aria-label="Conversation" tabIndex={0}>
-        <div className={`${styles.column} ${styles.canvas}`}>
-          {loadError ? (
-            <p className={styles.loadError} role="alert">
-              <Icon>error</Icon>
-              {loadError}
-            </p>
+        <PlaygroundComposer
+          value={input}
+          onChange={setInput}
+          onSend={handleSend}
+          onStop={handleStop}
+          isStreaming={isStreaming}
+          canSend={canSend}
+          model={activeSession?.model || null}
+          pickerOpen={pickerOpen}
+          onOpenPicker={() => {
+            setSettingsOpen(false);
+            setPickerOpen((open) => !open);
+          }}
+          picker={(
+            <ModelPickerPopover
+              isOpen={pickerOpen}
+              onClose={() => setPickerOpen(false)}
+              onSelect={handleSelectModel}
+              selectedModel={activeSession?.model?.value || ""}
+              activeProviders={providers}
+              modelAliases={modelAliases}
+              favorites={favorites}
+              onToggleFavorite={toggleFavorite}
+            />
+          )}
+          onOpenHistory={() => {
+            setPickerOpen(false);
+            setSettingsOpen(false);
+            setHistoryOpen(true);
+          }}
+          historyCount={sessions.length}
+          think={settings.think}
+          onToggleThink={() => handleSettingsChange({ think: !settings.think })}
+          settingsOpen={settingsOpen}
+          onToggleSettings={() => {
+            setPickerOpen(false);
+            setSettingsOpen((open) => !open);
+          }}
+          settingsPanel={settingsOpen ? (
+            <PlaygroundSettingsPopover
+              settings={settings}
+              onChange={handleSettingsChange}
+              onClose={() => setSettingsOpen(false)}
+              onExport={() => {
+                setSettingsOpen(false);
+                setExportOpen(true);
+              }}
+              onClear={handleClear}
+            />
           ) : null}
+          onCommand={runCommand}
+          textareaRef={textareaRef}
+        />
+      </section>
 
-          {messages.length === 0 ? (
-            <div className={styles.empty}>
-              <span className={styles.emptyIcon}>
-                <Icon>science</Icon>
-              </span>
-              <p className={styles.emptyTitle}>Start a conversation</p>
-              <p className={styles.emptyHint}>{emptyHint}</p>
-              {selectedModel && hasCatalog ? (
-                <div className={styles.suggestions}>
-                  {SUGGESTIONS.map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      type="button"
-                      className={styles.suggestion}
-                      onClick={() => handleSuggestion(suggestion)}
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : messages.map(renderMessage)}
-        </div>
-      </div>
+      <PlaygroundHistoryModal
+        isOpen={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        sessions={sessions}
+        activeId={activeId}
+        onSelect={handleSelectSession}
+        onNew={() => {
+          setHistoryOpen(false);
+          handleNewChat();
+        }}
+        onDuplicate={handleDuplicateSession}
+        onDelete={handleDeleteSession}
+      />
 
-      <div className={`${styles.column} ${styles.composerWrap}`}>
-        <div className={styles.composer}>
-          <textarea
-            ref={inputRef}
-            rows={1}
-            className={styles.textarea}
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={selectedModel ? `Message ${selectedModel.name}...` : "Select a model to start…"}
-            aria-label="Message"
-          />
-
-          <div className={styles.composerBar}>
-            {selectedModel ? (
-              <span className={styles.composerContext}>
-                <ModelIcon
-                  providerId={selectedModel.providerId}
-                  providerName={selectedModel.providerName}
-                  providerColor={selectedModel.providerColor}
-                  isCombo={selectedModel.isCombo}
-                  size={13}
-                />
-                <span className={styles.composerContextName}>
-                  {selectedModel.providerName || selectedModel.name}
-                </span>
-              </span>
-            ) : (
-              <button
-                type="button"
-                className={styles.suggestion}
-                onClick={() => setPickerOpen(true)}
-              >
-                Select a model
-              </button>
-            )}
-
-            <span className={styles.composerButtons}>
-              {isStreaming ? (
-                <Tooltip text="Stop generating">
-                  <button
-                    type="button"
-                    className={styles.sendButton}
-                    data-mode="stop"
-                    onClick={handleStop}
-                    aria-label="Stop generating"
-                  >
-                    <Icon>stop</Icon>
-                  </button>
-                </Tooltip>
-              ) : (
-                <Tooltip text="Send">
-                  <button
-                    type="button"
-                    className={styles.sendButton}
-                    onClick={sendMessage}
-                    disabled={!canSend}
-                    aria-label="Send message"
-                  >
-                    <Icon>arrow_upward</Icon>
-                  </button>
-                </Tooltip>
-              )}
-            </span>
-          </div>
-          <p className={styles.hint}>
-            <kbd>Enter</kbd> to send · <kbd>Shift</kbd> + <kbd>Enter</kbd> for a new line
-          </p>
-        </div>
-      </div>
-      </div>
+      <PlaygroundExportModal
+        isOpen={exportOpen}
+        onClose={() => setExportOpen(false)}
+        body={exportBody}
+        onCopy={(code) => {
+          copy(code, "export");
+          notify({ type: "success", message: "Code copied", duration: 2000 });
+        }}
+      />
     </div>
   );
 }
