@@ -3,7 +3,7 @@
 **Date:** 2026-10-30
 **Route:** `/dashboard/playground`
 **Reference:** `docs/templates/playground/main.html`, `docs/templates/playground/screen.png`
-**Status:** Approved design, implementation plan pending
+**Status:** Superseded by `2026-10-31-playground-chat-first-design.md` (chat-first redesign)
 
 ## 1. Context & Objectives
 
