@@ -113,6 +113,13 @@ describe("playgroundUtils storage", () => {
     expect(Object.getOwnPropertyDescriptor(globalThis, "localStorage")).toEqual(original);
   });
 
+  it("fails when there is no usable storage", () => {
+    expect(writeStorage("k", {}, null)).toBe(false);
+    expect(writeStorage("k", {}, {})).toBe(false);
+    expect(writeStorage("k", {}, { getItem: () => null })).toBe(false);
+    expect(persistSessions({ activeId: "s1", conversations: [{ id: "s1", messages: [] }] }, null)).toBe(false);
+  });
+
   it("trims long reasoning before writing", () => {
     const storage = { saved: null, setItem: (key, value) => { storage.saved = JSON.parse(value); } };
     const sessions = { activeId: "s1", conversations: [{ id: "s1", messages: [{ reasoning: "x".repeat(5000) }] }] };
@@ -205,6 +212,16 @@ describe("playgroundUtils code renderers", () => {
     for (const code of [renderCurl(body, origin), renderJavaScript(body, origin), renderPython(body, origin)]) {
       expect(code).not.toMatch(/Bearer [A-Za-z0-9_-]{20,}/);
     }
+  });
+
+  it("renders Python that survives triple quotes in content", () => {
+    const tricky = { ...body, messages: [{ role: "user", content: 'a """ b\nc\\d' }] };
+    const code = renderPython(tricky, origin);
+    expect(code).not.toContain('"""');
+    expect(code).toContain("json.loads(");
+    expect(code).toContain("print(res.json())");
+    const literal = code.match(/^payload = json\.loads\((.*)\)$/m)?.[1];
+    expect(JSON.parse(JSON.parse(literal))).toEqual(tricky);
   });
 });
 

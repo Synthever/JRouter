@@ -138,6 +138,13 @@ function resolveStorage(storage) {
   }
 }
 
+// A target is only usable when it exists and can actually accept a write: a
+// `null`/`{}` storage used to short-circuit the optional call and report success
+// while persisting nothing.
+function isWritableStorage(target) {
+  return target !== NO_STORAGE && Boolean(target) && typeof target.setItem === "function";
+}
+
 export function readStorage(key, validate, storage) {
   try {
     const target = resolveStorage(storage);
@@ -154,8 +161,8 @@ export function readStorage(key, validate, storage) {
 export function writeStorage(key, value, storage) {
   try {
     const target = resolveStorage(storage);
-    if (target === NO_STORAGE) return false;
-    target?.setItem(key, JSON.stringify(value));
+    if (!isWritableStorage(target)) return false;
+    target.setItem(key, JSON.stringify(value));
     return true;
   } catch {
     return false;
@@ -178,7 +185,7 @@ export function trimReasoning(sessions) {
 
 export function persistSessions(sessions, storage) {
   const target = resolveStorage(storage);
-  if (target === NO_STORAGE) return false;
+  if (!isWritableStorage(target)) return false;
   if (writeStorage(SESSIONS_KEY, trimReasoning(sessions), target)) return true;
   // Quota: retry without the heavy reasoning bodies before giving up.
   return writeStorage(SESSIONS_KEY, stripReasoning(sessions), target);
@@ -281,11 +288,11 @@ console.log(await res.json());`;
 }
 
 export function renderPython(body, origin) {
+  // Single JSON-encoded string literal: a raw triple-quoted body breaks the
+  // snippet as soon as a message contains `"""`.
   return `import json, os, requests
 
-payload = json.loads(r"""
-${stringify(body)}
-""")
+payload = json.loads(${JSON.stringify(stringify(body))})
 
 res = requests.post(
     "${origin}/v1/chat/completions",
