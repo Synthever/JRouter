@@ -156,3 +156,27 @@ describe("playground settings popover", () => {
     expect(source).toContain("clearArmed");
   });
 });
+
+describe("playground dialogs", () => {
+  it("lists conversations with search and per-row actions", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundHistoryModal.js`);
+    expect(source).toContain("Conversations");
+    expect(source).toContain("Switch or manage saved chat sessions");
+    expect(source).toContain("Search chats");
+    expect(source).toContain("Active");
+    expect(source).toContain("onDuplicate");
+    expect(source).toContain("onDelete");
+    expect(source).toContain("trapFocus");
+  });
+
+  it("exports the three languages", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundExportModal.js`);
+    expect(source).toContain('"cURL"');
+    expect(source).toContain('"JavaScript"');
+    expect(source).toContain('"Python"');
+    expect(source).toContain("renderCurl");
+    expect(source).toContain("renderJavaScript");
+    expect(source).toContain("renderPython");
+    expect(source).toContain("onCopy");
+  });
+});
