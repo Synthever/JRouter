@@ -74,7 +74,13 @@ export default function usePlaygroundSessions() {
       ...source,
       id: createId(),
       title: `${source.title} (copy)`.slice(0, MAX_TITLE_CHARS),
-      messages: source.messages.map((message) => ({ ...message, id: createId() })),
+      messages: source.messages.map((message) => ({
+        ...message,
+        id: createId(),
+        // A duplicated placeholder has no stream writing into it, so it would wait
+        // forever. Keep the partial text, but finish it so the copy renders actions.
+        ...(message.status === "streaming" ? { status: "done" } : {}),
+      })),
       updatedAt: Date.now(),
     };
     setSessions((current) => [copy, ...current]);

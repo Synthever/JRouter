@@ -107,12 +107,20 @@ export default function PlaygroundPageClient() {
     requestFollowUps(sessionId, assistantId, messages);
   }, [requestFollowUps, settings.helper]);
 
+  // A failed turn hands its question back to the composer, but only while that
+  // conversation is still on screen and only when nothing new was typed meanwhile.
+  const restoreFailedPrompt = useCallback(({ sessionId, question }) => {
+    if (sessionId !== activeIdRef.current) return;
+    setInput((current) => current || question);
+  }, []);
+
   const { isStreaming, run, stop } = usePlaygroundChat({
     apiKey,
     settings,
     onAppend: appendMessages,
     onPatch: patchMessage,
     onFinish: finishTurn,
+    onError: restoreFailedPrompt,
   });
 
   // Model picker sources: same connections/aliases data the Combo picker uses.

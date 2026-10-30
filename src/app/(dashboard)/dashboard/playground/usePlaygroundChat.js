@@ -30,7 +30,14 @@ function reasoningDeltaFrom(delta) {
   return typeof raw === "string" ? raw : "";
 }
 
-export default function usePlaygroundChat({ apiKey, settings, onAppend, onPatch, onFinish }) {
+export default function usePlaygroundChat({
+  apiKey,
+  settings,
+  onAppend,
+  onPatch,
+  onFinish,
+  onError,
+}) {
   const [isStreaming, setIsStreaming] = useState(false);
   const streamingRef = useRef(false);
   const abortRef = useRef(null);
@@ -206,13 +213,16 @@ export default function usePlaygroundChat({ apiKey, settings, onAppend, onPatch,
           thinkingMs,
           error: error?.message || "Request failed.",
         });
+        // The composer cleared on send; hand the question back so it can be edited
+        // and resent instead of being retyped from memory.
+        onError?.({ sessionId, question, error: error?.message || "Request failed." });
       }
     } finally {
       if (abortRef.current === controller) abortRef.current = null;
       streamingRef.current = false;
       setIsStreaming(false);
     }
-  }, [apiKey, settings, onAppend, onPatch, onFinish]);
+  }, [apiKey, settings, onAppend, onPatch, onFinish, onError]);
 
   return { isStreaming, run, stop };
 }

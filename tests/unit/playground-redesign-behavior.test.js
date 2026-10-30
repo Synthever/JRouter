@@ -33,6 +33,19 @@ describe("playground sessions", () => {
     expect(source).toContain("MAX_TITLE_CHARS");
     expect(source).toContain("(copy)");
   });
+
+  it("normalises a duplicated streaming placeholder into a finished reply", () => {
+    const source = read(`${PLAYGROUND}/usePlaygroundSessions.js`);
+    const duplicate = source.slice(
+      source.indexOf("const duplicateSession"),
+      source.indexOf("const deleteSession"),
+    );
+    // Nothing streams into the copy: left as streaming it would render a permanent
+    // waiting… card with no actions, so the status is finished on the way in.
+    expect(duplicate).toContain("messages: source.messages.map");
+    expect(duplicate).toMatch(/message\.status === "streaming"[^}]*"done"/);
+    expect(duplicate).toContain("...message");
+  });
 });
 
 describe("playground turn engine", () => {

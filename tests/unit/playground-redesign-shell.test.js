@@ -297,3 +297,57 @@ describe("playground page composition", () => {
     expect(source).toContain("if (firstTurn && settings.helper) requestTitle(sessionId, text);");
   });
 });
+
+describe("playground review fixes", () => {
+  it("relabels a trailing model-switch divider instead of stacking a second one", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundPageClient.js`);
+    const branch = source.slice(
+      source.indexOf("One divider per model change"),
+      source.indexOf("setPickerOpen(false);"),
+    );
+    expect(branch).toContain('last?.role === "divider"');
+    expect(branch).toContain(": [...session.messages");
+    // Isolate the relabel arm: the append arm uses the same prefix string, so a
+    // whole-branch search would pass even when the relabel keeps the old name.
+    const relabel = branch.slice(
+      branch.indexOf('last?.role === "divider"'),
+      branch.indexOf(": [...session.messages"),
+    );
+    expect(relabel).toContain("index === lastIndex");
+    expect(relabel).toContain("content: `${DIVIDER_PREFIX}${next.name}`");
+    // Only the non-divider case appends; a trailing divider is relabelled in place.
+    expect(branch.match(/role: "divider"/g)?.length).toBe(1);
+  });
+
+  it("truncates the session at the retried question before replaying it", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundPageClient.js`);
+    const retry = source.slice(source.indexOf("const handleRetry"), source.indexOf("const handleStop"));
+    expect(retry).toContain("updateSessionMessages(activeSession.id, () => messages.slice(0, questionIndex));");
+    expect(retry).toContain("history: messages.slice(0, questionIndex)");
+    // The old reply must be dropped, not sliced off at its own index.
+    expect(retry).not.toContain("messages.slice(0, index)");
+  });
+
+  it("stops the stream and helper calls before duplicating a conversation", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundPageClient.js`);
+    const handler = source.slice(
+      source.indexOf("const handleDuplicateSession"),
+      source.indexOf("const handleDeleteSession"),
+    );
+    expect(handler).toMatch(/stop\(\);\s*cancelAll\(\);\s*duplicateSession\(session\);/);
+  });
+
+  it("reports a failed turn back to the page", () => {
+    const source = read(`${PLAYGROUND}/usePlaygroundChat.js`);
+    expect(source).toMatch(/onFinish,\s*onError,/);
+    expect(source).toContain("onError?.({ sessionId, question");
+    expect(source).toContain("[apiKey, settings, onAppend, onPatch, onFinish, onError]");
+  });
+
+  it("restores a failed prompt without clobbering a draft", () => {
+    const source = read(`${PLAYGROUND}/PlaygroundPageClient.js`);
+    expect(source).toContain("onError: restoreFailedPrompt");
+    expect(source).toContain("if (sessionId !== activeIdRef.current) return;");
+    expect(source).toContain("setInput((current) => current || question)");
+  });
+});
