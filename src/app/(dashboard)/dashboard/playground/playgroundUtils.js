@@ -124,9 +124,25 @@ export function stripReasoning(sessions) {
   };
 }
 
-export function readStorage(key, validate, storage = globalThis.localStorage) {
+const NO_STORAGE = Symbol("playground.noStorage");
+
+// Resolve the default storage inside the guarded body: reading
+// `globalThis.localStorage` throws in hosts where site data is blocked, and a
+// default parameter would surface that error before any `try` runs.
+function resolveStorage(storage) {
+  if (storage !== undefined) return storage;
   try {
-    const raw = storage?.getItem(key);
+    return globalThis.localStorage ?? NO_STORAGE;
+  } catch {
+    return NO_STORAGE;
+  }
+}
+
+export function readStorage(key, validate, storage) {
+  try {
+    const target = resolveStorage(storage);
+    if (target === NO_STORAGE) return null;
+    const raw = target?.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     return validate(parsed) ? parsed : null;
@@ -135,9 +151,11 @@ export function readStorage(key, validate, storage = globalThis.localStorage) {
   }
 }
 
-export function writeStorage(key, value, storage = globalThis.localStorage) {
+export function writeStorage(key, value, storage) {
   try {
-    storage?.setItem(key, JSON.stringify(value));
+    const target = resolveStorage(storage);
+    if (target === NO_STORAGE) return false;
+    target?.setItem(key, JSON.stringify(value));
     return true;
   } catch {
     return false;
@@ -158,10 +176,12 @@ export function trimReasoning(sessions) {
   };
 }
 
-export function persistSessions(sessions, storage = globalThis.localStorage) {
-  if (writeStorage(SESSIONS_KEY, trimReasoning(sessions), storage)) return true;
+export function persistSessions(sessions, storage) {
+  const target = resolveStorage(storage);
+  if (target === NO_STORAGE) return false;
+  if (writeStorage(SESSIONS_KEY, trimReasoning(sessions), target)) return true;
   // Quota: retry without the heavy reasoning bodies before giving up.
-  return writeStorage(SESSIONS_KEY, stripReasoning(sessions), storage);
+  return writeStorage(SESSIONS_KEY, stripReasoning(sessions), target);
 }
 
 export function sanitizeTitle(raw) {

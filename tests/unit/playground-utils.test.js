@@ -94,6 +94,25 @@ describe("playgroundUtils storage", () => {
     expect(writeStorage("k", {}, storage)).toBe(false);
   });
 
+  it("treats an unreadable localStorage getter as missing storage", () => {
+    const original = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+    try {
+      Object.defineProperty(globalThis, "localStorage", {
+        configurable: true,
+        get() {
+          throw new Error("SecurityError: storage is blocked");
+        },
+      });
+      expect(readStorage("k", () => true)).toBeNull();
+      expect(writeStorage("k", {})).toBe(false);
+      expect(persistSessions({ activeId: "s1", conversations: [{ id: "s1", messages: [] }] })).toBe(false);
+    } finally {
+      if (original) Object.defineProperty(globalThis, "localStorage", original);
+      else delete globalThis.localStorage;
+    }
+    expect(Object.getOwnPropertyDescriptor(globalThis, "localStorage")).toEqual(original);
+  });
+
   it("trims long reasoning before writing", () => {
     const storage = { saved: null, setItem: (key, value) => { storage.saved = JSON.parse(value); } };
     const sessions = { activeId: "s1", conversations: [{ id: "s1", messages: [{ reasoning: "x".repeat(5000) }] }] };
