@@ -36,9 +36,9 @@ Create:
 | `tests/unit/cli-tools-groups.test.js` | Unit tests for the pure module. |
 | `tests/unit/cli-tools-redesign.test.js` | Source-text contract tests for index + detail shell. |
 
-Modify: `CLIToolsPageClient.js`, `[toolId]/ToolDetailClient.js`, `cli-tools.module.css`, `shared/constants/cliTools.js`, `components/index.js`, and the 17 card files.
+Modify: `CLIToolsPageClient.js`, `[toolId]/ToolDetailClient.js`, `cli-tools.module.css`, `shared/constants/cliTools.js`, `components/index.js`, and the 16 reachable card files.
 
-Delete: `components/ToolSummaryCard.js`, `components/MitmLinkCard.js` (replaced by `ui/ToolCard.js`).
+Delete: `components/ToolSummaryCard.js`, `components/MitmLinkCard.js` (replaced by `ui/ToolCard.js`), `components/AntigravityToolCard.js`, `components/CopilotToolCard.js` (unreachable barrel exports).
 
 ---
 
@@ -2173,10 +2173,11 @@ git commit -m "refactor(cli-tools): migrate the remaining custom config cards"
 
 ---
 
-### Task 11: Migrate the structured and guide cards (5 cards)
+### Task 11: Migrate the structured and guide cards (3 cards, 2 deletions)
 
 **Files:**
-- Modify: `components/HermesToolCard.js` (7 rows), `components/CoworkToolCard.js` (7), `components/DefaultToolCard.js` (0), `components/CopilotToolCard.js` (0), `components/AntigravityToolCard.js` (0)
+- Modify: `components/HermesToolCard.js` (7 rows), `components/CoworkToolCard.js` (7), `components/DefaultToolCard.js` (0)
+- Delete: `components/AntigravityToolCard.js`, `components/CopilotToolCard.js` (unreachable — no `antigravity`/`copilot` id exists in `CLI_TOOLS`, and `ToolDetailClient` routes both through `DefaultToolCard`)
 
 **Interfaces:**
 - Consumes: kit.
@@ -2194,24 +2195,31 @@ Rows: `Select Endpoint`, `Current`, `API Key` plus four plain-label rows. Groups
 
 No field rows. Delete the `Card` wrapper and header, wrap the guide steps and `ManualConfigModal` in `<div className={styles.panelBody}>`, put the copy buttons that currently sit at the bottom into `ActionBar`. If the card has no action buttons, render `ActionBar` with only the `message` prop and no children.
 
-- [ ] **Step 4: CopilotToolCard (guide-only)**
+- [ ] **Step 4: Delete the unreachable cards**
 
-Same treatment as DefaultToolCard: drop the header, keep the marketplace link and step list, move the copy button(s) into `ActionBar`.
+```bash
+git rm "src/app/(dashboard)/dashboard/cli-tools/components/AntigravityToolCard.js" \
+       "src/app/(dashboard)/dashboard/cli-tools/components/CopilotToolCard.js"
+```
 
-- [ ] **Step 5: AntigravityToolCard**
+Remove their two export lines from `components/index.js`. Confirm nothing else imports them:
 
-No `fieldLabel` rows, but three `8rem` grids — convert them to `FieldRow` with their existing plain labels. Keep the alias table and MITM status block in their own `FieldGroup`s. Actions → `ActionBar`.
+```bash
+grep -rn "AntigravityToolCard\|CopilotToolCard" "src/app/(dashboard)/dashboard/cli-tools"
+```
 
-- [ ] **Step 6: Verify, lint, browser check**
+Expected: no output.
 
-Run the Task 9 Step 6 greps over these five files. Expected: all `0`.
+- [ ] **Step 5: Verify, lint, browser check**
+
+Run the Task 9 Step 6 greps over `HermesToolCard.js`, `CoworkToolCard.js`, `DefaultToolCard.js`. Expected: all `0`.
 
 Run: `npx eslint "src/app/(dashboard)/dashboard/cli-tools/components"`
 Expected: no errors.
 
-Open `/dashboard/cli-tools/hermes`, `/cowork`, `/copilot`, `/antigravity`, `/devin`.
+Open `/dashboard/cli-tools/hermes`, `/cowork`, `/devin` (Devin renders `DefaultToolCard`), and `/dashboard/mitm` for the MITM pair migrated in Task 12.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add "src/app/(dashboard)/dashboard/cli-tools/components"
@@ -2242,7 +2250,6 @@ Replace the `migrated` array in `tests/unit/cli-tools-redesign.test.js` with:
 
 ```js
     const migrated = [
-      "AntigravityToolCard",
       "ClaudeToolCard",
       "ClineToolCard",
       "CodexToolCard",
@@ -2261,6 +2268,7 @@ Replace the `migrated` array in `tests/unit/cli-tools-redesign.test.js` with:
       "OpenClawToolCard",
       "OpenCodeToolCard",
     ];
+    expect(migrated).toHaveLength(16);
 ```
 
 - [ ] **Step 3: Run the whole test suite**

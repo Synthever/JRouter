@@ -175,7 +175,7 @@ New presentational components in `src/app/(dashboard)/dashboard/cli-tools/compon
 
 ## 9. Migration of the Tool Cards
 
-Scope: the 15 cards dispatched by `ToolDetailClient` plus the two MITM components (`MitmToolCard`, `MitmServerCard`), 17 files in total.
+Scope: the 14 cards dispatched by `ToolDetailClient` plus the two MITM components (`MitmToolCard`, `MitmServerCard`), 16 files in total. Two barrel exports — `AntigravityToolCard` and `CopilotToolCard` — are unreachable: neither `antigravity` nor `copilot` exists in `CLI_TOOLS`, and `ToolDetailClient` has no case for them (both ids fall through to `DefaultToolCard`). They are deleted as dead code rather than redesigned.
 
 Each card follows the same recipe: drop `Card`/`styles.panel` and the header block (including `onToggle`/`isExpanded`), group the body with `FieldGroup`, convert field rows to `FieldRow`, move its buttons into `ActionBar`. `ToolDetailClient` stops passing `isExpanded`/`onToggle` and renders `CliToolHeader` once.
 
@@ -195,9 +195,9 @@ Each card follows the same recipe: drop `Card`/`styles.panel` and the header blo
 | `GrokBuildToolCard` | 3 | config preview |
 | `CoworkToolCard` | 3 | MCP registry + plugin list |
 | `DefaultToolCard` | 0 | guide steps, manual-config modal |
-| `CopilotToolCard` | 0 | guide steps, marketplace link |
-| `AntigravityToolCard` | 0 | MITM status, alias table |
 | `MitmToolCard`, `MitmServerCard` | 0 | MITM server controls, alias editor |
+
+Deleted, not migrated: `AntigravityToolCard.js`, `CopilotToolCard.js` (unreachable, see above).
 
 Behaviour that must not change: which endpoint gets written, the `manualConfig` payloads, CooldownTimer/OAuth flows, MCP plugin writes, and every `/api/cli-tools/*` request body.
 
