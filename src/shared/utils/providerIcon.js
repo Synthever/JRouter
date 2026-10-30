@@ -25,10 +25,15 @@ const REMOTE_ICONS_LIGHT = {
 
 const REMOTE_ICONS_DARK = {
   cursor: "https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/cursor/default.svg",
-  // The CDN's "dark" file is white-filled, which disappears on light surfaces
-  openai: "https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/openai/light.svg",
+  openai: "https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/openai/dark.svg",
   anthropic: "https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/anthropic/dark.svg",
 };
+
+// Custom compatible endpoints get generated ids; show their protocol's brand mark.
+const COMPATIBLE_ICON_IDS = [
+  ["openai-compatible-", "openai"],
+  ["anthropic-compatible-", "anthropic"],
+];
 
 // Runtime only — first 404 remembers id for the whole session
 const failedIds = new Set();
@@ -44,8 +49,10 @@ export function resolveProviderIconId(providerId) {
   if (!id) return "";
   if (failedIds.has(id)) return "";
   const aliased = ICON_ALIASES[id] || id;
-  if (failedIds.has(aliased)) return "";
-  return aliased;
+  const compatible = COMPATIBLE_ICON_IDS.find(([prefix]) => aliased.startsWith(prefix));
+  const resolved = compatible ? compatible[1] : aliased;
+  if (failedIds.has(resolved)) return "";
+  return resolved;
 }
 
 /** Remote URL or `/providers/{id}.png`; null when previously failed. */

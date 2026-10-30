@@ -56,6 +56,8 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/custom-server.js ./custom-server.js
 COPY --from=builder /app/open-sse ./open-sse
+# opencode free-lane sidecar: spawned by path from the server's cwd at runtime.
+COPY --from=builder /app/scripts/opencode-transport.mjs ./scripts/opencode-transport.mjs
 # Next file tracing can omit sibling files; MITM runs server.js as a separate process.
 COPY --from=builder /app/src/mitm ./src/mitm
 # Standalone node_modules may omit deps only required by the MITM child process.

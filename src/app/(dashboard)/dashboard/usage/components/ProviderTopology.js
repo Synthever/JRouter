@@ -15,6 +15,7 @@ import "@xyflow/react/dist/style.css";
 import { AI_PROVIDERS } from "@/shared/constants/providers";
 import { getProviderIconSrc, markProviderIconMissing } from "@/shared/utils/providerIcon";
 import AppLogo from "@/shared/components/AppLogo";
+import { useTheme } from "@/shared/hooks/useTheme";
 import styles from "../usage.module.css";
 
 // Force-stop FE animation if a provider stays active longer than this
@@ -29,8 +30,8 @@ function getProviderConfig(providerId) {
   return AI_PROVIDERS[providerId] || { color: "#6b7280", name: providerId };
 }
 
-function getProviderImageUrl(providerId) {
-  return getProviderIconSrc(providerId);
+function getProviderImageUrl(providerId, isDark) {
+  return getProviderIconSrc(providerId, { isDark });
 }
 
 // Custom provider node - rectangle with image + name
@@ -273,7 +274,7 @@ const nodeTypes = { provider: ProviderNode, router: RouterNode };
 const edgeTypes = { topology: TopologyEdge };
 
 // Place N nodes evenly along an ellipse around the router center.
-function buildLayout(providers, activeSet, lastSet, errorSet) {
+function buildLayout(providers, activeSet, lastSet, errorSet, isDark) {
   const nodeW = 180;
   const nodeH = 30;
   const routerW = 120;
@@ -325,7 +326,7 @@ function buildLayout(providers, activeSet, lastSet, errorSet) {
     const data = {
       label: (config.name !== p.provider ? config.name : null) || p.nodeName || p.name || p.provider,
       color: config.color || "#6b7280",
-      imageUrl: getProviderImageUrl(p.provider),
+      imageUrl: getProviderImageUrl(p.provider, isDark),
       textIcon: config.textIcon || (p.provider || "?").slice(0, 2).toUpperCase(),
       active,
     };
@@ -373,6 +374,7 @@ function buildLayout(providers, activeSet, lastSet, errorSet) {
 }
 
 export default function ProviderTopology({ providers = [], activeRequests = [], lastProvider = "", errorProvider = "" }) {
+  const { isDark } = useTheme();
   // Serialize to stable string keys so useMemo only re-runs when values actually change
   const activeKey = useMemo(
     () => activeRequests.map((r) => r.provider?.toLowerCase()).filter(Boolean).sort().join(","),
@@ -417,8 +419,8 @@ export default function ProviderTopology({ providers = [], activeRequests = [], 
   }, [rawActiveSet, tick]);
 
   const { nodes, edges } = useMemo(
-    () => buildLayout(providers, activeSet, lastSet, errorSet),
-    [providers, activeSet, lastSet, errorSet]
+    () => buildLayout(providers, activeSet, lastSet, errorSet, isDark),
+    [providers, activeSet, lastSet, errorSet, isDark]
   );
 
   // Stable key — only remount when provider list changes

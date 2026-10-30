@@ -1,4 +1,4 @@
-import { cpSync, existsSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
@@ -36,6 +36,17 @@ export function copyStandaloneAssets({ projectRoot = process.cwd(), distDir = pr
   if (existsSync(serverWrapperSource)) {
     cpSync(serverWrapperSource, serverWrapperDestination, { force: true });
     console.log(`[standalone-assets] Copied custom-server.js to ${serverWrapperDestination}`);
+  }
+
+  // The opencode free-lane sidecar is spawned by path from the server's cwd, and
+  // the standalone server chdirs into its own directory — ship it beside server.js
+  // or the Bun transport silently stays unavailable.
+  const transportSource = resolve(projectRoot, "scripts", "opencode-transport.mjs");
+  const transportDestination = resolve(standaloneDir, "scripts", "opencode-transport.mjs");
+  if (existsSync(transportSource)) {
+    mkdirSync(dirname(transportDestination), { recursive: true });
+    cpSync(transportSource, transportDestination, { force: true });
+    console.log(`[standalone-assets] Copied opencode transport sidecar to ${transportDestination}`);
   }
 }
 

@@ -7,6 +7,7 @@ import { injectReasoningContent } from "../utils/reasoningContentInjector.js";
 import { resolveSessionId } from "../utils/sessionManager.js";
 import { isMuseSparkModel } from "../providers/models/helpers.js";
 import { applyFingerprintTools } from "../utils/opencodeFingerprint.js";
+import { fetchViaTransport } from "../utils/opencodeTransport.js";
 import { ANTHROPIC_API_VERSION } from "../providers/shared.js";
 import {
   normalizeResponsesInput,
@@ -319,6 +320,18 @@ function normalizeOpencodeReasoning(model, body) {
   delete body.reasoning_effort;
 }
 
+// The upstream free gate keys on the TLS ClientHello. Forward through the local
+// Bun sidecar, which owns the handshake and the proxy hop. This fork carries no
+// impersonating client, so an unavailable sidecar returns null and the caller's
+// native fetch still runs (fail-open).
+async function fetchFreeLane(url, options, proxyUrl = "") {
+  return fetchViaTransport(url, {
+    method: options.method,
+    headers: options.headers,
+    body: options.body,
+  }, { proxyUrl, signal: options.signal });
+}
+
 export class OpenCodeExecutor extends BaseExecutor {
   constructor() {
     super("opencode", PROVIDERS.opencode);
@@ -374,7 +387,13 @@ export class OpenCodeExecutor extends BaseExecutor {
   }
 
   async execute(args) {
-    return super.execute({ ...args, credentials: this.prepareRequestCredentials(args) });
+    const credentials = this.prepareRequestCredentials(args);
+    return super.execute({
+      ...args,
+      credentials,
+      directFetch: fetchFreeLane,
+      proxyDirectFetch: true,
+    });
   }
 
   // Free tier moved from /zen/v1 to /inference/v1 (OpenCode v2); /zen/v1 now

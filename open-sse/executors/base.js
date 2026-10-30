@@ -97,7 +97,7 @@ export class BaseExecutor {
     return { status: response.status, message: bodyText || `HTTP ${response.status}` };
   }
 
-  async execute({ model, body, stream, credentials, signal, log, proxyOptions = null, providerOverrides = null, healthProbe = false }) {
+  async execute({ model, body, stream, credentials, signal, log, proxyOptions = null, providerOverrides = null, healthProbe = false, directFetch = null, proxyDirectFetch = false }) {
     const fallbackCount = healthProbe ? 1 : this.getFallbackCount();
     let lastError = null;
     let lastStatus = 0;
@@ -148,7 +148,11 @@ export class BaseExecutor {
           method: "POST",
           headers,
           body: bodyStr,
-          signal: mergedSignal
+          signal: mergedSignal,
+          // Protocol adapters that need their own transport (opencode's TLS
+          // fingerprint) override the direct path; proxies still take priority
+          // unless the adapter can carry the proxy hop itself.
+          ...(directFetch ? { directFetch, proxyDirectFetch } : {}),
         }, proxyOptions);
         clearTimeout(connectTimer);
         const ct = response.headers?.get?.("content-type") || "";

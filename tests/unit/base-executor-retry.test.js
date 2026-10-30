@@ -105,3 +105,27 @@ describe("BaseExecutor.execute — computeRetryDelay hook veto", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
+
+// The opencode free lane hands its Bun transport to proxyFetch as `directFetch`.
+// Dropping the option here silently reverts that provider to native fetch, so pin
+// the passthrough shape instead of the transport's own behaviour.
+describe("BaseExecutor.execute — adapter-owned transport passthrough", () => {
+  it("forwards directFetch + proxyDirectFetch into the proxyAwareFetch options", async () => {
+    const ex = makeExec({ baseUrl: "https://x/api", retry: { 502: { attempts: 0 } } });
+    fetchMock.mockResolvedValueOnce(res(200));
+    const directFetch = vi.fn();
+    await ex.execute({ model: "m", body: {}, stream: false, credentials: creds, directFetch, proxyDirectFetch: true });
+    const options = fetchMock.mock.calls[0][1];
+    expect(options.directFetch).toBe(directFetch);
+    expect(options.proxyDirectFetch).toBe(true);
+  });
+
+  it("omits both transport options when the executor has no adapter", async () => {
+    const ex = makeExec({ baseUrl: "https://x/api", retry: { 502: { attempts: 0 } } });
+    fetchMock.mockResolvedValueOnce(res(200));
+    await ex.execute({ model: "m", body: {}, stream: false, credentials: creds });
+    const options = fetchMock.mock.calls[0][1];
+    expect("directFetch" in options).toBe(false);
+    expect("proxyDirectFetch" in options).toBe(false);
+  });
+});

@@ -903,7 +903,15 @@ export default function ProviderLimits() {
     return (
       <div className={styles.content}>
         <section className={styles.section} aria-labelledby="quota-sources-heading">
-          <h2 id="quota-sources-heading" className="ui-eyebrow flex items-center gap-2"><Icon className="text-[16px]">data_usage</Icon> Quota sources</h2>
+          <div className="min-w-0">
+            <h2 id="quota-sources-heading" className={styles.sectionTitle}>
+              <Icon className={styles.sectionIcon}>data_usage</Icon>
+              Quota sources
+            </h2>
+            <p className={styles.sectionDescription}>
+              Accounts, remaining capacity and reset times
+            </p>
+          </div>
           <div className={styles.empty}>
             <h3 className={styles.emptyTitle}>
               No Providers Connected
@@ -1158,15 +1166,15 @@ export default function ProviderLimits() {
             title={autoRefresh ? "Disable auto-refresh" : "Enable auto-refresh"}
           >
             <Icon className={`text-[14px] ${
-                autoRefresh ? "text-text-main" : "text-text-muted"
+                autoRefresh ? "text-[var(--text)]" : "text-[var(--text-3)]"
               }`}>
               {autoRefresh ? "toggle_on" : "toggle_off"}
             </Icon>
-            <span className="hidden text-text-primary sm:inline">
+            <span className="hidden text-[var(--text)] sm:inline">
               Auto-refresh
             </span>
             {autoRefresh && (
-              <span className="text-[10px] text-text-muted tabular-nums">
+              <span className="text-[11px] text-[var(--text-3)] tabular-nums">
                 ({countdown}s)
               </span>
             )}
@@ -1178,7 +1186,7 @@ export default function ProviderLimits() {
             type="button"
             onClick={() => refreshAll(true)}
             disabled={refreshingAll}
-            className={styles.iconButton}
+            className={styles.iconPill}
             aria-label="Refresh all quotas"
             title="Refresh all"
           >
@@ -1198,7 +1206,15 @@ export default function ProviderLimits() {
 
       <section className={styles.section} aria-labelledby="quota-sources-heading" aria-busy={connectionsLoading}>
         <div className={styles.sectionHeader}>
-          <h2 id="quota-sources-heading" className="ui-eyebrow flex items-center gap-2"><Icon className="text-[16px]">data_usage</Icon> Quota sources</h2>
+          <div className="min-w-0">
+            <h2 id="quota-sources-heading" className={styles.sectionTitle}>
+              <Icon className={styles.sectionIcon}>data_usage</Icon>
+              Quota sources
+            </h2>
+            <p className={styles.sectionDescription}>
+              Accounts, remaining capacity and reset times
+            </p>
+          </div>
           <span className={styles.metadata}>{connectionsPageSummary}</span>
         </div>
         {!connectionsLoading && !hasVisibleConnections && (

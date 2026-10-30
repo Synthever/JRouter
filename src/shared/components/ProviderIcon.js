@@ -10,6 +10,10 @@ function resolveSrc(src, providerId, isDark) {
   if (!src) return null;
   const m = String(src).match(/^\/providers\/([^/]+)\.png$/i);
   if (m) return getProviderIconSrc(m[1], { isDark });
+  // Brand marks from the icon CDN ship light/dark files; keep them in sync
+  // with the active theme even when the src was resolved elsewhere.
+  const brand = String(src).match(/glincker\/thesvg@[^/]+\/public\/icons\/([^/]+)\//);
+  if (brand) return getProviderIconSrc(brand[1], { isDark });
   return src;
 }
 

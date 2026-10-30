@@ -81,19 +81,44 @@
   gap: 6px;
   min-height: 36px;
   padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: 99px;
-  background: var(--canvas);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-full);
+  background: var(--surface);
   color: var(--text);
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
-  transition: background-color 150ms, border-color 150ms;
+  transition: background-color 150ms, border-color 150ms, color 150ms;
 }
 
 .selectPill {
   padding-right: 10px;
+}
+
+.iconPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-full);
+  background: var(--surface);
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background-color 150ms, color 150ms;
+}
+
+.iconPill:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.iconPill:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .pill:hover:not(:disabled),
@@ -102,8 +127,10 @@
 }
 
 .pill[aria-pressed="true"] {
-  background: var(--surface-2);
   border-color: var(--line-2);
+  background: var(--surface-2);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--line-2);
 }
 
 .pill:disabled,
@@ -112,12 +139,33 @@
   cursor: not-allowed;
 }
 
-/* The shared segmented control is 28px tall inside a 4px inset shell. */
+/* Shared segmented control restyled as the dashboard's pill segment. */
 .segmented {
+  gap: 2px;
   padding: 4px;
-  border: 1px solid var(--line);
-  border-radius: 99px;
+  border: 0;
+  border-radius: var(--r-full);
+  background: var(--surface-2);
+}
+
+.segmented :global(button) {
+  min-height: 28px;
+  padding: 4px 12px;
+  border-radius: var(--r-full);
+  color: var(--text-2);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.segmented :global(button[aria-pressed="true"]) {
   background: var(--canvas);
+  color: var(--text);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.segmented :global(button:not([aria-pressed="true"]):hover) {
+  color: var(--text);
 }
 
 .moreWrap {
@@ -132,7 +180,7 @@
   min-width: 232px;
   padding: 6px;
   border: 1px solid var(--line-2);
-  border-radius: 14px;
+  border-radius: var(--r2);
   background: var(--surface);
   box-shadow: var(--shadow-pop);
 }
@@ -175,7 +223,25 @@
   padding: 28px;
   border: 1px solid var(--line);
   border-radius: 24px;
-  background: var(--surface);
+  background: var(--canvas);
+}
+
+.sectionTitle {
+  composes: sectionTitle from "../usage/usage.module.css";
+}
+
+.sectionIcon {
+  composes: sectionIcon from "../usage/usage.module.css";
+}
+
+.sectionDescription {
+  composes: sectionDescription from "../usage/usage.module.css";
+}
+
+@media (max-width: 1023px) {
+  .page {
+    --quota-stick-offset: 24px;
+  }
 }
 
 .header {

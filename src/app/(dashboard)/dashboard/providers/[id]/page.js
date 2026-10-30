@@ -12,6 +12,7 @@ import { getModelsByProviderId, getModelKind } from "@/shared/constants/models";
 import { getThinkingLevels } from "open-sse/providers/thinkingLevels.js";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import { useModelCaps } from "@/shared/hooks/useModelCaps";
+import { useTheme } from "@/shared/hooks/useTheme";
 import { translate } from "@/i18n/runtime";
 import { fetchSuggestedModels } from "@/shared/utils/providerModelsFetcher";
 import { getProviderCustomModelRows } from "@/shared/utils/providerCustomModels";
@@ -20,7 +21,6 @@ import ModelRow from "./ModelRow";
 import PassthroughModelsSection from "./PassthroughModelsSection";
 import CompatibleModelsSection from "./CompatibleModelsSection";
 import ConnectionRow from "./ConnectionRow";
-import ProviderDetailStats from "./ProviderDetailStats";
 import AddApiKeyModal from "./AddApiKeyModal";
 import EditCompatibleNodeModal from "./EditCompatibleNodeModal";
 import AddCustomModelModal from "./AddCustomModelModal";
@@ -47,6 +47,7 @@ export default function ProviderDetailPage() {
   const router = useRouter();
   const providerId = params.id;
   const { getCaps } = useModelCaps();
+  const { isDark } = useTheme();
   const [connections, setConnections] = useState([]);
   const reorderBusy = useRef(false);
   const [reordering, setReordering] = useState(false);
@@ -1431,18 +1432,14 @@ export default function ProviderDetailPage() {
   // Determine icon path: OpenAI Compatible providers use specialized icons
   const getHeaderIconPath = () => {
     if (isOpenAICompatible && providerInfo.apiType) {
-      return providerInfo.apiType === "responses" ? "/providers/oai-r.png" : getProviderIconSrc("openai");
+      return providerInfo.apiType === "responses" ? "/providers/oai-r.png" : getProviderIconSrc("openai", { isDark });
     }
     if (isAnthropicCompatible) {
-      return getProviderIconSrc("anthropic");
+      return getProviderIconSrc("anthropic", { isDark });
     }
-    return getProviderIconSrc(providerInfo.id);
+    return getProviderIconSrc(providerInfo.id, { isDark });
   };
 
-  const activeConnectionCount = connections.filter((c) => c.isActive !== false).length;
-  const disabledConnectionCount = connections.length - activeConnectionCount;
-  const llmModelIds = new Set([...models, ...kiloFreeModels].map((m) => m.id));
-  const disabledLlmCount = disabledModelIds.filter((id) => llmModelIds.has(id)).length;
   const llmModelCount = [...models, ...kiloFreeModels.filter((fm) => !models.some((m) => m.id === fm.id))]
     .filter((m) => { const k = getModelKind(m); return !k || k === "llm"; }).length;
   // Custom rows count toward both provider kinds; compatible nodes carry no
@@ -1455,14 +1452,7 @@ export default function ProviderDetailPage() {
     type: "llm",
   }).length;
   const totalModelCount = isCompatible ? customModelCount : llmModelCount + customModelCount;
-  const enabledModelCount = isCompatible
-    ? customModelCount
-    : Math.max(totalModelCount - disabledLlmCount, 0);
   const demoteOn = providerDemoteOnError !== false;
-  const routingValue = providerStrategy === "round-robin" ? "Round robin" : "Fill first";
-  const routingNote = providerStrategy === "round-robin"
-    ? `Pool of ${providerStickyLimit || 1} · ${demoteOn ? "auto-demote on" : "auto-demote off"}`
-    : `Auto-demote ${demoteOn ? "on" : "off"}`;
   const introSub = [
     `${connections.length} connection${connections.length === 1 ? "" : "s"}`,
     isCompatible
@@ -1583,29 +1573,6 @@ export default function ProviderDetailPage() {
           )}
         </div>
       )}
-
-      <ProviderDetailStats
-        activeConnections={activeConnectionCount}
-        totalConnections={connections.length}
-        connectionsNote={
-          connections.length === 0
-            ? "No connections yet"
-            : disabledConnectionCount > 0
-              ? `${disabledConnectionCount} disabled`
-              : "All connections enabled"
-        }
-        modelsValue={enabledModelCount}
-        modelsUnit={isCompatible ? "custom" : `of ${totalModelCount}`}
-        modelsNote={
-          isCompatible
-            ? (customModelCount > 0 ? "Added to this endpoint" : "No custom models yet")
-            : disabledLlmCount > 0
-              ? `${disabledLlmCount} disabled`
-              : "All models enabled"
-        }
-        routingValue={routingValue}
-        routingNote={routingNote}
-      />
 
       {/* Compatible endpoint details -------------------------------------- */}
       {isCompatible && providerNode && (
