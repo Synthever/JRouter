@@ -16,6 +16,9 @@ export default function CliToolHeader({ tool, status, baseUrl }) {
   const needsExternal =
     Boolean(tool.requiresExternalUrl) &&
     /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?(?:\/|$)/i.test(baseUrl || "");
+  // The chip truncates with an ellipsis, so the sentence has to live in `title`
+  // as well as the visible label — otherwise the warning is unreadable.
+  const loopbackWarning = "Loopback is not reachable from this app";
   return (
     <header className={styles.detailHeader}>
       <div className={styles.detailIdentity}>
@@ -48,8 +51,8 @@ export default function CliToolHeader({ tool, status, baseUrl }) {
         </div>
       </div>
       <div className={cn(styles.endpointChip, needsExternal && styles.endpointWarning)}>
-        <span className={styles.endpointValue} title={baseUrl}>
-          {needsExternal ? "Loopback is not reachable from this app" : baseUrl || "—"}
+        <span className={styles.endpointValue} title={needsExternal ? loopbackWarning : baseUrl}>
+          {needsExternal ? loopbackWarning : baseUrl || "—"}
         </span>
         <button
           type="button"

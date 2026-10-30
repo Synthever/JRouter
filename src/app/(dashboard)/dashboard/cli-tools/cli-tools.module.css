@@ -959,8 +959,8 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
-  margin: 16px calc(-1 * var(--panel-pad)) calc(-1 * var(--panel-pad));
-  padding: 12px var(--panel-pad);
+  margin: 16px calc(-1 * var(--panel-pad, 28px)) calc(-1 * var(--panel-pad, 28px));
+  padding: 12px var(--panel-pad, 28px);
   border-top: 1px solid var(--line);
   background: var(--canvas);
 }

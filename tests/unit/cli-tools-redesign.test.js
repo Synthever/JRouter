@@ -79,3 +79,37 @@ describe("CLI Tools index", () => {
     expect(() => read(`${ROUTE}/components/MitmLinkCard.js`)).toThrow();
   });
 });
+
+describe("CLI Tools detail shell", () => {
+  const detail = read(`${ROUTE}/[toolId]/ToolDetailClient.js`);
+
+  it("renders exactly one header component and one panel", () => {
+    expect(detail).toContain("<CliToolHeader");
+    expect(detail.match(/styles\.panel\b/g)).toHaveLength(1);
+    expect(detail).not.toContain("styles.detailHeader");
+  });
+
+  it("no longer passes collapse props to the cards", () => {
+    expect(detail).not.toContain("isExpanded");
+    expect(detail).not.toContain("onToggle");
+  });
+
+  it("has a sticky action bar and no sticky-breaking panel overflow", () => {
+    const css = read(`${ROUTE}/cli-tools.module.css`);
+    const actionBar = css.slice(css.indexOf(".actionBar {"), css.indexOf(".actionMessage"));
+    expect(actionBar).toContain("position: sticky");
+    const panel = css.slice(css.indexOf(".panel {"), css.indexOf(".panelHeader {"));
+    expect(panel).not.toContain("overflow: hidden");
+  });
+
+  it("migrated cards render no panel header and no collapse chevron", () => {
+    const migrated = [
+      "GenericCliToolCard",
+    ];
+    for (const name of migrated) {
+      const source = read(`${ROUTE}/components/${name}.js`);
+      expect(source).not.toContain("styles.panelHeader");
+      expect(source).not.toContain("expand_more");
+    }
+  });
+});
