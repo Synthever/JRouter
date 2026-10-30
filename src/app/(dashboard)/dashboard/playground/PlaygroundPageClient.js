@@ -2,128 +2,205 @@
 import Icon from "@/shared/components/Icon";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Button, SegmentedControl, Tooltip } from "@/shared/components";
+import { Button, Tooltip } from "@/shared/components";
+import ProviderIcon from "@/shared/components/ProviderIcon";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
-import { useModelCaps } from "@/shared/hooks/useModelCaps";
 import { useModelCatalog } from "@/shared/hooks/useModelCatalog";
-import ModelIcon from "./PlaygroundModelIcon";
-import PlaygroundJsonView from "./PlaygroundJsonView";
-import PlaygroundStats from "./PlaygroundStats";
-import PlaygroundRail from "./PlaygroundRail";
-import PlaygroundTranscript from "./PlaygroundTranscript";
+import PlaygroundMarkdown from "./PlaygroundMarkdown";
 import ModelPickerPopover from "./ModelPickerPopover";
-import {
-  buildCurl,
-  buildRoutePlan,
-  cacheShare,
-  estimateTokens,
-  formatContext,
-  formatCount,
-  shortModelName,
-} from "./playgroundUtils.js";
-import usePlaygroundLane from "./usePlaygroundLane.js";
 import styles from "./playground.module.css";
 
+// Chat goes through the same OpenAI-compatible JRouter endpoint every other client uses,
+// so combos, provider fallback, translation and usage tracking all apply unchanged.
+const CHAT_ENDPOINT = "/api/v1/chat/completions";
 const MAX_COMPOSER_HEIGHT = 200;
-const MODE_STORAGE_KEY = "jrouter.playground.mode.v1";
-const MODES = ["single", "compare", "json"];
-const DEFAULT_PARAMS = { useDefaults: true, temperature: 0.7, maxTokens: 4096, topP: 0.95, stream: true, jsonMode: false };
 const SUGGESTIONS = [
   "Explain your capabilities",
   "Write a short TypeScript example",
   "Compare REST and GraphQL",
 ];
-const MODE_OPTIONS = [
-  { value: "single", label: "Single" },
-  { value: "compare", label: "Compare" },
-  { value: "json", label: "JSON API" },
-];
-const LANE_OPTIONS = [
-  { value: "a", label: "Lane A" },
-  { value: "b", label: "Lane B" },
-];
+
+function createId() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  return `pg_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+// Elapsed-time measurements happen in event handlers and stream callbacks, never
+// during render — reading the clock through one helper keeps that explicit.
+function now() {
+  return Date.now();
+}
+
+function formatLatency(ms) {
+  if (!Number.isFinite(ms) || ms <= 0) return "";
+  return ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(1)}s`;
+}
+
+function formatCount(value) {
+  return Number.isFinite(value) ? value.toLocaleString("en-US") : "";
+}
+
+function providerInitials(name) {
+  return (name || "?").slice(0, 2).toUpperCase();
+}
+
+// Upscale error payloads from the router, upstream providers and the network into one line.
+function errorMessageFrom(payload) {
+  const raw = payload?.error?.message ?? payload?.error ?? payload?.message ?? payload?.msg;
+  if (typeof raw === "string" && raw.trim()) return raw.trim();
+  if (raw && typeof raw === "object") {
+    try {
+      return JSON.stringify(raw);
+    } catch {
+      return "";
+    }
+  }
+  return "";
+}
+
+// Only non-empty, numeric values are sent, so untouched fields keep the provider default.
+function buildGenerationParams(settings) {
+  const params = {};
+  const temperature = Number.parseFloat(settings.temperature);
+  if (Number.isFinite(temperature)) params.temperature = temperature;
+  const maxTokens = Number.parseInt(settings.maxTokens, 10);
+  if (Number.isFinite(maxTokens) && maxTokens > 0) params.max_tokens = maxTokens;
+  const topP = Number.parseFloat(settings.topP);
+  if (Number.isFinite(topP)) params.top_p = topP;
+  return params;
+}
+
+function toRequestMessages(messages) {
+  return messages
+    .filter((message) => message.role === "user" || message.role === "assistant")
+    .map((message) => ({ role: message.role, content: message.content }));
+}
+
+// Reasoning fields some providers stream alongside (or instead of) the answer text.
+function reasoningDeltaFrom(delta) {
+  const raw = delta?.reasoning_content ?? delta?.reasoning;
+  return typeof raw === "string" ? raw : "";
+}
+
+// Latency · prompt tokens · completion tokens · finish reason · routed model.
+function buildMetaParts(meta) {
+  const parts = [];
+  const latency = formatLatency(meta.latencyMs);
+  if (latency) parts.push(latency);
+  const prompt = formatCount(meta.usage?.prompt_tokens);
+  if (prompt) parts.push(`${prompt} in`);
+  const completion = formatCount(meta.usage?.completion_tokens);
+  if (completion) {
+    parts.push(`${completion} out`);
+  } else {
+    const total = formatCount(meta.usage?.total_tokens);
+    if (total) parts.push(`${total} tokens`);
+  }
+  if (meta.finishReason) parts.push(meta.finishReason);
+  if (meta.responseModel && meta.responseModel !== meta.requestedModel) parts.push(meta.responseModel);
+  if (meta.stopped) parts.push("stopped");
+  return parts;
+}
+
+function ModelIcon({ model, providerId, providerName, providerColor, isCombo, size = 16 }) {
+  const connectionId = providerId && !isCombo ? providerId : "";
+  if (!connectionId) {
+    return (
+      <span className={styles.modelFallback} style={{ width: size, height: size }}>
+        <Icon style={{ fontSize: Math.max(10, Math.round(size * 0.7)) }}>{isCombo ? "layers" : "science"}</Icon>
+      </span>
+    );
+  }
+  return (
+    <ProviderIcon
+      providerId={connectionId}
+      alt={providerName || "model"}
+      size={size}
+      fallbackText={providerInitials(providerName)}
+      fallbackColor={providerColor}
+    />
+  );
+}
+
+// Nine-cell grid whose cells light up in sequence while the model works.
+function ActivityGlyph() {
+  return (
+    <span className={styles.activityGrid} aria-hidden="true">
+      {Array.from({ length: 9 }, (_, index) => <span key={index} />)}
+    </span>
+  );
+}
+
+// Waiting-for-first-token state. The running clock lives here so the 120ms ticks
+// re-render this row instead of the whole conversation.
+function ActivityState({ label, startedAt }) {
+  const [elapsedMs, setElapsedMs] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => setElapsedMs(Date.now() - startedAt), 120);
+    return () => clearInterval(timer);
+  }, [startedAt]);
+
+  return (
+    <p className={styles.activity} role="status">
+      <ActivityGlyph />
+      <span className={styles.activityText}>{label}</span>
+      <span className={styles.activityDots} aria-hidden="true">
+        <span /><span /><span />
+      </span>
+      <span className={styles.activityElapsed}>{formatLatency(elapsedMs)}</span>
+    </p>
+  );
+}
 
 export default function PlaygroundPageClient() {
   const [providers, setProviders] = useState([]);
   const [modelAliases, setModelAliases] = useState({});
   const [apiKey, setApiKey] = useState("");
-  const [combos, setCombos] = useState([]);
-  const [usageStats, setUsageStats] = useState(null);
-  const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
-  const [mode, setMode] = useState("single");
-  const [activeLane, setActiveLane] = useState("a");
-  // Which lane JSON mode mirrors; the request inspector itself lands in Task 9.
-  const [jsonLane, setJsonLane] = useState("a");
-  // One picker is open at a time, keyed by lane: null, "a" or "b".
-  const [pickerFor, setPickerFor] = useState(null);
-  const [params, setParams] = useState({ ...DEFAULT_PARAMS });
-  const [thinkingOpen, setThinkingOpen] = useState({});
-  const [railOpen, setRailOpen] = useState(true);
-  const [systemPrompt, setSystemPrompt] = useState("");
-  const [systemOpen, setSystemOpen] = useState(false);
-
-  const paramsRef = useRef({ ...DEFAULT_PARAMS });
-  const systemPromptRef = useRef("");
+  const [selectedModel, setSelectedModel] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  const restoreDraft = useCallback((text) => setInput((current) => current || text), []);
-  const laneA = usePlaygroundLane({ apiKey, paramsRef, systemPromptRef, onRestoreDraft: restoreDraft });
-  const laneB = usePlaygroundLane({ apiKey, paramsRef, systemPromptRef, onRestoreDraft: restoreDraft });
-  const router = useRouter();
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [generation, setGeneration] = useState({ temperature: "", maxTokens: "", topP: "" });
+  const [thinkingOpen, setThinkingOpen] = useState({});
 
+  const abortRef = useRef(null);
   const inputRef = useRef(null);
-  const scrollRefs = useRef({ a: null, b: null });
-  const atBottomRefs = useRef({ a: true, b: true });
+  const scrollRef = useRef(null);
+  const settingsRef = useRef(null);
+  const atBottomRef = useRef(true);
+  const streamingRef = useRef(false);
   const { copied, copy } = useCopyToClipboard();
 
-  // The rail owns the fields; both turn engines read them through the ref at send time.
-  useEffect(() => {
-    paramsRef.current = params;
-  }, [params]);
-
-  // Same contract for the system instructions card above the transcript.
-  useEffect(() => {
-    systemPromptRef.current = systemPrompt;
-  }, [systemPrompt]);
-
-  // One mount loader: picker sources plus the KPI sources. Requests are isolated
-  // with allSettled, so a failing card never blocks the chat or the picker.
+  // Model picker sources: same connections/aliases data the Combo picker uses.
   useEffect(() => {
     let cancelled = false;
 
-    async function readJson(result) {
-      if (result.status !== "fulfilled" || !result.value.ok) return null;
-      return result.value.json().catch(() => null);
-    }
-
     async function load() {
       try {
-        const results = await Promise.allSettled([
+        const [providersRes, aliasesRes, keysRes] = await Promise.all([
           fetch("/api/providers", { cache: "no-store" }),
           fetch("/api/models/alias", { cache: "no-store" }),
           fetch("/api/keys", { cache: "no-store" }),
-          fetch("/api/combos", { cache: "no-store" }),
-          fetch("/api/usage/stats?period=today", { cache: "no-store" }),
-          fetch("/api/settings", { cache: "no-store" }),
         ]);
-        const [providersData, aliasesData, keysData, combosData, usageData, settingsData] =
-          await Promise.all(results.map(readJson));
+        const providersData = providersRes.ok ? await providersRes.json().catch(() => ({})) : {};
+        const aliasesData = aliasesRes.ok ? await aliasesRes.json().catch(() => ({})) : {};
+        const keysData = keysRes.ok ? await keysRes.json().catch(() => ({})) : {};
         if (cancelled) return;
 
         setProviders(
-          Array.isArray(providersData?.connections)
+          Array.isArray(providersData.connections)
             ? providersData.connections.filter((connection) => connection?.isActive !== false)
             : []
         );
-        setModelAliases(aliasesData?.aliases && typeof aliasesData.aliases === "object" ? aliasesData.aliases : {});
-        setApiKey((keysData?.keys || []).find((key) => key.isActive !== false)?.key || "");
-        setCombos(Array.isArray(combosData?.combos) ? combosData.combos : []);
-        setUsageStats(usageData && typeof usageData === "object" && !Array.isArray(usageData) ? usageData : null);
-        setSettings(settingsData && typeof settingsData === "object" && !Array.isArray(settingsData) ? settingsData : null);
-        if (!providersData) setLoadError("Providers could not be loaded. Reload the page to try again.");
+        setModelAliases(aliasesData.aliases && typeof aliasesData.aliases === "object" ? aliasesData.aliases : {});
+        setApiKey((keysData.keys || []).find((key) => key.isActive !== false)?.key || "");
+        if (!providersRes.ok) setLoadError("Providers could not be loaded. Reload the page to try again.");
       } catch (error) {
         if (!cancelled) setLoadError(error?.message || "Providers and models could not be loaded.");
       } finally {
@@ -133,18 +210,6 @@ export default function PlaygroundPageClient() {
 
     load();
     return () => { cancelled = true; };
-  }, []);
-
-  // The mode survives reloads. Browser-only restoration has to follow the server's
-  // single-lane render, so it cannot be part of the initial state.
-  useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(MODE_STORAGE_KEY);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (MODES.includes(saved)) setMode(saved);
-    } catch {
-      // A blocked store just means the default single mode.
-    }
   }, []);
 
   useEffect(() => {
@@ -159,115 +224,284 @@ export default function PlaygroundPageClient() {
     element.style.height = `${Math.min(element.scrollHeight, MAX_COMPOSER_HEIGHT)}px`;
   }, [input]);
 
-  const changeMode = (next) => {
-    if (!MODES.includes(next) || next === mode) return;
-    setMode(next);
-    setPickerFor(null);
-    try {
-      window.localStorage.setItem(MODE_STORAGE_KEY, next);
-    } catch {
-      // The mode still applies for this session when storage is blocked.
-    }
-  };
-
-  const handleActiveLane = (key) => {
-    setActiveLane(key);
-    // The lane in view is also the lane JSON mode will inspect.
-    setJsonLane(key);
-  };
-
-  // Compare renders both lanes; every other mode edits lane A (or the persisted
-  // JSON lane), so all single-view chrome keeps one source of truth.
-  const laneKeyInView = mode === "json" ? jsonLane : "a";
-  const laneInView = laneKeyInView === "b" ? laneB : laneA;
-  const lanes = mode === "compare"
-    ? [{ key: "a", lane: laneA }, { key: "b", lane: laneB }]
-    : [{ key: laneKeyInView, lane: laneInView }];
-  const headerLane = lanes[0];
-  const viewLane = mode === "compare" ? (activeLane === "b" ? laneB : laneA) : laneInView;
-  const viewModel = viewLane.model;
-
-  const handleLaneScroll = (key) => {
-    const element = scrollRefs.current[key];
-    if (!element) return;
-    atBottomRefs.current[key] = element.scrollHeight - element.scrollTop - element.clientHeight < 80;
-  };
-
-  const followLane = useCallback((key) => {
-    const element = scrollRefs.current[key];
-    if (element && atBottomRefs.current[key]) element.scrollTop = element.scrollHeight;
+  const scrollToBottom = useCallback(() => {
+    const element = scrollRef.current;
+    if (element) element.scrollTop = element.scrollHeight;
   }, []);
 
   // Follow new output only while the reader is already at the bottom, so scrolling
   // back through a long answer is not yanked away by incoming tokens.
-  useEffect(() => { followLane("a"); }, [laneA.messages, followLane]);
-  useEffect(() => { followLane("b"); }, [laneB.messages, followLane]);
-  // A lane hidden below 1100px has no box to scroll until the tabs reveal it.
-  useEffect(() => { followLane(activeLane); }, [activeLane, followLane]);
+  useEffect(() => {
+    if (atBottomRef.current) scrollToBottom();
+  }, [messages, scrollToBottom]);
 
-  const openPicker = (key) => {
-    if (mode === "compare") handleActiveLane(key);
-    setPickerFor(key);
+  useEffect(() => {
+    if (!settingsOpen) return undefined;
+    const handlePointerDown = (event) => {
+      if (settingsRef.current && !settingsRef.current.contains(event.target)) setSettingsOpen(false);
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setSettingsOpen(false);
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [settingsOpen]);
+
+  useEffect(() => () => abortRef.current?.abort(), []);
+
+  const canSend = !isStreaming && !!selectedModel && input.trim().length > 0;
+
+  const handleScroll = () => {
+    const element = scrollRef.current;
+    if (!element) return;
+    atBottomRef.current = element.scrollHeight - element.scrollTop - element.clientHeight < 80;
   };
 
-  const togglePicker = (key) => {
-    if (pickerFor === key) {
-      setPickerFor(null);
-      return;
-    }
-    openPicker(key);
-  };
-
-  // Header telemetry: the target's real context window (from the model catalog)
-  // and the exact request the last turn in view sent, replayed as a cURL.
-  const caps = useModelCaps();
-  const contextWindow = viewModel ? caps.getCaps(viewModel.value)?.contextWindow || 0 : 0;
-  const headerCurl = viewLane.lastTurn?.request ? buildCurl(viewLane.lastTurn.request) : "";
-
-  const composerTargets = lanes;
-  const composerBusy = laneA.isStreaming || laneB.isStreaming;
-  const missingTarget = composerTargets.find((entry) => !entry.lane.model) || null;
-  const canSend = !composerBusy && !missingTarget && input.trim().length > 0;
-  const hasMessages = laneA.messages.length > 0 || laneB.messages.length > 0;
-
-  // One composer feeds every lane in view, so a compare turn is a single prompt
-  // broadcast to both targets.
-  const submit = () => {
-    const text = input.trim();
-    if (!text || composerBusy) return;
-    const ready = composerTargets.filter((entry) => entry.lane.model);
-    if (ready.length === 0) return;
+  const handleNewChat = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    streamingRef.current = false;
+    setIsStreaming(false);
+    setMessages([]);
     setInput("");
-    ready.forEach((entry) => {
-      // A send always jumps to the new turn, even if the reader had scrolled back.
-      atBottomRefs.current[entry.key] = true;
-      entry.lane.send(text);
+    setThinkingOpen({});
+    setSettingsOpen(false);
+    setPickerOpen(false);
+    atBottomRef.current = true;
+    inputRef.current?.focus();
+  };
+
+  const handleSelectModel = (model) => {
+    if (!model?.value) return;
+    const label = model.name || model.value;
+    const previous = selectedModel;
+    const changed = previous?.value !== model.value;
+    setSelectedModel({
+      value: model.value,
+      name: label,
+      providerId: model.providerId || "",
+      providerName: model.providerName || "",
+      providerColor: model.providerColor || "",
+      isCombo: model.isCombo === true,
     });
+    setPickerOpen(false);
+    // Keep the transcript so the same context can be replayed against another model.
+    setMessages((current) => (
+      changed && current.some((message) => message.role !== "divider")
+        ? [...current, {
+          id: createId(),
+          role: "divider",
+          from: previous?.name || previous?.value || "",
+          to: label,
+          content: `Model switched to ${label}`,
+        }]
+        : current
+    ));
     inputRef.current?.focus();
   };
 
-  const stopAll = () => {
-    laneA.stop();
-    laneB.stop();
+  const handleStop = () => {
+    abortRef.current?.abort();
   };
 
-  // Reset session clears both transcripts, the draft and any open overlay.
-  const handleResetSession = () => {
-    laneA.reset();
-    laneB.reset();
+  const patchAssistant = useCallback((assistantId, patch) => {
+    setMessages((previous) => previous.map((message) => (
+      message.id === assistantId ? { ...message, ...patch } : message
+    )));
+  }, []);
+
+  // `base` is the transcript the new turn runs against. Retry passes the history
+  // truncated at the retried question instead of the whole conversation.
+  const runTurn = async (question, base, model, startedAt) => {
+    if (!question || !model || streamingRef.current) return;
+
+    const assistantId = createId();
+    const history = [...base, { id: createId(), role: "user", content: question }];
+
+    setMessages([
+      ...history,
+      {
+        id: assistantId,
+        role: "assistant",
+        content: "",
+        status: "streaming",
+        modelName: model.name,
+        providerId: model.providerId,
+        providerName: model.providerName,
+        isCombo: model.isCombo,
+        startedAt,
+        reasoning: "",
+        meta: null,
+      },
+    ]);
     setInput("");
-    setThinkingOpen({});
-    setPickerFor(null);
-    atBottomRefs.current = { a: true, b: true };
-    inputRef.current?.focus();
+    streamingRef.current = true;
+    setIsStreaming(true);
+    atBottomRef.current = true;
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    const patch = (values) => patchAssistant(assistantId, values);
+
+    let content = "";
+    let reasoning = "";
+    let usage = null;
+    let finishReason = "";
+    let responseModel = "";
+    let elapsedMs = null;
+
+    const finalize = (status, extra = {}) => {
+      patch({
+        content,
+        reasoning,
+        status,
+        elapsedMs,
+        meta: {
+          latencyMs: elapsedMs ?? Date.now() - startedAt,
+          usage,
+          finishReason,
+          responseModel,
+          requestedModel: model.value,
+          ...extra,
+        },
+      });
+    };
+
+    try {
+      const headers = { "Content-Type": "application/json", Accept: "text/event-stream" };
+      if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+
+      const response = await fetch(CHAT_ENDPOINT, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          model: model.value,
+          messages: toRequestMessages(history),
+          stream: true,
+          ...buildGenerationParams(generation),
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(errorMessageFrom(payload) || `Request failed (${response.status})`);
+      }
+      if (!response.body) throw new Error("The response contained no body to read.");
+
+      // A buffered JSON body means the reply was not streamed after all.
+      if ((response.headers.get("content-type") || "").includes("application/json")) {
+        const payload = await response.json().catch(() => null);
+        const failure = errorMessageFrom(payload);
+        if (failure) throw new Error(failure);
+        const message = payload?.choices?.[0]?.message;
+        content = typeof message?.content === "string" ? message.content : "";
+        reasoning = reasoningDeltaFrom(message);
+        usage = payload?.usage || null;
+        finishReason = payload?.choices?.[0]?.finish_reason || "";
+        responseModel = typeof payload?.model === "string" ? payload.model : "";
+        finalize(content ? "done" : "empty");
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split(/\r?\n/);
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data:")) continue;
+          const payload = trimmed.slice(5).trim();
+          if (!payload || payload === "[DONE]") continue;
+
+          let chunk;
+          try {
+            chunk = JSON.parse(payload);
+          } catch {
+            continue;
+          }
+
+          if (chunk?.error) throw new Error(errorMessageFrom(chunk) || "Request failed.");
+
+          const choice = chunk?.choices?.[0];
+          const deltaText = typeof choice?.delta?.content === "string" ? choice.delta.content : "";
+          const deltaReasoning = reasoningDeltaFrom(choice?.delta);
+          if (deltaText || deltaReasoning) {
+            content += deltaText;
+            reasoning += deltaReasoning;
+            if (!elapsedMs) elapsedMs = now() - startedAt;
+            patch({ content, reasoning });
+          }
+          if (choice?.finish_reason) finishReason = choice.finish_reason;
+          if (chunk?.usage && typeof chunk.usage === "object") usage = chunk.usage;
+          if (typeof chunk?.model === "string" && chunk.model) responseModel = chunk.model;
+        }
+      }
+
+      finalize(content || reasoning ? "done" : "empty");
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        finalize("done", { stopped: true });
+      } else {
+        patch({ content, reasoning, status: "error", error: error?.message || "Request failed." });
+        // Hand the prompt back so the user can edit and retry.
+        setInput((current) => current || question);
+      }
+    } finally {
+      if (abortRef.current === controller) abortRef.current = null;
+      streamingRef.current = false;
+      setIsStreaming(false);
+      inputRef.current?.focus();
+    }
   };
 
-  // Clear thread drops the conversations but keeps the draft and the targets.
-  const handleClearThread = () => {
-    laneA.reset();
-    laneB.reset();
-    setThinkingOpen({});
-    atBottomRefs.current = { a: true, b: true };
+  const sendMessage = () => {
+    const text = input.trim();
+    if (!text || !selectedModel || streamingRef.current) return;
+    return runTurn(text, messages, selectedModel, now());
+  };
+
+  // Replay the same question against the model that answered it.
+  const handleRetry = (assistantId) => {
+    if (streamingRef.current) return;
+    const index = messages.findIndex((message) => message.id === assistantId);
+    if (index < 0) return;
+    const answered = messages[index];
+
+    let questionIndex = -1;
+    for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
+      if (messages[cursor].role === "user") {
+        questionIndex = cursor;
+        break;
+      }
+    }
+    if (questionIndex < 0) return;
+
+    const question = messages[questionIndex].content;
+    const base = messages.slice(0, questionIndex);
+    const model = {
+      value: answered.meta?.requestedModel || "",
+      name: answered.modelName || "",
+      providerId: answered.providerId || "",
+      providerName: answered.providerName || "",
+      providerColor: selectedModel?.providerColor || "",
+      isCombo: answered.isCombo === true,
+    };
+    if (!model.value) return;
+    runTurn(question, base, model, now());
   };
 
   const copyMessage = (message) => {
@@ -280,473 +514,414 @@ export default function PlaygroundPageClient() {
     if (event.key !== "Enter" || event.shiftKey) return;
     if (event.nativeEvent?.isComposing) return;
     event.preventDefault();
-    if (canSend) submit();
+    if (canSend) sendMessage();
   };
 
-  // Memoized like the other handlers: the React Compiler's ref check rejects a
-  // render-created closure that reads inputRef when it is passed down as a prop.
-  const handleSuggestion = useCallback((suggestion) => {
+  const handleGenerationChange = (field) => (event) => {
+    setGeneration((previous) => ({ ...previous, [field]: event.target.value }));
+  };
+
+  const handleSuggestion = (suggestion) => {
     setInput(suggestion);
     inputRef.current?.focus();
-  }, []);
+  };
 
   const toggleThinking = (messageId) => {
     setThinkingOpen((previous) => ({ ...previous, [messageId]: !previous[messageId] }));
   };
 
-  const modelCatalog = useModelCatalog({ isOpen: pickerFor !== null, activeProviders: providers, modelAliases });
+  const modelCatalog = useModelCatalog({ isOpen: pickerOpen, activeProviders: providers, modelAliases });
   const hasCatalog = modelCatalog.filteredCombos.length
     + Object.values(modelCatalog.visibleGroups).reduce((total, group) => total + group.models.length, 0) > 0;
 
-  const emptyHintFor = (lane, key) => {
-    if (mode === "compare") {
-      return lane.model
-        ? `Test ${lane.model.name} against lane ${key === "a" ? "B" : "A"}.`
-        : `Pick a model for lane ${key.toUpperCase()}, then send a prompt to compare both.`;
+  const renderMessage = (message) => {
+    if (message.role === "divider") {
+      return <p key={message.id} className={styles.divider}>{message.content}</p>;
     }
-    return lane.model
-      ? `Test ${lane.model.name} through JRouter.`
-      : !loading && providers.length === 0
-        ? "No providers connected yet. Connect one from the Providers page to test models here."
-        : "Pick a model, then send your first message through JRouter.";
+
+    if (message.role === "user") {
+      return (
+        <div key={message.id} className={`${styles.row} ${styles.rowUser}`}>
+          <div className={styles.userBubble}>{message.content}</div>
+        </div>
+      );
+    }
+
+    const isThinkingVisible = thinkingOpen[message.id] === true;
+    const reasoningSeconds = message.meta?.latencyMs ? Math.max(1, Math.round(message.meta.latencyMs / 1000)) : 0;
+    const isStreamingMessage = message.status === "streaming";
+    const isWaiting = isStreamingMessage && !message.content && !message.reasoning;
+    const isAnswering = isStreamingMessage && !!message.content;
+    const metaParts = message.meta ? buildMetaParts(message.meta) : [];
+    const canRetry = message.status === "done" && messages[messages.length - 1]?.id === message.id;
+    const actionsVisible = !isStreamingMessage;
+
+    return (
+      <div key={message.id} className={styles.row}>
+        <div className={styles.assistantHead}>
+          <ModelIcon
+            providerId={message.providerId}
+            providerName={message.providerName}
+            isCombo={message.isCombo}
+            size={16}
+          />
+          <span className={styles.assistantName}>{message.modelName || "Assistant"}</span>
+          {message.providerName ? (
+            <span className={styles.assistantProvider}>{message.providerName}</span>
+          ) : null}
+        </div>
+
+        {message.status === "error" ? (
+          <div className={styles.error} role="alert">
+            <p className={styles.errorHead}>
+              <Icon>error</Icon> Request failed
+            </p>
+            <p className={styles.errorBody}>{message.error}</p>
+            <div className={styles.errorActions}>
+              <Button variant="secondary" size="sm" icon="refresh" onClick={() => handleRetry(message.id)}>
+                Retry
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {message.reasoning ? (
+              <div className={styles.thinking}>
+                <button
+                  type="button"
+                  className={styles.thinkingToggle}
+                  onClick={() => toggleThinking(message.id)}
+                  aria-expanded={isThinkingVisible}
+                >
+                  <Icon>stars</Icon>
+                  {isStreamingMessage && !message.content
+                    ? "Thinking…"
+                    : reasoningSeconds > 0
+                      ? `Thought for ${reasoningSeconds}s`
+                      : "Thoughts"}
+                  <Icon className={styles.chevronSmall}>{isThinkingVisible ? "expand_less" : "expand_more"}</Icon>
+                </button>
+                {isThinkingVisible ? <div className={styles.thinkingBody}>{message.reasoning}</div> : null}
+              </div>
+            ) : null}
+
+            {isWaiting ? (
+              <ActivityState label="Generating" startedAt={message.startedAt} />
+            ) : null}
+
+            {message.content ? (
+              <div className={styles.assistantBody}>
+                <PlaygroundMarkdown content={message.content} />
+                {isAnswering ? <span className={styles.caret} aria-hidden="true">▍</span> : null}
+              </div>
+            ) : null}
+
+            {!message.content && !message.reasoning && !isStreamingMessage ? (
+              <p className={styles.note}>
+                {message.meta?.stopped ? "Stopped before any output." : "The model returned no text."}
+              </p>
+            ) : null}
+
+            {!message.content && message.reasoning && !isStreamingMessage ? (
+              <p className={styles.note}>This model returned reasoning only.</p>
+            ) : null}
+          </>
+        )}
+
+        {actionsVisible && !isWaiting ? (
+          <div className={styles.actions}>
+            <button
+              type="button"
+              className={styles.actionButton}
+              data-state={copied === message.id ? "copied" : undefined}
+              onClick={() => copyMessage(message)}
+              disabled={!message.content && !message.reasoning}
+            >
+              <Icon>{copied === message.id ? "check" : "content_copy"}</Icon>
+              {copied === message.id ? "Copied" : "Copy"}
+            </button>
+            {canRetry ? (
+              <button type="button" className={styles.actionButton} onClick={() => handleRetry(message.id)}>
+                <Icon>refresh</Icon>
+                Retry
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
+        {metaParts.length > 0 ? (
+          <p className={styles.meta}>
+            {metaParts.map((part, index) => (
+              <span key={part}>
+                {index > 0 ? <span className={styles.metaSep}>·</span> : null}
+                {part}
+              </span>
+            ))}
+          </p>
+        ) : null}
+      </div>
+    );
   };
 
-  const composerPlaceholder = mode === "compare"
-    ? laneA.model && laneB.model
-      ? `Message ${laneA.model.name} and ${laneB.model.name}…`
-      : "Pick a model for each lane to compare…"
-    : viewModel
-      ? `Message ${viewModel.name}...`
-      : "Select a model to start…";
-
-  // KPI props carry only values the APIs returned; nothing here is estimated.
-  // `targets` is what is actually selected, so a half-filled compare reads one target.
-  const targets = (mode === "compare" ? [laneA.model, laneB.model] : [headerLane.lane.model]).filter(Boolean);
-  const primaryTarget = targets[0] || null;
-  const cache = cacheShare(usageStats);
-  const routePlanA = buildRoutePlan(laneA.model, combos, providers, settings?.comboStrategies || {});
-  const routePlanB = buildRoutePlan(laneB.model, combos, providers, settings?.comboStrategies || {});
-  // Single view follows the lane on screen; compare keeps the routing card on lane A
-  // because the rail already lists both plans, one per lane.
-  const viewPlan = mode === "compare"
-    ? routePlanA
-    : buildRoutePlan(headerLane.lane.model, combos, providers, settings?.comboStrategies || {});
-  const routePlans = mode === "compare"
-    ? [{ key: "a", plan: routePlanA }, { key: "b", plan: routePlanB }]
-    : [{ key: "a", plan: viewPlan }];
-  const saverNote = settings === null
-    ? "Token saver status unavailable"
-    : `Token saver: RTK ${settings.rtkEnabled ? "on" : "off"} · Headroom ${settings.headroomEnabled ? "on" : "off"}`;
-
-  const statsProps = {
-    targetLabel: targets.length > 1
-      ? `${targets.length} targets`
-      : primaryTarget
-        ? shortModelName(primaryTarget.name)
-        : "No target",
-    targetNote: targets.length > 1
-      ? targets.map((target) => target.providerName || "Unknown provider").join(" + ")
-      : primaryTarget
-        ? `${primaryTarget.providerName || "Unknown provider"} · ${primaryTarget.isCombo ? "combo" : "direct"}`
-        : "Pick a model to start",
-    targetStatus: targets.length ? (composerBusy ? "streaming" : "ready") : "idle",
-    cachePercent: cache.percent,
-    cacheNote: usageStats === null
-      ? "Usage data unavailable"
-      : cache.hasData
-        ? `${formatCount(cache.cached)} cached tokens today`
-        : "No prompt tokens today",
-    saverNote,
-    hasCache: cache.hasData,
-    routeLabel: viewPlan.label,
-    routeNote: viewPlan.summary,
-    routeStrategy: viewPlan.strategy ? `${viewPlan.strategy} · from config` : "from config",
-  };
-
-  const systemCard = (
-    <details
-      className={styles.systemCard}
-      open={systemOpen}
-      onToggle={(event) => setSystemOpen(event.currentTarget.open)}
-    >
-      <summary className={styles.systemHead}>
-        <span className={styles.systemTitle}><Icon>article</Icon> System instructions</span>
-        <span className={styles.systemMeta}>
-          {systemPrompt.trim() ? `~${estimateTokens(systemPrompt)} tokens` : "empty"}
-          <Icon className={styles.chevronSmall}>{systemOpen ? "expand_less" : "expand_more"}</Icon>
-        </span>
-      </summary>
-      <textarea
-        className={styles.systemInput}
-        rows={3}
-        value={systemPrompt}
-        onChange={(event) => setSystemPrompt(event.target.value)}
-        placeholder="Sent as the first message of every request."
-        aria-label="System instructions"
-      />
-    </details>
-  );
+  const emptyHint = selectedModel
+    ? `Test ${selectedModel.name} through JRouter.`
+    : !loading && providers.length === 0
+      ? "No providers connected yet. Connect one from the Providers page to test models here."
+      : "Pick a model, then send your first message through JRouter.";
 
   return (
     <div className={styles.page}>
-      <header className={styles.intro}>
-        <div className={styles.introText}>
-          <h1 className={styles.title}>Playground</h1>
-          <p className={styles.sub}>Test models, combos, prompt routing, and streaming latencies in real time.</p>
-        </div>
-        <div className={styles.introActions}>
-          <SegmentedControl
-            aria-label="Playground mode"
-            value={mode}
-            onChange={changeMode}
-            options={MODE_OPTIONS}
-          />
-          <Button variant="secondary" size="sm" icon="refresh" onClick={handleResetSession}>
-            Reset session
-          </Button>
-        </div>
-      </header>
+      <div className={styles.workspace}>
+      <div className={`${styles.column} ${styles.toolbar}`}>
+        <div className={styles.modelTriggerWrap}>
+          <button
+            type="button"
+            data-model-trigger
+            className={styles.modelTrigger}
+            onClick={() => setPickerOpen((open) => !open)}
+            aria-haspopup="dialog"
+            aria-expanded={pickerOpen}
+          >
+            <ModelIcon
+              providerId={selectedModel?.providerId}
+              providerName={selectedModel?.providerName}
+              providerColor={selectedModel?.providerColor}
+              isCombo={selectedModel?.isCombo}
+              size={18}
+            />
+            <span className={styles.modelTriggerText}>
+              <span className={styles.modelNameRow}>
+                <span className={styles.modelName}>
+                  {selectedModel ? selectedModel.name : loading ? "Loading models…" : "Select a model"}
+                </span>
+                {selectedModel?.isCombo ? <span className={styles.modelBadge}>combo</span> : null}
+              </span>
+              <span className={styles.modelProvider}>
+                {selectedModel
+                  ? selectedModel.providerName || selectedModel.value
+                  : !loading && providers.length === 0
+                    ? "No connected providers"
+                    : "Choose from connected providers"}
+              </span>
+            </span>
+            <Icon className={styles.chevron}>{pickerOpen ? "expand_less" : "expand_more"}</Icon>
+          </button>
 
-      <div className={styles.statsSlot}>
-        <PlaygroundStats {...statsProps} />
+          <ModelPickerPopover
+            isOpen={pickerOpen}
+            onClose={() => setPickerOpen(false)}
+            onSelect={handleSelectModel}
+            selectedModel={selectedModel?.value}
+            activeProviders={providers}
+            modelAliases={modelAliases}
+          />
+        </div>
+
+        <div className={styles.toolbarActions}>
+          <Tooltip text="New chat">
+            <button
+              type="button"
+              className={styles.iconButton}
+              onClick={handleNewChat}
+              disabled={messages.length === 0}
+              aria-label="New chat"
+            >
+              <Icon>add</Icon>
+            </button>
+          </Tooltip>
+
+          <span ref={settingsRef} className={styles.settingsAnchor}>
+            <Tooltip text="Generation settings">
+              <button
+                type="button"
+                className={styles.iconButton}
+                onClick={() => setSettingsOpen((open) => !open)}
+                aria-expanded={settingsOpen}
+                aria-label="Generation settings"
+              >
+                <Icon>settings</Icon>
+              </button>
+            </Tooltip>
+
+            {settingsOpen ? (
+              <div className={styles.settingsPopover} role="dialog" aria-label="Generation settings">
+                <div className={styles.settingsHead}>
+                  <span>Generation</span>
+                  <button
+                    type="button"
+                    className={styles.settingsClose}
+                    onClick={() => setSettingsOpen(false)}
+                    aria-label="Close settings"
+                  >
+                    <Icon>close</Icon>
+                  </button>
+                </div>
+
+                <label className={styles.settingsField}>
+                  <span className={styles.settingsLabel}>Temperature</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="2"
+                    step="0.1"
+                    placeholder="default"
+                    value={generation.temperature}
+                    onChange={handleGenerationChange("temperature")}
+                    className={styles.settingsInput}
+                  />
+                </label>
+
+                <label className={styles.settingsField}>
+                  <span className={styles.settingsLabel}>Max tokens</span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    placeholder="default"
+                    value={generation.maxTokens}
+                    onChange={handleGenerationChange("maxTokens")}
+                    className={styles.settingsInput}
+                  />
+                </label>
+
+                <label className={styles.settingsField}>
+                  <span className={styles.settingsLabel}>Top P</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    placeholder="default"
+                    value={generation.topP}
+                    onChange={handleGenerationChange("topP")}
+                    className={styles.settingsInput}
+                  />
+                </label>
+
+                <p className={styles.settingsHint}>
+                  Applied to the next request. Empty fields use the provider default.
+                </p>
+
+                {generation.temperature || generation.maxTokens || generation.topP ? (
+                  <button
+                    type="button"
+                    className={styles.settingsReset}
+                    onClick={() => setGeneration({ temperature: "", maxTokens: "", topP: "" })}
+                  >
+                    Reset to provider defaults
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </span>
+        </div>
       </div>
 
-      <div className={styles.workbench} data-rail={railOpen ? "open" : "closed"}>
-        <section className={styles.chat} aria-label={mode === "json" ? "JSON API" : "Playground chat"}>
-          <div className={styles.chatHeader}>
-            {mode === "compare" ? (
-              <SegmentedControl
-                size="sm"
-                aria-label="Active lane"
-                value={activeLane}
-                onChange={handleActiveLane}
-                options={LANE_OPTIONS}
-              />
-            ) : (
-              <div className={styles.modelTriggerWrap}>
-                <button
-                  type="button"
-                  data-model-trigger
-                  className={styles.modelTrigger}
-                  onClick={() => togglePicker(headerLane.key)}
-                  aria-haspopup="dialog"
-                  aria-expanded={pickerFor === headerLane.key}
-                >
-                  <ModelIcon
-                    providerId={headerLane.lane.model?.providerId}
-                    providerName={headerLane.lane.model?.providerName}
-                    providerColor={headerLane.lane.model?.providerColor}
-                    isCombo={headerLane.lane.model?.isCombo}
-                    size={18}
-                  />
-                  <span className={styles.modelTriggerText}>
-                    <span className={styles.modelNameRow}>
-                      <span className={styles.modelName}>
-                        {headerLane.lane.model
-                          ? headerLane.lane.model.name
-                          : loading ? "Loading models…" : "Select a model"}
-                      </span>
-                      {headerLane.lane.model?.isCombo ? <span className={styles.modelBadge}>combo</span> : null}
-                    </span>
-                    <span className={styles.modelProvider}>
-                      {headerLane.lane.model
-                        ? headerLane.lane.model.providerName || headerLane.lane.model.value
-                        : !loading && providers.length === 0
-                          ? "No connected providers"
-                          : "Choose from connected providers"}
-                    </span>
-                  </span>
-                  <Icon className={styles.chevron}>{pickerFor === headerLane.key ? "expand_less" : "expand_more"}</Icon>
-                </button>
-
-                <ModelPickerPopover
-                  isOpen={pickerFor === headerLane.key}
-                  onClose={() => setPickerFor(null)}
-                  onSelect={(model) => {
-                    headerLane.lane.selectModel(model);
-                    setPickerFor(null);
-                    inputRef.current?.focus();
-                  }}
-                  selectedModel={headerLane.lane.model?.value}
-                  activeProviders={providers}
-                  modelAliases={modelAliases}
-                />
-              </div>
-            )}
-
-            <div className={styles.pills}>
-              {mode === "compare" ? <span className={styles.pill}>lane {activeLane}</span> : null}
-              {viewModel?.isCombo ? <span className={styles.pill}>combo</span> : null}
-              {contextWindow ? <span className={styles.pill}>{formatContext(contextWindow)} ctx</span> : null}
-              <span className={styles.pill} data-tone={composerBusy ? "live" : "idle"}>
-                {params.stream ? "SSE stream" : "JSON"}
-              </span>
-            </div>
-
-            <div className={styles.toolbarActions}>
-              <Tooltip text="Copy as cURL">
-                <button
-                  type="button"
-                  className={styles.iconButton}
-                  onClick={() => copy(headerCurl, "curl")}
-                  disabled={!headerCurl}
-                  aria-label="Copy request as cURL"
-                >
-                  <Icon>terminal</Icon>
-                </button>
-              </Tooltip>
-
-              <Tooltip text="Clear thread">
-                <button
-                  type="button"
-                  className={styles.iconButton}
-                  onClick={handleClearThread}
-                  disabled={!hasMessages}
-                  aria-label="Clear thread"
-                >
-                  <Icon>delete</Icon>
-                </button>
-              </Tooltip>
-
-              <Tooltip text={railOpen ? "Hide parameters" : "Show parameters"}>
-                <button
-                  type="button"
-                  className={styles.iconButton}
-                  onClick={() => setRailOpen((open) => !open)}
-                  aria-expanded={railOpen}
-                  aria-label="Toggle execution rail"
-                >
-                  <Icon>settings</Icon>
-                </button>
-              </Tooltip>
-            </div>
-          </div>
-
+      <div className={styles.scroll} ref={scrollRef} onScroll={handleScroll} role="region" aria-label="Conversation" tabIndex={0}>
+        <div className={`${styles.column} ${styles.canvas}`}>
           {loadError ? (
-            <div className={styles.chatNotice}>
-              <p className={styles.loadError} role="alert">
-                <Icon>error</Icon>
-                {loadError}
-              </p>
-            </div>
+            <p className={styles.loadError} role="alert">
+              <Icon>error</Icon>
+              {loadError}
+            </p>
           ) : null}
 
-          <div className={styles.lanes} data-mode={mode} data-active={activeLane}>
-            {mode === "json" ? (
-              <PlaygroundJsonView
-                turns={[
-                  { key: "a", label: "Lane A", turn: laneA.lastTurn },
-                  ...(laneB.model ? [{ key: "b", label: "Lane B", turn: laneB.lastTurn }] : []),
-                ]}
-                activeKey={jsonLane}
-                onSelectKey={setJsonLane}
-              />
-            ) : lanes.map(({ key, lane }) => (
-              <section
-                key={key}
-                className={styles.lane}
-                data-lane={key}
-                aria-label={mode === "compare" ? `Lane ${key.toUpperCase()}` : undefined}
-              >
-                {mode === "compare" ? (
-                  <div className={styles.laneHead}>
-                    <span className={styles.laneLetter}>{key.toUpperCase()}</span>
-                    <div className={styles.modelTriggerWrap}>
-                      <button
-                        type="button"
-                        data-model-trigger
-                        className={styles.modelTrigger}
-                        onClick={() => togglePicker(key)}
-                        aria-haspopup="dialog"
-                        aria-expanded={pickerFor === key}
-                        aria-label={`Lane ${key.toUpperCase()} model`}
-                      >
-                        <ModelIcon
-                          providerId={lane.model?.providerId}
-                          providerName={lane.model?.providerName}
-                          providerColor={lane.model?.providerColor}
-                          isCombo={lane.model?.isCombo}
-                          size={18}
-                        />
-                        <span className={styles.modelTriggerText}>
-                          <span className={styles.modelNameRow}>
-                            <span className={styles.modelName}>
-                              {lane.model ? lane.model.name : loading ? "Loading models…" : "Select a model"}
-                            </span>
-                            {lane.model?.isCombo ? <span className={styles.modelBadge}>combo</span> : null}
-                          </span>
-                          <span className={styles.modelProvider}>
-                            {lane.model
-                              ? lane.model.providerName || lane.model.value
-                              : "Choose from connected providers"}
-                          </span>
-                        </span>
-                        <Icon className={styles.chevron}>{pickerFor === key ? "expand_less" : "expand_more"}</Icon>
-                      </button>
-
-                      <ModelPickerPopover
-                        isOpen={pickerFor === key}
-                        onClose={() => setPickerFor(null)}
-                        onSelect={(model) => {
-                          lane.selectModel(model);
-                          setPickerFor(null);
-                          inputRef.current?.focus();
-                        }}
-                        selectedModel={lane.model?.value}
-                        activeProviders={providers}
-                        modelAliases={modelAliases}
-                      />
-                    </div>
-                    <span className={styles.laneStatus}>
-                      {lane.isStreaming ? "streaming" : lane.model ? "ready" : "no model"}
-                    </span>
-                  </div>
-                ) : null}
-
-                <div
-                  className={styles.laneBody}
-                  ref={(element) => { scrollRefs.current[key] = element; }}
-                  onScroll={() => handleLaneScroll(key)}
-                  role="region"
-                  aria-label={mode === "compare" ? `Lane ${key.toUpperCase()} conversation` : "Conversation"}
-                  tabIndex={0}
-                >
-                  {mode !== "compare" ? systemCard : null}
-
-                  <div className={styles.canvas}>
-                    {lane.messages.length === 0 ? (
-                      <div className={styles.empty}>
-                        <span className={styles.emptyIcon}>
-                          <Icon>science</Icon>
-                        </span>
-                        <p className={styles.emptyTitle}>
-                          {mode === "compare" ? `Lane ${key.toUpperCase()}` : "Start a conversation"}
-                        </p>
-                        <p className={styles.emptyHint}>{emptyHintFor(lane, key)}</p>
-                        {lane.model && hasCatalog ? (
-                          <div className={styles.suggestions}>
-                            {SUGGESTIONS.map((suggestion) => (
-                              <button
-                                key={suggestion}
-                                type="button"
-                                className={styles.suggestion}
-                                onClick={() => handleSuggestion(suggestion)}
-                              >
-                                {suggestion}
-                              </button>
-                            ))}
-                          </div>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <PlaygroundTranscript
-                        messages={lane.messages}
-                        thinkingOpen={thinkingOpen}
-                        onToggleThinking={toggleThinking}
-                        copied={copied}
-                        onCopy={copyMessage}
-                        onRetry={lane.retry}
-                      />
-                    )}
-                  </div>
-                </div>
-              </section>
-            ))}
-          </div>
-
-          <div className={styles.composerWrap}>
-            <div className={styles.composer}>
-              <textarea
-                ref={inputRef}
-                rows={1}
-                className={styles.textarea}
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={composerPlaceholder}
-                aria-label="Message"
-              />
-
-              <div className={styles.composerBar}>
-                <div className={styles.composerContexts}>
-                  {composerTargets.map(({ key, lane }) => (
-                    lane.model ? (
-                      <span key={key} className={styles.composerContext}>
-                        <ModelIcon
-                          providerId={lane.model.providerId}
-                          providerName={lane.model.providerName}
-                          providerColor={lane.model.providerColor}
-                          isCombo={lane.model.isCombo}
-                          size={13}
-                        />
-                        <span className={styles.composerContextName}>
-                          {mode === "compare" ? `${key.toUpperCase()} · ` : ""}
-                          {lane.model.providerName || lane.model.name}
-                        </span>
-                      </span>
-                    ) : null
-                  ))}
-
-                  {missingTarget ? (
+          {messages.length === 0 ? (
+            <div className={styles.empty}>
+              <span className={styles.emptyIcon}>
+                <Icon>science</Icon>
+              </span>
+              <p className={styles.emptyTitle}>Start a conversation</p>
+              <p className={styles.emptyHint}>{emptyHint}</p>
+              {selectedModel && hasCatalog ? (
+                <div className={styles.suggestions}>
+                  {SUGGESTIONS.map((suggestion) => (
                     <button
+                      key={suggestion}
                       type="button"
                       className={styles.suggestion}
-                      onClick={() => openPicker(missingTarget.key)}
-                      aria-label={`Select a model for lane ${missingTarget.key.toUpperCase()}`}
+                      onClick={() => handleSuggestion(suggestion)}
                     >
-                      Select a model
+                      {suggestion}
                     </button>
-                  ) : null}
+                  ))}
                 </div>
-
-                <span className={styles.composerButtons}>
-                  {composerBusy ? (
-                    <Tooltip text="Stop generating">
-                      <button
-                        type="button"
-                        className={styles.sendButton}
-                        data-mode="stop"
-                        onClick={stopAll}
-                        aria-label="Stop generating"
-                      >
-                        <Icon>stop</Icon>
-                      </button>
-                    </Tooltip>
-                  ) : (
-                    <Tooltip text="Send">
-                      <button
-                        type="button"
-                        className={styles.sendButton}
-                        onClick={submit}
-                        disabled={!canSend}
-                        aria-label="Send message"
-                      >
-                        <Icon>arrow_upward</Icon>
-                      </button>
-                    </Tooltip>
-                  )}
-                </span>
-              </div>
-              <p className={styles.hint}>
-                <kbd>Enter</kbd> to send · <kbd>Shift</kbd> + <kbd>Enter</kbd> for a new line
-              </p>
+              ) : null}
             </div>
-          </div>
-        </section>
+          ) : messages.map(renderMessage)}
+        </div>
+      </div>
 
-        {railOpen ? (
-          <aside className={styles.rail} aria-label="Execution parameters">
-            <PlaygroundRail
-              params={params}
-              onParamsChange={setParams}
-              onResetParams={() => setParams({ ...DEFAULT_PARAMS })}
-              routePlans={routePlans}
-              lastTurn={viewLane.lastTurn}
-              saver={{ label: saverNote }}
-              onOpenTokenSaver={() => router.push("/dashboard/token-saver")}
-            />
-          </aside>
-        ) : null}
+      <div className={`${styles.column} ${styles.composerWrap}`}>
+        <div className={styles.composer}>
+          <textarea
+            ref={inputRef}
+            rows={1}
+            className={styles.textarea}
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={selectedModel ? `Message ${selectedModel.name}...` : "Select a model to start…"}
+            aria-label="Message"
+          />
+
+          <div className={styles.composerBar}>
+            {selectedModel ? (
+              <span className={styles.composerContext}>
+                <ModelIcon
+                  providerId={selectedModel.providerId}
+                  providerName={selectedModel.providerName}
+                  providerColor={selectedModel.providerColor}
+                  isCombo={selectedModel.isCombo}
+                  size={13}
+                />
+                <span className={styles.composerContextName}>
+                  {selectedModel.providerName || selectedModel.name}
+                </span>
+              </span>
+            ) : (
+              <button
+                type="button"
+                className={styles.suggestion}
+                onClick={() => setPickerOpen(true)}
+              >
+                Select a model
+              </button>
+            )}
+
+            <span className={styles.composerButtons}>
+              {isStreaming ? (
+                <Tooltip text="Stop generating">
+                  <button
+                    type="button"
+                    className={styles.sendButton}
+                    data-mode="stop"
+                    onClick={handleStop}
+                    aria-label="Stop generating"
+                  >
+                    <Icon>stop</Icon>
+                  </button>
+                </Tooltip>
+              ) : (
+                <Tooltip text="Send">
+                  <button
+                    type="button"
+                    className={styles.sendButton}
+                    onClick={sendMessage}
+                    disabled={!canSend}
+                    aria-label="Send message"
+                  >
+                    <Icon>arrow_upward</Icon>
+                  </button>
+                </Tooltip>
+              )}
+            </span>
+          </div>
+          <p className={styles.hint}>
+            <kbd>Enter</kbd> to send · <kbd>Shift</kbd> + <kbd>Enter</kbd> for a new line
+          </p>
+        </div>
+      </div>
       </div>
     </div>
   );
