@@ -44,8 +44,15 @@
   max-height: 400px;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: var(--line-2) transparent;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .rail,
+  .rows,
+  .scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-2) transparent;
+  }
 }
 
 .rail::-webkit-scrollbar,
@@ -248,8 +255,6 @@
   gap: 2px;
   min-height: 0;
   overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--line-2) transparent;
   padding: 12px;
   border-right: 1px solid var(--line);
 }
@@ -332,8 +337,6 @@
   gap: 4px;
   min-height: 0;
   overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--line-2) transparent;
   padding: 12px;
 }
 
