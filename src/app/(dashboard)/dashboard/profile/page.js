@@ -2,13 +2,15 @@
 import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Card, Button, Toggle, Input, SegmentedControl, Skeleton } from "@/shared/components";
+import { Card, Button, Toggle, Input, SegmentedControl, CardSkeleton } from "@/shared/components";
 import Modal, { ConfirmModal } from "@/shared/components/Modal";
 import LanguageSwitcher from "@/shared/components/LanguageSwitcher";
 import { useTheme } from "@/shared/hooks/useTheme";
 import { APP_CONFIG } from "@/shared/constants/config";
 import { LOCALE_COOKIE, normalizeLocale } from "@/i18n/config";
-import { LOCALE_FLAGS } from "@/shared/constants/locales";
+import { PROFILE_SECTIONS, activeSectionId } from "./profileSections";
+import { useProfileSettings } from "./useProfileSettings";
+import PreferencesPanel from "./components/PreferencesPanel";
 import styles from "./profile.module.css";
 
 function ProfileSection({ id, title, icon, description, children }) {
@@ -40,17 +42,6 @@ function ProfileStatus({ status }) {
   );
 }
 
-function ProfileHeader() {
-  return (
-    <header className={styles.header}>
-      <div className="min-w-0">
-        <h1 className="ui-eyebrow"><Icon className="text-[16px]" aria-hidden="true">person</Icon>Profile</h1>
-        <p className={styles.description}>Preferences, security, and settings for your JRouter instance.</p>
-      </div>
-    </header>
-  );
-}
-
 function getLocaleFromCookie() {
   if (typeof document === "undefined") return "en";
   const cookie = document.cookie
@@ -66,9 +57,7 @@ export default function ProfilePage() {
   const [langOpen, setLangOpen] = useState(false);
   const [shutdownOpen, setShutdownOpen] = useState(false);
   const [isShuttingDown, setIsShuttingDown] = useState(false);
-  const [settings, setSettings] = useState({ fallbackStrategy: "fill-first" });
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
+  const [activeId, setActiveId] = useState(PROFILE_SECTIONS[0].id);
   const [passwords, setPasswords] = useState({ current: "", new: "", confirm: "" });
   const [passStatus, setPassStatus] = useState({ type: "", message: "" });
   const [passLoading, setPassLoading] = useState(false);
@@ -129,54 +118,72 @@ export default function ProfilePage() {
       setIsRemoteHost(!["localhost", "127.0.0.1", "::1"].includes(window.location.hostname));
   }, []);
 
-  const loadSettings = useCallback(() => {
-    fetch("/api/settings")
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to load settings");
-        return res.json();
-      })
-      .then((data) => {
-        setSettings(data);
-        setOidcForm({
-          authMode: data?.authMode || "password",
-          oidcIssuerUrl: data?.oidcIssuerUrl || "",
-          oidcClientId: data?.oidcClientId || "",
-          oidcScopes: data?.oidcScopes || "openid profile email",
-          oidcLoginLabel: data?.oidcLoginLabel || "Sign in with OIDC",
-        });
-        setOidcClientSecret("");
-        setSsoTypeTab(data?.ssoType || "saml");
-        setSamlForm({
-          samlEntryPoint: data?.samlEntryPoint || "",
-          samlIssuer: data?.samlIssuer || "urn:jrouter:sp",
-          samlCert: data?.samlCert || "",
-          samlLoginLabel: data?.samlLoginLabel || "Sign in with SAML SSO",
-          samlAttributeEmail: data?.samlAttributeEmail || "email",
-          samlAttributeName: data?.samlAttributeName || "name",
-        });
-        if (
-          data?.authMode === "sso" ||
-          data?.authMode === "saml" ||
-          data?.authMode === "oidc" ||
-          data?.authMode === "both"
-        ) {
-          setOidcExpanded(true);
-        }
-        setProxyForm({
-          outboundProxyEnabled: data?.outboundProxyEnabled === true,
-          outboundProxyUrl: data?.outboundProxyUrl || "",
-          outboundNoProxy: data?.outboundNoProxy || "",
-        });
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Failed to fetch settings:", err);
-        setLoadError("Could not load your instance settings. Try again.");
-        setLoading(false);
-      });
+  // Forms keep their own editable copies of the settings they edit. They are
+  // hydrated from the same response the hook stores, so a retry refills them
+  // exactly like the old single-fetch loader did.
+  const applySettingsToForms = useCallback((data) => {
+    setOidcForm({
+      authMode: data?.authMode || "password",
+      oidcIssuerUrl: data?.oidcIssuerUrl || "",
+      oidcClientId: data?.oidcClientId || "",
+      oidcScopes: data?.oidcScopes || "openid profile email",
+      oidcLoginLabel: data?.oidcLoginLabel || "Sign in with OIDC",
+    });
+    setOidcClientSecret("");
+    setSsoTypeTab(data?.ssoType || "saml");
+    setSamlForm({
+      samlEntryPoint: data?.samlEntryPoint || "",
+      samlIssuer: data?.samlIssuer || "urn:jrouter:sp",
+      samlCert: data?.samlCert || "",
+      samlLoginLabel: data?.samlLoginLabel || "Sign in with SAML SSO",
+      samlAttributeEmail: data?.samlAttributeEmail || "email",
+      samlAttributeName: data?.samlAttributeName || "name",
+    });
+    if (
+      data?.authMode === "sso" ||
+      data?.authMode === "saml" ||
+      data?.authMode === "oidc" ||
+      data?.authMode === "both"
+    ) {
+      setOidcExpanded(true);
+    }
+    setProxyForm({
+      outboundProxyEnabled: data?.outboundProxyEnabled === true,
+      outboundProxyUrl: data?.outboundProxyUrl || "",
+      outboundNoProxy: data?.outboundNoProxy || "",
+    });
   }, []);
 
-  useEffect(() => { loadSettings(); }, [loadSettings]);
+  const { settings, setSettings, loading, loadError, reload } = useProfileSettings(applySettingsToForms);
+
+  // Scroll spy for the chip toolbar. Measures each panel against the same
+  // scroller the browser uses for the anchor jumps.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const scroller =
+      document.querySelector("[data-page-scroller]") ||
+      document.querySelector("main .custom-scrollbar");
+    const target = scroller || window;
+    const measure = () => {
+      const offsets = PROFILE_SECTIONS.map((section) => {
+        const el = document.getElementById(section.id);
+        if (!el) return { id: section.id, top: Number.POSITIVE_INFINITY };
+        const top = scroller
+          ? el.getBoundingClientRect().top - scroller.getBoundingClientRect().top
+          : el.getBoundingClientRect().top;
+        return { id: section.id, top };
+      });
+      setActiveId(activeSectionId(offsets, 96));
+    };
+    const frame = requestAnimationFrame(measure);
+    target.addEventListener("scroll", measure, { passive: true });
+    window.addEventListener("resize", measure);
+    return () => {
+      cancelAnimationFrame(frame);
+      target.removeEventListener("scroll", measure);
+      window.removeEventListener("resize", measure);
+    };
+  }, [loading]);
 
   const updateOutboundProxy = async (e) => {
     e.preventDefault();
@@ -812,94 +819,53 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className={`dashboard-surface ${styles.page}`}>
-      <ProfileHeader />
+    <div className={styles.page}>
+      <header className={styles.intro}>
+        <div className={styles.introText}>
+          <h1 className={styles.introTitle}>Profile</h1>
+          <p className={styles.introSub}>Preferences, security, and settings for your JRouter instance.</p>
+        </div>
+      </header>
+
+      <nav className={styles.toolbar} aria-label="Jump to a settings section">
+        {PROFILE_SECTIONS.map((section) => (
+          <a
+            key={section.id}
+            href={`#${section.id}`}
+            className={styles.chip}
+            aria-current={activeId === section.id ? "true" : undefined}
+            onClick={() => setActiveId(section.id)}
+          >
+            {section.label}
+          </a>
+        ))}
+      </nav>
+
       {loading ? (
         <div className={styles.stack} aria-busy="true" aria-label="Loading profile settings">
-          {["Preferences", "Security", "Routing and network"].map((section) => (
-            <Card key={section} padding="none" className={styles.section}>
-              <Skeleton className="mb-5 h-4 w-32" />
-              <div className={styles.formGrid}>
-                <Skeleton className="h-10" />
-                <Skeleton className="h-10" />
-              </div>
-              <Skeleton className="mt-4 h-4 w-48 max-w-full" />
-            </Card>
-          ))}
-          <p className={styles.description} role="status">Loading profile settings…</p>
+          <CardSkeleton />
         </div>
       ) : loadError ? (
-        <Card padding="none" className={styles.section}>
-          <ProfileStatus status={{ type: "error", message: loadError }} />
-          <Button variant="secondary" onClick={() => { setLoading(true); setLoadError(""); loadSettings(); }} className="mt-3" icon="refresh">Retry</Button>
-        </Card>
+        <>
+          <p className={styles.loadError} role="alert">{loadError}</p>
+          <div className={styles.actions}>
+            <Button variant="secondary" icon="refresh" onClick={reload}>Retry</Button>
+          </div>
+        </>
       ) : (
       <div className={styles.stack}>
-        {/* Local Mode Info */}
-        <ProfileSection id="profile-preferences" title="Preferences & data" icon="settings" description="Display preferences and database backups.">
-          <div className={styles.settingRow}>
-            <div className="min-w-0">
-              <p className={styles.settingTitle}>Appearance</p>
-              <p className={styles.settingDescription}>Use a light, dark, or system theme.</p>
-            </div>
-            <SegmentedControl aria-label="Appearance" value={theme} onChange={setTheme} options={[
-              { value: "light", label: "Light", icon: "light_mode" },
-              { value: "dark", label: "Dark", icon: "dark_mode" },
-              { value: "system", label: "System", icon: "contrast" },
-            ]} />
-          </div>
-          <div className={styles.settingRow}>
-            <div className="min-w-0">
-              <p className={styles.settingTitle}>Display language</p>
-              <p className={styles.settingDescription}>Choose the language used in the dashboard.</p>
-            </div>
-            <Button variant="secondary" onClick={() => setLangOpen(true)} aria-label="Change display language" data-i18n-skip="true">
-              <span aria-hidden="true">{LOCALE_FLAGS[locale] || "🌐"}</span>
-              <span>{locale}</span>
-              <Icon className="text-[14px]" aria-hidden="true">expand_more</Icon>
-            </Button>
-          </div>
-          <div className={styles.settingRow}>
-            <div className="min-w-0">
-              <p className={styles.settingTitle}>{isRemoteHost ? "Remote Mode" : "Local Mode"}</p>
-              <p className={styles.settingDescription}>{isRemoteHost ? "Connected to a remote instance." : "Running on your machine."}</p>
-            </div>
-          </div>
-          <div className={styles.settingRow}>
-            <div className="min-w-0">
-              <p className={styles.settingTitle}>Database Location</p>
-              <code className={styles.settingDescription}>~/.jrouter/db/data.sqlite</code>
-            </div>
-            <div className={styles.actions}>
-              <Button
-                variant="secondary"
-                icon="download"
-                onClick={() => setDbAuth({ open: true, mode: "export", password: "" })}
-                loading={dbLoading}
-                className="w-full sm:w-auto"
-              >
-                Download Backup
-              </Button>
-              <Button
-                variant="secondary"
-                icon="upload"
-                onClick={() => importFileRef.current?.click()}
-                disabled={dbLoading}
-                className="w-full sm:w-auto"
-              >
-                Import Backup
-              </Button>
-              <input
-                ref={importFileRef}
-                type="file"
-                accept="application/json,.json"
-                className="hidden"
-                onChange={handleImportDatabase}
-              />
-            </div>
-          </div>
-          <ProfileStatus status={dbStatus} />
-        </ProfileSection>
+        <PreferencesPanel
+          theme={theme}
+          setTheme={setTheme}
+          locale={locale}
+          onOpenLanguage={() => setLangOpen(true)}
+          isRemoteHost={isRemoteHost}
+          dbStatus={dbStatus}
+          dbLoading={dbLoading}
+          onExport={() => setDbAuth({ open: true, mode: "export", password: "" })}
+          onImport={handleImportDatabase}
+          importFileRef={importFileRef}
+        />
 
         {/* Security */}
         <ProfileSection id="profile-security" title="Security" icon="shield" description="Dashboard access and password management.">
@@ -1688,6 +1654,7 @@ export default function ProfilePage() {
           autoFocus
         />
       </Modal>
+
     </div>
   );
 }
