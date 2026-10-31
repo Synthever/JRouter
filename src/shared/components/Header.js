@@ -8,7 +8,6 @@ import PropTypes from "prop-types";
 import ProviderIcon from "@/shared/components/ProviderIcon";
 import Icon from "@/shared/components/Icon";
 import HeaderMenu from "@/shared/components/HeaderMenu";
-import { useHeaderSearchStore } from "@/store/headerSearchStore";
 import { useHeaderTitleStore } from "@/store/headerTitleStore";
 import { OAUTH_PROVIDERS, APIKEY_PROVIDERS } from "@/shared/constants/config";
 import { MEDIA_PROVIDER_KINDS, AI_PROVIDERS } from "@/shared/constants/providers";
@@ -176,7 +175,6 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
   const [bellOpen, setBellOpen] = useState(false);
   const bellRef = useRef(null);
   const searchInputRef = useRef(null);
-  const contextualSearch = useHeaderSearchStore((s) => s.visible);
   const storeCrumbs = useHeaderTitleStore((state) => state.crumbs);
   const notifications = useNotificationStore((s) => s.notifications);
   const removeNotification = useNotificationStore((s) => s.removeNotification);
@@ -366,25 +364,21 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
       </div>
 
       <div className="dashboard-header__actions">
-        {contextualSearch ? (
-          <HeaderSearch />
-        ) : (
-          <button
-            type="button"
-            onClick={() => {
-              setSearchQuery("");
-              setActiveResult(0);
-              setSearchOpen(true);
-            }}
-            className="dashboard-header__search-trigger"
-            aria-label="Search pages"
-            aria-haspopup="dialog"
-          >
-            <Search size={16} aria-hidden="true" />
-            <span className="dashboard-header__search-label">Search pages...</span>
-            <kbd className="dashboard-header__kbd">⌘K</kbd>
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => {
+            setSearchQuery("");
+            setActiveResult(0);
+            setSearchOpen(true);
+          }}
+          className="dashboard-header__search-trigger"
+          aria-label="Search pages"
+          aria-haspopup="dialog"
+        >
+          <Search size={16} aria-hidden="true" />
+          <span className="dashboard-header__search-label">Search pages...</span>
+          <kbd className="dashboard-header__kbd">⌘K</kbd>
+        </button>
 
         {dateText && <span className="dashboard-header__date">{dateText}</span>}
 
@@ -480,43 +474,6 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
         document.body,
       )}
     </header>
-  );
-}
-
-function HeaderSearch() {
-  const visible = useHeaderSearchStore((s) => s.visible);
-  const query = useHeaderSearchStore((s) => s.query);
-  const placeholder = useHeaderSearchStore((s) => s.placeholder);
-  const setQuery = useHeaderSearchStore((s) => s.setQuery);
-
-  if (!visible) return null;
-
-  return (
-    <div className="dashboard-header__search relative">
-      <Search
-        size={16}
-        className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)] pointer-events-none"
-        aria-hidden="true"
-      />
-      <input
-        type="text"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder={placeholder}
-        aria-label={placeholder}
-        className="dashboard-header__search-input dashboard-header__search-input--contextual"
-      />
-      {query && (
-        <button
-          type="button"
-          onClick={() => setQuery("")}
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-3)] hover:text-[var(--text)] p-0.5 rounded cursor-pointer"
-          aria-label="Clear search"
-        >
-          <X size={16} aria-hidden="true" />
-        </button>
-      )}
-    </div>
   );
 }
 
