@@ -66,7 +66,7 @@ Copy `cli-tools/components/ui/FieldRow.js` to `src/shared/components/ui/FieldRow
 
 - [ ] **Step 2: Move the CSS**
 
-Create `src/shared/components/ui/field.module.css` containing, verbatim, these rules from `cli-tools.module.css`: `.field`, `.fieldWithAside`, `.fieldLabel`, `.fieldArrow`, `.fieldControl`, `.fieldAside`, `.fieldHint`, `.fieldGroup`, `.fieldGroup + .fieldGroup`, `.fieldGroupHeader`, `.fieldGroupTitle`, `.fieldGroupDescription`, plus the `@media (max-width: 899px)` block that collapses `.field`/`.fieldWithAside`. Delete those rules from `cli-tools.module.css`. Keep `.currentValue` and `.fieldTop` there — cards still import them from the route module.
+Create `src/shared/components/ui/field.module.css` containing, verbatim, these rules from `cli-tools.module.css`: `.field`, `.fieldWithAside`, `.fieldLabel`, `.fieldArrow`, `.fieldControl`, `.fieldAside`, `.fieldHint`, `.fieldGroup`, `.fieldGroup + .fieldGroup`, `.fieldGroupHeader`, `.fieldGroupTitle`, `.fieldGroupDescription`, plus the `@media (max-width: 899px)` block that collapses `.field`/`.fieldWithAside`. Delete those rules from `cli-tools.module.css`. Keep `.currentValue` and `.fieldTop` there — cards still import them from the route module — and change `.fieldTop` to the compound selector `.field.fieldTop { align-items: start; }` so it keeps winning over the shared `.field` rule regardless of CSS chunk order.
 
 - [ ] **Step 3: Replace the route files with re-exports**
 
@@ -593,10 +593,6 @@ describe("Profile shell", () => {
     expect(page).toContain("PROFILE_SECTIONS.map");
   });
 
-  it("no longer renders a Card wrapper anywhere in the page", () => {
-    expect(page).not.toContain("<Card");
-  });
-
   it("wires the scroll spy to the section offsets", () => {
     expect(page).toContain("activeSectionId");
     expect(page).toContain("aria-current");
@@ -604,6 +600,10 @@ describe("Profile shell", () => {
 });
 
 describe("Profile panels", () => {
+  it("no longer renders a Card wrapper anywhere in the page", () => {
+    expect(read(`${ROUTE}/page.js`)).not.toContain("<Card");
+  });
+
   it("renders one panel component per section", () => {
     const page = read(`${ROUTE}/page.js`);
     for (const name of [
@@ -928,7 +928,7 @@ If no `[data-page-scroller]` exists in the shell, fall back to `window` as writt
 - [ ] **Step 7: Run the shell contracts**
 
 Run: `cd tests && npx vitest run --config ./vitest.config.js unit/profile-redesign.test.js -t "Profile shell"`
-Expected: PASS — 3 tests. The "Profile panels" block fails until Tasks 5–8; that is expected.
+Expected: PASS — 2 tests (intro/toolbar, scroll spy). The "Profile panels" block fails until Tasks 5–8; that is expected.
 
 - [ ] **Step 8: Commit**
 
