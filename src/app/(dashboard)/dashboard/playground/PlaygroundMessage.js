@@ -84,7 +84,11 @@ export default function PlaygroundMessage({
           <span className={styles.assistantTag}>{message.isCombo ? "combo" : message.providerName}</span>
         ) : null}
         <span className={styles.assistantStatus}>
-          {message.status === "streaming" ? <span className={styles.dots} aria-hidden="true"><i /><i /><i /></span> : null}
+          {message.status === "streaming" ? (
+            <span className={styles.pixelLoader} aria-hidden="true">
+              {Array.from({ length: 9 }, (_, index) => <i key={index} />)}
+            </span>
+          ) : null}
           {status}
         </span>
 

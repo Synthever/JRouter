@@ -48,6 +48,7 @@ describe("playground message row", () => {
     const hook = read(`${PLAYGROUND}/useStreamReveal.js`);
     expect(message).toContain("useStreamReveal");
     expect(message).toContain("bodyContent");
+    expect(message).toContain("pixelLoader");
     expect(hook).toContain("requestAnimationFrame");
     expect(hook).toContain("prefers-reduced-motion: reduce");
   });
@@ -373,9 +374,11 @@ describe("playground polish", () => {
   it("uses themed scrollbars in the transcript and the picker", () => {
     const thread = read(`${PLAYGROUND}/playground.module.css`);
     const picker = read("src/shared/components/ModelPickerList.module.css");
+    const globals = read("src/app/globals.css");
     expect(thread).toContain(".transcript::-webkit-scrollbar");
-    expect(thread).toContain("scrollbar-color: var(--line-2) transparent");
+    expect(thread).toContain("@supports not selector(::-webkit-scrollbar)");
     expect(picker).toContain(".rail::-webkit-scrollbar");
     expect(picker).toContain(".rows::-webkit-scrollbar");
+    expect(globals).toContain("@supports not selector(::-webkit-scrollbar)");
   });
 });

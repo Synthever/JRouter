@@ -332,10 +332,14 @@ html {
   }
 }
 
-/* Global themed scrollbars: slim rounded thumb, transparent track, no arrows. */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--line-2) transparent;
+/* Global themed scrollbars: slim rounded thumb, transparent track, no arrows.
+   Standard properties are Firefox-only on purpose: Chromium ignores
+   ::-webkit-scrollbar as soon as scrollbar-width/color are set. */
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-2) transparent;
+  }
 }
 *::-webkit-scrollbar,
 ::-webkit-scrollbar {
