@@ -297,10 +297,24 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Streaming status sits on its own line under the model name row. */
+.streamStatus {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  color: var(--text-3);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Drive loader: 3×3 grid, chevron wavefront sweeping left→right. The 650ms
+   cycle is shorter than the sweep, so two fronts are always in flight. */
 .pixelLoader {
   display: inline-grid;
+  flex: none;
   grid-template-columns: repeat(3, 4px);
-  gap: 2px;
+  gap: 1.5px;
   margin-right: 7px;
   vertical-align: middle;
 }
@@ -308,21 +322,36 @@
   width: 4px;
   height: 4px;
   border-radius: 1px;
-  background: var(--text-3);
-  animation: pixelPulse 1.1s ease-in-out infinite;
+  background: var(--text);
+  opacity: 0.15;
+  animation: pixelOn 650ms ease-in-out infinite;
 }
-.pixelLoader i:nth-child(2) { animation-delay: 0.08s; }
-.pixelLoader i:nth-child(3) { animation-delay: 0.16s; }
-.pixelLoader i:nth-child(4) { animation-delay: 0.08s; }
-.pixelLoader i:nth-child(5) { animation-delay: 0.16s; }
-.pixelLoader i:nth-child(6) { animation-delay: 0.24s; }
-.pixelLoader i:nth-child(7) { animation-delay: 0.16s; }
-.pixelLoader i:nth-child(8) { animation-delay: 0.24s; }
-.pixelLoader i:nth-child(9) { animation-delay: 0.32s; }
 
-@keyframes pixelPulse {
-  0%, 100% { opacity: 0.2; transform: scale(0.8); }
-  45% { opacity: 1; transform: scale(1); }
+@keyframes pixelOn {
+  0%, 100% { opacity: 0.15; }
+  45% { opacity: 1; }
+}
+
+.statusLabel {
+  background-image: linear-gradient(90deg, var(--text-3) 35%, var(--text) 50%, var(--text-3) 65%);
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  font-weight: 500;
+  animation: statusShimmer 1.4s linear infinite;
+}
+
+@keyframes statusShimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+.statusElapsed {
+  color: var(--text-3);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 .actions {
@@ -368,19 +397,68 @@
 }
 
 .thinkingToggle svg { color: var(--text-3); font-size: 16px; }
+.thinkingGlyph[data-working="true"] { color: var(--text-2); }
 .chevronSmall { font-size: 15px; }
 
-.thinkingBody {
-  max-height: 320px;
-  margin: 6px 0 0 28px;
-  overflow-y: auto;
-  padding: 10px 14px;
-  border-left: 2px solid var(--line);
-  color: var(--text-3);
-  font-size: 13.5px;
-  line-height: 1.7;
-  white-space: pre-wrap;
+.thinkingDone {
+  color: var(--text-2);
+  animation: fadeIn 350ms ease-out both;
+}
+
+/* Expandable trace: grid-rows 0fr → 1fr keeps the reveal height-agnostic. */
+.thinkingTrace {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 400ms cubic-bezier(0.23, 1, 0.32, 1), opacity 400ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.thinkingTrace[data-open="true"] { grid-template-rows: 1fr; opacity: 1; }
+.thinkingTraceInner { overflow: hidden; }
+
+.thinkingSteps {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0 0 5px;
+  padding: 4px 0 4px 16px;
+  border-left: 1px solid var(--line);
+}
+
+.thinkingStep {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 28px;
+  padding: 2px 6px;
+  animation: fadeUp 320ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.thinkingStep svg { flex: none; margin-top: 3px; font-size: 14px; color: var(--text-3); }
+
+.thinkingSpinner {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin-top: 4px;
+  border: 1.5px solid var(--line-2);
+  border-top-color: var(--text-2);
+  border-radius: var(--r-full);
+  animation: spin 700ms linear infinite;
+}
+
+.thinkingStepText {
+  min-width: 0;
+  color: var(--text-2);
+  font-size: 12.5px;
+  line-height: 1.6;
   overflow-wrap: anywhere;
+}
+
+.thinkingMore { color: var(--text-3); font-size: 12px; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .assistantBody {
@@ -920,9 +998,15 @@
 
 @media (prefers-reduced-motion: reduce) {
   .pixelLoader i,
+  .statusLabel,
   .assistantCard,
   .userBubble,
   .caret { animation: none; }
+  .statusLabel { color: var(--text-3); }
+  .thinkingStep,
+  .thinkingDone { animation: none; }
+  .thinkingSpinner { animation: none; }
+  .thinkingTrace { transition: none; }
   .switch,
   .switch::after { transition: none; }
 }

@@ -4,6 +4,13 @@
   gap: 24px;
 }
 
+/* The action pill floats over the panel's bottom edge, so the page needs no
+   extra tail space below it. Doubled class beats the composed `.page` rule,
+   which CSS Modules emits after this one. */
+.page.page {
+  padding-bottom: 0;
+}
+
 .status {
   flex-shrink: 0;
   max-width: 100%;
@@ -811,28 +818,43 @@
 
 /* Detail: action bar ---------------------------------------------------- */
 
+/* Floating glass pill pinned to the bottom of the scrollport. It is sticky
+   rather than fixed so it stays inside the panel's scroll container. */
 .actionBar {
   position: sticky;
-  bottom: 0;
+  bottom: 16px;
   z-index: 20;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
-  margin: 16px calc(-1 * var(--panel-pad, 28px)) calc(-1 * var(--panel-pad, 28px));
-  padding: 12px var(--panel-pad, 28px);
-  border-top: 1px solid var(--line);
-  background: var(--canvas);
+  gap: 10px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 16px auto 0;
+  padding: 6px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-full);
+  background: color-mix(in srgb, var(--canvas) 72%, transparent);
+  box-shadow: var(--shadow-elev);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
 }
 
 .actionMessage {
   margin: 0;
   min-width: 0;
+  padding-left: 10px;
   color: var(--text-2);
   font-size: 13px;
   line-height: 1.45;
   overflow-wrap: anywhere;
+}
+
+/* An empty status paragraph would still claim a flex slot and push the
+   buttons off-centre, so collapse it until there is something to say. */
+.actionMessage:empty {
+  display: none;
 }
 
 .actionSuccess {
@@ -847,16 +869,31 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   margin-left: auto;
 }
 
+/* The pill is fully rounded, so the buttons inside it must be too — square
+   corners read as a mistake against the capsule edge. `!important` is needed
+   because the Button component ships a `rounded-[var(--r1)]` utility. */
+.actionButtons > .actionButton {
+  border-radius: var(--r-full) !important;
+  min-height: 32px;
+  padding-inline: 14px;
+}
+
 @media (max-width: 639px) {
+  .actionBar {
+    bottom: 12px;
+    width: 100%;
+    padding: 6px;
+  }
+
   .actionButtons {
     width: 100%;
   }
 
-  .actionButtons > * {
+  .actionButtons > .actionButton {
     flex: 1 1 auto;
     min-height: 44px;
   }

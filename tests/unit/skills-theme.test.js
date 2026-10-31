@@ -1,30 +1,51 @@
+// Contract for the skills surface: page hero, a quick-start panel (command +
+// copy) and one skills panel whose rows are hairline separated. These
+// assertions lock the anatomy and the links that must survive the redesign.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
 const skillsPath = "src/app/(dashboard)/dashboard/skills";
 
-describe("skills dashboard theme", () => {
-  it("renders as a shared-surface page instead of a self-constrained column", () => {
+describe("skills dashboard surface", () => {
+  it("opens with the shared page hero instead of the old eyebrow header", () => {
     const source = read(`${skillsPath}/page.js`);
     expect(source).toContain("dashboard-surface ${styles.page}");
-    expect(source).toContain("ui-card ${styles.section}");
-    expect(source).toContain('className="ui-eyebrow');
-    // The page used to narrow itself and stack a Card per skill.
+    expect(source).toContain("<h1 className={styles.title}>Skills</h1>");
+    expect(source).toContain("styles.intro");
+    expect(source).toContain("styles.sub");
+    // The old page used a ui-card panel and an eyebrow title.
+    expect(source).not.toContain("ui-card");
+    expect(source).not.toContain("ui-eyebrow");
     expect(source).not.toContain("max-w-4xl");
     expect(source).not.toContain("<Card");
+
     const css = read(`${skillsPath}/skills.module.css`);
     // Compose the approved Usage module rather than duplicating the design system.
     expect(css).toMatch(/\.page\s*\{\s*composes: page from "\.\.\/usage\/usage\.module\.css";/);
     expect(css).toMatch(/\.section\s*\{\s*composes: section from "\.\.\/usage\/usage\.module\.css";/);
     expect(css).toMatch(/composes: formScope from "\.\.\/\.\.\/\.\.\/\.\.\/shared\/components\/DashboardControls\.module\.css";/);
-    expect(css).not.toContain("backdrop-filter");
+    expect(css).toMatch(/\.title\s*\{[^}]*font-size: clamp\(28px, 3\.4vw, 40px\);/s);
+    expect(css).not.toMatch(/backdrop-filter|#131315|linear-gradient/);
+  });
+
+  it("keeps two panels: quick start and the skills list with its GitHub action", () => {
+    const source = read(`${skillsPath}/page.js`);
+    expect(source.match(/className=\{styles\.section\}/g) || []).toHaveLength(2);
+    expect(source).toContain('id="skills-quickstart-heading"');
+    expect(source).toContain('id="skills-list-heading"');
+    // The old third panel held nothing but a link; the link now sits in the
+    // skills section header.
+    expect(source).not.toContain("More on GitHub");
+    expect(source).toContain("View on GitHub");
+    expect(source).toContain("<small>{SKILLS.length} skills</small>");
+    expect(source).toContain("styles.linkButton");
   });
 
   it("keeps every skill in one section with hairline separators, not per-row cards", () => {
     const css = read(`${skillsPath}/skills.module.css`);
-    expect(css).toMatch(/\.row\s*\{[^}]*border-bottom: 1px solid var\(--line\);/);
-    expect(css).toMatch(/\.row:last-child\s*\{[^}]*border-bottom: 0;/);
+    expect(css).toMatch(/\.row\s*\{[^}]*padding: 20px 0;[^}]*border-bottom: 1px solid var\(--line\);/s);
+    expect(css).toMatch(/\.row:last-child\s*\{[^}]*border-bottom: 0;/s);
     // Rows must not reintroduce per-row radius or shadow.
     expect(css).not.toMatch(/\.row\s*\{[^}]*box-shadow/);
     expect(css).not.toMatch(/\.row\s*\{[^}]*border-radius:\s*var\(--r[23]\)/);
@@ -33,18 +54,29 @@ describe("skills dashboard theme", () => {
     expect(source).toContain("<li className={styles.row}>");
   });
 
-  it("uses the shared badge, button and token system", () => {
+  it("uses the shared controls, badges and token system", () => {
     const source = read(`${skillsPath}/page.js`);
-    expect(source).toContain("StatusBadge");
-    expect(source).toContain('variant="secondary"');
+    expect(source).toContain("<Button");
+    expect(source).toContain('variant="outline"');
     expect(source).toContain("useCopyToClipboard");
     expect(source).not.toMatch(/bg-primary|text-primary|border-brand|text-white|bg-surface |border-border-subtle/);
     const css = read(`${skillsPath}/skills.module.css`);
+    expect(css).toMatch(/\.badge\s*\{[^}]*height: 24px;[^}]*font-size: 12px;[^}]*font-weight: 600;/s);
     expect(css).toContain("var(--surface-inset)");
     expect(css).toContain("var(--font-mono)");
     expect(css).toContain(":focus-visible");
     expect(css).toMatch(/@media \(max-width: 639px\)/);
     expect(css).toContain("prefers-reduced-motion: reduce");
+  });
+
+  it("copies both the entry command and each row link", () => {
+    const source = read(`${skillsPath}/page.js`);
+    expect(source).toContain('const ENTRY_SKILL_URL = getSkillRawUrl("jrouter");');
+    expect(source).toContain("Read this skill and use it: ${ENTRY_SKILL_URL}");
+    expect(source).toContain('skillName="JRouter entry skill"');
+    // Only the quick start passes a short label; rows keep "Copy link".
+    expect(source.match(/<CopyButton/g) || []).toHaveLength(2);
+    expect(source).toContain('label = "Copy link"');
   });
 
   it("preserves every skill, endpoint and link target", () => {
@@ -56,8 +88,9 @@ describe("skills dashboard theme", () => {
       "SKILLS.map",
       "Paste this to your AI:",
       "Read this skill and use it:",
-      "More on GitHub",
       "View on GitHub",
+      'target="_blank"',
+      'rel="noreferrer"',
     ]) {
       expect(source).toContain(preserved);
     }
@@ -93,10 +126,15 @@ describe("skills dashboard theme", () => {
 
   it("keeps the skills route on the shared grid background", () => {
     const layout = read("src/shared/components/layouts/DashboardLayout.js");
-    const expression = layout.match(/\$\{([^{}]*"dashboard-grid-bg"[^{}]*)\}/)?.[1];
-    expect(expression).toBeDefined();
-    const backgroundClass = new Function("pathname", `return (${expression});`);
-    expect(backgroundClass("/dashboard/skills")).toBe("dashboard-grid-bg");
-    expect(backgroundClass("/dashboard/skills/detail")).toBe("");
+    const pages = new Function(`return ${layout.match(/const GRID_BACKGROUND_PAGES = (\[[\s\S]*?\]);/)[1]};`)();
+    const predicate = layout.match(/const hasGridBackground = (.+);/)?.[1];
+    expect(predicate).toBeDefined();
+    const backgroundClass = new Function(
+      "pathname",
+      "GRID_BACKGROUND_PAGES",
+      `return (${predicate}) ? "dashboard-grid-bg" : "";`
+    );
+    expect(backgroundClass("/dashboard/skills", pages)).toBe("dashboard-grid-bg");
+    expect(backgroundClass("/dashboard/skills/detail", pages)).toBe("");
   });
 });

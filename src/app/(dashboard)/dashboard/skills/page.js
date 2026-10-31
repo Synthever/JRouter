@@ -2,7 +2,6 @@
 import Icon from "@/shared/components/Icon";
 
 import { Button } from "@/shared/components";
-import StatusBadge from "@/shared/components/StatusBadge";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import {
   SKILLS,
@@ -12,11 +11,14 @@ import {
 } from "@/shared/constants/skills";
 import styles from "./skills.module.css";
 
+const ENTRY_SKILL_URL = getSkillRawUrl("jrouter");
+const QUICK_START_COMMAND = `Read this skill and use it: ${ENTRY_SKILL_URL}`;
+
 function CopyButton({ value, skillName, label = "Copy link" }) {
   const { copied, copy } = useCopyToClipboard(2000);
   return (
     <Button
-      variant="secondary"
+      variant="outline"
       size="sm"
       icon={copied ? "check" : "content_copy"}
       onClick={() => copy(value)}
@@ -34,13 +36,13 @@ function SkillRow({ skill }) {
     <li className={styles.row}>
       <div className={styles.identity}>
         <span className={styles.icon} data-entry={skill.isEntry ? "true" : "false"} aria-hidden="true">
-          <Icon className="text-[18px]">{skill.icon}</Icon>
+          <Icon className="text-[20px]">{skill.icon}</Icon>
         </span>
 
-        <div className="min-w-0">
+        <div className={styles.body}>
           <div className={styles.titleLine}>
-            <h3 className={styles.title}>{skill.name}</h3>
-            {skill.isEntry && <StatusBadge dot={false}>Start here</StatusBadge>}
+            <h3 className={styles.rowTitle}>{skill.name}</h3>
+            {skill.isEntry && <span className={styles.badge}>Start here</span>}
             {skill.endpoint && <code className={styles.endpoint}>{skill.endpoint}</code>}
           </div>
           <p className={styles.metadata}>{skill.description}</p>
@@ -52,7 +54,7 @@ function SkillRow({ skill }) {
             title={url}
           >
             <span className={styles.urlText}>{url}</span>
-            <Icon className="mt-[3px] shrink-0 text-[13px]">open_in_new</Icon>
+            <Icon className="mt-[2px] shrink-0 text-[13px]">open_in_new</Icon>
           </a>
         </div>
       </div>
@@ -67,50 +69,38 @@ function SkillRow({ skill }) {
 export default function SkillsPage() {
   return (
     <div className={`dashboard-surface ${styles.page}`}>
-      <header className={styles.header}>
-        <div className="min-w-0">
-          <h1 className="ui-eyebrow flex items-center gap-2">
-            <Icon className="text-[16px]">extension</Icon> Skills
-          </h1>
-          <p className={styles.description}>
-            Reusable agent skills — copy a raw URL and paste it into any AI agent
-          </p>
-        </div>
+      <header className={styles.intro}>
+        <h1 className={styles.title}>Skills</h1>
+        <p className={styles.sub}>
+          Reusable agent skills — copy a raw URL and paste it into any AI agent
+        </p>
       </header>
 
-      <section className={`ui-card ${styles.section}`} aria-labelledby="skills-quickstart-heading">
-        <div className={styles.sectionHeader}>
-          <h2 id="skills-quickstart-heading" className="ui-eyebrow">Quick start</h2>
-        </div>
-        <p className={styles.hint}>Paste this to your AI:</p>
-        <div className={styles.command}>
-          <code>Read this skill and use it: {getSkillRawUrl("jrouter")}</code>
-        </div>
-      </section>
-
-      <section className={`ui-card ${styles.section}`} aria-labelledby="skills-list-heading">
+      <section className={styles.section} aria-labelledby="skills-quickstart-heading">
         <div className={styles.sectionHeader}>
           <div className="min-w-0">
-            <h2 id="skills-list-heading" className="ui-eyebrow flex items-center gap-2">
-              <Icon className="text-[16px]">list_alt</Icon> Available skills
+            <h2 id="skills-quickstart-heading" className={styles.sectionTitle}>
+              <Icon className={styles.sectionIcon}>bolt</Icon> Quick start
             </h2>
-            <p className={styles.sectionDescription}>
-              {SKILLS.length} skills · each one is a single SKILL.md you can hand to an agent
-            </p>
+            <p className={styles.sectionDescription}>Paste this to your AI:</p>
           </div>
         </div>
-        <ul className={styles.rows}>
-          {SKILLS.map((skill) => (
-            <SkillRow key={skill.id} skill={skill} />
-          ))}
-        </ul>
+        <div className={styles.quickStart}>
+          <code className={styles.command}>{QUICK_START_COMMAND}</code>
+          <CopyButton value={ENTRY_SKILL_URL} skillName="JRouter entry skill" label="Copy" />
+        </div>
       </section>
 
-      <section className={`ui-card ${styles.section}`} aria-labelledby="skills-repo-heading">
+      <section className={styles.section} aria-labelledby="skills-list-heading">
         <div className={styles.sectionHeader}>
           <div className="min-w-0">
-            <h2 id="skills-repo-heading" className="ui-eyebrow">More on GitHub</h2>
-            <p className={styles.sectionDescription}>Browse source, README, and examples.</p>
+            <h2 id="skills-list-heading" className={styles.sectionTitle}>
+              <Icon className={styles.sectionIcon}>list_alt</Icon> Available skills
+              <small>{SKILLS.length} skills</small>
+            </h2>
+            <p className={styles.sectionDescription}>
+              Each one is a single SKILL.md you can hand to an agent
+            </p>
           </div>
           <a
             className={styles.linkButton}
@@ -122,6 +112,11 @@ export default function SkillsPage() {
             View on GitHub
           </a>
         </div>
+        <ul className={styles.rows}>
+          {SKILLS.map((skill) => (
+            <SkillRow key={skill.id} skill={skill} />
+          ))}
+        </ul>
       </section>
     </div>
   );

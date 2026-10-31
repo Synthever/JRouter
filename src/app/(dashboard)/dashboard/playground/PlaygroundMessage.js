@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Icon from "@/shared/components/Icon";
 import PropTypes from "prop-types";
 import PlaygroundMarkdown from "./PlaygroundMarkdown";
@@ -7,6 +8,14 @@ import PlaygroundModelIcon from "./PlaygroundModelIcon";
 import useStreamReveal from "./useStreamReveal";
 import { buildMetaParts, formatSeconds } from "./playgroundUtils";
 import styles from "./playground.module.css";
+
+// Chevron wavefront: each cell's delay is its column plus its distance from the
+// middle row, so the bright front sweeps left→right as a chevron.
+const CHEVRON_DELAYS = Array.from({ length: 9 }, (_, index) => {
+  const row = Math.floor(index / 3);
+  const col = index % 3;
+  return (col + Math.abs(row - 1)) * 90;
+});
 
 function statusLabel(message) {
   if (message.status === "streaming") {
@@ -16,6 +25,85 @@ function statusLabel(message) {
   }
   if (message.elapsedMs) return `for ${formatSeconds(message.elapsedMs)}`;
   return "";
+}
+
+function useElapsed(startedAt, active) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!active) return undefined;
+    const timer = setInterval(() => setNow(Date.now()), 100);
+    return () => clearInterval(timer);
+  }, [active, startedAt]);
+  if (!active || !startedAt) return "";
+  const total = Math.max(0, now - startedAt) / 1000;
+  if (total < 60) return `${total.toFixed(1)}s`;
+  return `${Math.floor(total / 60)}m ${(total % 60).toFixed(1)}s`;
+}
+
+function PixelLoader() {
+  return (
+    <span className={styles.pixelLoader} aria-hidden="true">
+      {CHEVRON_DELAYS.map((delay, index) => (
+        <i key={index} style={{ animationDelay: `${delay}ms` }} />
+      ))}
+    </span>
+  );
+}
+
+// Reasoning arrives as one growing string, so the trace is derived from it:
+// the last line is the step in flight, everything before it is done.
+function reasoningSteps(reasoning) {
+  return reasoning
+    .split(/\r?\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(-6);
+}
+
+function ThinkingTrace({ reasoning, working, summary, open, onToggle }) {
+  const steps = reasoningSteps(reasoning);
+  const visible = working ? steps : steps.slice(0, 3);
+  const more = steps.length - visible.length;
+
+  return (
+    <div className={styles.thinking}>
+      <button
+        type="button"
+        className={styles.thinkingToggle}
+        onClick={onToggle}
+        aria-expanded={open}
+      >
+        <Icon className={styles.thinkingGlyph} data-working={working ? "true" : undefined}>stars</Icon>
+        {working ? (
+          <span className={styles.statusLabel}>{summary}</span>
+        ) : (
+          <span className={styles.thinkingDone}>{summary}</span>
+        )}
+        <Icon className={styles.chevronSmall}>{open ? "expand_less" : "expand_more"}</Icon>
+      </button>
+
+      <div className={styles.thinkingTrace} data-open={open ? "true" : undefined}>
+        <div className={styles.thinkingTraceInner}>
+          <div className={styles.thinkingSteps}>
+            {visible.map((step, index) => {
+              const pending = working && index === visible.length - 1;
+              return (
+                <div key={`${index}-${step}`} className={styles.thinkingStep}>
+                  {pending ? (
+                    <span className={styles.thinkingSpinner} aria-hidden="true" />
+                  ) : (
+                    <Icon className={styles.thinkingCheck}>check</Icon>
+                  )}
+                  <span className={styles.thinkingStepText}>{step}</span>
+                </div>
+              );
+            })}
+            {more > 0 ? <span className={styles.thinkingMore}>+{more} more</span> : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function PlaygroundMessage({
@@ -36,6 +124,7 @@ export default function PlaygroundMessage({
     message.content,
     message.role === "assistant" && isStreaming && message.status === "streaming",
   );
+  const elapsed = useElapsed(message.startedAt, message.status === "streaming");
 
   if (message.role === "divider") {
     return <p className={styles.divider}>{message.content}</p>;
@@ -67,6 +156,9 @@ export default function PlaygroundMessage({
       ? `Thought for ${formatSeconds(message.thinkingMs)}`
       : "Thoughts";
   const bodyContent = raw ? message.content : reveal;
+  // While reasoning streams, the trace header carries the status; showing the
+  // stream status line too would print "thinking…" twice.
+  const showStreamStatus = message.status === "streaming" && !isThinking;
 
   return (
     <article className={styles.assistantCard}>
@@ -83,14 +175,9 @@ export default function PlaygroundMessage({
         {message.isCombo || message.providerName ? (
           <span className={styles.assistantTag}>{message.isCombo ? "combo" : message.providerName}</span>
         ) : null}
-        <span className={styles.assistantStatus}>
-          {message.status === "streaming" ? (
-            <span className={styles.pixelLoader} aria-hidden="true">
-              {Array.from({ length: 9 }, (_, index) => <i key={index} />)}
-            </span>
-          ) : null}
-          {status}
-        </span>
+        {message.status === "streaming" ? null : (
+          <span className={styles.assistantStatus}>{status}</span>
+        )}
 
         {showActions ? (
           <div className={styles.actions}>
@@ -120,6 +207,14 @@ export default function PlaygroundMessage({
         ) : null}
       </header>
 
+      {showStreamStatus ? (
+        <div className={styles.streamStatus} role="status">
+          <PixelLoader />
+          <span className={styles.statusLabel}>{status}</span>
+          {elapsed ? <span className={styles.statusElapsed}>{elapsed}</span> : null}
+        </div>
+      ) : null}
+
       {message.status === "error" ? (
         <div className={styles.error} role="alert">
           <p className={styles.errorHead}><Icon>error</Icon> Request failed</p>
@@ -134,19 +229,13 @@ export default function PlaygroundMessage({
       ) : (
         <>
           {message.reasoning ? (
-            <div className={styles.thinking}>
-              <button
-                type="button"
-                className={styles.thinkingToggle}
-                onClick={() => onToggleThinking(message.id)}
-                aria-expanded={thinkingOpen}
-              >
-                <Icon>stars</Icon>
-                {thoughtLabel}
-                <Icon className={styles.chevronSmall}>{thinkingOpen ? "expand_less" : "expand_more"}</Icon>
-              </button>
-              {thinkingOpen ? <div className={styles.thinkingBody}>{message.reasoning}</div> : null}
-            </div>
+            <ThinkingTrace
+              reasoning={message.reasoning}
+              working={isThinking}
+              summary={thoughtLabel}
+              open={thinkingOpen}
+              onToggle={() => onToggleThinking(message.id)}
+            />
           ) : null}
 
           {bodyContent ? (

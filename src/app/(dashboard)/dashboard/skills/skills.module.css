@@ -3,13 +3,30 @@
   composes: formScope from "../../../../shared/components/DashboardControls.module.css";
 }
 
-.header {
-  composes: header from "../usage/usage.module.css";
+/* Page intro ------------------------------------------------------------ */
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
 }
 
-.description {
-  composes: description from "../usage/usage.module.css";
+.title {
+  color: var(--text);
+  font-size: clamp(28px, 3.4vw, 40px);
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  line-height: 1.1;
 }
+
+.sub {
+  color: var(--text-2);
+  font-size: 16px;
+  max-width: 60ch;
+}
+
+/* Section panels -------------------------------------------------------- */
 
 .section {
   composes: section from "../usage/usage.module.css";
@@ -19,23 +36,36 @@
   composes: sectionHeader from "../usage/usage.module.css";
 }
 
+.sectionTitle {
+  composes: sectionTitle from "../usage/usage.module.css";
+}
+
+.sectionIcon {
+  composes: sectionIcon from "../usage/usage.module.css";
+}
+
 .sectionDescription {
   composes: sectionDescription from "../usage/usage.module.css";
 }
 
-/* Quick-start command block: same code treatment as the other developer surfaces. */
-.hint {
-  color: var(--text-2);
-  font-size: 12px;
+/* Quick start: one command block plus its copy control. */
+.quickStart {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
 }
 
 .command {
   display: flex;
-  gap: 8px;
-  margin-top: 8px;
-  padding: 10px 12px;
+  align-items: center;
+  flex: 1 1 320px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 14px;
   border: 1px solid var(--line);
-  border-radius: var(--r1);
+  border-radius: var(--r2);
   background: var(--surface-inset);
   color: var(--text);
   font-family: var(--font-mono);
@@ -57,13 +87,13 @@
   align-items: flex-start;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 14px;
   min-width: 0;
-  padding: 16px 0;
+  padding: 20px 0;
   border-bottom: 1px solid var(--line);
 }
 
-.row:first-child {
+.rows .row:first-child {
   padding-top: 0;
 }
 
@@ -76,28 +106,30 @@
   display: flex;
   align-items: flex-start;
   flex: 1 1 320px;
-  gap: 12px;
+  gap: 14px;
   min-width: 0;
 }
 
 .icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  border: 1px solid var(--line);
-  border-radius: var(--r2);
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   background: var(--surface-2);
   color: var(--text-2);
 }
 
 /* The entry skill is the one visual anchor on the page; emphasis stays monochrome. */
 .icon[data-entry="true"] {
-  border-color: var(--text);
   background: var(--text);
   color: var(--bg);
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
 }
 
 .titleLine {
@@ -108,17 +140,31 @@
   min-width: 0;
 }
 
-.title {
+.rowTitle {
   color: var(--text);
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.5;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 99px;
+  background: var(--surface-2);
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .endpoint {
-  padding: 2px 6px;
+  padding: 2px 8px;
   border: 1px solid var(--line);
-  border-radius: var(--r1);
+  border-radius: 99px;
   background: var(--surface-2);
   color: var(--text-2);
   font-family: var(--font-mono);
@@ -128,9 +174,9 @@
 
 .metadata {
   margin-top: 4px;
-  color: var(--text-2);
-  font-size: 12px;
-  line-height: 1.6;
+  color: var(--text-3);
+  font-size: 13px;
+  line-height: 1.5;
   overflow-wrap: anywhere;
 }
 
@@ -159,9 +205,10 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  flex-shrink: 0;
+  flex: none;
   gap: 8px;
   min-width: 0;
+  margin-left: auto;
 }
 
 .linkButton {
@@ -169,13 +216,13 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-height: 34px;
-  padding: 8px 12px;
+  height: 36px;
+  padding: 0 14px;
   border: 1px solid var(--line-2);
-  border-radius: var(--r1);
+  border-radius: 10px;
   background: var(--surface-2);
   color: var(--text);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -198,12 +245,16 @@
     width: 100%;
   }
 
-  .actions > button,
-  .actions > a {
+  .actions > button {
     width: 100%;
   }
 
   .linkButton {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .page button {
     min-height: 44px;
   }
 }
