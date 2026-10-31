@@ -1,6 +1,6 @@
-// /dashboard/quota now shares the dashboard/endpoint/providers/combos surface:
-// page intro, bento summary, one sticky toolbar and a 24/28 panel holding the
-// account list plus its pagination.
+// /dashboard/quota shares the dashboard/endpoint/providers/combos surface: page
+// intro, one sticky toolbar and a 24/28 panel holding the account list plus its
+// pagination. The bento summary strip is gone, so the toolbar follows the hero.
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -12,7 +12,6 @@ const read = (rel) => readFileSync(path.join(root, rel), "utf8");
 const page = read("src/app/(dashboard)/dashboard/quota/page.js");
 const limits = read("src/app/(dashboard)/dashboard/usage/components/ProviderLimits/index.js");
 const css = read("src/app/(dashboard)/dashboard/quota/quota.module.css");
-const stats = read("src/app/(dashboard)/dashboard/quota/components/QuotaStats.js");
 
 describe("quota surface redesign", () => {
   it("renders the shared page intro outside the suspended data boundary", () => {
@@ -22,11 +21,17 @@ describe("quota surface redesign", () => {
     expect(page.indexOf("<header")).toBeLessThan(page.indexOf("<Suspense"));
   });
 
-  it("mounts the bento summary with a per-surface layout key", () => {
-    expect(stats).toContain("WidgetGrid");
-    expect(stats).toContain("jrouter.quota.statsLayout.v1");
-    expect(stats).toContain("Reset layout");
-    expect(limits).toContain("<QuotaStats");
+  it("goes straight from the hero to the toolbar, with no summary strip", () => {
+    expect(limits).not.toContain("<QuotaStats");
+    expect(limits).not.toContain("statsLayout");
+    expect(page).not.toContain("statsSkeleton");
+    expect(css).not.toContain(".statsSkeleton");
+    expect(css).not.toContain(".statSkeleton");
+    // The strip module is gone from the route folder.
+    expect(() => read("src/app/(dashboard)/dashboard/quota/components/QuotaStats.js")).toThrow();
+    // The suspended fallback still reserves the panel, not a stat row.
+    expect(page).toContain("<section className={styles.section}>");
+    expect(limits).toMatch(/\{styles\.content\}>\s*<div className=\{styles\.toolbar\}/);
   });
 
   it("keeps filters in a sticky toolbar and bulk actions behind More", () => {

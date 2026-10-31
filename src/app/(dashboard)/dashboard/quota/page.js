@@ -13,11 +13,6 @@ export default function QuotaPage() {
       <Suspense
         fallback={
           <div className={styles.content} aria-busy="true" aria-label="Loading quota">
-            <div className={styles.statsSkeleton}>
-              {[0, 1, 2].map((index) => (
-                <Skeleton key={index} className={styles.statSkeleton} />
-              ))}
-            </div>
             <section className={styles.section}>
               <Skeleton className="mb-4 h-4 w-40" />
               <Skeleton className="h-24 w-full" />

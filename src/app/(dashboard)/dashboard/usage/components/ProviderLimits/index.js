@@ -18,8 +18,6 @@ import {
   getConnectionLabel,
   maskQuotaEmail,
   getConnectionQuotaRemaining,
-  getRemainingPercentage,
-  formatResetTime,
   sortVisibleConnections,
   buildLoadingState,
   filterQuotaStateByConnections,
@@ -46,7 +44,6 @@ import {
   QUOTA_SORT_OPTIONS,
 } from "./utils";
 import { Button, ConfirmModal, EditConnectionModal, Modal, SegmentedControl, Skeleton } from "@/shared/components";
-import QuotaStats from "@/app/(dashboard)/dashboard/quota/components/QuotaStats";
 import AutoPingScheduleModal from "@/app/(dashboard)/dashboard/providers/[id]/AutoPingScheduleModal";
 import { getScheduleSlotLabels } from "@/shared/services/quotaPingSchedule";
 import { USAGE_SUPPORTED_PROVIDERS, AI_PROVIDERS } from "@/shared/constants/providers";
@@ -866,36 +863,6 @@ export default function ProviderLimits() {
   );
   const connectionsPageSummary = getConnectionsPaginationSummary(pagination);
 
-  // Summary tiles read from the quota state the page already holds: quotas are
-  // fetched per visible page, so the low-quota count is reported as "checked".
-  const quotaOverview = useMemo(() => {
-    let checked = 0;
-    let low = 0;
-    let nextResetAt = null;
-    let nextResetConnection = null;
-    for (const [connectionId, entry] of Object.entries(quotaData || {})) {
-      const quotas = Array.isArray(entry?.quotas) ? entry.quotas : [];
-      if (!quotas.length) continue;
-      checked += 1;
-      const percentages = quotas.map((quota) => getRemainingPercentage(quota)).filter((value) => Number.isFinite(value));
-      if (percentages.length && Math.min(...percentages) <= 20) low += 1;
-      for (const quota of quotas) {
-        if (!quota?.resetAt) continue;
-        const time = new Date(quota.resetAt).getTime();
-        if (!Number.isFinite(time) || time <= Date.now()) continue;
-        if (nextResetAt == null || time < nextResetAt) {
-          nextResetAt = time;
-          nextResetConnection = connections.find((connection) => connection.id === connectionId) || null;
-        }
-      }
-    }
-    return { checked, low, nextResetAt, nextResetConnection };
-  }, [quotaData, connections]);
-
-  const nextResetOwner = quotaOverview.nextResetConnection;
-  const nextResetNote = nextResetOwner
-    ? [providerLabel(nextResetOwner.provider), maskQuotaEmail(getConnectionLabel(nextResetOwner))].filter(Boolean).join(" · ")
-    : "No reset scheduled";
   const isCustomPageSize = !ACCOUNT_PAGE_SIZE_OPTIONS.includes(pageSize);
   const pageSizeLabel = getPageSizeLabel(pageSize, isCustomPageSize);
 
@@ -928,15 +895,6 @@ export default function ProviderLimits() {
 
   return (
     <div className={styles.content}>
-      <QuotaStats
-        totalAccounts={totals.providerFilteredConnections || connections.length}
-        accountsNote={connectionsPageSummary}
-        lowCount={quotaOverview.low}
-        checkedCount={quotaOverview.checked}
-        nextResetLabel={quotaOverview.nextResetAt ? formatResetTime(new Date(quotaOverview.nextResetAt)) : "—"}
-        nextResetNote={nextResetNote}
-      />
-
       <div className={styles.toolbar} role="toolbar" aria-label="Quota filters and actions">
         <div className={styles.toolbarGroup}>
           <div className="relative">

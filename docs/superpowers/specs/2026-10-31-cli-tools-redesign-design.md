@@ -135,7 +135,7 @@ Group assignment is stored on the constants as `group: "cli" | "ide"` on every `
 
 ### 6.5 Tool card
 
-Anatomy: 40px logo tile (or `tool.icon` in `tool.color`), name (14px/600, single line, ellipsis, `title` attribute), description (13px `--text-2`, two-line clamp), footer row with the config-type chip and the status badge. Type chips: `env` → `Env vars`, `custom` → `Config file`, `guide` → `Guide`, `mitm` → `MITM`. Badge variants: `Connected` success with dot, `Needs setup` warning with dot, `Not installed` default, `Guide` info, `Unknown` default without dot. MITM cards show the `MITM` type chip and no status badge — they are configured on the MITM page, so a status badge there would be noise.
+Anatomy: 40px logo tile (or `tool.icon` in `tool.color`), name (14px/600, single line, ellipsis, `title` attribute), description (13px `--text-2`, two-line clamp), footer row with the config-type chip and the status badge. Type chips: `env` → `Env vars`, `custom` → `Config file`, `guide` → `Guide`, `mitm` → `MITM`. Badge variants: `Connected` success with dot, `Needs setup` warning with dot, `Not installed` default, `Guide` info, `Unknown` default without dot. MITM and guide cards show only the type chip and no status badge — the chip already carries the same word (`MITM` / `Guide`), so a badge there would repeat it. Guide badges use the `info` variant, which requires adding `info: "badge-info"` to `StatusBadge` and a `.badge-info` rule beside the other badge classes in `globals.css`.
 
 The whole card is one `<a>` with `height: 100%`, 16px padding, `--r3` radius and a hairline border; hover raises the border to `--line-2` and tints the background by 3% of `--text`. Focus ring: `outline: 2px solid var(--text)`, offset 2px.
 

@@ -40,17 +40,6 @@
   color: var(--text);
 }
 
-.statsSkeleton {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.statSkeleton {
-  min-height: 168px;
-  border-radius: 24px;
-}
-
 /* Sticky toolbar -------------------------------------------------------- */
 
 .toolbar {
@@ -631,10 +620,6 @@
 
   .section {
     padding: 20px;
-  }
-
-  .statsSkeleton {
-    grid-template-columns: 1fr;
   }
 
   .page .control,
