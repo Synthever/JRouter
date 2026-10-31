@@ -38,7 +38,29 @@
   overscroll-behavior: contain;
   padding: 24px 28px;
   scrollbar-width: thin;
+  scrollbar-color: var(--line-2) transparent;
   scrollbar-gutter: stable;
+}
+
+.transcript::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.transcript::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.transcript::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: var(--r-full);
+  background: var(--line-2);
+  background-clip: padding-box;
+}
+
+.transcript::-webkit-scrollbar-thumb:hover {
+  background: var(--text-3);
+  background-clip: padding-box;
 }
 
 /* Deviation from the brief: the transcript is focusable (role="log", tabIndex=0),
@@ -181,8 +203,6 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
-
-.userMeta span { margin-right: 6px; }
 
 .iconAction {
   display: inline-flex;

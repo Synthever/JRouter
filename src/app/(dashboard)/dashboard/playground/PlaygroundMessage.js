@@ -4,6 +4,7 @@ import Icon from "@/shared/components/Icon";
 import PropTypes from "prop-types";
 import PlaygroundMarkdown from "./PlaygroundMarkdown";
 import PlaygroundModelIcon from "./PlaygroundModelIcon";
+import useStreamReveal from "./useStreamReveal";
 import { buildMetaParts, formatSeconds } from "./playgroundUtils";
 import styles from "./playground.module.css";
 
@@ -11,7 +12,7 @@ function statusLabel(message) {
   if (message.status === "streaming") {
     if (message.content) return "writing…";
     if (message.reasoning) return "thinking…";
-    return "waiting…";
+    return "Generating";
   }
   if (message.elapsedMs) return `for ${formatSeconds(message.elapsedMs)}`;
   return "";
@@ -31,6 +32,11 @@ export default function PlaygroundMessage({
   onToggleRaw,
   onFollowUp,
 }) {
+  const reveal = useStreamReveal(
+    message.content,
+    message.role === "assistant" && isStreaming && message.status === "streaming",
+  );
+
   if (message.role === "divider") {
     return <p className={styles.divider}>{message.content}</p>;
   }
@@ -40,7 +46,6 @@ export default function PlaygroundMessage({
       <div className={`${styles.row} ${styles.rowUser}`}>
         <div className={styles.userBubble}>{message.content}</div>
         <div className={styles.userMeta}>
-          <span>YOU</span>
           <button type="button" className={styles.iconAction} onClick={() => onCopy(message)} aria-label="Copy message">
             <Icon>{copied ? "check" : "content_copy"}</Icon>
           </button>
@@ -53,7 +58,6 @@ export default function PlaygroundMessage({
   }
 
   const status = statusLabel(message);
-  const isWaiting = message.status === "streaming" && !message.content && !message.reasoning;
   const isThinking = message.status === "streaming" && !!message.reasoning && !message.content;
   const showActions = message.status !== "streaming" && message.status !== "error";
   const parts = message.meta ? buildMetaParts(message.meta) : [];
@@ -62,6 +66,7 @@ export default function PlaygroundMessage({
     : message.thinkingMs
       ? `Thought for ${formatSeconds(message.thinkingMs)}`
       : "Thoughts";
+  const bodyContent = raw ? message.content : reveal;
 
   return (
     <article className={styles.assistantCard}>
@@ -79,7 +84,7 @@ export default function PlaygroundMessage({
           <span className={styles.assistantTag}>{message.isCombo ? "combo" : message.providerName}</span>
         ) : null}
         <span className={styles.assistantStatus}>
-          {isWaiting ? <span className={styles.dots} aria-hidden="true"><i /><i /><i /></span> : null}
+          {message.status === "streaming" ? <span className={styles.dots} aria-hidden="true"><i /><i /><i /></span> : null}
           {status}
         </span>
 
@@ -140,12 +145,12 @@ export default function PlaygroundMessage({
             </div>
           ) : null}
 
-          {message.content ? (
+          {bodyContent ? (
             <div className={styles.assistantBody}>
               {raw ? (
-                <pre className={styles.rawBody}>{message.content}</pre>
+                <pre className={styles.rawBody}>{bodyContent}</pre>
               ) : (
-                <PlaygroundMarkdown content={message.content} />
+                <PlaygroundMarkdown content={bodyContent} />
               )}
               {isStreaming && message.status === "streaming" && message.content ? (
                 <span className={styles.caret} aria-hidden="true">▍</span>

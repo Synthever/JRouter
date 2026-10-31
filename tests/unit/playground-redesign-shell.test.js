@@ -35,12 +35,21 @@ describe("playground transcript shell", () => {
 describe("playground message row", () => {
   it("keeps the template message anatomy", () => {
     const source = read(`${PLAYGROUND}/PlaygroundMessage.js`);
-    expect(source).toContain("YOU");
+    expect(source).not.toContain(">YOU<");
     expect(source).toContain("Thought for");
     expect(source).toContain("Retry");
     expect(source).toContain("Rendered");
     expect(source).toContain("Raw");
     expect(source).toContain("Delete reply");
+  });
+
+  it("reveals streaming text instead of dumping a whole burst", () => {
+    const message = read(`${PLAYGROUND}/PlaygroundMessage.js`);
+    const hook = read(`${PLAYGROUND}/useStreamReveal.js`);
+    expect(message).toContain("useStreamReveal");
+    expect(message).toContain("bodyContent");
+    expect(hook).toContain("requestAnimationFrame");
+    expect(hook).toContain("prefers-reduced-motion: reduce");
   });
 
   it("renders user bubbles on the right and dividers between turns", () => {
@@ -349,5 +358,24 @@ describe("playground review fixes", () => {
     expect(source).toContain("onError: restoreFailedPrompt");
     expect(source).toContain("if (sessionId !== activeIdRef.current) return;");
     expect(source).toContain("setInput((current) => current || question)");
+  });
+});
+
+describe("playground polish", () => {
+  it("shows provider logos and the JRouter mark in the picker rail", () => {
+    const picker = read("src/shared/components/ModelPickerList.js");
+    expect(picker).toContain("ProviderIcon");
+    expect(picker).toContain("AppLogo");
+    expect(picker).toMatch(/entry\.providerId \? \(/);
+    expect(picker).toContain('entry.key === "favorites"');
+  });
+
+  it("uses themed scrollbars in the transcript and the picker", () => {
+    const thread = read(`${PLAYGROUND}/playground.module.css`);
+    const picker = read("src/shared/components/ModelPickerList.module.css");
+    expect(thread).toContain(".transcript::-webkit-scrollbar");
+    expect(thread).toContain("scrollbar-color: var(--line-2) transparent");
+    expect(picker).toContain(".rail::-webkit-scrollbar");
+    expect(picker).toContain(".rows::-webkit-scrollbar");
   });
 });

@@ -4,6 +4,7 @@ import Icon from "@/shared/components/Icon";
 import PropTypes from "prop-types";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ProviderIcon from "@/shared/components/ProviderIcon";
+import AppLogo from "@/shared/components/AppLogo";
 import CapacityBadges from "@/shared/components/CapacityBadges";
 import { useModelCaps } from "@/shared/hooks/useModelCaps";
 import styles from "./ModelPickerList.module.css";
@@ -159,7 +160,19 @@ export default function ModelPickerList({
                 onClick={() => setRailKey(entry.key)}
               >
                 <span className={styles.railGlyph}>
-                  {entry.icon ? <Icon>{entry.icon}</Icon> : (entry.name || entry.key).slice(0, 1).toUpperCase()}
+                  {entry.providerId ? (
+                    <ProviderIcon
+                      providerId={entry.providerId}
+                      src={`/providers/${entry.providerId}.png`}
+                      alt=""
+                      size={16}
+                      fallbackText={(entry.name || entry.key).slice(0, 2).toUpperCase()}
+                    />
+                  ) : entry.key === "favorites" ? (
+                    <Icon>star</Icon>
+                  ) : (
+                    <AppLogo size={16} />
+                  )}
                 </span>
                 <span className={styles.railName}>{entry.name}</span>
                 <em className={styles.railCount}>{entry.count}</em>

@@ -44,6 +44,37 @@
   max-height: 400px;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-2) transparent;
+}
+
+.rail::-webkit-scrollbar,
+.rows::-webkit-scrollbar,
+.scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.rail::-webkit-scrollbar-track,
+.rows::-webkit-scrollbar-track,
+.scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.rail::-webkit-scrollbar-thumb,
+.rows::-webkit-scrollbar-thumb,
+.scroll::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: var(--r-full);
+  background: var(--line-2);
+  background-clip: padding-box;
+}
+
+.rail::-webkit-scrollbar-thumb:hover,
+.rows::-webkit-scrollbar-thumb:hover,
+.scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--text-3);
+  background-clip: padding-box;
 }
 
 .group + .group {
@@ -217,6 +248,8 @@
   gap: 2px;
   min-height: 0;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-2) transparent;
   padding: 12px;
   border-right: 1px solid var(--line);
 }
@@ -259,11 +292,17 @@
   flex: none;
   width: 22px;
   height: 22px;
+  overflow: hidden;
   border-radius: 7px;
   background: var(--surface-2);
   color: var(--text);
   font-size: 11px;
   font-weight: 600;
+}
+.railGlyph img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
 }
 
 .railItem[aria-selected="true"] .railGlyph { background: var(--surface); }
@@ -293,6 +332,8 @@
   gap: 4px;
   min-height: 0;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-2) transparent;
   padding: 12px;
 }
 
