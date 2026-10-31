@@ -1,0 +1,101 @@
+/* Field primitives shared by the CLI Tools cards and the profile settings
+   sections. Route modules still own their page-specific rules. */
+
+.field {
+  display: grid;
+  grid-template-columns: 8rem auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 0;
+}
+
+.fieldWithAside {
+  grid-template-columns: 8rem auto minmax(0, 1fr) auto;
+}
+
+.fieldLabel {
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.fieldArrow {
+  color: var(--text-3);
+  font-size: 14px;
+}
+
+.fieldControl {
+  min-width: 0;
+}
+
+.fieldAside {
+  min-width: 0;
+}
+
+.fieldHint {
+  grid-column: 3 / -1;
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 0 16px;
+  border-top: 0;
+}
+
+.fieldGroup + .fieldGroup {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+
+.fieldGroupHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.fieldGroupTitle {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.fieldGroupDescription {
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+@media (max-width: 899px) {
+  .field,
+  .fieldWithAside {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .fieldLabel {
+    text-align: left;
+  }
+
+  .fieldArrow {
+    display: none;
+  }
+
+  .fieldHint {
+    grid-column: auto;
+  }
+}

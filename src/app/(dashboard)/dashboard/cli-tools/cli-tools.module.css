@@ -784,51 +784,15 @@
 
 /* Detail: field rows ---------------------------------------------------- */
 
-.field {
-  display: grid;
-  grid-template-columns: 8rem auto minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  padding: 6px 0;
-}
+/* Row layout now lives in the shared `field.module.css` that FieldRow and
+   FieldGroup import; only the current-value chip and the top-alignment
+   modifier stay route-scoped. */
 
-.fieldTop {
+/* Cowork top-aligns the rows that hold lists. The shared `.field` rule sets
+   `align-items: center` at the same specificity, so the modifier is doubled
+   to outrank it by specificity rather than by stylesheet order. */
+.fieldTop.fieldTop {
   align-items: start;
-}
-
-.fieldWithAside {
-  grid-template-columns: 8rem auto minmax(0, 1fr) auto;
-}
-
-.fieldLabel {
-  color: var(--text-2);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  text-align: right;
-  overflow-wrap: anywhere;
-}
-
-.fieldArrow {
-  color: var(--text-3);
-  font-size: 14px;
-}
-
-.fieldControl {
-  min-width: 0;
-}
-
-.fieldAside {
-  min-width: 0;
-}
-
-.fieldHint {
-  grid-column: 3 / -1;
-  color: var(--text-3);
-  font-size: 12px;
-  line-height: 1.45;
 }
 
 .currentValue {
@@ -843,62 +807,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.fieldGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-  padding: 0 0 16px;
-  border-top: 0;
-}
-
-.fieldGroup + .fieldGroup {
-  border-top: 1px solid var(--line);
-  padding-top: 16px;
-}
-
-.fieldGroupHeader {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-bottom: 4px;
-}
-
-.fieldGroupTitle {
-  color: var(--text);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.fieldGroupDescription {
-  color: var(--text-3);
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-@media (max-width: 899px) {
-  .field,
-  .fieldWithAside {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 6px;
-  }
-
-  .fieldLabel {
-    text-align: left;
-  }
-
-  .fieldArrow {
-    display: none;
-  }
-
-  .fieldHint {
-    grid-column: auto;
-  }
 }
 
 /* Detail: action bar ---------------------------------------------------- */
