@@ -1098,7 +1098,7 @@ Delete only the classes that report `0`.
 - [ ] **Step 2: Confirm the page shrank**
 
 Run: `wc -l "src/app/(dashboard)/dashboard/profile/page.js"` and every `components/*.js`.
-Expected: `page.js` under 300 lines; no component file over 400.
+Expected: `page.js` under 320 lines (Task 10 moves the handler bodies into hooks); no component file over 400.
 
 - [ ] **Step 3: Run every test**
 
@@ -1110,14 +1110,62 @@ Expected: 44 passed (5 + 5 + 14 + 20).
 Run: `npx eslint "src/app/(dashboard)/dashboard/profile" "src/shared/components/ui"`
 Expected: no new diagnostics versus the pre-change count recorded in Task 5.
 
+- [ ] **Step 4b: Fix the three defects the panel extractions surfaced**
+
+1. `tests/unit/profile-redesign.test.js` asserts `not.toContain("<Card")`, which `<CardSkeleton` also matches — `page.js` currently dodges it with `CardSkeleton as LoadingSkeleton`. Tighten the assertion to `expect(read(`${ROUTE}/page.js`)).not.toMatch(/<Card[\s/>]/);` and restore the plain `CardSkeleton` import.
+2. `SettingRow`'s stacked variant is broken: `.settingRowStacked .settingText` keeps `flex: 1 1 240px`, which becomes a 240px *height* in column mode. Add `flex: 0 0 auto;` for the stacked case.
+3. The hairline between `styles.form`'s `border-top` and the previous `SettingRow`'s `border-bottom` is doubled: drop the `border-top` from `.form`.
+
 - [ ] **Step 5: Commit**
 
 ```bash
-git add "src/app/(dashboard)/dashboard/profile"
+git add "src/app/(dashboard)/dashboard/profile" tests/unit/profile-redesign.test.js
 git commit -m "refactor(profile): drop the superseded styles"
 ```
 
 Controller then runs `npm run build` and the runtime matrix (1440/1024/390, both themes, SSO collapsed→expanded, password mismatch, proxy toggle, shutdown dialog).
+
+### Task 10: Move the handler bodies into hooks
+
+**Files:**
+- Create: `profile/hooks/useSsoSettings.js`, `profile/hooks/useNetworkSettings.js`, `profile/hooks/useBackupSettings.js`
+- Modify: `profile/page.js`
+
+The page still carries ~765 lines of state and handlers before its JSX. Each hook owns one area end to end — state, refs, handlers, status objects — and returns them as one object. Bodies move **verbatim**: no renamed variables, no reordered `await`s, no "while I'm here" fixes. If a body references something outside its area, pass it in (`patchSettings`, `settings`, `reload`, `router`).
+
+- [ ] **Step 1: `useSsoSettings({ settings, patchSettings })`**
+
+Move lines 43–77 (OIDC + SAML state, `ssoTypeTab`, `oidcExpanded`, `idpMetadataFileRef`, `certFileRef`) and handlers
+`updateOidcForm` (375), `saveOidcSettings` (379), `testOidcConnection` (444), `updateSamlForm` (513), `handleIdpMetadataUpload` (517), `handleCertFileUpload` (570), `saveSamlSettings` (584), `testSamlConnection` (637), plus `oidcRedirectUri`/`samlAcsUrl`/`samlMetadataUrl` (58–60).
+Return every value `SsoPanel` receives today, under the same names.
+
+- [ ] **Step 2: `useNetworkSettings({ settings, setSettings, patchSettings })`**
+
+Move lines 80–88 (`proxyForm`, `proxyStatus`, `proxyLoading`, `proxyTestLoading`) and handlers `updateOutboundProxy` (162), `testOutboundProxy` (192), `updateOutboundProxyEnabled` (230), `updateFallbackStrategy` (294), `updateComboStrategy` (309), `updateStickyLimit` (324), `updateComboStickyLimit` (342).
+
+- [ ] **Step 3: `useBackupSettings({ reload })`**
+
+Move lines 39–42, 79 (`dbLoading`, `dbStatus`, `dbAuth`, `pendingImportRef`, `importFileRef`) and `handleExportDatabase` (692), `handleImportDatabase` (725), `runImportDatabase` (734), `handleDbAuthConfirm` (764), `isRemoteHost` (89–96).
+
+- [ ] **Step 4: Rewire `page.js`**
+
+Replace the moved blocks with three hook calls; spread each hook's return into the panel props it already feeds. Password change (259), `updateRequireLogin` (360), `updateObservabilityEnabled` (666), `handleShutdown` (773), `handleLogout` (784), `applySettingsToForms` (98) and the shell state stay in the page.
+
+- [ ] **Step 5: Gate**
+
+```bash
+cd tests && npx vitest run --config ./vitest.config.js unit/profile-redesign.test.js unit/profile-sections.test.js unit/cli-tools-redesign.test.js unit/cli-tools-groups.test.js
+cd .. && npx eslint "src/app/(dashboard)/dashboard/profile"
+wc -l "src/app/(dashboard)/dashboard/profile/page.js" "src/app/(dashboard)/dashboard/profile/hooks/"*.js
+```
+Expected: 44 passed; only the pre-existing `set-state-in-effect`; `page.js` under 320 lines and every hook under 400. Compare the panel prop lists before and after with `grep -c "=" proof` — no prop may disappear.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add "src/app/(dashboard)/dashboard/profile"
+git commit -m "refactor(profile): move the sso, network and backup handlers into hooks"
+```
 
 ---
 
@@ -1131,11 +1179,11 @@ Controller then runs `npm run build` and the runtime matrix (1440/1024/390, both
 | §5 visual system | 3, 4 |
 | §6 three row types | 3 |
 | §7 seven sections | 4, 5, 6, 7, 8 |
-| §8 code structure + shared promotion | 1, 2, 3, 9 |
+| §8 code structure + shared promotion | 1, 2, 3, 9, 10 |
 | §9 preserved behaviour | 5, 6, 8 (each panel passes the existing handlers verbatim) |
 | §10 responsive | 3, 4 (CSS blocks) |
 | §11 accessibility | 3, 4 (aria-labelledby, aria-current, role=status) |
-| §12 testing | 2, 4, 8, 9 |
+| §12 testing | 2, 4, 8, 9, 10 |
 
 **Placeholder scan:** no TBD/TODO; every new file ships full code; panels that reuse existing JSX say exactly which rows and which handlers, and the executor reads the source for the unchanged bodies.
 
