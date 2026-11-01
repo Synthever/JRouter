@@ -1,8 +1,6 @@
 "use client";
-import Icon from "@/shared/components/Icon";
-
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Card, Button, Input, SegmentedControl, CardSkeleton } from "@/shared/components";
+import { Button, Input, CardSkeleton as LoadingSkeleton } from "@/shared/components";
 import Modal, { ConfirmModal } from "@/shared/components/Modal";
 import LanguageSwitcher from "@/shared/components/LanguageSwitcher";
 import { useTheme } from "@/shared/hooks/useTheme";
@@ -12,21 +10,12 @@ import { PROFILE_SECTIONS, activeSectionId } from "./profileSections";
 import { useProfileSettings } from "./useProfileSettings";
 import PreferencesPanel from "./components/PreferencesPanel";
 import SecurityPanel from "./components/SecurityPanel";
+import SsoPanel from "./components/SsoPanel";
 import RoutingPanel from "./components/RoutingPanel";
 import NetworkPanel from "./components/NetworkPanel";
 import ObservabilityPanel from "./components/ObservabilityPanel";
 import SessionPanel from "./components/SessionPanel";
 import styles from "./profile.module.css";
-
-function ProfileStatus({ status }) {
-  if (!status.message) return null;
-  return (
-    <p className={styles.status} data-status={status.type} role={status.type === "error" ? "alert" : "status"}>
-      <Icon className="shrink-0 text-[14px]" aria-hidden="true">{status.type === "error" ? "error" : "check_circle"}</Icon>
-      {status.message}
-    </p>
-  );
-}
 
 function getLocaleFromCookie() {
   if (typeof document === "undefined") return "en";
@@ -84,7 +73,6 @@ export default function ProfilePage() {
   const [samlLoading, setSamlLoading] = useState(false);
   const [samlTestLoading, setSamlTestLoading] = useState(false);
   const [samlTestStatus, setSamlTestStatus] = useState({ type: "", message: "" });
-  const [showSamlGuide, setShowSamlGuide] = useState(false);
   const idpMetadataFileRef = useRef(null);
   const certFileRef = useRef(null);
 
@@ -829,7 +817,7 @@ export default function ProfilePage() {
 
       {loading ? (
         <div className={styles.stack} aria-busy="true" aria-label="Loading profile settings">
-          <CardSkeleton />
+          <LoadingSkeleton />
         </div>
       ) : loadError ? (
         <>
@@ -863,460 +851,38 @@ export default function ProfilePage() {
           onSubmit={handlePasswordChange}
         />
 
-        {/* Single Sign-On (SSO) */}
-        <section aria-labelledby="profile-sso">
-        <Card padding="none" className={styles.section}>
-          <button
-            type="button"
-            onClick={() => setOidcExpanded((v) => !v)}
-            className={styles.disclosure}
-            aria-expanded={oidcExpanded}
-            aria-controls="profile-sso-settings"
-          >
-            <div className="flex-1 min-w-0">
-              <h2 id="profile-sso" className="ui-eyebrow"><Icon className="text-[16px]" aria-hidden="true">lock_open</Icon>Single Sign-On (SSO)</h2>
-              <p className={styles.sectionDescription}>
-                {settings.authMode === "sso" || settings.authMode === "oidc" || settings.authMode === "saml"
-                  ? `${settings.ssoType === "saml" ? "SAML 2.0" : "OIDC"} SSO active`
-                  : settings.authMode === "both"
-                    ? `Password + ${settings.ssoType === "saml" ? "SAML 2.0" : "OIDC"} active`
-                    : "Optional SSO via Okta, Entra ID, Keycloak, or OIDC"}
-              </p>
-            </div>
-            <Icon className="text-text-muted shrink-0">
-              {oidcExpanded ? "expand_less" : "expand_more"}
-            </Icon>
-          </button>
-          {oidcExpanded && (
-            <div id="profile-sso-settings" className={styles.ssoForm}>
-              <p className="text-xs sm:text-sm text-text-muted">
-                Configure enterprise Single Sign-On (SSO) for dashboard access using SAML 2.0 or OIDC.
-              </p>
-
-              {/* SSO Protocol Switcher Tabs */}
-              <div className="flex flex-col gap-2">
-                <p className={styles.fieldLabel}>SSO Protocol</p>
-                <SegmentedControl aria-label="SSO Protocol" value={ssoTypeTab} onChange={setSsoTypeTab} options={[
-                  { value: "saml", label: "SAML 2.0" },
-                  { value: "oidc", label: "OIDC" },
-                ]} className="self-start" />
-              </div>
-
-              {/* Auth Mode selection */}
-              <div className="flex flex-col gap-2">
-                <p className={styles.fieldLabel}>Auth Mode</p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {[
-                    {
-                      value: "password",
-                      title: "Password only",
-                      desc: "Keep legacy password login.",
-                    },
-                    {
-                      value: "sso",
-                      title: `${ssoTypeTab === "saml" ? "SAML" : "OIDC"} only`,
-                      desc: "Require SSO for dashboard access.",
-                    },
-                    {
-                      value: "both",
-                      title: "Both",
-                      desc: "Allow password or SSO login.",
-                    },
-                  ].map((option) => {
-                    const currentMode = oidcForm.authMode;
-                    const active =
-                      option.value === "password"
-                        ? currentMode === "password"
-                        : option.value === "sso"
-                          ? currentMode === "sso" || currentMode === "saml" || currentMode === "oidc"
-                          : currentMode === "both";
-                    return (
-                      <Button
-                        key={option.value}
-                        type="button"
-                        onClick={() => updateOidcForm("authMode", option.value)}
-                        variant="outline"
-                        className={styles.choice}
-                        aria-pressed={active}
-                        disabled={loading || oidcLoading || samlLoading}
-                      >
-                        <span className={styles.settingTitle}>{option.title}</span>
-                        <span className={styles.settingDescription}>{option.desc}</span>
-                      </Button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {ssoTypeTab === "saml" ? (
-                /* SAML Configuration Panel */
-                <div className="flex flex-col gap-4 pt-2 border-t border-border/50">
-                  {/* IdP Setup Guidelines Banner & Collapsible Drawer */}
-                  <div className={styles.inset}>
-                    <button
-                      type="button"
-                      onClick={() => setShowSamlGuide((prev) => !prev)}
-                      className={styles.disclosure}
-                      aria-expanded={showSamlGuide}
-                      aria-controls="profile-saml-guide"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Icon className="text-text-muted text-lg" aria-hidden="true">menu_book</Icon>
-                        <div>
-                          <p className="font-semibold text-xs sm:text-sm text-text-main">
-                            IdP Setup Guidelines & Provider Configuration Instructions
-                          </p>
-                          <p className="text-[11px] text-text-muted">
-                            Click to view setup steps for AWS IAM Identity Center, Okta, Entra ID, Keycloak, & Authentik
-                          </p>
-                        </div>
-                      </div>
-                      <Icon className="text-text-muted transition-transform text-lg"
-                        style={{ transform: showSamlGuide ? "rotate(180deg)" : "none" }}>
-                        expand_more
-                      </Icon>
-                    </button>
-
-                    {showSamlGuide && (
-                      <div id="profile-saml-guide" className={styles.guide}>
-                        <div className={styles.inset}>
-                          <p className="font-semibold mb-1">Required Service Provider (SP) Values for your IdP Setup:</p>
-                          <ul className="list-disc pl-4 space-y-1 font-mono text-[11px]">
-                            <li>
-                              <b>Assertion Consumer Service (ACS) URL:</b>{" "}
-                              <code className="bg-bg px-1 py-0.5 rounded break-all">{samlAcsUrl}</code>
-                            </li>
-                            <li>
-                              <b>SP Entity ID / Audience URI:</b>{" "}
-                              <code className="bg-bg px-1 py-0.5 rounded break-all">{samlForm.samlIssuer || "urn:jrouter:sp"}</code>
-                            </li>
-                            <li>
-                              <b>NameID Format:</b>{" "}
-                              <code className="bg-bg px-1 py-0.5 rounded">EmailAddress</code> or <code className="bg-bg px-1 py-0.5 rounded">Unspecified</code>
-                            </li>
-                          </ul>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-                          <div className="p-3 rounded border border-border bg-bg/50 flex flex-col gap-1.5">
-                            <p className="font-semibold text-text-main flex items-center gap-1.5">
-                              AWS IAM Identity Center
-                            </p>
-                            <ol className="list-decimal pl-4 text-text-muted space-y-1">
-                              <li>Applications → <b>Add application</b> → Select <b>Add custom SAML 2.0 application</b>.</li>
-                              <li>Set <b>Application ACS URL</b> to <code className="text-text-main font-mono">{samlAcsUrl}</code>.</li>
-                              <li>Set <b>Application SAML audience</b> to <code className="text-text-main font-mono">{samlForm.samlIssuer || "urn:jrouter:sp"}</code>.</li>
-                              <li>Under <i>Attribute mappings</i>, map <code className="text-text-main font-mono">Subject</code> or <code className="text-text-main font-mono">email</code> to <code className="text-text-main font-mono">${`{user:email}`}</code>.</li>
-                              <li>Download <b>IAM Identity Center SAML metadata XML</b> file and use 1-Click Import below!</li>
-                            </ol>
-                          </div>
-
-                          <div className="p-3 rounded border border-border bg-bg/50 flex flex-col gap-1.5">
-                            <p className="font-semibold text-text-main flex items-center gap-1.5">
-                              Microsoft Entra ID (Azure AD)
-                            </p>
-                            <ol className="list-decimal pl-4 text-text-muted space-y-1">
-                              <li>Enterprise Applications → <b>New application</b> → <b>Create your own application</b>.</li>
-                              <li>Select <b>Single sign-on</b> → <b>SAML</b>.</li>
-                              <li><b>Identifier (Entity ID):</b> <code className="text-text-main font-mono">{samlForm.samlIssuer || "urn:jrouter:sp"}</code></li>
-                              <li><b>Reply URL (ACS):</b> <code className="text-text-main font-mono">{samlAcsUrl}</code></li>
-                              <li>Download <b>Federation Metadata XML</b> and import or copy X.509 Certificate.</li>
-                            </ol>
-                          </div>
-
-                          <div className="p-3 rounded border border-border bg-bg/50 flex flex-col gap-1.5">
-                            <p className="font-semibold text-text-main flex items-center gap-1.5">
-                              Okta / Auth0
-                            </p>
-                            <ol className="list-decimal pl-4 text-text-muted space-y-1">
-                              <li>Applications → <b>Create App Integration</b> → Select <b>SAML 2.0</b>.</li>
-                              <li><b>Single Sign-On URL:</b> <code className="text-text-main font-mono">{samlAcsUrl}</code></li>
-                              <li><b>Audience URI (SP Entity ID):</b> <code className="text-text-main font-mono">{samlForm.samlIssuer || "urn:jrouter:sp"}</code></li>
-                              <li>Name ID format: <i>EmailAddress</i>.</li>
-                              <li>Download Identity Provider metadata XML or copy the X.509 cert.</li>
-                            </ol>
-                          </div>
-
-                          <div className="p-3 rounded border border-border bg-bg/50 flex flex-col gap-1.5">
-                            <p className="font-semibold text-text-main flex items-center gap-1.5">
-                              Keycloak / Authentik
-                            </p>
-                            <ol className="list-decimal pl-4 text-text-muted space-y-1">
-                              <li>Clients → <b>Create client</b> → Select <b>SAML</b>.</li>
-                              <li><b>Client ID:</b> <code className="text-text-main font-mono">{samlForm.samlIssuer || "urn:jrouter:sp"}</code></li>
-                              <li><b>Master SAML Processing URL:</b> <code className="text-text-main font-mono">{samlAcsUrl}</code></li>
-                              <li>Export SAML Descriptor XML or copy IDP Certificate PEM.</li>
-                            </ol>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Quick Import Card */}
-                  <div className={styles.settingRow}>
-                    <div>
-                      <p className="font-medium text-sm text-text-main">1-Click IdP Metadata XML Import</p>
-                      <p className="text-xs text-text-muted">Auto-fill SSO URL, Issuer & Cert from XML metadata</p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      icon="upload_file"
-                      onClick={() => idpMetadataFileRef.current?.click()}
-                    >
-                      Upload Metadata XML
-                    </Button>
-                    <input
-                      ref={idpMetadataFileRef}
-                      type="file"
-                      accept=".xml,application/xml,text/xml"
-                      className="hidden"
-                      onChange={handleIdpMetadataUpload}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="flex flex-col gap-2">
-                      <Input
-                        label="Single Sign-On Service URL (samlEntryPoint)"
-                        placeholder="https://idp.example.com/app/saml/sso/..."
-                        value={samlForm.samlEntryPoint}
-                        onChange={(e) => updateSamlForm("samlEntryPoint", e.target.value)}
-                        disabled={loading || samlLoading}
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <Input
-                        label="SP Entity ID / Audience (samlIssuer)"
-                        placeholder="urn:jrouter:sp"
-                        value={samlForm.samlIssuer}
-                        onChange={(e) => updateSamlForm("samlIssuer", e.target.value)}
-                        disabled={loading || samlLoading}
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <div className={styles.actions}>
-                        <label htmlFor="profile-saml-cert" className={styles.fieldLabel}>IdP X.509 Certificate (samlCert)</label>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          icon="file_upload"
-                          onClick={() => certFileRef.current?.click()}
-                        >
-                          Upload Certificate
-                        </Button>
-                        <input
-                          ref={certFileRef}
-                          type="file"
-                          accept=".crt,.pem,.cer,text/plain"
-                          className="hidden"
-                          onChange={handleCertFileUpload}
-                        />
-                      </div>
-                      <textarea
-                        id="profile-saml-cert"
-                        aria-describedby="profile-saml-cert-hint"
-                        rows={4}
-                        placeholder="-----BEGIN CERTIFICATE-----&#10;MIIC...&#10;-----END CERTIFICATE-----"
-                        value={samlForm.samlCert}
-                        onChange={(e) => updateSamlForm("samlCert", e.target.value)}
-                        className="w-full font-mono resize-y"
-                        disabled={loading || samlLoading}
-                      />
-                      <p id="profile-saml-cert-hint" className={styles.settingDescription}>Paste raw Base64 certificate or PEM block.</p>
-                    </div>
-
-                    <div className={styles.formGrid}>
-                      <div className="flex flex-col gap-2">
-                        <Input
-                          label="Login Button Label"
-                          placeholder="Sign in with SAML SSO"
-                          value={samlForm.samlLoginLabel}
-                          onChange={(e) => updateSamlForm("samlLoginLabel", e.target.value)}
-                          disabled={loading || samlLoading}
-                        />
-                      </div>
-
-                      <div className="flex flex-col gap-2">
-                        <Input
-                          label="Email Claim Attribute"
-                          placeholder="email"
-                          value={samlForm.samlAttributeEmail}
-                          onChange={(e) => updateSamlForm("samlAttributeEmail", e.target.value)}
-                          disabled={loading || samlLoading}
-                        />
-                      </div>
-
-                      <div className="flex flex-col gap-2">
-                        <Input
-                          label="Display Name Claim"
-                          placeholder="name"
-                          value={samlForm.samlAttributeName}
-                          onChange={(e) => updateSamlForm("samlAttributeName", e.target.value)}
-                          disabled={loading || samlLoading}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={styles.inset}>
-                    <div className={styles.settingRow}>
-                      <div className="min-w-0">
-                        <p className="font-medium text-text-main">ACS Callback URL</p>
-                        <code className="block break-all font-mono text-xs">{samlAcsUrl}</code>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        icon="content_copy"
-                        aria-label="Copy ACS Callback URL"
-                        onClick={() => {
-                          navigator.clipboard.writeText(samlAcsUrl);
-                          setSamlStatus({ type: "success", message: "ACS URL copied to clipboard!" });
-                        }}
-                      >
-                        Copy
-                      </Button>
-                    </div>
-                    <div className={styles.settingRow}>
-                      <div className="min-w-0">
-                        <p className="font-medium text-text-main">SP XML Metadata</p>
-                        <code className="block break-all font-mono text-xs">{samlMetadataUrl}</code>
-                      </div>
-                      <a
-                        href={samlMetadataUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        download="jrouter-sp-metadata.xml"
-                        className={styles.linkButton}
-                      >
-                        <Icon className="text-[16px]">download</Icon>
-                        Download XML
-                      </a>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-border/50">
-                    <Button
-                      type="button"
-                      variant="contrast"
-                      loading={samlLoading}
-                      onClick={() => saveSamlSettings(oidcForm.authMode)}
-                      className="w-full sm:w-auto"
-                    >
-                      Save SAML settings
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      loading={samlTestLoading}
-                      onClick={testSamlConnection}
-                      className="w-full sm:w-auto"
-                    >
-                      Test SAML settings
-                    </Button>
-                  </div>
-
-                  <ProfileStatus status={samlTestStatus} />
-                  <ProfileStatus status={samlStatus} />
-                </div>
-              ) : (
-                /* OIDC Panel */
-                <div className="flex flex-col gap-4 pt-2 border-t border-border/50">
-                  <div className={styles.formGrid}>
-                    <div className="flex flex-col gap-2">
-                      <Input
-                        label="Issuer URL"
-                        placeholder="https://auth.example.com/application/o/jrouter/"
-                        value={oidcForm.oidcIssuerUrl}
-                        onChange={(e) => updateOidcForm("oidcIssuerUrl", e.target.value)}
-                        disabled={loading || oidcLoading}
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <Input
-                        label="Client ID"
-                        placeholder="jrouter-dashboard"
-                        value={oidcForm.oidcClientId}
-                        onChange={(e) => updateOidcForm("oidcClientId", e.target.value)}
-                        disabled={loading || oidcLoading}
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <Input
-                        label="Client Secret"
-                        hint="This value is write-only after saving."
-                        type="password"
-                        placeholder="Leave blank to keep existing secret"
-                        value={oidcClientSecret}
-                        onChange={(e) => setOidcClientSecret(e.target.value)}
-                        disabled={loading || oidcLoading}
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <Input
-                        label="Scopes"
-                        placeholder="openid profile email"
-                        value={oidcForm.oidcScopes}
-                        onChange={(e) => updateOidcForm("oidcScopes", e.target.value)}
-                        disabled={loading || oidcLoading}
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <Input
-                        label="Login Button Label"
-                        placeholder="Sign in with OIDC"
-                        value={oidcForm.oidcLoginLabel}
-                        onChange={(e) => updateOidcForm("oidcLoginLabel", e.target.value)}
-                        disabled={loading || oidcLoading}
-                      />
-                    </div>
-                  </div>
-
-                  <div className={styles.inset}>
-                    <p className="font-medium text-text-main mb-1">Redirect URI</p>
-                    <code className="block break-all font-mono">{oidcRedirectUri}</code>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-border/50">
-                    <Button type="button" variant="contrast" loading={oidcLoading} onClick={() => saveOidcSettings()} className="w-full sm:w-auto">
-                      Save OIDC settings
-                    </Button>
-                    <Button type="button" variant="outline" loading={oidcTestLoading} onClick={testOidcConnection} className="w-full sm:w-auto">
-                      Test connection
-                    </Button>
-                  </div>
-
-                  <ProfileStatus status={oidcTestStatus} />
-                  <ProfileStatus status={oidcStatus} />
-                </div>
-              )}
-
-              {settings.authMode === "oidc" || settings.authMode === "saml" || settings.authMode === "sso" ? (
-                <p className={styles.notice} role="status">
-                  SSO login ({settings.ssoType === "saml" ? "SAML 2.0" : "OIDC"}) is currently active. Password login is disabled until you switch back.
-                </p>
-              ) : null}
-
-              {settings.authMode === "both" && (
-                <p className={styles.notice} role="status">
-                  Password and SSO login ({settings.ssoType === "saml" ? "SAML 2.0" : "OIDC"}) are both active.
-                </p>
-              )}
-            </div>
-          )}
-        </Card>
-        </section>
+        <SsoPanel
+          settings={settings}
+          expanded={oidcExpanded}
+          onToggleExpanded={() => setOidcExpanded((v) => !v)}
+          ssoTypeTab={ssoTypeTab}
+          setSsoTypeTab={setSsoTypeTab}
+          oidcForm={oidcForm}
+          updateOidcForm={updateOidcForm}
+          oidcClientSecret={oidcClientSecret}
+          setOidcClientSecret={setOidcClientSecret}
+          oidcStatus={oidcStatus}
+          oidcLoading={oidcLoading}
+          oidcTestStatus={oidcTestStatus}
+          oidcTestLoading={oidcTestLoading}
+          onSaveOidc={saveOidcSettings}
+          onTestOidc={testOidcConnection}
+          samlForm={samlForm}
+          updateSamlForm={updateSamlForm}
+          samlStatus={samlStatus}
+          samlLoading={samlLoading}
+          samlTestStatus={samlTestStatus}
+          samlTestLoading={samlTestLoading}
+          onSaveSaml={saveSamlSettings}
+          onTestSaml={testSamlConnection}
+          onIdpMetadataUpload={handleIdpMetadataUpload}
+          onCertUpload={handleCertFileUpload}
+          samlAcsUrl={samlAcsUrl}
+          samlMetadataUrl={samlMetadataUrl}
+          oidcRedirectUri={oidcRedirectUri}
+          idpMetadataFileRef={idpMetadataFileRef}
+          certFileRef={certFileRef}
+        />
 
         <RoutingPanel
           settings={settings}
