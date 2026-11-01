@@ -12,6 +12,8 @@ import { PROFILE_SECTIONS, activeSectionId } from "./profileSections";
 import { useProfileSettings } from "./useProfileSettings";
 import PreferencesPanel from "./components/PreferencesPanel";
 import SecurityPanel from "./components/SecurityPanel";
+import RoutingPanel from "./components/RoutingPanel";
+import NetworkPanel from "./components/NetworkPanel";
 import styles from "./profile.module.css";
 
 function ProfileSection({ id, title, icon, description, children }) {
@@ -1333,158 +1335,25 @@ export default function ProfilePage() {
         </Card>
         </section>
 
-        {/* Routing Preferences */}
-        <ProfileSection id="profile-routing" title="Routing Strategy" icon="route" description="Account and combo rotation preferences.">
-          <div>
-            <div className={styles.settingRow}>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm sm:text-base">Round Robin</p>
-                <p className="text-xs sm:text-sm text-text-muted">
-                  Cycle through accounts to distribute load
-                </p>
-              </div>
-              <Toggle
-                aria-label="Round Robin"
-                checked={settings.fallbackStrategy === "round-robin"}
-                onChange={() => updateFallbackStrategy(settings.fallbackStrategy === "round-robin" ? "fill-first" : "round-robin")}
-                disabled={loading}
-              />
-            </div>
+        <RoutingPanel
+          settings={settings}
+          onFallbackStrategy={updateFallbackStrategy}
+          onStickyLimit={updateStickyLimit}
+          onComboStrategy={updateComboStrategy}
+          onComboStickyLimit={updateComboStickyLimit}
+        />
 
-            {/* Sticky Round Robin Limit */}
-            {settings.fallbackStrategy === "round-robin" && (
-              <div className={styles.settingRow}>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm sm:text-base">Sticky Limit</p>
-                  <p className="text-xs sm:text-sm text-text-muted">
-                    Calls per account before switching
-                  </p>
-                </div>
-                <Input
-                  aria-label="Sticky Limit"
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={settings.stickyRoundRobinLimit || 3}
-                  onChange={(e) => updateStickyLimit(e.target.value)}
-                  disabled={loading}
-                  className="w-16 sm:w-20 text-center shrink-0"
-                />
-              </div>
-            )}
-
-            {/* Combo Round Robin */}
-            <div className={styles.settingRow}>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm sm:text-base">Combo Round Robin</p>
-                <p className="text-xs sm:text-sm text-text-muted">
-                  Cycle through providers in combos instead of always starting with first
-                </p>
-              </div>
-              <Toggle
-                aria-label="Combo Round Robin"
-                checked={settings.comboStrategy === "round-robin"}
-                onChange={() => updateComboStrategy(settings.comboStrategy === "round-robin" ? "fallback" : "round-robin")}
-                disabled={loading}
-              />
-            </div>
-
-            {/* Combo Sticky Round Robin Limit */}
-            {settings.comboStrategy === "round-robin" && (
-              <div className={styles.settingRow}>
-                <div className="min-w-0">
-                  <p className="font-medium">Combo Sticky Limit</p>
-                  <p className="text-sm text-text-muted">
-                    Calls per combo model before switching
-                  </p>
-                </div>
-                <Input
-                  aria-label="Combo Sticky Limit"
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={settings.comboStickyRoundRobinLimit || 1}
-                  onChange={(e) => updateComboStickyLimit(e.target.value)}
-                  disabled={loading}
-                  className="w-20 text-center"
-                />
-              </div>
-            )}
-
-            <p className="text-xs text-text-muted italic pt-2 border-t border-border/50">
-              {settings.fallbackStrategy === "round-robin"
-                ? `Currently distributing requests across all available accounts with ${settings.stickyRoundRobinLimit || 3} calls per account.`
-                : "Currently using accounts in priority order (Fill First)."}
-              {settings.comboStrategy === "round-robin"
-                ? ` Combos rotate after ${settings.comboStickyRoundRobinLimit || 1} call${(settings.comboStickyRoundRobinLimit || 1) === 1 ? "" : "s"} per model.`
-                : " Combos always start with their first model."}
-            </p>
-          </div>
-        </ProfileSection>
-
-        {/* Network */}
-        <ProfileSection id="profile-network" title="Network" icon="wifi" description="Outbound connections for OAuth and provider requests.">
-          <div className="flex flex-col gap-4">
-            <div className={styles.settingRow}>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm sm:text-base">Outbound Proxy</p>
-                <p className="text-xs sm:text-sm text-text-muted">Enable proxy for OAuth + provider outbound requests.</p>
-              </div>
-              <Toggle
-                aria-label="Outbound Proxy"
-                checked={settings.outboundProxyEnabled === true}
-                onChange={() => updateOutboundProxyEnabled(!(settings.outboundProxyEnabled === true))}
-                disabled={loading || proxyLoading}
-              />
-            </div>
-
-            {settings.outboundProxyEnabled === true && (
-              <form onSubmit={updateOutboundProxy} className={styles.form}>
-                <div className={styles.formGrid}>
-                <div className="flex flex-col gap-2">
-                  <Input
-                    label="Proxy URL"
-                    hint="Leave empty to inherit existing env proxy (if any)."
-                    placeholder="http://127.0.0.1:7897"
-                    value={proxyForm.outboundProxyUrl}
-                    onChange={(e) => setProxyForm((prev) => ({ ...prev, outboundProxyUrl: e.target.value }))}
-                    disabled={loading || proxyLoading}
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <Input
-                    label="No Proxy"
-                    hint="Comma-separated hostnames/domains to bypass the proxy."
-                    placeholder="localhost,127.0.0.1"
-                    value={proxyForm.outboundNoProxy}
-                    onChange={(e) => setProxyForm((prev) => ({ ...prev, outboundNoProxy: e.target.value }))}
-                    disabled={loading || proxyLoading}
-                  />
-                </div>
-                </div>
-
-                <div className="pt-2 border-t border-border/50 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    loading={proxyTestLoading}
-                    disabled={loading || proxyLoading}
-                    onClick={testOutboundProxy}
-                    className="w-full sm:w-auto"
-                  >
-                    Test proxy URL
-                  </Button>
-                  <Button type="submit" variant="contrast" loading={proxyLoading} className="w-full sm:w-auto">
-                    Apply
-                  </Button>
-                </div>
-              </form>
-            )}
-
-            <ProfileStatus status={proxyStatus} />
-          </div>
-        </ProfileSection>
+        <NetworkPanel
+          settings={settings}
+          proxyForm={proxyForm}
+          setProxyForm={setProxyForm}
+          proxyStatus={proxyStatus}
+          proxyLoading={proxyLoading}
+          proxyTestLoading={proxyTestLoading}
+          onToggleEnabled={updateOutboundProxyEnabled}
+          onSubmit={updateOutboundProxy}
+          onTest={testOutboundProxy}
+        />
 
         {/* Observability Settings */}
         <ProfileSection id="profile-observability" title="Observability" icon="monitoring">
