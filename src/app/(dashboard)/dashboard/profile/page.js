@@ -11,6 +11,7 @@ import { LOCALE_COOKIE, normalizeLocale } from "@/i18n/config";
 import { PROFILE_SECTIONS, activeSectionId } from "./profileSections";
 import { useProfileSettings } from "./useProfileSettings";
 import PreferencesPanel from "./components/PreferencesPanel";
+import SecurityPanel from "./components/SecurityPanel";
 import styles from "./profile.module.css";
 
 function ProfileSection({ id, title, icon, description, children }) {
@@ -867,74 +868,15 @@ export default function ProfilePage() {
           importFileRef={importFileRef}
         />
 
-        {/* Security */}
-        <ProfileSection id="profile-security" title="Security" icon="shield" description="Dashboard access and password management.">
-          <div className="flex flex-col gap-4">
-            <div className={styles.settingRow}>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm sm:text-base">Require login</p>
-                <p className="text-xs sm:text-sm text-text-muted">
-                  When ON, dashboard requires password. When OFF, access without login.
-                </p>
-              </div>
-              <Toggle
-                aria-label="Require login"
-                checked={settings.requireLogin === true}
-                onChange={() => updateRequireLogin(!settings.requireLogin)}
-                disabled={loading}
-              />
-            </div>
-            {settings.requireLogin === true && (
-              <form onSubmit={handlePasswordChange} className={styles.form}>
-                {settings.hasPassword && (
-                  <div className="flex flex-col gap-2">
-                    <Input
-                      label="Current Password"
-                      autoComplete="current-password"
-                      type="password"
-                      placeholder="Enter current password"
-                      value={passwords.current}
-                      onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
-                      required
-                    />
-                  </div>
-                )}
-                <div className={styles.formGrid}>
-                  <div className="flex flex-col gap-2">
-                    <Input
-                      label="New Password"
-                      autoComplete="new-password"
-                      type="password"
-                      placeholder="Enter new password"
-                      value={passwords.new}
-                      onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Input
-                      label="Confirm New Password"
-                      autoComplete="new-password"
-                      type="password"
-                      placeholder="Confirm new password"
-                      value={passwords.confirm}
-                      onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <ProfileStatus status={passStatus} />
-
-                <div className="pt-2">
-                  <Button type="submit" variant="contrast" loading={passLoading} className="w-full sm:w-auto">
-                    {settings.hasPassword ? "Update Password" : "Set Password"}
-                  </Button>
-                </div>
-              </form>
-            )}
-          </div>
-        </ProfileSection>
+        <SecurityPanel
+          settings={settings}
+          onRequireLoginChange={updateRequireLogin}
+          passwords={passwords}
+          setPasswords={setPasswords}
+          passStatus={passStatus}
+          passLoading={passLoading}
+          onSubmit={handlePasswordChange}
+        />
 
         {/* Single Sign-On (SSO) */}
         <section aria-labelledby="profile-sso">

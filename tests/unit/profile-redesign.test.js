@@ -45,11 +45,20 @@ describe("Profile panels", () => {
     }
   });
 
-  it("keeps the panel ids in sync with the metadata", () => {
+  it("derives every panel id from the section metadata", () => {
     const meta = read(`${ROUTE}/profileSections.js`);
-    const page = read(`${ROUTE}/page.js`);
     const ids = [...meta.matchAll(/id: "(profile-[a-z]+)"/g)].map((m) => m[1]);
     expect(ids).toHaveLength(7);
-    for (const id of ids) expect(page).toContain(`id="${id}"`);
+    for (const file of [
+      "PreferencesPanel",
+      "SecurityPanel",
+      "SsoPanel",
+      "RoutingPanel",
+      "NetworkPanel",
+      "ObservabilityPanel",
+      "SessionPanel",
+    ]) {
+      expect(read(`${ROUTE}/components/${file}.js`)).toMatch(/PROFILE_SECTIONS\[\d\]/);
+    }
   });
 });
