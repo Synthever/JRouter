@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Button, Input, CardSkeleton as LoadingSkeleton } from "@/shared/components";
+import { Button, Input, CardSkeleton } from "@/shared/components";
 import Modal, { ConfirmModal } from "@/shared/components/Modal";
 import LanguageSwitcher from "@/shared/components/LanguageSwitcher";
 import { useTheme } from "@/shared/hooks/useTheme";
@@ -817,7 +817,7 @@ export default function ProfilePage() {
 
       {loading ? (
         <div className={styles.stack} aria-busy="true" aria-label="Loading profile settings">
-          <LoadingSkeleton />
+          <CardSkeleton />
         </div>
       ) : loadError ? (
         <>

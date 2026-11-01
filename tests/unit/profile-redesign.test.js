@@ -27,7 +27,7 @@ describe("Profile shell", () => {
 
 describe("Profile panels", () => {
   it("no longer renders a Card wrapper anywhere in the page", () => {
-    expect(read(`${ROUTE}/page.js`)).not.toContain("<Card");
+    expect(read(`${ROUTE}/page.js`)).not.toMatch(/<Card[\s/>]/);
   });
 
   it("renders one panel component per section", () => {
