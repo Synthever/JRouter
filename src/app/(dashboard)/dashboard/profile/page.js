@@ -2,7 +2,7 @@
 import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Card, Button, Toggle, Input, SegmentedControl, CardSkeleton } from "@/shared/components";
+import { Card, Button, Input, SegmentedControl, CardSkeleton } from "@/shared/components";
 import Modal, { ConfirmModal } from "@/shared/components/Modal";
 import LanguageSwitcher from "@/shared/components/LanguageSwitcher";
 import { useTheme } from "@/shared/hooks/useTheme";
@@ -14,26 +14,9 @@ import PreferencesPanel from "./components/PreferencesPanel";
 import SecurityPanel from "./components/SecurityPanel";
 import RoutingPanel from "./components/RoutingPanel";
 import NetworkPanel from "./components/NetworkPanel";
+import ObservabilityPanel from "./components/ObservabilityPanel";
+import SessionPanel from "./components/SessionPanel";
 import styles from "./profile.module.css";
-
-function ProfileSection({ id, title, icon, description, children }) {
-  return (
-    <section aria-labelledby={id}>
-      <Card padding="none" className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <div className="min-w-0">
-            <h2 id={id} className="ui-eyebrow">
-              <Icon className="text-[16px]" aria-hidden="true">{icon}</Icon>
-              {title}
-            </h2>
-            {description && <p className={styles.sectionDescription}>{description}</p>}
-          </div>
-        </div>
-        {children}
-      </Card>
-    </section>
-  );
-}
 
 function ProfileStatus({ status }) {
   if (!status.message) return null;
@@ -1356,53 +1339,16 @@ export default function ProfilePage() {
         />
 
         {/* Observability Settings */}
-        <ProfileSection id="profile-observability" title="Observability" icon="monitoring">
-          <div className={styles.settingRow}>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm sm:text-base">Enable Observability</p>
-              <p className="text-xs sm:text-sm text-text-muted">
-                Record request details for inspection in the logs view
-              </p>
-            </div>
-            <Toggle
-              aria-label="Enable Observability"
-              checked={observabilityEnabled}
-              onChange={updateObservabilityEnabled}
-              disabled={loading}
-            />
-          </div>
-        </ProfileSection>
+        <ObservabilityPanel
+          enabled={observabilityEnabled}
+          onChange={updateObservabilityEnabled}
+        />
 
         {/* Account actions */}
-        <ProfileSection id="profile-session" title="Session & server" icon="logout">
-        <div className={styles.settingRow}>
-          <div className="min-w-0">
-            <p className={styles.settingTitle}>Dashboard session</p>
-            <p className={styles.settingDescription}>Sign out of the dashboard.</p>
-          </div>
-          <Button
-            variant="secondary"
-            icon="logout"
-            onClick={handleLogout}
-          >
-            Logout
-          </Button>
-        </div>
-        <div className={styles.settingRow}>
-          <div className="min-w-0">
-            <p className={styles.settingTitle}>Stop proxy server</p>
-            <p className={styles.settingDescription}>Shut down this JRouter instance.</p>
-          </div>
-          <Button
-            variant="danger"
-            icon="power_settings_new"
-            onClick={() => setShutdownOpen(true)}
-            className={styles.dangerButton}
-          >
-            Shutdown
-          </Button>
-        </div>
-        </ProfileSection>
+        <SessionPanel
+          onLogout={handleLogout}
+          onShutdown={() => setShutdownOpen(true)}
+        />
 
         {/* App Info */}
         <div className={styles.appInfo}>
