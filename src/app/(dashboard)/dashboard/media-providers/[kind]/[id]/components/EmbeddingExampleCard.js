@@ -2,11 +2,12 @@
 import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect } from "react";
-import { Card } from "@/shared/components";
+import { Button } from "@/shared/components";
 import { getProviderAlias, isCustomEmbeddingProvider } from "@/shared/constants/providers";
 import { getModelsByProviderId, getModelKind } from "@/shared/constants/models";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import { Row } from "./exampleShared";
+import styles from "../../../media-providers.module.css";
 
 const DEFAULT_RESPONSE_EXAMPLE = `{
   "object": "list",
@@ -105,24 +106,42 @@ export function EmbeddingExampleCard({ providerId, customAlias }) {
   const resultJson = result ? JSON.stringify(result.data, null, 2) : "";
 
   return (
-    <Card>
-      <h2 className="text-lg font-semibold mb-4">Example</h2>
+    <section className={styles.panel} aria-labelledby="media-example-heading">
+      <div className={styles.panelHead}>
+        <div className="min-w-0">
+          <h2 id="media-example-heading" className={styles.panelTitle}>
+            <Icon className={styles.panelIcon}>terminal</Icon> Example
+          </h2>
+          <p className={styles.panelDesc}>
+            POST this body to <code className={styles.metaMono}>/v1/embeddings</code> — or press Run to send it through the gateway.
+          </p>
+        </div>
+        <div className={styles.panelActions}>
+          <Button
+            size="sm"
+            icon="play_arrow"
+            onClick={handleRun}
+            disabled={running || !input.trim() || !modelFull}
+          >
+            {running ? "Running…" : "Run"}
+          </Button>
+        </div>
+      </div>
 
-      <div className="flex flex-col gap-2.5">
-        {/* Model — text input for custom node, dropdown otherwise */}
+      <div className={styles.fieldList}>
         <Row label="Model">
           {isCustom ? (
             <input
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
               placeholder="e.g. voyage-3, embed-english-v3.0, text-embedding-3-small"
-              className="w-full px-3 py-1.5 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary font-mono"
+              className={`${styles.input} ${styles.inputMono}`}
             />
           ) : (
             <select
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
-              className="w-full px-3 py-1.5 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary"
+              className={styles.input}
             >
               {embeddingModels.map((m) => (
                 <option key={m.id} value={m.id}>{m.name || m.id}</option>
@@ -131,55 +150,49 @@ export function EmbeddingExampleCard({ providerId, customAlias }) {
           )}
         </Row>
 
-        {/* Endpoint */}
         <Row label="Endpoint">
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-            <input
-              value={endpoint}
-              onChange={(e) => useTunnel ? setTunnelEndpoint(e.target.value) : setLocalEndpoint(e.target.value)}
-              className="w-full min-w-0 flex-1 px-3 py-1.5 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary font-mono"
-              placeholder="http://localhost:3000"
-            />
-            {/* Tunnel toggle — only show if tunnel URL is available */}
-            {tunnelEndpoint && (
-              <button
-                onClick={() => setUseTunnel((v) => !v)}
-                title={useTunnel ? "Using tunnel" : "Using local"}
-                className={`flex items-center gap-1 text-xs px-2 py-1.5 rounded-lg border shrink-0 transition-colors ${
-                  useTunnel ? "border-primary/40 bg-primary/10 text-primary" : "border-border text-text-muted hover:text-primary"
-                }`}
-              >
-                <Icon className="text-[14px]">wifi_tethering</Icon>
-                Tunnel
-              </button>
-            )}
-          </div>
+          <input
+            value={endpoint}
+            onChange={(e) => useTunnel ? setTunnelEndpoint(e.target.value) : setLocalEndpoint(e.target.value)}
+            className={`${styles.input} ${styles.inputMono}`}
+            placeholder="http://localhost:3000"
+          />
+          {tunnelEndpoint && (
+            <button
+              type="button"
+              onClick={() => setUseTunnel((v) => !v)}
+              title={useTunnel ? "Using tunnel" : "Using local"}
+              className={`${styles.tunnelBtn} ${useTunnel ? styles.tunnelBtnOn : ""}`}
+            >
+              <Icon className="text-[14px]">wifi_tethering</Icon>
+              Tunnel
+            </button>
+          )}
         </Row>
 
-        {/* API Key */}
         <Row label="API Key">
           <input
             type="password"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             placeholder="sk-..."
-            className="w-full px-3 py-1.5 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary font-mono"
+            className={`${styles.input} ${styles.inputMono}`}
           />
         </Row>
 
-        {/* Input */}
         <Row label="Input">
-          <div className="relative">
+          <div className={styles.inputWrap}>
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              className="w-full px-3 py-1.5 pr-7 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary"
+              className={styles.input}
             />
             {input && (
               <button
                 type="button"
                 onClick={() => setInput("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-primary transition-colors"
+                className={styles.inputClear}
+                aria-label="Clear input"
               >
                 <Icon className="text-[14px]">close</Icon>
               </button>
@@ -187,7 +200,6 @@ export function EmbeddingExampleCard({ providerId, customAlias }) {
           </div>
         </Row>
 
-        {/* Dimensions (optional) — truncate embedding vector length */}
         <Row label="Dimensions">
           <input
             type="number"
@@ -195,61 +207,42 @@ export function EmbeddingExampleCard({ providerId, customAlias }) {
             value={dimensions}
             onChange={(e) => setDimensions(e.target.value)}
             placeholder="optional, e.g. 512, 1024 (leave empty for default)"
-            className="w-full px-3 py-1.5 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary"
+            className={styles.input}
           />
         </Row>
+      </div>
 
-        {/* Curl + Run */}
-        <div className="mt-1">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-1.5">
-            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">Request</span>
-            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-              <button
-                onClick={() => copyCurl(curlSnippet)}
-                className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-primary transition-colors"
-              >
-                <Icon className="text-[14px]">{copiedCurl ? "check" : "content_copy"}</Icon>
-                {copiedCurl ? "Copied" : "Copy"}
-              </button>
-              <button
-                onClick={handleRun}
-                disabled={running || !input.trim() || !modelFull}
-                className="flex w-full sm:w-auto items-center justify-center gap-1.5 px-3 py-1 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Icon className="text-[14px]" style={running ? { animation: "spin 1s linear infinite" } : undefined}>
-                  play_arrow
-                </Icon>
-                {running ? "Running..." : "Run"}
-              </button>
-            </div>
+      <div className={styles.examplePanes}>
+        <div>
+          <div className={styles.codeHead}>
+            <span className={styles.codeTitle}>Request</span>
+            <button type="button" onClick={() => copyCurl(curlSnippet)} className={styles.copyBtn}>
+              <Icon className="text-[14px]">{copiedCurl ? "check" : "content_copy"}</Icon>
+              {copiedCurl ? "Copied" : "Copy"}
+            </button>
           </div>
-          <pre className="bg-sidebar rounded-lg px-3 py-2.5 text-xs font-mono text-text-main overflow-x-auto whitespace-pre-wrap break-all">{curlSnippet}</pre>
+          <pre className={styles.codeBlock}>{curlSnippet}</pre>
         </div>
 
-        {/* Error */}
-        {error && <p className="text-xs text-red-500 break-words">{error}</p>}
-
-        {/* Response — default example or real result */}
         <div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-1.5">
-            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
-              Response {result && <span className="font-normal normal-case">&#9889; {result.latencyMs}ms</span>}
+          <div className={styles.codeHead}>
+            <span className={styles.codeTitle}>
+              Response
+              {result && <span className={styles.codeMeta}> ⚡ {result.latencyMs}ms</span>}
             </span>
             {result && (
-              <button
-                onClick={() => copyRes(resultJson)}
-                className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-primary transition-colors"
-              >
+              <button type="button" onClick={() => copyRes(resultJson)} className={styles.copyBtn}>
                 <Icon className="text-[14px]">{copiedRes ? "check" : "content_copy"}</Icon>
                 {copiedRes ? "Copied" : "Copy"}
               </button>
             )}
           </div>
-          <pre className="bg-sidebar rounded-lg px-3 py-2.5 text-xs font-mono text-text-main overflow-x-auto whitespace-pre-wrap break-all opacity-70">
+          <pre className={`${styles.codeBlock} ${result ? "" : styles.codeBlockMuted}`}>
             {formatResultJson(result?.data)}
           </pre>
+          {error && <p className={styles.noticeError}>{error}</p>}
         </div>
       </div>
-    </Card>
+    </section>
   );
 }

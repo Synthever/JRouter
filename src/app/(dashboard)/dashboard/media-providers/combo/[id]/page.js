@@ -4,9 +4,10 @@ import Icon from "@/shared/components/Icon";
 import { useParams, notFound, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Card, Button, Input, Toggle, ModelSelectModal } from "@/shared/components";
+import { Button, Toggle, ModelSelectModal } from "@/shared/components";
 import ProviderIcon from "@/shared/components/ProviderIcon";
 import { AI_PROVIDERS, MEDIA_PROVIDER_KINDS } from "@/shared/constants/providers";
+import styles from "../../media-providers.module.css";
 
 // Parse "providerId/model" or just "providerId" → { providerId, model }
 function parseModelEntry(entry) {
@@ -229,7 +230,15 @@ export default function ComboDetailPage() {
     return out;
   }
 
-  if (loading) return <div className="text-text-muted text-sm">Loading...</div>;
+  if (loading) {
+    return (
+      <div className={`dashboard-surface ${styles.page}`}>
+        <section className={styles.panel}>
+          <div className={styles.loading} />
+        </section>
+      </div>
+    );
+  }
   if (!combo) return notFound();
 
   const kindLabel = KIND_LABELS[combo.kind] || MEDIA_PROVIDER_KINDS.find((k) => k.id === combo.kind)?.label || "Combo";
@@ -241,85 +250,166 @@ export default function ComboDetailPage() {
   const backHref = getListingHref(combo.kind);
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3 min-w-0">
-          <Link href={backHref} className="text-text-muted hover:text-primary">
-            <Icon>arrow_back</Icon>
-          </Link>
-          <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Icon className="text-primary">layers</Icon>
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs text-text-muted">{kindLabel} Combo</p>
-            <code className="text-lg font-semibold font-mono">{combo.name}</code>
-          </div>
-        </div>
-        <Button variant="outline" icon="delete" onClick={handleDelete} className="text-red-500 border-red-200 hover:bg-red-50">
-          Delete
-        </Button>
+    <div className={`dashboard-surface ${styles.page}`}>
+      <div>
+        <Link href={backHref} className={styles.backLink}>
+          <Icon className="text-[16px]">arrow_back</Icon>
+          {kindLabel}
+        </Link>
       </div>
 
-      {/* Settings Card */}
-      <Card>
-        <h2 className="text-lg font-semibold mb-3">Settings</h2>
-        <div className="flex flex-col gap-4">
-          <div>
-            <Input label="Combo Name" value={name} onChange={(e) => { setName(e.target.value); validateName(e.target.value); }} onBlur={handleSaveName} error={nameError} />
-            <p className="text-[10px] text-text-muted mt-0.5">Only letters, numbers, -, _ and .</p>
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium">Round Robin</p>
-              <p className="text-xs text-text-muted">Rotate providers across requests instead of strict fallback order.</p>
-            </div>
-            <Toggle checked={roundRobin} onChange={handleToggleRoundRobin} />
-          </div>
-        </div>
-      </Card>
+      <header className={styles.detailHead}>
+        <span className={styles.detailLogo} style={{ backgroundColor: "var(--surface-2)" }}>
+          <Icon className="text-[24px]" style={{ color: "var(--text-2)" }}>layers</Icon>
+        </span>
 
-      {/* Providers Card */}
-      <Card>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-3">
-          <div>
-            <h2 className="text-lg font-semibold">Providers</h2>
-            <p className="text-xs text-text-muted">Tried in order (top-down) or rotated when round-robin is on.</p>
+        <div className={styles.detailIdentity}>
+          <div className={styles.detailNameRow}>
+            <h1 className={styles.detailTitle}>{combo.name}</h1>
           </div>
-          <Button size="sm" icon="add" onClick={() => setShowPicker(true)}>Add Provider</Button>
+          <div className={styles.detailBadges}>
+            <span className={`${styles.badge} ${styles.badgeCurrent}`}>{combo.kind ? kindLabel : "Combo"}</span>
+            {combo.kind && <span className={styles.badge}>{combo.kind}</span>}
+            <span className={styles.badge}>{providers.length} providers</span>
+            {roundRobin && <span className={`${styles.badge} ${styles.badgeOn}`}>Round robin</span>}
+          </div>
+          <p className={styles.detailSub}>
+            {examplePath ? `POST ${examplePath}` : "Text combo — not routed by a media kind"}
+          </p>
         </div>
+
+        <div className={styles.detailActions}>
+          <Button size="sm" variant="danger" icon="delete" onClick={handleDelete}>
+            Delete
+          </Button>
+        </div>
+      </header>
+
+      <section className={styles.panel} aria-labelledby="combo-settings-heading">
+        <div className={styles.panelHead}>
+          <div className="min-w-0">
+            <h2 id="combo-settings-heading" className={styles.panelTitle}>
+              <Icon className={styles.panelIcon}>settings</Icon> Settings
+            </h2>
+            <p className={styles.panelDesc}>The combo name is the model id clients send; changing it breaks saved callers.</p>
+          </div>
+        </div>
+
+        <div className={styles.rowList}>
+          <div className={styles.settingsRow}>
+            <div className={styles.settingsBody}>
+              <p className={styles.settingsTitle}>Combo Name</p>
+              <p className={styles.settingsDesc}>Only letters, numbers, -, _ and .</p>
+              {nameError && <p className={styles.fieldErrorText}>{nameError}</p>}
+            </div>
+            <div className={styles.fieldControl} style={{ flex: "0 1 320px" }}>
+              <input
+                value={name}
+                onChange={(e) => { setName(e.target.value); validateName(e.target.value); }}
+                onBlur={handleSaveName}
+                aria-label="Combo name"
+                aria-invalid={!!nameError}
+                className={`${styles.input} ${styles.inputMono} ${nameError ? styles.inputError : ""}`}
+              />
+            </div>
+          </div>
+
+          <div className={styles.settingsRow}>
+            <div className={styles.settingsBody}>
+              <p className={styles.settingsTitle}>Round Robin</p>
+              <p className={styles.settingsDesc}>Rotate providers across requests instead of strict fallback order.</p>
+            </div>
+            <Toggle checked={roundRobin} onChange={handleToggleRoundRobin} aria-label="Round robin" />
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.panel} aria-labelledby="combo-providers-heading">
+        <div className={styles.panelHead}>
+          <div className="min-w-0">
+            <h2 id="combo-providers-heading" className={styles.panelTitle}>
+              <Icon className={styles.panelIcon}>layers</Icon> Providers
+              <small>{providers.length}</small>
+            </h2>
+            <p className={styles.panelDesc}>Tried in order (top-down) or rotated when round-robin is on.</p>
+          </div>
+          <div className={styles.panelActions}>
+            <Button size="sm" variant="outline" icon="add" onClick={() => setShowPicker(true)}>
+              Add Provider
+            </Button>
+          </div>
+        </div>
+
         {providers.length === 0 ? (
-          <div className="text-center py-6 border border-dashed border-border rounded-lg text-text-muted text-sm">
-            No providers yet.
+          <div className={styles.empty}>
+            <p>No providers yet.</p>
+            <div className={styles.emptyActions}>
+              <Button size="sm" variant="outline" icon="add" onClick={() => setShowPicker(true)}>
+                Add Provider
+              </Button>
+            </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className={styles.rowList}>
             {providers.map((entry, idx) => {
               const { providerId, model } = parseModelEntry(entry);
               const p = AI_PROVIDERS[providerId];
               return (
-                <div key={`${entry}-${idx}`} className="flex items-center gap-3 p-2 rounded-lg bg-black/[0.02] dark:bg-white/[0.02]">
-                  <span className="text-xs text-text-muted w-5 text-center">{idx + 1}</span>
-                  <ProviderIcon
-                    src={`/providers/${providerId}.png`}
-                    alt={p?.name || providerId}
-                    size={24}
-                    className="object-contain rounded shrink-0"
-                    fallbackText={p?.textIcon || providerId.slice(0, 2).toUpperCase()}
-                    fallbackColor={p?.color}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium truncate">{p?.name || providerId}</div>
-                    {model && <code className="text-[10px] text-text-muted font-mono truncate block">{model}</code>}
+                <div key={`${entry}-${idx}`} className={styles.rowItem}>
+                  <div className={styles.rowMain}>
+                    <div className={styles.reorder}>
+                      <button
+                        type="button"
+                        onClick={() => handleMove(idx, -1)}
+                        disabled={idx === 0}
+                        className={styles.iconBtn}
+                        title="Move up"
+                        aria-label={`Move ${providerId} up`}
+                      >
+                        <Icon className="text-[16px]">keyboard_arrow_up</Icon>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMove(idx, 1)}
+                        disabled={idx === providers.length - 1}
+                        className={styles.iconBtn}
+                        title="Move down"
+                        aria-label={`Move ${providerId} down`}
+                      >
+                        <Icon className="text-[16px]">keyboard_arrow_down</Icon>
+                      </button>
+                    </div>
+
+                    <span className={styles.indexNum}>{idx + 1}</span>
+
+                    <span className={styles.logoTile}>
+                      <ProviderIcon
+                        src={`/providers/${providerId}.png`}
+                        alt={p?.name || providerId}
+                        size={22}
+                        className="object-contain"
+                        fallbackText={p?.textIcon || providerId.slice(0, 2).toUpperCase()}
+                        fallbackColor={p?.color}
+                      />
+                    </span>
+
+                    <div className={styles.rowBody}>
+                      <p className={styles.rowTitle}>{p?.name || providerId}</p>
+                      <div className={styles.rowMeta}>
+                        <code className={styles.metaMono}>{model || providerId}</code>
+                        {!p && <span className={styles.metaText}>unknown provider</span>}
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-0.5">
-                    <button onClick={() => handleMove(idx, -1)} disabled={idx === 0} className={`p-1 rounded ${idx === 0 ? "text-text-muted/20" : "text-text-muted hover:text-primary hover:bg-black/5"}`} title="Move up">
-                      <Icon className="text-[16px]">arrow_upward</Icon>
-                    </button>
-                    <button onClick={() => handleMove(idx, 1)} disabled={idx === providers.length - 1} className={`p-1 rounded ${idx === providers.length - 1 ? "text-text-muted/20" : "text-text-muted hover:text-primary hover:bg-black/5"}`} title="Move down">
-                      <Icon className="text-[16px]">arrow_downward</Icon>
-                    </button>
-                    <button onClick={() => handleRemoveProvider(idx)} className="p-1 rounded text-text-muted hover:text-red-500 hover:bg-red-500/10" title="Remove">
+
+                  <div className={styles.rowActions}>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveProvider(idx)}
+                      className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
+                      title="Remove"
+                      aria-label={`Remove ${model || providerId}`}
+                    >
                       <Icon className="text-[16px]">close</Icon>
                     </button>
                   </div>
@@ -328,71 +418,106 @@ export default function ComboDetailPage() {
             })}
           </div>
         )}
-      </Card>
+      </section>
 
-      {/* Test Example Card */}
       {combo.kind && examplePath && (
-        <Card>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-3">
-            <h2 className="text-lg font-semibold">Test Example</h2>
-            <Button size="sm" icon="play_arrow" onClick={handleTest} disabled={testing || providers.length === 0}>
-              {testing ? "Running..." : "Run"}
-            </Button>
+        <section className={styles.panel} aria-labelledby="combo-test-heading">
+          <div className={styles.panelHead}>
+            <div className="min-w-0">
+              <h2 id="combo-test-heading" className={styles.panelTitle}>
+                <Icon className={styles.panelIcon}>terminal</Icon> Test
+              </h2>
+              <p className={styles.panelDesc}>One request through the combo — press Run to see which provider answers.</p>
+            </div>
+            <div className={styles.panelActions}>
+              <Button
+                size="sm"
+                icon="play_arrow"
+                onClick={handleTest}
+                disabled={testing || providers.length === 0}
+              >
+                {testing ? "Running…" : "Run"}
+              </Button>
+            </div>
           </div>
-          <pre className="text-xs font-mono bg-black/[0.03] dark:bg-white/[0.03] p-3 rounded-lg overflow-x-auto whitespace-pre-wrap break-all">
-            {curlExample}
-          </pre>
-          {testError && (
-            <p className="mt-3 text-xs text-red-500 break-words">{testError}</p>
-          )}
-          {testResult && (
-            <div className="mt-3 flex flex-col gap-3">
-              {testResult.latencyMs != null && (
-                <span className="text-[11px] text-text-muted">⚡ {testResult.latencyMs}ms</span>
-              )}
-              {testResult.imageUrl && (
-                <div>
-                  <div className="flex items-center justify-end mb-1.5">
-                    <a href={testResult.imageUrl} download="image.png" className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-primary transition-colors">
-                      <Icon className="text-[14px]">download</Icon>
-                      Download
-                    </a>
-                  </div>
-                  <img src={testResult.imageUrl} alt="Generated" className="max-w-full rounded-lg border border-border" loading="lazy" decoding="async" />
-                </div>
-              )}
-              {testResult.audioUrl && (
-                <div>
-                  <div className="flex items-center justify-end mb-1.5">
-                    <a href={testResult.audioUrl} download="speech.mp3" className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-primary transition-colors">
-                      <Icon className="text-[14px]">download</Icon>
-                      Download
-                    </a>
-                  </div>
-                  <audio controls src={testResult.audioUrl} className="w-full" />
-                </div>
-              )}
-              {testResult.json && (
-                <pre className="text-xs font-mono bg-black/[0.03] dark:bg-white/[0.03] p-3 rounded-lg overflow-auto max-h-[300px] whitespace-pre-wrap break-all">
-                  {testResult.json}
+
+          <div className={styles.examplePanes}>
+            <div>
+              <div className={styles.codeHead}>
+                <span className={styles.codeTitle}>Request</span>
+                {testResult?.latencyMs != null && (
+                  <span className={styles.codeMeta}>⚡ {testResult.latencyMs}ms</span>
+                )}
+              </div>
+              <pre className={styles.codeBlock}>{curlExample}</pre>
+            </div>
+
+            <div>
+              <div className={styles.codeHead}>
+                <span className={styles.codeTitle}>Response</span>
+                {testResult?.imageUrl && (
+                  <a href={testResult.imageUrl} download="image.png" className={styles.copyBtn}>
+                    <Icon className="text-[14px]">download</Icon>
+                    Download
+                  </a>
+                )}
+                {testResult?.audioUrl && (
+                  <a href={testResult.audioUrl} download="speech.mp3" className={styles.copyBtn}>
+                    <Icon className="text-[14px]">download</Icon>
+                    Download
+                  </a>
+                )}
+              </div>
+
+              {!testResult && !testError && (
+                <pre className={`${styles.codeBlock} ${styles.codeBlockMuted}`}>
+                  {"// No request sent yet — press Run."}
                 </pre>
               )}
+
+              {testError && <p className={styles.noticeError}>{testError}</p>}
+
+              {testResult?.imageUrl && (
+                <div className={styles.mediaPreview}>
+                  <img
+                    src={testResult.imageUrl}
+                    alt="Generated"
+                    className={styles.mediaPrevImg}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+              )}
+
+              {testResult?.audioUrl && (
+                <div className={styles.mediaPreview}>
+                  <audio controls src={testResult.audioUrl} className={styles.mediaPrevAudio} />
+                </div>
+              )}
+
+              {testResult?.json && <pre className={styles.codeBlock}>{testResult.json}</pre>}
             </div>
-          )}
-        </Card>
+          </div>
+        </section>
       )}
 
-      {/* Usage Logs Card */}
-      <Card>
-        <h2 className="text-lg font-semibold mb-3">Usage Logs</h2>
+      <section className={styles.panel} aria-labelledby="combo-logs-heading">
+        <div className={styles.panelHead}>
+          <div className="min-w-0">
+            <h2 id="combo-logs-heading" className={styles.panelTitle}>
+              <Icon className={styles.panelIcon}>history</Icon> Usage
+              <small>{logs.length}</small>
+            </h2>
+            <p className={styles.panelDesc}>Recent gateway log lines that mention this combo name.</p>
+          </div>
+        </div>
+
         {logs.length === 0 ? (
-          <p className="text-xs text-text-muted italic">No usage yet.</p>
+          <p className={styles.emptyText}>No usage yet.</p>
         ) : (
-          <pre className="text-[11px] font-mono bg-black/[0.03] dark:bg-white/[0.03] p-3 rounded-lg overflow-auto max-h-[400px] whitespace-pre-wrap">
-            {logs.join("\n")}
-          </pre>
+          <pre className={styles.codeBlock} style={{ maxHeight: 400 }}>{logs.join("\n")}</pre>
         )}
-      </Card>
+      </section>
 
       {showPicker && (
         <ModelSelectModal

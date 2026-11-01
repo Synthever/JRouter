@@ -1,10 +1,12 @@
 "use client";
 
+import styles from "../../../media-providers.module.css";
+
 export function Row({ label, children }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
-      <span className="w-full text-xs font-medium text-text-muted sm:w-20 sm:shrink-0">{label}</span>
-      <div className="w-full min-w-0 flex-1">{children}</div>
+    <div className={styles.fieldRow}>
+      <span className={styles.fieldLabel}>{label}</span>
+      <div className={styles.fieldControl}>{children}</div>
     </div>
   );
 }

@@ -2,10 +2,18 @@
 import Icon from "@/shared/components/Icon";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getStatusVariant as getConnectionStatusVariant } from "@/shared/utils/connectionStatus";
+import { getStatusVariant } from "@/shared/utils/connectionStatus";
 import { applyDemotionOverlay } from "@/sse/services/demotion.js";
 import PropTypes from "prop-types";
-import { Card, Badge, Button, Modal, Select, Toggle, EditConnectionModal, ConfirmModal } from "@/shared/components";
+import { Button, Modal, Select, Toggle, EditConnectionModal, ConfirmModal } from "@/shared/components";
+import styles from "../../media-providers/media-providers.module.css";
+
+const STATUS_CLASS = {
+  success: styles.badgeOn,
+  error: styles.badgeError,
+  warning: styles.badgeWarn,
+  default: "",
+};
 
 // ── CooldownTimer ──────────────────────────────────────────────
 function CooldownTimer({ until }) {
@@ -26,7 +34,7 @@ function CooldownTimer({ until }) {
   }, [until]);
 
   if (!remaining) return null;
-  return <span className="text-xs text-orange-500 font-mono">⏱ {remaining}</span>;
+  return <span className={styles.cooldown}>⏱ {remaining}</span>;
 }
 
 CooldownTimer.propTypes = { until: PropTypes.string.isRequired };
@@ -59,7 +67,7 @@ function ConnectionRow({ connection, proxyPools, isOAuth, isFirst, isLast, onMov
   }
 
   const noProxyText = boundProxyPool?.noProxy || connection.providerSpecificData?.connectionNoProxy || "";
-  const proxyBadgeVariant = boundProxyPool?.isActive === true ? "success" : (boundProxyPoolId || hasLegacyProxy) ? "error" : "default";
+  const proxyBadgeClass = boundProxyPool?.isActive === true ? styles.badgeOn : (boundProxyPoolId || hasLegacyProxy) ? styles.badgeError : "";
 
   const modelLockUntil = Object.entries(connection)
     .filter(([k]) => k.startsWith("modelLock_"))
@@ -88,8 +96,7 @@ function ConnectionRow({ connection, proxyPools, isOAuth, isFirst, isLast, onMov
   }, [showProxyDropdown]);
 
   const effectiveStatus = connection.testStatus === "unavailable" && !isCooldown ? "active" : connection.testStatus;
-
-  const getStatusVariant = () => getConnectionStatusVariant(connection.isActive, effectiveStatus);
+  const statusLabel = connection.isActive === false ? "disabled" : (effectiveStatus || "Unknown");
 
   const displayName = isOAuth
     ? connection.name || connection.email || connection.displayName || "OAuth Account"
@@ -102,79 +109,138 @@ function ConnectionRow({ connection, proxyPools, isOAuth, isFirst, isLast, onMov
   };
 
   return (
-    <div className={`group flex flex-col gap-3 p-2 rounded-lg sm:flex-row sm:items-center sm:justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors ${connection.isActive === false ? "opacity-60" : ""}`}>
-      <div className="flex w-full min-w-0 flex-1 items-start gap-3 sm:items-center">
-        <div className="flex flex-col">
-          <button onClick={onMoveUp} disabled={isFirst} className={`p-0.5 rounded ${isFirst ? "text-text-muted/30 cursor-not-allowed" : "hover:bg-sidebar text-text-muted hover:text-primary"}`}>
-            <Icon className="text-sm">keyboard_arrow_up</Icon>
+    <div className={`${styles.rowItem} ${connection.isActive === false ? styles.rowOff : ""}`}>
+      <div className={styles.rowMain}>
+        <div className={styles.reorder}>
+          <button
+            type="button"
+            onClick={onMoveUp}
+            disabled={isFirst}
+            className={styles.iconBtn}
+            aria-label={`Move ${displayName} up`}
+            title="Move up"
+          >
+            <Icon className="text-[16px]">keyboard_arrow_up</Icon>
           </button>
-          <button onClick={onMoveDown} disabled={isLast} className={`p-0.5 rounded ${isLast ? "text-text-muted/30 cursor-not-allowed" : "hover:bg-sidebar text-text-muted hover:text-primary"}`}>
-            <Icon className="text-sm">keyboard_arrow_down</Icon>
+          <button
+            type="button"
+            onClick={onMoveDown}
+            disabled={isLast}
+            className={styles.iconBtn}
+            aria-label={`Move ${displayName} down`}
+            title="Move down"
+          >
+            <Icon className="text-[16px]">keyboard_arrow_down</Icon>
           </button>
         </div>
-        <Icon className="text-base text-text-muted">{isOAuth ? "lock" : "key"}</Icon>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{displayName}</p>
-          <div className="flex flex-wrap items-center gap-2 mt-1">
-            <Badge variant={getStatusVariant()} size="sm" dot>
-              {connection.isActive === false ? "disabled" : (effectiveStatus || "Unknown")}
-            </Badge>
+
+        <Icon className={styles.rowIcon}>{isOAuth ? "lock" : "key"}</Icon>
+
+        <div className={styles.rowBody}>
+          <p className={styles.rowTitle}>{displayName}</p>
+          <div className={styles.rowMeta}>
+            <span className={`${styles.badge} ${STATUS_CLASS[getStatusVariant(connection.isActive, effectiveStatus)] || ""}`}>
+              <i className={styles.dot} aria-hidden="true" />
+              {statusLabel}
+            </span>
             {connection.demotedAt && connection.isActive !== false && (
               <span
+                className={styles.demoted}
                 title={`Failed recently — serving at the back of the rotation until its next success (since ${new Date(connection.demotedAt).toLocaleTimeString()})`}
-                className="px-1.5 py-0.5 rounded-[var(--r1)] bg-transparent border border-[var(--line)] text-[10px] font-mono text-[var(--text-2)]"
               >
                 ⬇ demoted
               </span>
             )}
-            {hasAnyProxy && <Badge variant={proxyBadgeVariant} size="sm">Proxy</Badge>}
+            {hasAnyProxy && (
+              <span className={`${styles.badge} ${proxyBadgeClass}`}>Proxy</span>
+            )}
             {isCooldown && connection.isActive !== false && <CooldownTimer until={modelLockUntil} />}
             {connection.lastError && connection.isActive !== false && (
-              <span className="text-xs text-red-500 truncate max-w-[300px]" title={connection.lastError}>{connection.lastError}</span>
+              <span className={styles.metaError} title={connection.lastError}>{connection.lastError}</span>
             )}
-            <span className="text-xs text-text-muted">#{connection.priority}</span>
+            <span className={styles.metaMono}>#{connection.priority}</span>
           </div>
+
           {hasAnyProxy && (
-            <div className="mt-1 flex flex-wrap items-center gap-2">
-              <span className="text-[11px] text-text-muted truncate max-w-[420px]" title={proxyDisplayText}>{proxyDisplayText}</span>
-              {maskedProxyUrl && <code className="text-[10px] font-mono bg-black/5 dark:bg-white/5 px-1 py-0.5 rounded text-text-muted">{maskedProxyUrl}</code>}
-              {noProxyText && <span className="text-[11px] text-text-muted truncate max-w-[320px]" title={noProxyText}>no_proxy: {noProxyText}</span>}
+            <div className={styles.proxyLine}>
+              <span className={styles.metaText} title={proxyDisplayText}>{proxyDisplayText}</span>
+              {maskedProxyUrl && <code className={styles.proxyCode}>{maskedProxyUrl}</code>}
+              {noProxyText && (
+                <span className={styles.metaText} title={noProxyText}>no_proxy: {noProxyText}</span>
+              )}
             </div>
           )}
         </div>
       </div>
-      <div className="flex w-full flex-wrap items-center justify-between gap-2 sm:w-auto sm:justify-end">
-        <div className="flex flex-wrap gap-1">
-          {(proxyPools || []).length > 0 && (
-            <div className="relative" ref={proxyDropdownRef}>
-              <button
-                onClick={() => setShowProxyDropdown((v) => !v)}
-                className={`flex flex-col items-center px-2 py-1 rounded hover:bg-black/5 dark:hover:bg-white/5 transition-colors ${hasAnyProxy ? "text-primary" : "text-text-muted hover:text-primary"}`}
-                disabled={updatingProxy}
-              >
-                <Icon className="text-[18px]">{updatingProxy ? "progress_activity" : "lan"}</Icon>
-                <span className="text-[10px] leading-tight">Proxy</span>
-              </button>
-              {showProxyDropdown && (
-                <div className="absolute right-0 top-full mt-1 z-50 bg-bg border border-border rounded-lg shadow-lg py-1 min-w-[160px]">
-                  <button onClick={() => handleSelectProxy("__none__")} className={`w-full text-left px-3 py-1.5 text-sm hover:bg-black/5 dark:hover:bg-white/5 ${!boundProxyPoolId ? "text-primary font-medium" : "text-text-main"}`}>None</button>
-                  {(proxyPools || []).map((pool) => (
-                    <button key={pool.id} onClick={() => handleSelectProxy(pool.id)} className={`w-full text-left px-3 py-1.5 text-sm hover:bg-black/5 dark:hover:bg-white/5 ${boundProxyPoolId === pool.id ? "text-primary font-medium" : "text-text-main"}`}>{pool.name}</button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          <button onClick={onEdit} className="flex flex-col items-center px-2 py-1 rounded hover:bg-black/5 dark:hover:bg-white/5 text-text-muted hover:text-primary">
-            <Icon className="text-[18px]">edit</Icon>
-            <span className="text-[10px] leading-tight">Edit</span>
-          </button>
-          <button onClick={onDelete} className="flex flex-col items-center px-2 py-1 rounded hover:bg-red-500/10 text-red-500">
-            <Icon className="text-[18px]">delete</Icon>
-            <span className="text-[10px] leading-tight">Delete</span>
-          </button>
-        </div>
-        <Toggle size="sm" checked={connection.isActive ?? true} onChange={onToggleActive} title={(connection.isActive ?? true) ? "Disable" : "Enable"} />
+
+      <div className={styles.rowActions}>
+        {(proxyPools || []).length > 0 && (
+          <div className={styles.menuWrap} ref={proxyDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setShowProxyDropdown((v) => !v)}
+              className={styles.iconBtn}
+              disabled={updatingProxy}
+              aria-label="Proxy pool"
+              aria-haspopup="menu"
+              aria-expanded={showProxyDropdown}
+              title="Proxy pool"
+            >
+              <Icon className="text-[18px]">{updatingProxy ? "progress_activity" : "lan"}</Icon>
+            </button>
+            {showProxyDropdown && (
+              <div className={styles.proxyMenu} role="menu" aria-label="Proxy pool">
+                <button
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={!boundProxyPoolId}
+                  aria-current={!boundProxyPoolId ? "true" : undefined}
+                  onClick={() => handleSelectProxy("__none__")}
+                  className={styles.proxyOption}
+                >
+                  None
+                </button>
+                {(proxyPools || []).map((pool) => (
+                  <button
+                    key={pool.id}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={boundProxyPoolId === pool.id}
+                    aria-current={boundProxyPoolId === pool.id ? "true" : undefined}
+                    onClick={() => handleSelectProxy(pool.id)}
+                    className={styles.proxyOption}
+                  >
+                    {pool.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={onEdit}
+          className={styles.iconBtn}
+          aria-label={`Edit ${displayName}`}
+          title="Edit"
+        >
+          <Icon className="text-[16px]">edit</Icon>
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
+          aria-label={`Delete ${displayName}`}
+          title="Delete"
+        >
+          <Icon className="text-[16px]">delete</Icon>
+        </button>
+        <Toggle
+          checked={connection.isActive ?? true}
+          onChange={onToggleActive}
+          aria-label={`${(connection.isActive ?? true) ? "Disable" : "Enable"} ${displayName}`}
+          title={(connection.isActive ?? true) ? "Disable" : "Enable"}
+        />
       </div>
     </div>
   );
@@ -235,7 +301,7 @@ function AddApiKeyModal({ isOpen, provider, providerName, proxyPools, onSave, on
         const res = await fetch("/api/providers/validate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ provider, apiKey: formData.apiKey }),
+        body: JSON.stringify({ provider, apiKey: formData.apiKey }),
         });
         const data = await res.json();
         isValid = !!data.valid;
@@ -256,15 +322,15 @@ function AddApiKeyModal({ isOpen, provider, providerName, proxyPools, onSave, on
 
   return (
     <Modal isOpen={isOpen} title={`Add ${providerName || provider} API Key`} onClose={onClose}>
-      <div className="flex flex-col gap-4">
+      <div className={styles.fieldList}>
         <div>
-          <label className="text-xs text-text-muted mb-1 block">Name</label>
-          <input className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Production Key" />
+          <label className={styles.fieldLabel}>Name</label>
+          <input className={styles.input} value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Production Key" />
         </div>
-        <div className="flex gap-2">
+        <div className={styles.buttonRow}>
           <div className="flex-1">
-            <label className="text-xs text-text-muted mb-1 block">API Key</label>
-            <input type="password" className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary" value={formData.apiKey} onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })} />
+            <label className={styles.fieldLabel}>API Key</label>
+            <input type="password" className={styles.input} value={formData.apiKey} onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })} />
           </div>
           <div className="pt-6">
             <Button onClick={handleValidate} disabled={!formData.apiKey || validating || saving} variant="secondary">
@@ -273,17 +339,17 @@ function AddApiKeyModal({ isOpen, provider, providerName, proxyPools, onSave, on
           </div>
         </div>
         {validationResult && (
-          <Badge variant={validationResult === "success" ? "success" : "error"}>
+          <span className={`${styles.badge} ${validationResult === "success" ? styles.badgeOn : styles.badgeError}`}>
             {validationResult === "success" ? "Valid" : "Invalid"}
-          </Badge>
+          </span>
         )}
         <div>
-          <label className="text-xs text-text-muted mb-1 block">Priority</label>
-          <input type="number" className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary" value={formData.priority} onChange={(e) => setFormData({ ...formData, priority: Number.parseInt(e.target.value) || 1 })} />
+          <label className={styles.fieldLabel}>Priority</label>
+          <input type="number" className={styles.input} value={formData.priority} onChange={(e) => setFormData({ ...formData, priority: Number.parseInt(e.target.value) || 1 })} />
         </div>
         <Select label="Proxy Pool" value={formData.proxyPoolId} onChange={(e) => setFormData({ ...formData, proxyPoolId: e.target.value })}
           options={[{ value: NONE, label: "None" }, ...(proxyPools || []).map((p) => ({ value: p.id, label: p.name }))]} />
-        <div className="flex gap-2">
+        <div className={styles.buttonRow}>
           <Button onClick={handleSubmit} fullWidth disabled={!formData.name || !formData.apiKey || saving}>
             {saving ? "Saving..." : "Save"}
           </Button>
@@ -304,7 +370,8 @@ AddApiKeyModal.propTypes = {
 };
 
 // ── ConnectionsCard ────────────────────────────────────────────
-// Self-contained card: fetches, displays and manages all connections for a provider.
+// Self-contained panel: fetches, displays and manages all connections for a provider.
+// Only mounted by the media-provider detail page.
 export default function ConnectionsCard({ providerId, isOAuth }) {
   const [connections, setConnections] = useState([]);
   const reorderBusy = useRef(false);
@@ -442,20 +509,35 @@ export default function ConnectionsCard({ providerId, isOAuth }) {
     } catch (e) { console.log("update connection error:", e); }
   };
 
-  if (loading) return <Card><div className="h-20 animate-pulse bg-black/5 rounded-lg" /></Card>;
+  if (loading) {
+    return (
+      <section className={styles.panel} aria-label="Connections">
+        <div className={styles.loading} />
+      </section>
+    );
+  }
 
   const displayedConnections = demoteOnError === false ? connections : applyDemotionOverlay(connections);
   const manualIndexById = new Map(connections.map((conn, index) => [conn.id, index]));
 
   return (
     <>
-      <Card>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
-          <h2 className="text-lg font-semibold">Connections</h2>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-text-muted font-medium">Round Robin</span>
+      <section className={styles.panel} aria-labelledby="connections-heading">
+        <div className={styles.panelHead}>
+          <div className="min-w-0">
+            <h2 id="connections-heading" className={styles.panelTitle}>
+              <Icon className={styles.panelIcon}>lan</Icon> Connections
+              <small>{connections.length}</small>
+            </h2>
+            <p className={styles.panelDesc}>
+              Routing order follows priority; the arrows swap manual neighbours.
+            </p>
+          </div>
+          <div className={styles.panelActions}>
+            <span className={styles.controlLabel}>Round Robin</span>
             <Toggle
               checked={providerStrategy === "round-robin"}
+              aria-label="Round robin"
               onChange={(enabled) => {
                 const strategy = enabled ? "round-robin" : null;
                 setProviderStrategy(strategy);
@@ -464,18 +546,22 @@ export default function ConnectionsCard({ providerId, isOAuth }) {
               }}
             />
             {providerStrategy === "round-robin" && (
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-xs text-text-muted">Pool:</span>
+              <>
+                <span className={styles.controlLabel}>Pool</span>
                 <input
-                  type="number" min={1} value={providerStickyLimit}
+                  type="number"
+                  min={1}
+                  value={providerStickyLimit}
                   onChange={(e) => { setProviderStickyLimit(e.target.value); saveStrategy("round-robin", e.target.value); }}
-                  className="w-16 px-2 py-1 text-xs border border-border rounded-md bg-background focus:outline-none focus:border-primary"
+                  className={styles.poolInput}
+                  aria-label="Sticky round robin pool size"
                 />
-              </div>
+              </>
             )}
-            <span className="text-xs text-text-muted font-medium">Auto-demote on error</span>
+            <span className={styles.controlLabel}>Auto-demote</span>
             <Toggle
               checked={demoteOnError === null ? true : demoteOnError}
+              aria-label="Auto-demote on error"
               onChange={(enabled) => {
                 setDemoteOnError(enabled ? null : false);
                 saveDemoteOnError(enabled);
@@ -485,13 +571,17 @@ export default function ConnectionsCard({ providerId, isOAuth }) {
         </div>
 
         {connections.length === 0 ? (
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-text-muted">No connections yet</p>
-            <Button size="sm" icon="add" onClick={() => setShowAddModal(true)}>Add Connection</Button>
+          <div className={styles.empty}>
+            <p>No connections yet.</p>
+            <div className={styles.emptyActions}>
+              <Button size="sm" variant="outline" icon="add" onClick={() => setShowAddModal(true)}>
+                Add Connection
+              </Button>
+            </div>
           </div>
         ) : (
           <>
-            <div title="Routing order includes auto-demotion. Arrows edit manual priority (#), not demotion." className="flex flex-col divide-y divide-black/[0.03] dark:divide-white/[0.03] max-h-[500px] overflow-y-auto pr-1">
+            <div className={styles.rowList}>
               {displayedConnections.map((conn) => (
                 <ConnectionRow
                   key={conn.id}
@@ -509,12 +599,14 @@ export default function ConnectionsCard({ providerId, isOAuth }) {
                 />
               ))}
             </div>
-            <div className="mt-4 flex justify-stretch sm:justify-start">
-              <Button size="sm" icon="add" onClick={() => setShowAddModal(true)}>Add</Button>
+            <div className={styles.panelActions}>
+              <Button size="sm" variant="outline" icon="add" onClick={() => setShowAddModal(true)}>
+                Add Connection
+              </Button>
             </div>
           </>
         )}
-      </Card>
+      </section>
 
       <AddApiKeyModal
         isOpen={showAddModal}

@@ -3,53 +3,65 @@ import Icon from "@/shared/components/Icon";
 
 import { useState, useCallback, useEffect } from "react";
 import PropTypes from "prop-types";
-import { Card, Button, Modal } from "@/shared/components";
+import { Button, Modal } from "@/shared/components";
 import { getModelsByProviderId, getModelKind } from "@/shared/constants/models";
 import { getProviderAlias } from "@/shared/constants/providers";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
+import styles from "../../media-providers/media-providers.module.css";
 
 // ── ModelRow ───────────────────────────────────────────────────
-export function ModelRow({ model, fullModel, copied, onCopy, testStatus, isCustom, isFree, onDeleteAlias, onTest, isTesting }) {
-  const borderColor = testStatus === "ok" ? "border-green-500/40" : testStatus === "error" ? "border-red-500/40" : "border-border";
-  const iconColor = testStatus === "ok" ? "#22c55e" : testStatus === "error" ? "#ef4444" : undefined;
+// One model chip: status icon, `alias/model` code, optional name, copy/test actions.
+export function ModelRow({ model, fullModel, selected, onClick, copied, onCopy, isSelected, testStatus, isCustom, isFree, onDeleteAlias, onTest, isTesting }) {
+  const chipState = testStatus === "ok" ? styles.modelChipOk : testStatus === "error" ? styles.modelChipError : "";
+  const icon = testStatus === "ok" ? "check_circle" : testStatus === "error" ? "cancel" : "smart_toy";
 
   return (
-    <div className={`group px-3 py-2 rounded-lg border ${borderColor} hover:bg-sidebar/50`}>
-      <div className="flex items-center gap-2">
-        <Icon className="text-base" style={iconColor ? { color: iconColor } : undefined}>
-          {testStatus === "ok" ? "check_circle" : testStatus === "error" ? "cancel" : "smart_toy"}
-        </Icon>
-        <div className="flex flex-col gap-1">
-          <code className="text-xs text-text-muted font-mono bg-sidebar px-1.5 py-0.5 rounded">{fullModel}</code>
-          {model.name && <span className="text-[9px] text-text-muted/70 italic pl-1">{model.name}</span>}
-        </div>
-        {onTest && (
-          <div className="relative group/btn">
-            <button onClick={onTest} disabled={isTesting} className={`p-0.5 hover:bg-sidebar rounded text-text-muted hover:text-primary transition-opacity ${isTesting ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-              <Icon className="text-sm" style={isTesting ? { animation: "spin 1s linear infinite" } : undefined}>
-                {isTesting ? "progress_activity" : "science"}
-              </Icon>
-            </button>
-            <span className="pointer-events-none absolute mt-1 top-5 left-1/2 -translate-x-1/2 text-[10px] text-text-muted whitespace-nowrap opacity-0 group-hover/btn:opacity-100 transition-opacity">
-              {isTesting ? "Testing..." : "Test"}
-            </span>
-          </div>
-        )}
-        <div className="relative group/btn">
-          <button onClick={() => onCopy(fullModel, `model-${model.id}`)} className="p-0.5 hover:bg-sidebar rounded text-text-muted hover:text-primary">
-            <Icon className="text-sm">{copied === `model-${model.id}` ? "check" : "content_copy"}</Icon>
-          </button>
-          <span className="pointer-events-none absolute mt-1 top-5 left-1/2 -translate-x-1/2 text-[10px] text-text-muted whitespace-nowrap opacity-0 group-hover/btn:opacity-100 transition-opacity">
-            {copied === `model-${model.id}` ? "Copied!" : "Copy"}
-          </span>
-        </div>
-        {isFree && <span className="text-[10px] font-bold text-green-500 bg-green-500/10 px-1.5 py-0.5 rounded">FREE</span>}
-        {isCustom && (
-          <button onClick={onDeleteAlias} className="p-0.5 hover:bg-red-500/10 rounded text-text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity ml-auto" title="Remove custom model">
-            <Icon className="text-sm">close</Icon>
-          </button>
-        )}
+    <div className={`${styles.modelChip} ${chipState}`}>
+      <Icon
+        className={styles.modelIcon}
+        style={testStatus === "ok" ? { color: "var(--pos)" } : testStatus === "error" ? { color: "var(--danger)" } : undefined}
+      >
+        {icon}
+      </Icon>
+      <div className={styles.modelBody}>
+        <code className={styles.modelCode}>{fullModel}</code>
+        {model.name && <span className={styles.modelName}>{model.name}</span>}
       </div>
+      {onTest && (
+        <button
+          type="button"
+          onClick={onTest}
+          disabled={isTesting}
+          className={styles.iconBtn}
+          title={isTesting ? "Testing…" : "Test model"}
+          aria-label={`Test ${fullModel}`}
+        >
+          <Icon className="text-[15px]" style={isTesting ? { animation: "spin 1s linear infinite" } : undefined}>
+            {isTesting ? "progress_activity" : "science"}
+          </Icon>
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={() => onCopy(fullModel, `model-${model.id}`)}
+        className={styles.iconBtn}
+        title="Copy model id"
+        aria-label={`Copy ${fullModel}`}
+      >
+        <Icon className="text-[15px]">{copied === `model-${model.id}` ? "check" : "content_copy"}</Icon>
+      </button>
+      {isFree && <span className={styles.modelFree}>FREE</span>}
+      {isCustom && (
+        <button
+          type="button"
+          onClick={onDeleteAlias}
+          className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
+          title="Remove custom model"
+          aria-label={`Remove ${fullModel}`}
+        >
+          <Icon className="text-[15px]">close</Icon>
+        </button>
+      )}
     </div>
   );
 }
@@ -57,8 +69,11 @@ export function ModelRow({ model, fullModel, copied, onCopy, testStatus, isCusto
 ModelRow.propTypes = {
   model: PropTypes.shape({ id: PropTypes.string.isRequired }).isRequired,
   fullModel: PropTypes.string.isRequired,
+  selected: PropTypes.bool,
+  onClick: PropTypes.func,
   copied: PropTypes.string,
   onCopy: PropTypes.func.isRequired,
+  isSelected: PropTypes.bool,
   testStatus: PropTypes.oneOf(["ok", "error"]),
   isCustom: PropTypes.bool,
   isFree: PropTypes.bool,
@@ -79,11 +94,11 @@ function AddCustomModelModal({ isOpen, onSave, onClose }) {
 
   return (
     <Modal isOpen={isOpen} title="Add Custom Model" onClose={onClose}>
-      <div className="flex flex-col gap-4">
+      <div className={styles.fieldList}>
         <div>
-          <label className="text-xs text-text-muted mb-1 block">Model ID</label>
+          <label className={styles.fieldLabel}>Model ID</label>
           <input
-            className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary"
+            className={styles.input}
             value={modelId}
             onChange={(e) => setModelId(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSave()}
@@ -91,7 +106,7 @@ function AddCustomModelModal({ isOpen, onSave, onClose }) {
             autoFocus
           />
         </div>
-        <div className="flex gap-2">
+        <div className={styles.buttonRow}>
           <Button onClick={handleSave} fullWidth disabled={!modelId.trim()}>Add</Button>
           <Button onClick={onClose} variant="ghost" fullWidth>Cancel</Button>
         </div>
@@ -107,8 +122,8 @@ AddCustomModelModal.propTypes = {
 };
 
 // ── ModelsCard ─────────────────────────────────────────────────
-// Self-contained card: shows models for a provider, filtered by optional `kindFilter`.
-// kindFilter: if provided, only shows models with matching type/kinds field.
+// Models panel: chips for every model this provider exposes for `kindFilter`
+// plus user-added custom models. Only mounted by the media-provider detail page.
 export default function ModelsCard({ providerId, kindFilter, providerAliasOverride }) {
   const { copied, copy } = useCopyToClipboard();
   const [modelAliases, setModelAliases] = useState({});
@@ -215,62 +230,73 @@ export default function ModelsCard({ providerId, kindFilter, providerAliasOverri
   );
 
   const displayModels = builtInModels;
+  const total = displayModels.length + myCustomModels.length;
 
   return (
     <>
-      <Card>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Models{kindFilter ? ` — ${kindFilter.toUpperCase()}` : ""}</h2>
+      <section className={styles.panel} aria-labelledby="models-heading">
+        <div className={styles.panelHead}>
+          <div className="min-w-0">
+            <h2 id="models-heading" className={styles.panelTitle}>
+              <Icon className={styles.panelIcon}>smart_toy</Icon> Models
+              <small>{total}</small>
+            </h2>
+            <p className={styles.panelDesc}>
+              Client-side model ids after the provider alias. Test one, or copy it straight into a request.
+            </p>
+          </div>
+          <div className={styles.panelActions}>
+            <Button size="sm" variant="outline" icon="add" onClick={() => setShowAddCustomModel(true)}>
+              Add Model
+            </Button>
+          </div>
         </div>
-        {testError && <p className="text-xs text-red-500 mb-3 break-words">{testError}</p>}
 
-        <div className="flex flex-wrap gap-3">
-          {displayModels.map((model) => {
-            const fullModel = `${providerAlias}/${model.id}`;
-            const existingAlias = Object.entries(modelAliases).find(([, m]) => m === fullModel)?.[0];
-            return (
+        {testError && <p className={styles.noticeError}>{testError}</p>}
+
+        {total === 0 ? (
+          <p className={styles.emptyText}>No models for this kind yet.</p>
+        ) : (
+          <div className={styles.modelGrid}>
+            {displayModels.map((model) => {
+              const fullModel = `${providerAlias}/${model.id}`;
+              const existingAlias = Object.entries(modelAliases).find(([, m]) => m === fullModel)?.[0];
+              return (
+                <ModelRow
+                  key={model.id}
+                  model={model}
+                  fullModel={fullModel}
+                  alias={existingAlias}
+                  copied={copied}
+                  onCopy={copy}
+                  onSetAlias={(alias) => handleSetAlias(model.id, alias)}
+                  onDeleteAlias={() => handleDeleteAlias(existingAlias)}
+                  testStatus={modelTestResults[model.id]}
+                  onTest={() => handleTestModel(model.id)}
+                  isTesting={testingModelId === model.id}
+                  isFree={model.isFree}
+                />
+              );
+            })}
+
+            {myCustomModels.map((model) => (
               <ModelRow
-                key={model.id}
-                model={model}
+                key={`${model.id}-${model.type}`}
+                model={{ id: model.id, name: model.name }}
                 fullModel={`${providerAlias}/${model.id}`}
-                alias={existingAlias}
                 copied={copied}
                 onCopy={copy}
-                onSetAlias={(alias) => handleSetAlias(model.id, alias)}
-                onDeleteAlias={() => handleDeleteAlias(existingAlias)}
+                onSetAlias={() => {}}
+                onDeleteAlias={() => handleDeleteCustomModel(model.id)}
                 testStatus={modelTestResults[model.id]}
                 onTest={() => handleTestModel(model.id)}
                 isTesting={testingModelId === model.id}
-                isFree={model.isFree}
+                isCustom
               />
-            );
-          })}
-
-          {myCustomModels.map((model) => (
-            <ModelRow
-              key={`${model.id}-${model.type}`}
-              model={{ id: model.id, name: model.name }}
-              fullModel={`${providerAlias}/${model.id}`}
-              copied={copied}
-              onCopy={copy}
-              onSetAlias={() => {}}
-              onDeleteAlias={() => handleDeleteCustomModel(model.id)}
-              testStatus={modelTestResults[model.id]}
-              onTest={() => handleTestModel(model.id)}
-              isTesting={testingModelId === model.id}
-              isCustom
-            />
-          ))}
-
-          <button
-            onClick={() => setShowAddCustomModel(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dashed border-black/15 dark:border-white/15 text-xs text-text-muted hover:text-primary hover:border-primary/40 transition-colors"
-          >
-            <Icon className="text-sm">add</Icon>
-            Add Model
-          </button>
-        </div>
-      </Card>
+            ))}
+          </div>
+        )}
+      </section>
 
       <AddCustomModelModal
         isOpen={showAddCustomModel}

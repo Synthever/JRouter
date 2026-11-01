@@ -1,7 +1,7 @@
 // Contract for the media-providers listing surfaces (phase 1): page hero, one
 // 24/28 panel per kind holding a provider card grid, and combo rows above it.
 // These assertions lock the anatomy and the data paths that must survive.
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
@@ -129,5 +129,173 @@ describe("media providers listing surfaces", () => {
       }
     }
     expect(missing).toEqual([]);
+  });
+});
+
+// Phase 2: the provider detail surface — hero, panels, rows, model chips and
+// the per-kind example cards all live in the same module as the listing.
+const detailBase = `${base}/[kind]/[id]`;
+const detailPage = () => read(`${detailBase}/page.js`);
+const configPanel = () => read(`${detailBase}/components/ProviderConfigPanel.js`);
+const connectionsCard = () => read("src/app/(dashboard)/dashboard/providers/components/ConnectionsCard.js");
+const modelsCard = () => read("src/app/(dashboard)/dashboard/providers/components/ModelsCard.js");
+const exampleCards = () => [
+  `${detailBase}/components/EmbeddingExampleCard.js`,
+  `${detailBase}/components/GenericExampleCard.js`,
+  `${detailBase}/components/TtsExampleCard.js`,
+  `${detailBase}/components/SttExampleCard.js`,
+];
+
+describe("media provider detail surface", () => {
+  it("renders the detail page as hero → panels → examples in the shared surface", () => {
+    const page = detailPage();
+    expect(page).toContain("dashboard-surface ${styles.page}");
+    expect(page).toContain("styles.backLink");
+    expect(page).toContain("<h1 className={styles.detailTitle}>");
+    expect(page).toContain("styles.detailLogo");
+    expect(page).toContain("styles.detailBadges");
+    expect(page).toContain("styles.detailSub");
+    expect(page).toContain("styles.badgeCurrent");
+    expect(page).toContain("styles.noticeWarn");
+    expect(page).toContain("styles.noticeInfo");
+    expect(page).toContain("styles.detailActions");
+    expect(page).toContain("<ConnectionsCard");
+    expect(page).toContain("<ModelsCard");
+    expect(page).toContain("<ProviderConfigPanel");
+    expect(page).toContain("<EmbeddingExampleCard");
+    expect(page).toContain("<TtsExampleCard");
+    expect(page).toContain("<GenericExampleCard");
+    expect(page).not.toMatch(/<Card\b/);
+    expect(page).not.toMatch(/text-text-muted|border-border|bg-primary|padding="xs"/);
+  });
+
+  it("keeps the data paths and modals of the detail page", () => {
+    const page = detailPage();
+    expect(page).toContain('fetch("/api/provider-nodes", { cache: "no-store" })');
+    expect(page).toContain('fetch(`/api/provider-nodes/${id}`, { method: "DELETE" })');
+    expect(page).toContain("isCustomEmbeddingProvider(id)");
+    expect(page).toContain("<NoAuthProxyCard providerId={id} />");
+    expect(page).toContain("<AddCustomEmbeddingModal");
+    expect(page).toContain("if (!kindConfig) return notFound();");
+    expect(page).toContain("KIND_EXAMPLE_CONFIG[kind]");
+    expect(page).toContain('kind !== "tts" && kind !== "webSearch" && kind !== "webFetch"');
+  });
+
+  it("moves the connections and models cards onto theme panels", () => {
+    for (const src of [connectionsCard(), modelsCard()]) {
+      expect(src).toContain("styles.panel");
+      expect(src).toContain("styles.panelHead");
+      expect(src).toContain("styles.panelTitle");
+      expect(src).toContain("styles.panelDesc");
+      expect(src).not.toMatch(/<Card\b/);
+      expect(src).not.toMatch(/text-text-muted|border-border|bg-primary|bg-sidebar/);
+    }
+    const connections = connectionsCard();
+    expect(connections).toContain("styles.rowItem");
+    expect(connections).toContain("styles.rowActions");
+    expect(connections).toContain("styles.iconBtn");
+    expect(connections).toContain("styles.badgeOn");
+    expect(connections).toContain('fetch("/api/providers", { cache: "no-store" })');
+    expect(connections).toContain("applyDemotionOverlay(connections)");
+    expect(connections).toContain("swapWithId");
+
+    const models = modelsCard();
+    expect(models).toContain("styles.modelChip");
+    expect(models).toContain("styles.modelGrid");
+    expect(models).toContain('fetch("/api/models/test"');
+    expect(models).toContain("getModelsByProviderId(providerId)");
+  });
+
+  it("renders provider config as label/value rows", () => {
+    const panel = configPanel();
+    expect(panel).toContain("styles.kvGrid");
+    expect(panel).toContain("styles.kvRow");
+    expect(panel).toContain("styles.kvLabel");
+    expect(panel).toContain("styles.kvValue");
+    expect(panel).toContain("const FIELD_SCHEMA");
+    expect(panel).not.toMatch(/<Card\b|text-text-muted|border-border/);
+  });
+
+  it("drops the old shared ProviderInfoCard", () => {
+    expect(existsSync(new URL("../../src/shared/components/ProviderInfoCard.js", import.meta.url))).toBe(false);
+    expect(read("src/shared/components/index.js")).not.toContain("ProviderInfoCard");
+  });
+
+  it("styles every example card with the shared code/field classes", () => {
+    for (const file of exampleCards()) {
+      const src = read(file);
+      expect(src).toContain("styles.panel");
+      expect(src).toContain("styles.codeBlock");
+      expect(src).toContain("styles.copyBtn");
+      expect(src).toContain('id="media-example-heading"');
+      expect(src).not.toMatch(/<Card\b/);
+      expect(src).not.toMatch(/text-text-muted|border-border|bg-sidebar|bg-primary|text-red-500/);
+    }
+    expect(read(`${detailBase}/components/exampleShared.js`)).toContain("styles.fieldRow");
+  });
+
+  it("resolves every styles.* class used by the detail consumers", () => {
+    const defined = moduleClasses();
+    const consumers = [
+      `${detailBase}/page.js`,
+      `${detailBase}/components/ProviderConfigPanel.js`,
+      ...exampleCards(),
+      `${detailBase}/components/exampleShared.js`,
+      `${base}/combo/[id]/page.js`,
+      "src/app/(dashboard)/dashboard/providers/components/ConnectionsCard.js",
+      "src/app/(dashboard)/dashboard/providers/components/ModelsCard.js",
+    ];
+    const missing = [];
+    for (const file of consumers) {
+      const used = new Set([...read(file).matchAll(/styles\.([A-Za-z0-9_]+)/g)].map((m) => m[1]));
+      for (const name of used) {
+        if (!defined.has(name)) missing.push(`${file}: ${name}`);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+});
+
+// Phase 3: the combo detail surface.
+const comboPage = () => read(`${base}/combo/[id]/page.js`);
+
+describe("media combo detail surface", () => {
+  it("renders the combo as hero plus four panels", () => {
+    const page = comboPage();
+    expect(page).toContain("dashboard-surface ${styles.page}");
+    expect(page).toContain("styles.backLink");
+    expect(page).toContain("<h1 className={styles.detailTitle}>{combo.name}</h1>");
+    expect(page).toContain("styles.detailBadges");
+    expect(page).toContain("styles.detailSub");
+    expect(page).toContain("styles.detailActions");
+    for (const id of ["combo-settings-heading", "combo-providers-heading", "combo-test-heading", "combo-logs-heading"]) {
+      expect(page).toContain(`id="${id}"`);
+    }
+    expect(page).toContain("styles.settingsRow");
+    expect(page).toContain("styles.rowItem");
+    expect(page).toContain("styles.logoTile");
+    expect(page).toContain("styles.indexNum");
+    expect(page).toContain("styles.codeBlock");
+    expect(page).toContain("styles.mediaPreview");
+    expect(page).not.toMatch(/<Card\b/);
+    expect(page).not.toMatch(/text-text-muted|border-border|bg-primary|bg-black\/\[|dark:bg-white/);
+  });
+
+  it("keeps the combo data paths, ordering and destructive action", () => {
+    const page = comboPage();
+    expect(page).toContain("fetch(`/api/combos/${id}`");
+    for (const endpoint of ["/api/settings", "/api/usage/logs", "/api/keys", "/api/providers", "/api/models/alias"]) {
+      expect(page).toContain(`fetch("${endpoint}"`);
+    }
+    expect(page).toContain('fallbackStrategy: "round-robin"');
+    expect(page).toContain("handleMove(idx, -1)");
+    expect(page).toContain("handleMove(idx, 1)");
+    expect(page).toContain("handleRemoveProvider(idx)");
+    expect(page).toContain("router.push(getListingHref(combo.kind))");
+    expect(page).toContain("maskB64(data)");
+    expect(page).toContain("<ModelSelectModal");
+    expect(page).toContain("kindFilter={combo.kind}");
+    expect(page).toContain("addedModelValues={providers}");
+    expect(page).toContain("if (!combo) return notFound();");
   });
 });

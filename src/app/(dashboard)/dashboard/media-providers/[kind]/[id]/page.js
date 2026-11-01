@@ -4,16 +4,18 @@ import Icon from "@/shared/components/Icon";
 import { useParams, notFound, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Card, Badge, Button, AddCustomEmbeddingModal, NoAuthProxyCard, ProviderInfoCard } from "@/shared/components";
+import { Button, AddCustomEmbeddingModal, NoAuthProxyCard } from "@/shared/components";
 import ProviderIcon from "@/shared/components/ProviderIcon";
 import { MEDIA_PROVIDER_KINDS, AI_PROVIDERS, isCustomEmbeddingProvider } from "@/shared/constants/providers";
 import ConnectionsCard from "@/app/(dashboard)/dashboard/providers/components/ConnectionsCard";
 import ModelsCard from "@/app/(dashboard)/dashboard/providers/components/ModelsCard";
+import ProviderConfigPanel from "./components/ProviderConfigPanel";
 import { KIND_EXAMPLE_CONFIG } from "./components/exampleShared";
 import { EmbeddingExampleCard } from "./components/EmbeddingExampleCard";
 import { TtsExampleCard } from "./components/TtsExampleCard";
 import { GenericExampleCard } from "./components/GenericExampleCard";
 import { SttExampleCard } from "./components/SttExampleCard";
+import styles from "../../media-providers.module.css";
 
 // MediaProviderDetailPage
 export default function MediaProviderDetailPage() {
@@ -63,92 +65,114 @@ export default function MediaProviderDetailPage() {
   if (!isCustom && !builtInProvider) return notFound();
   if (isCustom && !customLoading && !customNode) return notFound();
   if (isCustom && customLoading) {
-    return <div className="text-text-muted text-sm py-12 text-center">Loading...</div>;
+    return (
+      <div className={`dashboard-surface ${styles.page}`}>
+        <section className={styles.panel}>
+          <div className={styles.loading} />
+        </section>
+      </div>
+    );
   }
 
   const kinds = isCustom ? ["embedding"] : (provider.serviceKinds ?? ["llm"]);
   if (!isCustom && !kinds.includes(kind)) return notFound();
 
+  const config =
+    kind === "webFetch" ? provider.fetchConfig
+      : kind === "tts" ? provider.ttsConfig
+      : kind === "stt" ? provider.sttConfig
+      : kind === "embedding" ? provider.embeddingConfig
+      : kind === "systemone" ? provider.systemoneConfig
+      : provider.searchConfig || (provider.searchViaChat
+        ? {
+            mode: "chat-completions",
+            defaultModel: provider.searchViaChat.defaultModel,
+            pricingUrl: provider.searchViaChat.pricingUrl,
+            freeTier: provider.searchViaChat.freeTier,
+          }
+        : null);
+
   return (
-    <div className="flex flex-col gap-8">
-      {/* Back */}
+    <div className={`dashboard-surface ${styles.page}`}>
       <div>
-        <Link
-          href={`/dashboard/media-providers/${kind}`}
-          className="inline-flex items-center gap-1 text-sm text-text-muted hover:text-primary transition-colors mb-4"
-        >
-          <Icon className="text-lg">arrow_back</Icon>
+        <Link href={`/dashboard/media-providers/${kind}`} className={styles.backLink}>
+          <Icon className="text-[16px]">arrow_back</Icon>
           {kindConfig.label}
         </Link>
-
-        {/* Header */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-          <div className="size-12 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${provider.color}15` }}>
-            <ProviderIcon
-              src={`/providers/${provider.id}.png`}
-              alt={provider.name}
-              size={48}
-              className="object-contain rounded-lg max-w-[48px] max-h-[48px]"
-              fallbackText={provider.textIcon || provider.id.slice(0, 2).toUpperCase()}
-              fallbackColor={provider.color}
-            />
-          </div>
-          <div className="flex-1">
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <h1 className="text-3xl font-semibold tracking-tight">{provider.name}</h1>
-              {!isCustom && provider.notice?.apiKeyUrl && (
-                <a
-                  href={provider.notice.apiKeyUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-                >
-                  <Icon className="text-sm">open_in_new</Icon>
-                  Get API Key
-                </a>
-              )}
-            </div>
-            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-              {isCustom && <Badge variant="default" size="sm">Custom · {customNode?.prefix}</Badge>}
-              {kinds.map((k) => (
-                <Badge key={k} variant={k === kind ? "primary" : "default"} size="sm">
-                  {k.toUpperCase()}
-                </Badge>
-              ))}
-            </div>
-          </div>
-          {isCustom && (
-            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-              <Button size="sm" variant="secondary" icon="edit" onClick={() => setShowEditModal(true)}>
-                Edit
-              </Button>
-              <Button size="sm" variant="secondary" icon="delete" onClick={handleDeleteCustom}>
-                Delete
-              </Button>
-            </div>
-          )}
-        </div>
       </div>
 
-      {/* Kind-specific notice (e.g. codex/image requires Plus) */}
+      <header className={styles.detailHead}>
+        <span className={styles.detailLogo} style={{ backgroundColor: `${provider.color}15` }}>
+          <ProviderIcon
+            src={`/providers/${provider.id}.png`}
+            alt=""
+            size={40}
+            className="object-contain max-w-10 max-h-10"
+            fallbackText={provider.textIcon || provider.id.slice(0, 2).toUpperCase()}
+            fallbackColor={provider.color}
+          />
+        </span>
+
+        <div className={styles.detailIdentity}>
+          <div className={styles.detailNameRow}>
+            <h1 className={styles.detailTitle}>{provider.name}</h1>
+            {!isCustom && provider.notice?.apiKeyUrl && (
+              <a
+                href={provider.notice.apiKeyUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.detailLink}
+              >
+                <Icon className="text-[14px]">open_in_new</Icon>
+                Get API Key
+              </a>
+            )}
+          </div>
+          <div className={styles.detailBadges}>
+            {isCustom && <span className={styles.badge}>Custom · {customNode?.prefix}</span>}
+            {kinds.map((k) => (
+              <span
+                key={k}
+                className={`${styles.badge} ${k === kind ? styles.badgeCurrent : ""}`}
+              >
+                {k.toUpperCase()}
+              </span>
+            ))}
+          </div>
+          <p className={styles.detailSub}>
+            {kindConfig.endpoint.method} {kindConfig.endpoint.path}
+          </p>
+        </div>
+
+        {isCustom && (
+          <div className={styles.detailActions}>
+            <Button size="sm" variant="outline" icon="edit" onClick={() => setShowEditModal(true)}>
+              Edit
+            </Button>
+            <Button size="sm" variant="danger" icon="delete" onClick={handleDeleteCustom}>
+              Delete
+            </Button>
+          </div>
+        )}
+      </header>
+
       {!isCustom && provider.kindNotice?.[kind] && (
-        <div className="flex items-start gap-3 px-4 py-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400">
-          <Icon className="text-[20px] mt-0.5">warning</Icon>
-          <p className="text-sm">{provider.kindNotice[kind]}</p>
+        <div className={styles.noticeWarn}>
+          <Icon className="text-[18px]">warning</Icon>
+          <p>{provider.kindNotice[kind]}</p>
         </div>
       )}
 
-      {/* Provider notice text (only when there's actual text content) */}
       {!isCustom && provider.notice?.text && !provider.deprecated && (
-        <div className="flex flex-col gap-2 rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-2 sm:flex-row sm:items-center">
-          <Icon className="text-[16px] text-blue-500 shrink-0">info</Icon>
-          <p className="min-w-0 flex-1 text-xs leading-relaxed text-blue-600 dark:text-blue-400">{provider.notice.text}</p>
+        <div className={styles.noticeInfo}>
+          <Icon className="text-[16px]">info</Icon>
+          <p>{provider.notice.text}</p>
           {provider.notice.apiKeyUrl && (
             <a
               href={provider.notice.apiKeyUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex justify-center rounded bg-blue-500 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-blue-600 sm:py-0.5"
+              className={styles.noticeLink}
             >
               Get API Key →
             </a>
@@ -156,14 +180,12 @@ export default function MediaProviderDetailPage() {
         </div>
       )}
 
-      {/* Connections */}
       {!isCustom && provider.noAuth ? (
         <NoAuthProxyCard providerId={id} />
       ) : (
         <ConnectionsCard providerId={id} isOAuth={false} />
       )}
 
-      {/* Models - hidden for tts/webSearch/webFetch (provider IS the model); custom uses prefix as alias */}
       {kind !== "tts" && kind !== "webSearch" && kind !== "webFetch" && (
         <ModelsCard
           providerId={id}
@@ -172,20 +194,8 @@ export default function MediaProviderDetailPage() {
         />
       )}
 
-      {/* Provider Info — config-driven, supports searchConfig, fetchConfig, ttsConfig, embeddingConfig, systemoneConfig, searchViaChat */}
-      {!isCustom && (provider.searchConfig || provider.fetchConfig || provider.ttsConfig || provider.sttConfig || provider.embeddingConfig || provider.systemoneConfig || provider.searchViaChat) && (
-        <ProviderInfoCard
-          config={
-            kind === "webFetch" ? provider.fetchConfig
-              : kind === "tts" ? provider.ttsConfig
-              : kind === "stt" ? provider.sttConfig
-              : kind === "embedding" ? provider.embeddingConfig
-              : kind === "systemone" ? provider.systemoneConfig
-              : provider.searchConfig || { mode: "chat-completions", defaultModel: provider.searchViaChat?.defaultModel, pricingUrl: provider.searchViaChat?.pricingUrl, freeTier: provider.searchViaChat?.freeTier }
-          }
-          provider={provider}
-          title={`${kindConfig.label} Config`}
-        />
+      {!isCustom && config && (
+        <ProviderConfigPanel config={config} provider={provider} title={`${kindConfig.label} Config`} />
       )}
 
       {/* Example — per kind */}
