@@ -390,21 +390,27 @@
   padding: 0 14px;
   border-radius: var(--r-full);
   background: var(--surface-2);
-  color: var(--text);
+  color: var(--text-2);
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
-  transition: background-color 150ms;
+  transition: background-color 150ms, color 150ms;
 }
 
 .chip:hover {
   background: var(--surface-hover);
+  color: var(--text);
 }
 
 .chip[aria-current="true"] {
-  background: var(--canvas);
-  box-shadow: 0 0 0 1px var(--line);
+  background: var(--text);
+  color: var(--canvas);
   font-weight: 600;
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--text-2);
+  outline-offset: 3px;
 }
 
 .loadError {
