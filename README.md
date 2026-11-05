@@ -1,58 +1,91 @@
 <div align="center">
   <img src="./images/jrouter-dashboard.png" alt="JRouter Dashboard" width="800"/>
-  
-  # JRouter - AI Router & Token Saver
-  
-  **Never stop coding. Save 20-40% tokens with RTK + auto-fallback to free & cheap AI models.**
-  
-  **Connect All AI Code Tools (Claude Code, Cursor, Antigravity, Copilot, Codex, Gemini, OpenCode, Cline, OpenClaw...) to 40+ AI Providers & 100+ Models.**
-  
+
+  # JRouter: AI Router & Token Saver
+
+  **Never stop coding. Save 20-40% tokens with RTK + auto-fallback to free and cheap AI models.**
+
+  **Connect all AI coding tools (Claude Code, Cursor, Antigravity, Copilot, Codex, Gemini CLI, OpenCode, Cline, OpenClaw) to 140+ AI providers and models.**
+
   [![npm](https://img.shields.io/npm/v/@synthever/jrouter.svg)](https://www.npmjs.com/package/@synthever/jrouter)
   [![License](https://img.shields.io/npm/l/@synthever/jrouter.svg)](./LICENSE)
 
-  [🚀 Quick Start](#-quick-start) • [💡 Features](#-key-features) • [📖 Setup Guide](#-setup-guide) • [📸 Screenshots](#-screenshots)
+  [🚀 Quick Start & Installation](#-quick-start--how-to-install) • [📸 Screenshots](#-screenshots) • [🎨 Redesigned UI Highlights](#-redesigned-ui-highlights) • [💡 Key Features](#-key-features) • [🌐 Supported Providers](#-supported-providers) • [📖 Setup Guide](#-setup-guide)
 
 </div>
 
 ---
 
-> **JRouter is a maintained fork of [9Router](https://github.com/decolua/9router)** by [decolua](https://github.com/decolua) — all credit for the original architecture goes upstream. JRouter adds: **WorkBuddy & River providers**, model-namespace guards, orphan-model cleanup, **backup/restore of enabled-model settings**, **API-key extraction & bulk JSON import**, per-key model restrictions, and an installable CLI (`npm i -g @synthever/jrouter`).
+> **JRouter is a maintained fork of [9Router](https://github.com/decolua/9router)** by [decolua]. All credit for the original architecture goes upstream. JRouter adds: a redesigned Bento Grid dashboard with interactive 3D card tilt and draggable provider status tiles, a chat-first Playground workbench with dual-lane compare mode and JSON API inspection, scannable combos with custom model-IDs and key roles, move-on-error key demotion, sequential pool round-robin, WorkBuddy and River providers, model-namespace guards, orphan-model cleanup, backup and restore of enabled-model settings, API key extraction and bulk JSON import, per-key model restrictions, and an installable global CLI package (`npm i -g @synthever/jrouter`).
+
+---
 
 ## 📸 Screenshots
 
 <div align="center">
-  <img src="./images/jrouter-dashboard.png" alt="JRouter Dashboard — live telemetry" width="800"/>
-  <p><b>Dashboard</b> — real-time telemetry: requests, tokens, success rate, live routing & estimated cost</p>
+  <img src="./images/jrouter-dashboard.png" alt="JRouter Dashboard: live telemetry" width="800"/>
+  <p><b>Dashboard</b>: Redesigned Bento Grid layout with interactive 3D card tilt, draggable provider status tiles, real-time telemetry (requests, tokens, success rate, active routing), and warm/dark theme tokens.</p>
 
   <img src="./images/jrouter-providers.png" alt="JRouter Providers" width="800"/>
-  <p><b>Providers</b> — connection status and live model routing across all upstream accounts</p>
+  <p><b>Providers & Endpoints</b>: Real-time connection health, move-on-error demotion badges, sequential pool round-robin tracking, and one-click key extraction or bulk JSON import.</p>
 
   <img src="./images/jrouter-usage.png" alt="JRouter Usage & Analytics" width="800"/>
-  <p><b>Usage & Analytics</b> — requests, tokens and estimated cost across providers over time</p>
+  <p><b>Usage & Analytics</b>: Granular metrics including throughput KPIs (AVG REQ/MIN, AVG TOKENS/MIN), latency percentiles (p50, p95), and token consumption trends persisted into daily summaries.</p>
 
   <img src="./images/jrouter-playground.png" alt="JRouter Playground" width="800"/>
-  <p><b>Playground</b> — chat with any connected model instantly</p>
+  <p><b>Playground</b>: Chat-first workbench with streaming turns, execution rail, live telemetry cards (active target, cache ratio, routing latency), dual-lane Compare mode, and JSON API inspector.</p>
 </div>
+
+---
+
+## 🎨 Redesigned UI Highlights
+
+The latest release of JRouter features a completely overhauled design system built for high-density developer workflows:
+
+1. **Persistent Bento Grid Dashboard**:
+   - Reconfigurable modular bento layouts that remember your preferred tile arrangements.
+   - Interactive 3D card tilt and responsive lighting accents.
+   - Draggable provider status chips for real-time monitoring at a glance.
+   - Dual theme system: Warm cream paper (`#fffaf0`) for daylight clarity and deep dark (`#141414` / `#202020`) with hairline borders and pastel indicators.
+
+2. **Chat-First Playground Workbench**:
+   - Full-height workbench layout featuring live streaming turns and token counter.
+   - Live telemetry KPI cards: Active target node, prompt cache ratio, and round-trip routing latency.
+   - Execution rail: Parameter tuning without intrusive modal dialogs.
+   - Compare Mode: Run two models side by side with parallel streaming lanes.
+   - JSON API Inspector: View raw request payloads, response headers, and SSE events in real time.
+   - Persistent conversation sessions stored safely in local storage with one-click export (Markdown, JSON, Python, cURL).
+
+3. **Scannable Combos Management**:
+   - Redesigned table layout with instant visibility of primary models and fallback sequences.
+   - Support for Custom Model-IDs (`cmid`) and role gates (`owner` vs `user`).
+   - Publication switches to expose selected combos to consumer API keys while keeping private routes hidden.
+
+4. **Modular Settings & Profile**:
+   - Quick jump navigation chips for immediate access to sections.
+   - Modular panels for Preferences, Security, Routing, Network, Observability, SSO, and Backup & Restore.
 
 ---
 
 ## 🤔 Why JRouter?
 
-**Stop wasting money, tokens and hitting limits:**
+**Stop wasting money, tokens, and hitting limits:**
 
 - ❌ Subscription quota expires unused every month
 - ❌ Rate limits stop you mid-coding
-- ❌ Tool outputs (git diff, grep, ls...) burn tokens fast
-- ❌ Expensive APIs ($20-50/month per provider)
-- ❌ Manual switching between providers
+- ❌ Tool outputs (git diff, grep, ls, log dumps) burn prompt tokens rapidly
+- ❌ Expensive individual API subscriptions ($20-50/month per provider)
+- ❌ Manual switching between provider keys and configurations
 
 **JRouter solves this:**
 
-- ✅ **RTK Token Saver** - Auto-compress tool_result content, save 20-40% tokens per request
-- ✅ **Maximize subscriptions** - Track quota, use every bit before reset
-- ✅ **Auto fallback** - Subscription → Cheap → Free, zero downtime
-- ✅ **Multi-account** - Round-robin between accounts per provider
-- ✅ **Universal** - Works with Claude Code, Codex, Cursor, Cline, any CLI tool
+- ✅ **RTK Token Saver**: Auto-compress tool_result payloads, saving 20-40% tokens per request
+- ✅ **Prompt Optimization**: Optional Caveman and Ponytail modes cut output verbosity up to 65%
+- ✅ **Smart 3-Tier Fallback**: Automatic failover (Subscription -> Cheap -> Free) for zero downtime
+- ✅ **Move-on-Error Demotion**: Automatically sort failing keys behind healthy keys without rewriting priority
+- ✅ **Sequential Pool Round-Robin**: Strict 1 -> 2 -> 3 rotation across pool windows
+- ✅ **Multi-Account Load Balancing**: Round-robin across accounts per provider
+- ✅ **Universal Compatibility**: Works with Claude Code, Cursor, Codex, OpenClaw, Cline, and any OpenAI or Claude CLI tool
 
 ---
 
@@ -68,85 +101,174 @@
 ┌─────────────────────────────────────────────┐
 │           JRouter (Smart Router)            │
 │  • RTK Token Saver (cut tool_result tokens) │
-│  • Format translation (OpenAI ↔ Claude)     │
-│  • Quota tracking                           │
+│  • Move-on-error key demotion               │
+│  • Format translation (OpenAI <-> Claude)   │
+│  • Quota tracking and latency KPIs          │
 │  • Auto token refresh                       │
 └──────┬──────────────────────────────────────┘
        │
-       ├─→ [Tier 1: SUBSCRIPTION] Claude Code, Codex, GitHub Copilot
+       ├─> [Tier 1: SUBSCRIPTION] Claude Code, Codex, GitHub Copilot
        │   ↓ quota exhausted
-       ├─→ [Tier 2: CHEAP] GLM ($0.6/1M), MiniMax ($0.2/1M)
+       ├─> [Tier 2: CHEAP] GLM ($0.6/1M), MiniMax ($0.2/1M), Kimi
        │   ↓ budget limit
-       └─→ [Tier 3: FREE] Kiro, OpenCode Free, Vertex ($300 credits)
+       └─> [Tier 3: FREE] Kiro, OpenCode Free, Vertex ($300 credits)
 
 Result: Never stop coding, minimal cost + 20-40% token savings via RTK
 ```
 
 ---
 
-## ⚡ Quick Start
+## ⚡ Quick Start & How to Install
 
-**1. Install globally:**
+JRouter can be installed globally as a standalone CLI application, connected to existing tools remotely, run from source, deployed via PM2 as a background service, or launched inside a Docker container.
+
+### Method 1: Global CLI Install (Recommended)
+
+Install the global CLI using your preferred package manager:
 
 ```bash
+# Using npm
 npm install -g @synthever/jrouter
+
+# Or using pnpm
+pnpm add -g @synthever/jrouter
+
+# Or using bun
+bun add -g @synthever/jrouter
+```
+
+Start JRouter:
+
+```bash
 jrouter
 ```
 
-🎉 Dashboard opens at `http://localhost:20128`
+The web dashboard opens automatically at `http://localhost:20128/dashboard`.
 
-**Useful CLI commands:**
+#### Interactive Terminal UI (TUI)
 
-```bash
-jrouter                    # start the server + open the dashboard
-jrouter -p 3000            # run on a custom port
-jrouter connect <url>      # configure local CLI tools against a remote JRouter
-jrouter show               # show each CLI tool's current JRouter config
-```
+When run in an interactive terminal, `jrouter` provides an interactive Terminal UI to configure:
+- **Providers**: Connect, test, and manage OAuth or API-key providers
+- **Combos**: Build fallback and round-robin model cascades
+- **API Keys**: Generate and restrict keys with custom model-IDs and roles
+- **CLI Tools**: One-click setup for Claude Code, Codex, Cursor, and OpenClaw
+- **Backup & Restore**: Export and import full database state including enabled models
 
-**2. Connect a FREE provider (no signup needed):**
-
-Dashboard → Providers → Connect **Kiro AI** (~50 credits/month free: Claude 4.5 + GLM-5 + MiniMax) or **OpenCode Free** (no auth) → Done!
-
-**3. Use in your CLI tool:**
-
-```
-Claude Code/Codex/OpenClaw/Cursor/Cline Settings:
-  Endpoint: http://localhost:20128/v1
-  API Key: [copy from dashboard]
-  Model: kr/claude-sonnet-4.5
-```
-
-**That's it!** Start coding with FREE AI models.
-
-**Alternative: run from source (this repository):**
+#### CLI Command Options
 
 ```bash
-cp .env.example .env
+jrouter                     # Start server and launch dashboard in browser
+jrouter -p 3000             # Run on custom port (default: 20128)
+jrouter --host 127.0.0.1    # Bind to loopback interface only (local-only)
+jrouter --no-browser        # Start in headless mode without opening the browser
+jrouter --log               # Stream server logs to stdout
+jrouter --tray              # Minimize to system tray (macOS, Windows, Linux)
+jrouter --skip-update       # Skip automatic npm update checks
+jrouter --help              # Display full command help
+```
+
+---
+
+### Method 2: Connect Local CLI Tools to a Remote JRouter
+
+If you already have JRouter running on a server or VPS, you do not need to install the full server locally. You can configure your local CLI tools directly using `npx`:
+
+```bash
+# Interactively choose which tools to point to your remote JRouter:
+npx @synthever/jrouter connect http://<your-server-ip>:20128
+
+# Or configure specific tools directly:
+npx @synthever/jrouter connect http://<your-server-ip>:20128 --tools claude,codex,cursor
+
+# Inspect what your local CLI tools are currently pointed to:
+npx @synthever/jrouter show
+
+# Revert tools back to their previous configurations:
+npx @synthever/jrouter connect --reset --tools claude,codex
+```
+
+Supported tools: `claude`, `codex`, `opencode`, `droid`, `crush`, `kilo`, `cline`, `pi`, `omp`, or `all`.
+
+---
+
+### Method 3: Run from Source (Repository Checkout)
+
+To develop or run JRouter directly from source:
+
+```bash
+# 1. Clone repository
+git clone https://github.com/Synthever/JRouter.git
+cd JRouter
+
+# 2. Install dependencies
 npm install
+
+# 3. Development server
 PORT=20128 NEXT_PUBLIC_BASE_URL=http://localhost:20128 npm run dev
-```
 
-Production mode:
-
-```bash
+# 4. Production build and execution
 export MAKEFLAGS="-j1"
-
 npm run build
-
-PORT=20128 HOSTNAME=0.0.0.0 NEXT_PUBLIC_BASE_URL=http://localhost:20128 npm run start
+npm start
 ```
 
-Default URLs:
-
+Default endpoints:
 - Dashboard: `http://localhost:20128/dashboard`
 - OpenAI-compatible API: `http://localhost:20128/v1`
 
 ---
 
-## Video Guides
+### Method 4: Production Deployment via PM2 (VPS / Linux)
 
-Tutorials for the upstream 9Router project (JRouter works the same way):
+For 24/7 background operation on Linux servers:
+
+```bash
+git clone https://github.com/Synthever/JRouter.git
+cd JRouter
+npm install
+npm run build
+
+# Install PM2 globally
+npm install -g pm2
+
+# Start custom-server under PM2
+pm2 start custom-server.js --name jrouter -- --port 20128
+
+# Save process list and enable boot startup
+pm2 save
+pm2 startup
+```
+
+---
+
+### Method 5: Docker Container
+
+Run JRouter in an isolated Docker container with persistent data:
+
+```bash
+# Build the Docker image
+docker build -t jrouter .
+
+# Run container with volume persistence
+docker run -d \
+  -p 20128:20128 \
+  -v "$HOME/.9router:/app/data" \
+  -e DATA_DIR=/app/data \
+  --name jrouter \
+  jrouter
+```
+
+Or use docker-compose:
+
+```bash
+docker compose up -d
+```
+
+---
+
+## 📺 Video Guides
+
+Tutorials for setting up and maximizing routing efficiency (JRouter works following the same principles):
 
 <div align="center">
 
@@ -157,37 +279,37 @@ Tutorials for the upstream 9Router project (JRouter works the same way):
         <img src="https://img.youtube.com/vi/CkVZZUSTXAI/mqdefault.jpg" alt="Claude CLI Free Setup" width="300"/>
       </a><br/>
       <b>🇮🇩 Indonesia</b><br/>
-      <sub>Koding 24 Jam Anti Rate Limit! Hemat Token AI 65% | Tutorial Quick Setup 9Router 🚀<br/>by <a href="https://www.youtube.com/@krisswuh">Krisswuh</a></sub>
+      <sub>Koding 24 Jam Anti Rate Limit! Hemat Token AI 65% | Tutorial Quick Setup 🚀<br/>by <a href="https://www.youtube.com/@krisswuh">Krisswuh</a></sub>
     </td>
     <td align="center" width="320">
       <a href="https://www.youtube.com/watch?v=TXGv4eofe1I">
-        <img src="https://img.youtube.com/vi/TXGv4eofe1I/mqdefault.jpg" alt="Cara Deploy 9Router di Hugging Face GRATIS" width="300"/>
+        <img src="https://img.youtube.com/vi/TXGv4eofe1I/mqdefault.jpg" alt="Cara Deploy di Hugging Face GRATIS" width="300"/>
       </a><br/>
       <b>🇮🇩 Indonesia</b><br/>
-      <sub>Cara Deploy 9Router di Hugging Face GRATIS Non-Stop! | Alternatif VPS RAM 16GB<br/>by <a href="https://www.youtube.com/@krisswuh">Krisswuh</a></sub>
+      <sub>Cara Deploy di Hugging Face GRATIS Non-Stop! | Alternatif VPS RAM 16GB<br/>by <a href="https://www.youtube.com/@krisswuh">Krisswuh</a></sub>
     </td>
     <td align="center" width="320">
       <a href="https://www.youtube.com/watch?v=hgnE7MKi3Y4">
-        <img src="https://img.youtube.com/vi/hgnE7MKi3Y4/maxresdefault.jpg" alt="Bye Limit! AI Unlimited Gratis Dengan 9Router" width="300"/>
+        <img src="https://img.youtube.com/vi/hgnE7MKi3Y4/maxresdefault.jpg" alt="Bye Limit! AI Unlimited Gratis" width="300"/>
       </a><br/>
       <b>🇮🇩 Indonesia</b><br/>
-      <sub>Bye Limit! Cara Bikin Sistem "AI Unlimited" 100% Gratis Dengan 9Router!<br/>by <a href="https://www.youtube.com/@neptiver">neptiver</a></sub>
+      <sub>Bye Limit! Cara Bikin Sistem "AI Unlimited" 100% Gratis!<br/>by <a href="https://www.youtube.com/@neptiver">neptiver</a></sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="320">
       <a href="https://www.youtube.com/watch?v=raEyZPg5xE0">
-        <img src="https://img.youtube.com/vi/raEyZPg5xE0/maxresdefault.jpg" alt="9Router Setup Tutorial" width="300"/>
+        <img src="https://img.youtube.com/vi/raEyZPg5xE0/maxresdefault.jpg" alt="Setup Tutorial" width="300"/>
       </a><br/>
       <b>🇺🇸 English</b><br/>
-      <sub>9Router + Claude Code FREE Setup<br/>by <a href="https://www.youtube.com/@BuildAIWithHamid">Build AI With Hamid</a></sub>
+      <sub>Claude Code FREE Setup Guide<br/>by <a href="https://www.youtube.com/@BuildAIWithHamid">Build AI With Hamid</a></sub>
     </td>
     <td align="center" width="320">
       <a href="https://www.youtube.com/watch?v=X69n5Lm06Yw">
-        <img src="https://img.youtube.com/vi/X69n5Lm06Yw/maxresdefault.jpg" alt="Tiết kiệm chi phí LLM với 9Router" width="300"/>
+        <img src="https://img.youtube.com/vi/X69n5Lm06Yw/maxresdefault.jpg" alt="Cost Saving LLM" width="300"/>
       </a><br/>
       <b>🇻🇳 Tiếng Việt</b><br/>
-      <sub>Tiết kiệm chi phí LLM cho OpenClaw với 9Router<br/>by <a href="https://www.youtube.com/c/M%C3%ACAIblog">Mì AI</a></sub>
+      <sub>Cost Saving LLM for OpenClaw<br/>by <a href="https://www.youtube.com/c/M%C3%ACAIblog">Mì AI</a></sub>
     </td>
     <td align="center" width="320"></td>
   </tr>
@@ -308,7 +430,7 @@ JRouter works seamlessly with all major AI coding tools:
       <td align="center" width="150">
         <img src="./public/providers/opencode.png" width="70" alt="OpenCode Free"/><br/>
         <b>OpenCode Free</b><br/>
-        <sub>No auth • Auto-fetch models<br/>Free (model list varies)</sub>
+        <sub>No auth, auto-fetch models<br/>Free (model list varies)</sub>
       </td>
       <td align="center" width="150">
         <img src="./public/providers/gemini.png" width="70" alt="Vertex AI"/><br/>
@@ -376,16 +498,14 @@ JRouter works seamlessly with all major AI coding tools:
       </td>
     </tr>
   </table>
-  <p><i>...and 20+ more including Together, Fireworks, Cerebras, SiliconFlow, and custom OpenAI/Anthropic-compatible endpoints</i></p>
+  <p><i>...and 20+ more including Together, Fireworks, Cerebras, SiliconFlow, BeatAPI, and custom OpenAI/Anthropic-compatible endpoints</i></p>
 </div>
 
-> **JRouter extras:** `workbuddy` (GLM/DeepSeek/Kimi/MiniMax via workbuddy.ai) and `river` are JRouter additions, plus **bulk key management** — export all connection keys of a provider as JSON (*Extract Keys*) and import them on another provider (*Add Key → Import JSON*).
+> **JRouter extras**: `workbuddy` (GLM/DeepSeek/Kimi/MiniMax via workbuddy.ai) and `river` are JRouter additions, plus **bulk key management**: export all connection keys of a provider as JSON (*Extract Keys*) and import them on another provider (*Add Key -> Import JSON*).
 
 ### 🏠 Self-hosted Providers
 
-For speech and embeddings served from **your own** machine — whisper.cpp,
-faster-whisper, Kokoro-FastAPI, openedai-speech, llama.cpp/llama-server,
-vLLM, Infinity, or anything else that speaks the OpenAI shape.
+For speech and embeddings served from your own machine: whisper.cpp, faster-whisper, Kokoro-FastAPI, openedai-speech, llama.cpp/llama-server, vLLM, Infinity, or any OpenAI-compatible server.
 
 | Provider | Endpoint used | Typical server |
 | --- | --- | --- |
@@ -393,73 +513,61 @@ vLLM, Infinity, or anything else that speaks the OpenAI shape.
 | **Self-hosted TTS** | `/v1/audio/speech` | Kokoro-FastAPI, openedai-speech |
 | **Self-hosted Embedding** | `/v1/embeddings` | llama-server, vLLM, Infinity |
 
-Each of these reads its address from **each connection** (`providerSpecificData.baseUrl`),
-so one provider can front several machines and load-balance across them.
-
-> **Mind the `/v1` on embeddings.** The adapter appends `/embeddings`, so
-> `http://host:8080` resolves to `http://host:8080/embeddings` and misses the
-> OpenAI route — llama-server answers **501**. Give it the same base URL an OpenAI
-> client would use (`http://host:8080/v1`).
-
-The API key is not checked by most local servers, but the field must be non-empty:
-it is what gives the connection a credentials record, and `baseUrl` lives there.
-Any placeholder works.
+Each of these reads its address from each connection (`providerSpecificData.baseUrl`), so one provider can front several machines and load-balance across them.
 
 ---
 
 ## 💡 Key Features
 
-| Feature                                                                           | What It Does                                                                             | Why It Matters                                    |
-| --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| 🚀 **RTK Token Saver** ([RTK](https://github.com/rtk-ai/rtk) ⭐40K)               | Compress tool outputs (`git diff`, `grep`, `ls`, `tree`...) before sending to LLM        | Save **20-40% input tokens** per request          |
-| 🪨 **Caveman Mode** ([Caveman](https://github.com/JuliusBrussee/caveman) ⭐52K)   | Inject caveman-speak prompt → LLM replies terse, technical substance preserved           | Save **up to 65% output tokens**                  |
-| 🐴 **Ponytail** ([Ponytail](https://github.com/DietrichGebert/ponytail))          | Inject "lazy senior dev" prompt → LLM writes minimal, YAGNI-first code (Lite/Full/Ultra) | **Fewer output tokens, less refactoring**         |
-| 🎯 **Smart 3-Tier Fallback**                                                      | Auto-route: Subscription → Cheap → Free                                                  | Never stop coding, zero downtime                  |
-| 📊 **Real-Time Quota Tracking**                                                   | Live token count + reset countdown                                                       | Maximize subscription value                       |
-| 🔄 **Format Translation**                                                         | OpenAI ↔ Claude ↔ Gemini ↔ Cursor ↔ Kiro ↔ Vertex                                        | Works with any CLI tool                           |
-| 👥 **Multi-Account Support**                                                      | Multiple accounts per provider                                                           | Load balancing + redundancy                       |
-| 🔄 **Auto Token Refresh**                                                         | OAuth tokens refresh automatically                                                       | No manual re-login needed                         |
-| 🔐 **Per-Key Model Restrictions**                                                 | Each API key can restrict allowed models; `/v1/models` reflects the restriction          | Fine-grained access control                       |
-| 💾 **Backup/Restore with Model Settings**                                         | Full DB export as JSON **including per-provider enabled/disabled models**                | Restore anywhere, settings come back exactly      |
-| 📥 **Key Extract & Import**                                                       | Export connection keys as JSON, bulk-import on another provider                          | Move keys between providers in seconds            |
-| 🎨 **Custom Combos**                                                              | Create unlimited model combinations                                                      | Tailor fallback to your needs                     |
-| 📊 **Usage Analytics**                                                            | Track tokens, cost, trends over time                                                     | Optimize spending                                 |
-| 🌐 **Deploy Anywhere**                                                            | Localhost, VPS, npm CLI                                                                  | Flexible deployment options                       |
+| Feature | What It Does | Why It Matters |
+| --- | --- | --- |
+| 🚀 **RTK Token Saver** ([RTK](https://github.com/rtk-ai/rtk)) | Compress tool outputs (`git diff`, `grep`, `ls`, `tree`) before LLM | Save **20-40% input tokens** per request |
+| 🪨 **Caveman Mode** ([Caveman](https://github.com/JuliusBrussee/caveman)) | Terse, technical responses without fluff | Save **up to 65% output tokens** |
+| 🐴 **Ponytail** ([Ponytail](https://github.com/DietrichGebert/ponytail)) | "Lazy senior dev" prompt: minimal, YAGNI-first code | Fewer output tokens, cleaner diffs |
+| 🎯 **Smart 3-Tier Fallback** | Auto-route: Subscription -> Cheap -> Free | Never stop coding, zero downtime |
+| 📉 **Move-on-Error Demotion** | Sort failing keys behind healthy keys dynamically | Avoid re-hitting broken or empty keys |
+| 🔄 **Sequential Pool Round-Robin** | Strict 1 -> 2 -> 3 rotation across pool windows | True uniform load distribution |
+| 🔐 **Custom Model-IDs & Role Gates** | Restrict user-role keys to published combo names | Production multi-tenant safety |
+| 📊 **Real-Time Throughput & Latency KPIs** | AVG REQ/MIN, AVG TOKENS/MIN, p50/p95 latency metrics | Accurate performance monitoring |
+| 🔄 **Universal Format Translation** | OpenAI <-> Claude <-> Gemini <-> Cursor <-> Kiro <-> Vertex | Works with any CLI tool |
+| 👥 **Multi-Account Support** | Multiple credentials per provider | Redundancy and rate-limit bypassing |
+| 💾 **Backup/Restore with Model Settings** | Full database export/import preserving enabled-model state | Move configurations cleanly |
+| 📥 **Key Extract & Import** | Export keys as JSON, bulk-import across providers | Migrate credentials in seconds |
 
-Set `X-9Router-Token-Saver: off` to bypass all token savers for one chat request.
+Set header `X-9Router-Token-Saver: off` to bypass token savers for an individual request.
 
 <details>
 <summary><b>📖 Feature Details</b></summary>
 
 ### 🚀 RTK Token Saver
 
-Tool outputs (`git diff`, `grep`, `find`, `ls`, `tree`, log dumps...) often eat 30-50% of your prompt budget. RTK detects them and applies smart, lossless compression **before** the request hits the LLM:
+Tool outputs (`git diff`, `grep`, `find`, `ls`, `tree`, log dumps) often eat 30-50% of your prompt budget. RTK detects them and applies smart, lossless compression before the request hits the LLM:
 
-- **Filters:** `git-diff`, `git-status`, `grep`, `find`, `ls`, `tree`, `dedup-log`, `smart-truncate`, `read-numbered`, `search-list`
-- **Auto-detect:** No config needed — RTK peeks the first 1KB of each `tool_result` and picks the right filter.
-- **Safe by design:** If a filter fails, throws, or makes output bigger, RTK silently keeps the original text. Errors never break your request.
-- **Universal:** Works across all formats (OpenAI, Claude, Gemini, Cursor, Kiro, OpenAI Responses) because it runs **before** any format translation.
-- **Default ON:** Toggle anytime in Dashboard → Endpoint settings.
+- **Filters**: `git-diff`, `git-status`, `grep`, `find`, `ls`, `tree`, `dedup-log`, `smart-truncate`, `read-numbered`, `search-list`
+- **Auto-detect**: No config needed. RTK peeks the first 1KB of each `tool_result` and picks the right filter.
+- **Safe by design**: If a filter fails, throws, or makes output bigger, RTK silently keeps the original text. Errors never break your request.
+- **Universal**: Works across all formats (OpenAI, Claude, Gemini, Cursor, Kiro, OpenAI Responses) because it runs before any format translation.
+- **Default ON**: Toggle anytime in Dashboard -> Endpoint settings.
 
 ```
 Without RTK: 47K tokens sent to LLM
-With RTK:    28K tokens sent to LLM   (40% saved · same context · same answer)
+With RTK:    28K tokens sent to LLM   (40% saved, same context, same answer)
 ```
 
 ### 🐴 Ponytail (Lazy Senior Dev)
 
-Ponytail injects a _"lazy senior dev"_ system prompt into every request, biasing the LLM toward minimal, YAGNI-first code — deletion over addition, stdlib over new deps, one-liners over abstractions. Adapted from [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail).
+Ponytail injects a "lazy senior dev" system prompt into every request, biasing the LLM toward minimal, YAGNI-first code: deletion over addition, stdlib over new deps, one-liners over abstractions. Adapted from [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail).
 
-- **Lite** — Build what's asked, name the lazier alternative.
-- **Full** — YAGNI ladder enforced: stdlib → native → existing deps → one-liner → minimal code.
-- **Ultra** — YAGNI extremist: deletion first, ship the one-liner, challenge the rest of the requirement in the same response.
+- **Lite**: Build what is asked, name the lazier alternative.
+- **Full**: YAGNI ladder enforced: stdlib -> native -> existing deps -> one-liner -> minimal code.
+- **Ultra**: YAGNI extremist: deletion first, ship the one-liner, challenge the rest of the requirement in the same response.
 
 ```
 Without Ponytail: verbose code, extra abstractions, "just in case" scaffolding
 With Ponytail:    shortest working diff, no unrequested abstractions, fewer tokens
 ```
 
-Never trades away: input validation, error handling that prevents data loss, security, accessibility, or anything explicitly requested. Enable in Dashboard → Endpoint → Ponytail. Stacks with Caveman (output terseness) and RTK (input compression).
+Never trades away: input validation, error handling that prevents data loss, security, accessibility, or anything explicitly requested. Enable in Dashboard -> Endpoint -> Ponytail.
 
 ### 🎯 Smart 3-Tier Fallback
 
@@ -471,77 +579,62 @@ Combo: "my-coding-stack"
   2. glm/glm-4.7               (cheap backup, $0.6/1M)
   3. if/kimi-k2-thinking       (free fallback)
 
-→ Auto switches when quota runs out or errors occur
+-> Auto switches when quota runs out or errors occur
 ```
 
-### 🔐 Per-Key Model Restrictions
+### 📉 Move-on-Error Demotion
 
-Each API key can have an allowed-models list:
+A failing key is flagged and sorted behind every healthy key for that provider until its next successful call clears the flag. Your curated priority order is never rewritten: it is a runtime overlay, so a recovered key returns to its original slot. Per-provider toggle, on by default. Payload-caused 4xx errors (400, 404, 413, 422) never demote because the credential itself is not at fault.
 
-- **Allowed models set** → the key can only use those models, and `GET /v1/models` with that key returns only them
-- **Allowed models empty** → the key can use all models
+### 🔄 Sequential Pool Round-Robin
+
+Strict `1 -> 2 -> 3 -> 1` rotation over a configurable pool window, demotion-aware: a demoted key sinks out of the window and a recovered key re-enters at its curated position. The cursor is identity-based, so changing pool membership re-anchors instead of skipping a key.
+
+### 🔐 Custom Model-IDs & Key Role Gates
+
+Combos can be published under a clean, custom model identifier (e.g. `fast-code` or `synth-agent`). API keys can be designated with an `owner` role (full access) or a `user` role. User-role keys are restricted strictly to explicitly published custom model-IDs, making JRouter ready for team or client sharing.
 
 ### 💾 Backup / Restore with Model Settings
 
-Download the full database as JSON from Dashboard → Settings. The export includes per-provider **enabled/disabled model lists**, so a restore brings every provider back exactly as configured — no models reset to defaults.
+Download the full database as JSON from Dashboard -> Settings. The export includes per-provider **enabled/disabled model lists**, so a restore brings every provider back exactly as configured: no models reset to defaults.
 
 ### 📥 Extract Keys & Import JSON
 
-On any API-key provider: **Connections → Extract Keys** downloads `keys-<providerId>.json`. On another provider: **Add Key → Import JSON** parses that file, validates each key, and bulk-adds the active ones.
+On any API-key provider: **Connections -> Extract Keys** downloads `keys-<providerId>.json`. On another provider: **Add Key -> Import JSON** parses that file, validates each key, and bulk-adds the active ones.
 
 ### 🔄 Format Translation
 
 Seamless translation between formats:
+- **OpenAI** <-> **Claude** <-> **Gemini** <-> **Cursor** <-> **Kiro** <-> **Vertex** <-> **Antigravity** <-> **Ollama** <-> **OpenAI Responses**
+- Your CLI tool sends OpenAI format -> JRouter translates -> Provider receives native format
 
-- **OpenAI** ↔ **Claude** ↔ **Gemini** ↔ **Cursor** ↔ **Kiro** ↔ **Vertex** ↔ **Antigravity** ↔ **Ollama** ↔ **OpenAI Responses**
-- Your CLI tool sends OpenAI format → JRouter translates → Provider receives native format
-
-### 📊 Real-Time Quota Tracking
+### 📊 Real-Time Quota Tracking & Latency Metrics
 
 - Token consumption per provider
 - Reset countdown (5-hour, daily, weekly)
-- Cost estimation for paid tiers
-- Monthly spending reports
-
-### 👥 Multi-Account Support
-
-- Add multiple accounts per provider
-- Auto round-robin or priority-based routing
-- Fallback to next account when one hits quota
-
-### 🔄 Auto Token Refresh
-
-- OAuth tokens automatically refresh before expiration
-- No manual re-authentication needed
-
-> **💡 IMPORTANT - Understanding Dashboard Costs:**
->
-> The "cost" displayed in Usage Analytics is **for tracking and comparison purposes only**.
-> JRouter itself **never charges** you anything. You only pay providers directly (if using paid services).
->
-> Think of it as a "savings tracker" showing how much you're saving by using free models or
-> routing through JRouter!
+- Throughput and latency percentiles (AVG REQ/MIN, AVG TOKENS/MIN, p50, p95) persisted into daily summaries
+- Cost estimation for tracking and comparison
 
 </details>
 
 ---
 
-## 💰 Pricing at a Glance
+## 💰 Pricing & Provider Tiers
 
-| Tier                | Provider              | Cost         | Quota Reset      | Best For                                |
-| ------------------- | --------------------- | ------------ | ---------------- | --------------------------------------- |
-| **🚀 TOKEN SAVER**  | **RTK (built-in)**    | **FREE**     | Always on        | **Save 20-40% tokens on EVERY request** |
-| **💳 SUBSCRIPTION** | Claude Code (Pro/Max) | $20-200/mo   | 5h + weekly      | Already subscribed                      |
-|                     | Codex (Plus/Pro)      | $20-200/mo   | 5h + weekly      | OpenAI users                            |
-|                     | GitHub Copilot        | $10-19/mo    | Monthly          | GitHub users                            |
-| **💰 CHEAP**        | GLM-5.1 / GLM-4.7     | $0.6/1M      | Daily 10AM       | Budget backup                           |
-|                     | MiniMax M2.7          | $0.2/1M      | 5-hour rolling   | Cheapest option                         |
-|                     | Kimi K2.5             | $9/mo flat   | 10M tokens/mo    | Predictable cost                        |
-| **🆓 FREE**         | Kiro AI               | $0           | 50 credits/mo    | Claude 4.5 + GLM-5 + MiniMax free       |
-|                     | OpenCode Free         | $0           | Varies*          | No auth, auto-fetch models              |
-|                     | Vertex AI             | $300 credits | New GCP accounts | Gemini 3 Pro + DeepSeek + GLM-5         |
+| Tier | Provider | Cost | Quota Reset | Best For |
+| --- | --- | --- | --- | --- |
+| **🚀 TOKEN SAVER** | **RTK (built-in)** | **FREE** | Always on | Save 20-40% tokens on every request |
+| **💳 SUBSCRIPTION** | Claude Code (Pro/Max) | $20-200/mo | 5h + weekly | Active Anthropic subscribers |
+| | Codex (Plus/Pro) | $20-200/mo | 5h + weekly | Active OpenAI subscribers |
+| | GitHub Copilot | $10-19/mo | Monthly | Active GitHub users |
+| **💰 CHEAP** | GLM-5.1 / GLM-4.7 | $0.6/1M | Daily 10AM | Budget backup coding |
+| | MiniMax M2.7 | $0.2/1M | 5-hour rolling | Lowest cost per token |
+| | Kimi K2.5 | $9/mo flat | 10M tokens/mo | Predictable monthly cost |
+| **🆓 FREE** | Kiro AI | $0 | 50 credits/mo | Claude 4.5 + GLM-5 + MiniMax |
+| | OpenCode Free | $0 | Varies | Zero-auth passthrough |
+| | Vertex AI | $300 credits | New GCP accounts | Gemini 3 Pro + DeepSeek |
 
-**💡 Pro Tip:** RTK + Kiro AI + OpenCode Free combo = **$0 cost + 20-40% token savings**!
+**💡 Pro Tip**: RTK + Kiro AI + OpenCode Free combo = **$0 cost + 20-40% token savings**!
 
 ---
 
@@ -550,45 +643,48 @@ Seamless translation between formats:
 <details>
 <summary><b>📊 Why does my dashboard show high costs?</b></summary>
 
-The dashboard tracks your token usage and displays **estimated costs** as if you were using paid APIs directly. This is **not actual billing** — it's a reference to show how much you're saving by using free models or existing subscriptions through JRouter.
+The dashboard tracks your token usage and displays **estimated costs** as if you were using paid APIs directly. This is **not actual billing**: it is a reference metric showing how much you are saving by routing through free models or existing subscriptions.
 
 **Example:**
 - **Dashboard shows:** "$290 total cost"
-- **Reality:** You're using Kiro free models (~50 credits/mo)
+- **Reality:** You are using Kiro free models (50 credits/month)
 - **Your actual cost:** **$0.00**
-- **What $290 means:** Amount you **saved**!
+- **What $290 means:** Total estimated value of tokens saved!
 
 </details>
 
 <details>
 <summary><b>💳 Will I be charged by JRouter?</b></summary>
 
-**No.** JRouter is free, open-source software that runs on your own computer. It never charges you anything. You only pay providers directly (subscriptions or API fees).
+**No.** JRouter is free, open-source software that runs on your own machine or server. It never charges you. You only pay upstream providers directly when using paid accounts or API keys.
 </details>
 
 <details>
-<summary><b>🔀 How is JRouter different from 9Router?</b></summary>
+<summary><b>🔀 How is JRouter different from upstream 9Router?</b></summary>
 
-JRouter is a fork of [9Router](https://github.com/decolua/9router). JRouter additions:
-
-- **WorkBuddy** OAuth provider (workbuddy.ai — GLM/DeepSeek/Kimi/MiniMax) and **River** API-key provider
-- **Backup/restore includes enabled/disabled model settings** per provider
-- **Extract Keys / Import JSON** for bulk API-key management
-- **Per-key model restrictions** enforced on both chat and `/v1/models`
-- Model-namespace guards + orphan-model cleanup (no ghost models in the picker)
-- Published npm CLI: `npm i -g @synthever/jrouter`
+JRouter is an advanced, maintained fork of 9Router adding:
+- Redesigned Bento Grid dashboard with interactive 3D card tilt and draggable status tiles
+- Chat-first Playground workbench with execution rail, KPI cards, Compare mode, and JSON API inspector
+- Scannable Combos table with Custom Model-IDs (`cmid`) and role gates (`owner` vs `user`)
+- Move-on-error key demotion for resilient routing
+- Sequential pool round-robin load balancing
+- WorkBuddy and River provider integrations
+- Backup and restore preserving per-provider enabled/disabled model settings
+- Bulk key extraction and JSON import
+- Per-key model allow/deny lists
+- Installable global CLI package `@synthever/jrouter` with Terminal UI (TUI)
 </details>
 
 <details>
-<summary><b>🖥️ Can JRouter run alongside the official 9Router?</b></summary>
+<summary><b>🖥️ Can JRouter run alongside upstream 9Router?</b></summary>
 
-Yes — but not on the same port/data at once. Both default to port `20128` and the `~/.9router` data dir. Stop one before starting the other, or run `jrouter -p <other-port>` for a separate instance.
+Yes, but not on the same port or data directory simultaneously. Both default to port `20128` and `~/.9router`. Run `jrouter -p <other-port>` to run a separate instance.
 </details>
 
 <details>
 <summary><b>🆓 Are FREE providers really free?</b></summary>
 
-Yes, within their limits: **Kiro** ~50 credits/month (paid tiers above), **OpenCode Free** no-auth passthrough (model list fluctuates), **Vertex AI** $300 free credits for new GCP accounts (use the Vertex AI Studio endpoint). JRouter just routes — no "catch", no future billing from JRouter itself.
+Yes, within their limits: **Kiro** ~50 credits/month, **OpenCode Free** no-auth passthrough, **Vertex AI** $300 free credits for new GCP accounts. JRouter simply routes your requests without additional charges.
 </details>
 
 ---
@@ -596,14 +692,14 @@ Yes, within their limits: **Kiro** ~50 credits/month (paid tiers above), **OpenC
 ## 📖 Setup Guide
 
 <details>
-<summary><b>🔐 Subscription Providers (Maximize Value)</b></summary>
+<summary><b>🔐 Subscription Providers</b></summary>
 
 ### Claude Code (Pro/Max)
 
 ```bash
-Dashboard → Providers → Connect Claude Code
-→ OAuth login → Auto token refresh
-→ 5-hour + weekly quota tracking
+Dashboard -> Providers -> Connect Claude Code
+-> OAuth login -> Auto token refresh
+-> 5-hour + weekly quota tracking
 
 Models:
   cc/claude-opus-4-7
@@ -615,8 +711,8 @@ Models:
 ### OpenAI Codex (Plus/Pro)
 
 ```bash
-Dashboard → Providers → Connect Codex
-→ OAuth login → 5-hour + weekly reset
+Dashboard -> Providers -> Connect Codex
+-> OAuth login -> 5-hour + weekly reset
 
 Models:
   cx/gpt-5.5
@@ -626,8 +722,8 @@ Models:
 ### GitHub Copilot
 
 ```bash
-Dashboard → Providers → Connect GitHub
-→ OAuth via GitHub → Monthly reset
+Dashboard -> Providers -> Connect GitHub
+-> OAuth via GitHub -> Monthly reset
 
 Models:
   gh/gpt-5.4
@@ -638,8 +734,8 @@ Models:
 ### WorkBuddy (JRouter addition)
 
 ```bash
-Dashboard → Providers → Connect WorkBuddy
-→ OAuth device login at workbuddy.ai
+Dashboard -> Providers -> Connect WorkBuddy
+-> OAuth device login at workbuddy.ai
 
 Models:
   wb/glm-5.2
@@ -651,29 +747,29 @@ Models:
 </details>
 
 <details>
-<summary><b>💰 Cheap Providers (Backup)</b></summary>
+<summary><b>💰 Cheap Providers</b></summary>
 
-### GLM-5.1 / GLM-4.7 (Daily reset, $0.6/1M)
+### GLM-5.1 / GLM-4.7 ($0.6/1M)
 
 1. Sign up: [Zhipu AI](https://open.bigmodel.cn/)
 2. Get API key from Coding Plan
-3. Dashboard → Add API Key → Provider: `glm`
+3. Dashboard -> Add API Key -> Provider: `glm`
 
-**Use:** `glm/glm-5.1`, `glm/glm-5`, `glm/glm-4.7`
+**Use**: `glm/glm-5.1`, `glm/glm-5`, `glm/glm-4.7`
 
-### MiniMax M2.7 (5h reset, $0.20/1M)
+### MiniMax M2.7 ($0.20/1M)
 
 1. Sign up: [MiniMax](https://www.minimax.io/)
-2. Get API key → Dashboard → Add API Key
+2. Get API key -> Dashboard -> Add API Key
 
-**Use:** `minimax/MiniMax-M2.7`
+**Use**: `minimax/MiniMax-M2.7`
 
 ### Kimi K2.5 ($9/month flat)
 
 1. Subscribe: [Moonshot AI](https://platform.moonshot.ai/)
-2. Get API key → Dashboard → Add API Key
+2. Get API key -> Dashboard -> Add API Key
 
-**Use:** `kimi/kimi-k2.5`, `kimi/kimi-k2.5-thinking`
+**Use**: `kimi/kimi-k2.5`, `kimi/kimi-k2.5-thinking`
 
 </details>
 
@@ -683,8 +779,8 @@ Models:
 ### Kiro AI (Claude 4.5 + GLM-5 + MiniMax FREE)
 
 ```bash
-Dashboard → Connect Kiro
-→ AWS Builder ID, Google, or GitHub OAuth
+Dashboard -> Connect Kiro
+-> AWS Builder ID, Google, or GitHub OAuth
 
 Models:
   kr/claude-sonnet-4.5
@@ -695,15 +791,15 @@ Models:
 ### OpenCode Free (No auth, auto-fetch models)
 
 ```bash
-Dashboard → Connect OpenCode Free
-→ No login required (passthrough proxy)
+Dashboard -> Connect OpenCode Free
+-> No login required (passthrough proxy)
 ```
 
 ### Vertex AI ($300 free credits for new GCP accounts)
 
 ```bash
-Dashboard → Connect Vertex AI
-→ Upload Google Cloud Service Account JSON
+Dashboard -> Connect Vertex AI
+-> Upload Google Cloud Service Account JSON
 
 Models:
   vertex/gemini-3.1-pro-preview
@@ -714,10 +810,10 @@ Models:
 </details>
 
 <details>
-<summary><b>🎨 Create Combos</b></summary>
+<summary><b>🎨 Creating Combos & Fallbacks</b></summary>
 
 ```
-Dashboard → Combos → Create New
+Dashboard -> Combos -> Create New
 
 Name: premium-coding
 Models:
@@ -728,17 +824,22 @@ Models:
 Use in CLI: premium-coding
 ```
 
+Strategy options:
+- **Fallback**: Chain from primary to secondary to tertiary on failure or quota exhaustion
+- **Round-robin**: Uniformly distribute requests across selected models
+- **Fusion**: Query all panelists concurrently and synthesize the best output using a judge model
+
 </details>
 
 <details>
-<summary><b>🔧 CLI Integration</b></summary>
+<summary><b>🔧 CLI Tool Integration Examples</b></summary>
 
 ### Cursor IDE
 
 ```
-Settings → Models → Advanced:
+Settings -> Models -> Advanced:
   OpenAI API Base URL: http://localhost:20128/v1
-  OpenAI API Key: [from JRouter dashboard]
+  OpenAI API Key: [copy from JRouter dashboard]
   Model: cc/claude-opus-4-7
 ```
 
@@ -764,13 +865,7 @@ codex "your prompt"
 
 ### OpenClaw
 
-**Option 1 — Dashboard (recommended):**
-
-```
-Dashboard → CLI Tools → OpenClaw → Select Model → Apply
-```
-
-**Option 2 — Manual:** Edit `~/.openclaw/openclaw.json`:
+Edit `~/.openclaw/openclaw.json`:
 
 ```json
 {
@@ -799,7 +894,7 @@ Dashboard → CLI Tools → OpenClaw → Select Model → Apply
 }
 ```
 
-> **Note:** Use `127.0.0.1` instead of `localhost` to avoid IPv6 resolution issues.
+> **Note**: Use `127.0.0.1` instead of `localhost` to avoid IPv6 resolution issues.
 
 ### Cline / Continue / RooCode
 
@@ -812,87 +907,58 @@ Model: cc/claude-opus-4-7
 
 </details>
 
-<details>
-<summary><b>🚀 Deployment</b></summary>
+---
 
-### VPS Deployment
-
-```bash
-git clone https://github.com/Synthever/JRouter.git
-cd JRouter
-npm install
-npm run build
-
-# Configure
-export JWT_SECRET="your-secure-secret-change-this"
-export INITIAL_PASSWORD="your-password"
-export DATA_DIR="/var/lib/jrouter"
-export PORT="20128"
-export HOSTNAME="0.0.0.0"
-export NODE_ENV="production"
-export NEXT_PUBLIC_BASE_URL="http://localhost:20128"
-export API_KEY_SECRET="endpoint-proxy-api-key-secret"
-export MACHINE_ID_SALT="endpoint-proxy-salt"
-
-# Start (PM2)
-npm install -g pm2
-pm2 start npm --name jrouter -- start
-pm2 save
-pm2 startup
-```
+## 🚀 Deployment & Configuration
 
 ### Environment Variables
 
-| Variable                                             | Default                                  | Description                                                                         |
-| ---------------------------------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------- |
-| `JWT_SECRET`                                         | Auto-generated (`~/.9router/jwt-secret`) | JWT signing secret for dashboard auth cookie (override to share across instances)   |
-| `INITIAL_PASSWORD`                                   | `123456`                                 | First login password when no saved hash exists                                      |
-| `DATA_DIR`                                           | `~/.9router`                             | Main app data location (SQLite at `$DATA_DIR/db/data.sqlite`)                       |
-| `PORT`                                               | `20128`                                  | Service port                                                                        |
-| `HOSTNAME`                                           | framework default                        | Bind host                                                                           |
-| `NODE_ENV`                                           | runtime default                          | Set `production` for deploy                                                         |
-| `API_KEY_SECRET`                                     | `endpoint-proxy-api-key-secret`          | HMAC secret for generated API keys                                                  |
-| `MACHINE_ID_SALT`                                    | `endpoint-proxy-salt`                    | Salt for stable machine ID hashing                                                  |
-| `ENABLE_REQUEST_LOGS`                                | `false`                                  | Enables request/response logs under `logs/`                                         |
-| `AUTH_COOKIE_SECURE`                                 | `false`                                  | Force `Secure` auth cookie (set `true` behind HTTPS reverse proxy)                  |
-| `REQUIRE_API_KEY`                                    | `false`                                  | Enforce Bearer API key on `/v1/*` routes (recommended for internet-exposed deploys) |
-| `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, `NO_PROXY` | empty                                    | Optional outbound proxy for upstream provider calls                                 |
+| Variable | Default | Description |
+| --- | --- | --- |
+| `PORT` | `20128` | Port where JRouter listens |
+| `HOSTNAME` | `0.0.0.0` | Bind host address |
+| `DATA_DIR` | `~/.9router` | SQLite database and credential directory |
+| `JWT_SECRET` | Auto-generated | Secret for dashboard auth tokens (`~/.9router/jwt-secret`) |
+| `INITIAL_PASSWORD` | `123456` | Default password for initial dashboard login |
+| `NODE_ENV` | `production` | Environment mode |
+| `REQUIRE_API_KEY` | `false` | Enforce API key on all `/v1/*` routes |
+| `AUTH_COOKIE_SECURE` | `false` | Set to true when running behind HTTPS proxy |
+| `ENABLE_REQUEST_LOGS` | `false` | Write full request/response payloads to disk |
+| `HTTP_PROXY`, `HTTPS_PROXY` | empty | Outbound proxy for upstream provider requests |
 
-### Runtime Files and Storage
+### Runtime Storage Layout
 
-- Main app state: `${DATA_DIR}/db/data.sqlite` (SQLite — providers, combos, aliases, keys, settings, usage history)
-- Auto backups: `${DATA_DIR}/db/backups/`
-- Optional request/translator logs: `<repo>/logs/...` when `ENABLE_REQUEST_LOGS=true`
-
-</details>
+- Main state database: `${DATA_DIR}/db/data.sqlite` (SQLite: providers, combos, keys, settings, metrics)
+- Automated backups: `${DATA_DIR}/db/backups/`
+- Request telemetry logs: `${DATA_DIR}/logs/` when `ENABLE_REQUEST_LOGS=true`
 
 ---
 
 ## 📊 Available Models
 
 <details>
-<summary><b>View example models</b></summary>
+<summary><b>View model prefix reference</b></summary>
 
-**Claude Code (`cc/`)** - Pro/Max:
+**Claude Code (`cc/`)**:
 - `cc/claude-opus-4-7`, `cc/claude-opus-4-6`, `cc/claude-sonnet-4-6`, `cc/claude-haiku-4-5-20251001`
 
-**Codex (`cx/`)** - Plus/Pro:
+**Codex (`cx/`)**:
 - `cx/gpt-5.5`, `cx/gpt-5.4`, `cx/gpt-5.3-codex`
 
 **GitHub Copilot (`gh/`)**:
 - `gh/gpt-5.4`, `gh/claude-opus-4.7`, `gh/grok-code-fast-1`
 
-**GLM (`glm/`)** - $0.6/1M:
+**GLM (`glm/`)**:
 - `glm/glm-5.1`, `glm/glm-5`, `glm/glm-4.7`
 
-**Kiro (`kr/`)** - Free tier:
+**Kiro (`kr/`)**:
 - `kr/claude-sonnet-4.5`, `kr/glm-5`, `kr/MiniMax-M2.5`
 
-**WorkBuddy (`wb/`)** - JRouter addition:
+**WorkBuddy (`wb/`)**:
 - `wb/glm-5.2`, `wb/deepseek-v4.1-flash`, `wb/kimi-k2.7`, `wb/minimax-m3`
 
-**OpenRouter (`openrouter/`)** - live catalog (240+ models):
-- Custom models added via Dashboard → Providers → OpenRouter → Suggested models
+**OpenRouter (`openrouter/`)**:
+- 240+ live catalog models configured via Dashboard -> Providers -> OpenRouter
 
 </details>
 
@@ -901,25 +967,25 @@ pm2 startup
 ## 🐛 Troubleshooting
 
 <details>
-<summary><b>Common Issues</b></summary>
+<summary><b>Common Issues & Solutions</b></summary>
 
 **"Language model did not provide messages"**
-- Provider quota exhausted → Check dashboard quota tracker
-- Solution: Use combo fallback or switch to cheaper tier
+- Provider quota exhausted. Check dashboard quota tracker.
+- Solution: Use combo fallback or switch to cheaper/free tier.
 
 **OAuth token expired**
-- Auto-refreshed by JRouter
-- If issues persist: Dashboard → Provider → Reconnect
+- Auto-refreshed automatically by JRouter background worker.
+- If issues persist: Dashboard -> Providers -> Reconnect.
 
 **Dashboard opens on wrong port**
-- Set `PORT=20128` and `NEXT_PUBLIC_BASE_URL=http://localhost:20128`
+- Set `PORT=20128` and `NEXT_PUBLIC_BASE_URL=http://localhost:20128`.
 
-**First login not working**
-- Check `INITIAL_PASSWORD` in `.env`
-- If unset, fallback password is `123456`
+**First login password rejected**
+- Check `INITIAL_PASSWORD` in your environment or `.env`.
+- If unset, the default fallback password is `123456`.
 
-**No request logs under `logs/`**
-- Set `ENABLE_REQUEST_LOGS=true`
+**No request logs written**
+- Ensure `ENABLE_REQUEST_LOGS=true` is set.
 
 </details>
 
@@ -929,10 +995,10 @@ pm2 startup
 
 - **Runtime**: Node.js 20+
 - **Framework**: Next.js 16
-- **UI**: React 19 + Tailwind CSS 4
-- **Database**: SQLite (better-sqlite3 / node:sqlite / sql.js fallback)
-- **Streaming**: Server-Sent Events (SSE)
-- **Auth**: OAuth 2.0 (PKCE) + JWT + API Keys
+- **UI Engine**: React 19, Tailwind CSS 4, Motion, Lucide Icons
+- **Database**: SQLite (automatic fallback chain: bun:sqlite -> better-sqlite3 -> node:sqlite -> sql.js)
+- **Streaming**: Server-Sent Events (SSE) with HTTP/2 and h2c upgrade handling
+- **Authentication**: OAuth 2.0 (PKCE) + JWT + Role-based API Keys
 
 ---
 
@@ -948,7 +1014,7 @@ Content-Type: application/json
 {
   "model": "cc/claude-opus-4-6",
   "messages": [
-    {"role": "user", "content": "Write a function to..."}
+    {"role": "user", "content": "Write a clean binary search in Rust"}
   ],
   "stream": true
 }
@@ -959,28 +1025,26 @@ Content-Type: application/json
 ```bash
 GET http://localhost:20128/v1/models
 Authorization: Bearer <your-jrouter-key>
-
-→ Returns all models + combos in OpenAI format (restricted per key's allowed models)
 ```
+
+Returns all enabled models and published combos matching the requesting key's role and allowed-models policy.
 
 ---
 
 ## 🙏 Acknowledgments
 
-JRouter is built on **[9Router](https://github.com/decolua/9router)** by **decolua** — huge thanks for the original project and its community. Token-saving features build on the shoulders of giants:
+JRouter is built on the foundation of **[9Router](https://github.com/decolua/9router)** by **decolua**: sincere thanks to the original project and its community. Token saving and prompt optimization build on:
 
-- **[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI)** — original Go implementation that inspired this JavaScript port.
-- **[RTK](https://github.com/rtk-ai/rtk)** — Rust token-saver. 9Router ports its compression pipeline to JS → **−20-40% input tokens** on every request.
-- **[Caveman](https://github.com/JuliusBrussee/caveman)** — viral _"why use many token when few token do trick"_. 9Router adapts its prompt → **−65% output tokens**.
-- **[Ponytail](https://github.com/DietrichGebert/ponytail)** — _"lazy senior dev"_ skill. 9Router injects its YAGNI-first ladder → **fewer tokens, less code, shorter diffs**.
-
-⭐ [9Router upstream](https://github.com/decolua/9router) and these projects on GitHub!
+- **[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI)**: Original Go implementation that inspired this architecture.
+- **[RTK](https://github.com/rtk-ai/rtk)**: High-performance token-saver pipeline ported to JS for 20-40% prompt compression.
+- **[Caveman](https://github.com/JuliusBrussee/caveman)**: Terse output prompt engineering for up to 65% output token reduction.
+- **[Ponytail](https://github.com/DietrichGebert/ponytail)**: Pragmatic YAGNI engineering prompts for cleaner diffs and fewer output tokens.
 
 ---
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT License. See [LICENSE](LICENSE) for details.
 
 ---
 
